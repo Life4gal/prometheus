@@ -183,16 +183,26 @@ endif (${PROJECT_NAME_PREFIX}SYSTEM_HEADERS)
 set(
 		${PROJECT_NAME_PREFIX}HEADER
 
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/hello.hpp
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/easy_network.hpp
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/macro.hpp
+
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/platform/windows.hpp
+
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/debug/exception.hpp
+
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/traits/numeric.hpp
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/traits/object.hpp
+
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/compare/numeric.hpp
+
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/cast/numeric.hpp
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/cast/object.hpp
 )
 
 # SOURCE FILES
 set(
 		${PROJECT_NAME_PREFIX}SOURCE
 
-		${PROJECT_SOURCE_DIR}/src/hello.cpp
-		${PROJECT_SOURCE_DIR}/src/easy_network.cpp
+		${PROJECT_SOURCE_DIR}/src/debug/exception.cpp
 )
 
 # LIBRARY
@@ -215,6 +225,10 @@ target_compile_options(
 		${PROJECT_NAME}
 		PRIVATE
 		${${PROJECT_NAME_PREFIX}COMPILE_FLAGS}
+
+		PUBLIC
+		# __VA_OPT__
+		$<$<CXX_COMPILER_ID:MSVC>:-Zc:preprocessor>
 )
 
 # SET DEFINITIONS
