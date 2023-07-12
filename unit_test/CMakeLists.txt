@@ -1,5 +1,5 @@
 project(
-		CMakeTemplateProject-unit-test
+		prometheus-unit-test
 		LANGUAGES CXX
 )
 
@@ -29,7 +29,7 @@ include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/ut/ut.cmake)
 target_link_libraries(
 		${PROJECT_NAME}
 		PRIVATE
-		CMakeTemplateProject::CMakeTemplateProject
+		gal::prometheus
 )
 
 add_test(
