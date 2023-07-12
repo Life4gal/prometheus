@@ -1,0 +1,56 @@
+= CMakeTemplateProject
+Life4gal <Life4gal@gmail.com>
+:toc:
+:icons: font
+
+== Introduction
+For a modern C++ project, there is always a lot of repetitive preparation work.
+Not to mention configuring test environments, continuous integration, etc.
+This project template is designed to alleviate this to some extent by drawing from the best of many projects and constantly updating.
+
+== Features
+
+todo
+
+
+== Requirements
+
+For external dependencies, we have two main ways to use them:
+
+* Pre-compiled binaries
+* Compile from scratch
+
+If we use pre-compiled binaries, we can greatly reduce the compilation time of our project,
+especially if the external dependencies are very large and particularly time-consuming to compile (e.g. Boost).
+If we need to distribute, we can just distribute our own program,
+and the rest of the dependencies can be dynamically dependent on the runtime environment.
+
+If we compile from scratch, we no longer need to rely on the target environment to have the dependencies we need.
+We can easily compile the entire project from anywhere and strictly control the versioning of each dependency,
+making source code distribution much easier.
+
+However, nothing is absolute, and we can combine them to maximize their respective advantages.
+
+For Linux platforms, pre-compiled binaries seem to be the best choice, and the various distributions have their own reliable package managers, so there is nothing to worry about.
+
+But the Windows platform is a bit awkward, it does not have a unified path to install various pre-compiled binary dependencies, and there is no proper package manager.
+
+The good thing is that the situation has improved somewhat,
+now there are C++ package managers such as:
+
+- link:https://github.com/microsoft/vcpkg[`vcpkg`]
+- link:https://conan.io/[`conan`]
+- link:https://github.com/ruslo/hunter[`hunter`]
+- link:https://github.com/cpm-cmake/CPM.cmake[`CPM`]
+
+They have their own merits and will not be discussed too much in this project.
+
+This project is to demonstrate project management using `NuGet` (on Windows platform) and using `CPM` (Windows or Linux platform).
+
+Maybe we'll consider using `vcpkg` later, but for now it's a bit "uncontrollable".
+
+== License
+see link:LICENSE[License].
+
+== Off Topic
+Any contributions are welcome, and if you have any questions, please submit an issue.
