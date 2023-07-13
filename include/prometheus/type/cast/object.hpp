@@ -6,6 +6,7 @@
 
 #include <type_traits>
 #include <span>
+#include <bit>
 
 #include <prometheus/debug/exception.hpp>
 #include <prometheus/type/traits/object.hpp>
