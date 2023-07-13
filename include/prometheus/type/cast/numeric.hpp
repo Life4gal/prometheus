@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cmath>
+
 #include <prometheus/type/traits/numeric.hpp>
 #include <prometheus/type/compare/numeric.hpp>
 #include <prometheus/debug/exception.hpp>

@@ -5,7 +5,6 @@
 #pragma once
 
 #include <atomic>
-#include <format>
 #include <prometheus/macro.hpp>
 #include <stdexcept>
 
