@@ -14,7 +14,7 @@ set(
 
 set(
 		${PROJECT_NAME_PREFIX}PATCH_VERSION
-		3
+		4
 )
 
 set(${PROJECT_NAME_PREFIX}VERSION ${${PROJECT_NAME_PREFIX}MAJOR_VERSION}.${${PROJECT_NAME_PREFIX}MINOR_VERSION}.${${PROJECT_NAME_PREFIX}PATCH_VERSION})
@@ -185,9 +185,18 @@ set(
 
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/macro.hpp
 
+		# ======================
+		# PLATFORM
+
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/platform/windows.hpp
 
+		# ======================
+		# DEBUG
+
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/debug/exception.hpp
+
+		# ======================
+		# TYPE
 
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/traits/numeric.hpp
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/traits/object.hpp
@@ -197,6 +206,11 @@ set(
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/cast/numeric.hpp
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/cast/object.hpp
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/cast/enum.hpp
+
+		# ======================
+		# STRING
+
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/string/wildcard_match.hpp
 )
 
 # SOURCE FILES
