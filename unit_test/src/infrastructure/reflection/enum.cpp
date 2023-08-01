@@ -1,9 +1,9 @@
 #include <boost/ut.hpp>
 #include <prometheus/macro.hpp>
-#include <prometheus/type/cast/enum.hpp>
+#include <prometheus/infrastructure/reflection/enum.hpp>
 
 using namespace boost::ut;
-using namespace gal::prometheus::type::cast;
+using namespace gal::prometheus::reflection;
 
 namespace
 {

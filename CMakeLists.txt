@@ -185,18 +185,32 @@ set(
 
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/macro.hpp
 
+		# =========================
+		# PLATFORM
+		# =========================
+
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/platform/windows.hpp
+
+		# =========================
+		# DEBUG
+		# =========================
 
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/debug/exception.hpp
 
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/traits/numeric.hpp
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/traits/object.hpp
+		# =========================
+		# INFRASTRUCTURE
+		# =========================
 
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/compare/numeric.hpp
+		# traits
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/traits/numeric.hpp
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/traits/object.hpp
 
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/cast/numeric.hpp
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/cast/object.hpp
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/type/cast/enum.hpp
+		# reflection
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/reflection/enum.hpp
+
+		# cast
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/cast/numeric.hpp
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/cast/object.hpp
 )
 
 # SOURCE FILES

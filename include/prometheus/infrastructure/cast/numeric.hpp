@@ -6,12 +6,83 @@
 
 #include <cmath>
 
-#include <prometheus/type/traits/numeric.hpp>
-#include <prometheus/type/compare/numeric.hpp>
+#include <prometheus/infrastructure/traits/numeric.hpp>
 #include <prometheus/debug/exception.hpp>
 
-namespace gal::prometheus::type::cast
+namespace gal::prometheus::inline infrastructure::cast
 {
+	namespace numeric_detail
+	{
+		template<typename Left, typename Right>
+		struct three_way_comparison;
+
+		template<typename Left, typename Right>
+			requires std::is_same_v<Left, Right> and
+					 (traits::unsigned_integral<Left> or
+					  traits::signed_integral<Left> or
+					  std::floating_point<Left>)
+		struct three_way_comparison<Left, Right>
+		{
+			[[nodiscard]] constexpr auto operator()(const Left left, const Right right) const noexcept -> std::strong_ordering { return left <=> right; }
+		};
+
+		template<typename Left, typename Right>
+			requires(std::signed_integral<Left> and std::unsigned_integral<Right>) or
+					(std::unsigned_integral<Left> and std::signed_integral<Right>)
+		struct three_way_comparison<Left, Right>
+		{
+			[[nodiscard]] constexpr auto operator()(const Left left, const Right right) const noexcept -> std::strong_ordering
+			{
+				// if (std::cmp_greater(left, right))
+				// {
+				// 	return std::strong_ordering::greater;
+				// }
+
+				if constexpr (std::signed_integral<Left>)
+				{
+					if (left < 0) { return std::strong_ordering::less; }
+					return static_cast<Right>(left) <=> right;
+				}
+				else
+				{
+					if (right < 0) { return std::strong_ordering::greater; }
+					return left <=> static_cast<Left>(right);
+				}
+			}
+		};
+
+		template<typename L, typename R>
+			requires(std::floating_point<L> and std::integral<R>) or
+					(std::integral<L> and std::floating_point<R>)
+		struct three_way_comparison<L, R>
+		{
+			[[nodiscard]] constexpr auto operator()(const L l, const R r) const noexcept -> std::partial_ordering
+			{
+				if constexpr (std::floating_point<L>)
+				{
+					if constexpr (sizeof(R) < sizeof(float)) { return l <=> static_cast<float>(r); }
+					else if constexpr (sizeof(R) < sizeof(double)) { return l <=> static_cast<double>(r); }
+					else if constexpr (sizeof(R) < sizeof(long double)) { return l <=> static_cast<long double>(r); }
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE("Invalid floating point type!"); }
+				}
+				else
+				{
+					if constexpr (sizeof(L) < sizeof(float)) { return static_cast<float>(l) <=> r; }
+					else if constexpr (sizeof(L) < sizeof(double)) { return static_cast<double>(l) <=> r; }
+					else if constexpr (sizeof(L) < sizeof(long double)) { return static_cast<long double>(l) <=> r; }
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE("Invalid floating point type!"); }
+				}
+			}
+		};
+
+		template<typename Left, typename Right>
+			requires std::is_arithmetic_v<Left> and std::is_arithmetic_v<Right>
+		[[nodiscard]] constexpr auto three_way_compare(const Left left, const Right right) noexcept -> auto
+		{
+			return three_way_comparison<Left, Right>{}(left, right);
+		}
+	}
+
 	/**
 	 * @brief Cast a number to a type that will be able to represent all values without loss of precision.
 	 * @tparam Out The numeric type to cast to.
@@ -35,9 +106,9 @@ namespace gal::prometheus::type::cast
 	{
 		if constexpr (std::is_floating_point_v<In>) { if (std::isnan(input)) { return Out{0}; } }
 
-		if (compare::three_way_compare(input, std::numeric_limits<Out>::lowest()) != std::strong_ordering::greater) { return std::numeric_limits<Out>::lowest(); }
+		if (numeric_detail::three_way_compare(input, std::numeric_limits<Out>::lowest()) != std::strong_ordering::greater) { return std::numeric_limits<Out>::lowest(); }
 
-		if (compare::three_way_compare(input, std::numeric_limits<Out>::max()) != std::strong_ordering::less) { return std::numeric_limits<Out>::max(); }
+		if (numeric_detail::three_way_compare(input, std::numeric_limits<Out>::max()) != std::strong_ordering::less) { return std::numeric_limits<Out>::max(); }
 
 		return static_cast<Out>(input);
 	}

@@ -6,7 +6,7 @@
 
 #include <type_traits>
 
-namespace gal::prometheus::type::traits
+namespace gal::prometheus::inline infrastructure::traits
 {
 	template<typename T>
 	struct is_byte_like : std::false_type { };

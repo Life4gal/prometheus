@@ -68,7 +68,7 @@
 // #undef OUT
 // #undef small
 
-#include <prometheus/type/cast/numeric.hpp>
+#include <prometheus/infrastructure/cast/numeric.hpp>
 
 namespace gal::prometheus::platform
 {
@@ -80,13 +80,13 @@ namespace gal::prometheus::platform
 		}
 	[[nodiscard]] auto string_to_wstring(const std::string_view string) -> WString
 	{
-		const auto in_length  = type::cast::narrow_cast<int>(string.size());
+		const auto in_length  = cast::narrow_cast<int>(string.size());
 		const auto out_length = MultiByteToWideChar(CP_UTF8, 0, string.data(), in_length, nullptr, 0);
 
 		if (out_length == 0) { throw debug::RuntimeError{"string_to_wstring failed!"}; }
 
 		WString result{};
-		result.resize(type::cast::narrow_cast<typename WString::size_type>(out_length));
+		result.resize(cast::narrow_cast<typename WString::size_type>(out_length));
 		MultiByteToWideChar(CP_UTF8, 0, string.data(), in_length, result.data(), out_length);
 		return result;
 	}
@@ -99,13 +99,13 @@ namespace gal::prometheus::platform
 		}
 	[[nodiscard]] auto wstring_to_string(const std::wstring_view string) -> String
 	{
-		const auto in_length  = type::cast::narrow_cast<int>(string.size());
+		const auto in_length  = cast::narrow_cast<int>(string.size());
 		const auto out_length = WideCharToMultiByte(CP_UTF8, 0, string.data(), in_length, nullptr, 0, nullptr, nullptr);
 
 		if (out_length == 0) { throw debug::RuntimeError{"wstring_to_string failed!"}; }
 
 		String result{};
-		result.resize(type::cast::narrow_cast<typename String::size_type>(out_length));
+		result.resize(cast::narrow_cast<typename String::size_type>(out_length));
 		WideCharToMultiByte(CP_UTF8, 0, string.data(), in_length, result.data(), out_length, nullptr, nullptr);
 		return result;
 	}

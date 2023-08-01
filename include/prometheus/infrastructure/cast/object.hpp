@@ -9,9 +9,9 @@
 #include <bit>
 
 #include <prometheus/debug/exception.hpp>
-#include <prometheus/type/traits/object.hpp>
+#include <prometheus/infrastructure/traits/object.hpp>
 
-namespace gal::prometheus::type::cast
+namespace gal::prometheus::inline infrastructure::cast
 {
 	/**
 	 * @brief Cast a pointer to a class to its base class or itself.

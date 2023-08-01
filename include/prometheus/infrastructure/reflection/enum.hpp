@@ -8,10 +8,9 @@
 #include <array>
 #include <algorithm>
 
-#include <prometheus/type/cast/numeric.hpp>
 #include <prometheus/debug/exception.hpp>
 
-namespace gal::prometheus::type::cast
+namespace gal::prometheus::inline infrastructure::reflection
 {
 	template<typename EnumType, typename NameType>
 		requires std::is_enum_v<EnumType>

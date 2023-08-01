@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <numeric>
 
-namespace gal::prometheus::type::traits
+namespace gal::prometheus::inline infrastructure::traits
 {
 	template<typename T>
 	struct is_signed_integral : std::false_type { };

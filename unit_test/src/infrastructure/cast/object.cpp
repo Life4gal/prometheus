@@ -1,9 +1,9 @@
 #include <boost/ut.hpp>
 #include <prometheus/macro.hpp>
-#include <prometheus/type/cast/object.hpp>
+#include <prometheus/infrastructure/cast/object.hpp>
 
 using namespace boost::ut;
-using namespace gal::prometheus::type::cast;
+using namespace gal::prometheus::cast;
 
 namespace
 {
