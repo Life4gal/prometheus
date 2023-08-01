@@ -201,6 +201,10 @@ set(
 		# INFRASTRUCTURE
 		# =========================
 
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/utility.hpp
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/concepts.hpp
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/aligned_union.hpp
+
 		# traits
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/traits/numeric.hpp
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/traits/object.hpp
