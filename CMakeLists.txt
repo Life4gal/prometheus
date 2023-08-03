@@ -14,7 +14,7 @@ set(
 
 set(
 		${PROJECT_NAME_PREFIX}PATCH_VERSION
-		3
+		4
 )
 
 set(${PROJECT_NAME_PREFIX}VERSION ${${PROJECT_NAME_PREFIX}MAJOR_VERSION}.${${PROJECT_NAME_PREFIX}MINOR_VERSION}.${${PROJECT_NAME_PREFIX}PATCH_VERSION})
@@ -215,6 +215,9 @@ set(
 		# cast
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/cast/numeric.hpp
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/cast/object.hpp
+
+		# string
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/string/wildcard_match.hpp
 )
 
 # SOURCE FILES
