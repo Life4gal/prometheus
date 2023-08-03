@@ -10,7 +10,9 @@ namespace gal::prometheus::inline infrastructure
 {
 	namespace utility_detail
 	{
-		constexpr static auto as_boolean = [](const auto& i) -> bool { return static_cast<bool>(i); };
+		constexpr static auto as_boolean           = [](const auto& i) -> bool { return static_cast<bool>(i); };
+		constexpr static auto compare_greater_than = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs > rhs)) -> bool { return lhs > rhs; };
+		constexpr static auto compare_less_than    = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs < rhs)) -> bool { return lhs < rhs; };
 
 		template<auto Functor = as_boolean>
 		struct invoker_all
@@ -117,9 +119,8 @@ namespace gal::prometheus::inline infrastructure
 			}
 		};
 
-		struct invoker_max : binary_invoker<[](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs > rhs)) { return lhs > rhs; }> {};
-
-		struct invoker_min : binary_invoker<[](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs < rhs)) { return lhs < rhs; }> { };
+		using invoker_max = binary_invoker<compare_greater_than>;
+		using invoker_min = binary_invoker<compare_less_than>;
 	}
 
 	namespace functor
