@@ -28,7 +28,7 @@ namespace
 }
 
 template<>
-struct wildcard_type<point>
+struct gal::prometheus::infrastructure::string::wildcard_type<point>
 {
 	using value_type = point;
 
