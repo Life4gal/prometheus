@@ -1179,7 +1179,7 @@ namespace gal::prometheus::inline infrastructure::string
 		using const_iterator = decltype(std::ranges::cbegin(std::declval<const pattern_type&>()));
 
 		using wildcard = wildcard_type<value_type>;
-		using comparator = Comparator;
+		using comparator = std::decay_t<Comparator>;
 
 	private:
 		const_iterator borrow_pattern_begin_;
