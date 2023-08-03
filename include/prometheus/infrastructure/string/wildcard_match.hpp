@@ -67,8 +67,8 @@ namespace gal::prometheus::inline infrastructure::string
 				const value_type in_single,
 				const value_type in_escape) noexcept
 			: anything{in_anything},
-			  single{in_single},
-			  escape{in_escape} {}
+			single{in_single},
+			escape{in_escape} {}
 
 		constexpr wildcard_type(
 				const value_type in_anything,
@@ -81,14 +81,14 @@ namespace gal::prometheus::inline infrastructure::string
 				const value_type in_alt_close,
 				const value_type in_alt_or) noexcept
 			: anything{in_anything},
-			  single{in_single},
-			  escape{in_escape},
-			  set_open{in_set_open},
-			  set_close{in_set_close},
-			  set_not{in_set_not},
-			  alt_open{in_alt_open},
-			  alt_close{in_alt_close},
-			  alt_or{in_alt_or} {}
+			single{in_single},
+			escape{in_escape},
+			set_open{in_set_open},
+			set_close{in_set_close},
+			set_not{in_set_not},
+			alt_open{in_alt_open},
+			alt_close{in_alt_close},
+			alt_or{in_alt_or} {}
 	};
 
 	template<>
@@ -121,8 +121,8 @@ namespace gal::prometheus::inline infrastructure::string
 				const value_type in_single,
 				const value_type in_escape) noexcept
 			: anything{in_anything},
-			  single{in_single},
-			  escape{in_escape} {}
+			single{in_single},
+			escape{in_escape} {}
 
 		constexpr wildcard_type(
 				const value_type in_anything,
@@ -135,14 +135,14 @@ namespace gal::prometheus::inline infrastructure::string
 				const value_type in_alt_close,
 				const value_type in_alt_or) noexcept
 			: anything{in_anything},
-			  single{in_single},
-			  escape{in_escape},
-			  set_open{in_set_open},
-			  set_close{in_set_close},
-			  set_not{in_set_not},
-			  alt_open{in_alt_open},
-			  alt_close{in_alt_close},
-			  alt_or{in_alt_or} {}
+			single{in_single},
+			escape{in_escape},
+			set_open{in_set_open},
+			set_close{in_set_close},
+			set_not{in_set_not},
+			alt_open{in_alt_open},
+			alt_close{in_alt_close},
+			alt_or{in_alt_or} {}
 	};
 
 	template<>
@@ -175,8 +175,8 @@ namespace gal::prometheus::inline infrastructure::string
 				const value_type in_single,
 				const value_type in_escape) noexcept
 			: anything{in_anything},
-			  single{in_single},
-			  escape{in_escape} {}
+			single{in_single},
+			escape{in_escape} {}
 
 		constexpr wildcard_type(
 				const value_type in_anything,
@@ -189,14 +189,14 @@ namespace gal::prometheus::inline infrastructure::string
 				const value_type in_alt_close,
 				const value_type in_alt_or) noexcept
 			: anything{in_anything},
-			  single{in_single},
-			  escape{in_escape},
-			  set_open{in_set_open},
-			  set_close{in_set_close},
-			  set_not{in_set_not},
-			  alt_open{in_alt_open},
-			  alt_close{in_alt_close},
-			  alt_or{in_alt_or} {}
+			single{in_single},
+			escape{in_escape},
+			set_open{in_set_open},
+			set_close{in_set_close},
+			set_not{in_set_not},
+			alt_open{in_alt_open},
+			alt_close{in_alt_close},
+			alt_or{in_alt_or} {}
 	};
 
 	template<>
@@ -229,8 +229,8 @@ namespace gal::prometheus::inline infrastructure::string
 				const value_type in_single,
 				const value_type in_escape) noexcept
 			: anything{in_anything},
-			  single{in_single},
-			  escape{in_escape} {}
+			single{in_single},
+			escape{in_escape} {}
 
 		constexpr wildcard_type(
 				const value_type in_anything,
@@ -243,14 +243,14 @@ namespace gal::prometheus::inline infrastructure::string
 				const value_type in_alt_close,
 				const value_type in_alt_or) noexcept
 			: anything{in_anything},
-			  single{in_single},
-			  escape{in_escape},
-			  set_open{in_set_open},
-			  set_close{in_set_close},
-			  set_not{in_set_not},
-			  alt_open{in_alt_open},
-			  alt_close{in_alt_close},
-			  alt_or{in_alt_or} {}
+			single{in_single},
+			escape{in_escape},
+			set_open{in_set_open},
+			set_close{in_set_close},
+			set_not{in_set_not},
+			alt_open{in_alt_open},
+			alt_close{in_alt_close},
+			alt_or{in_alt_or} {}
 	};
 
 	template<>
@@ -283,8 +283,8 @@ namespace gal::prometheus::inline infrastructure::string
 				const value_type in_single,
 				const value_type in_escape) noexcept
 			: anything{in_anything},
-			  single{in_single},
-			  escape{in_escape} {}
+			single{in_single},
+			escape{in_escape} {}
 
 		constexpr wildcard_type(
 				const value_type in_anything,
@@ -297,14 +297,14 @@ namespace gal::prometheus::inline infrastructure::string
 				const value_type in_alt_close,
 				const value_type in_alt_or) noexcept
 			: anything{in_anything},
-			  single{in_single},
-			  escape{in_escape},
-			  set_open{in_set_open},
-			  set_close{in_set_close},
-			  set_not{in_set_not},
-			  alt_open{in_alt_open},
-			  alt_close{in_alt_close},
-			  alt_or{in_alt_or} {}
+			single{in_single},
+			escape{in_escape},
+			set_open{in_set_open},
+			set_close{in_set_close},
+			set_not{in_set_not},
+			alt_open{in_alt_open},
+			alt_close{in_alt_close},
+			alt_or{in_alt_or} {}
 	};
 
 	namespace wildcard_match_detail
@@ -376,8 +376,8 @@ namespace gal::prometheus::inline infrastructure::string
 		constexpr auto just_throw_it(const char* message, T t = T{}) -> T
 		{
 			return message == nullptr
-				       ? t
-				       : throw std::invalid_argument(message);
+						? t
+						: throw std::invalid_argument(message);
 		}
 
 		enum class CheckSetState
@@ -1192,11 +1192,11 @@ namespace gal::prometheus::inline infrastructure::string
 		constexpr explicit WildcardMatcher(
 				const pattern_type& pattern,
 				wildcard&&          w = wildcard{},
-				comparator&&        c = comparator{})
+				comparator          c = comparator{})
 			: borrow_pattern_begin_{std::ranges::cbegin(pattern)},
-			  borrow_pattern_end_{std::ranges::cend(pattern)},
-			  current_wildcard_{std::forward<wildcard>(w)},
-			  current_comparator_{std::forward<comparator>(c)} {}
+			borrow_pattern_end_{std::ranges::cend(pattern)},
+			current_wildcard_{std::forward<wildcard>(w)},
+			current_comparator_{c} {}
 
 		constexpr auto replace(wildcard&& new_wildcard) noexcept -> Comparator&
 		{
@@ -1205,7 +1205,7 @@ namespace gal::prometheus::inline infrastructure::string
 			return *this;
 		}
 
-		constexpr auto replace(comparator&& new_comparator) noexcept -> Comparator&
+		constexpr auto replace(comparator new_comparator) noexcept -> Comparator&
 		{
 			using std::swap;
 			swap(current_comparator_, new_comparator);
@@ -1217,7 +1217,7 @@ namespace gal::prometheus::inline infrastructure::string
 		operator()(
 				SequenceIterator sequence_begin,
 				SequenceIterator sequence_end
-			) const -> wildcard_match_detail::full_match_result<SequenceIterator, const_iterator>
+				) const -> wildcard_match_detail::full_match_result<SequenceIterator, const_iterator>
 		{
 			return match(
 					sequence_begin,
@@ -1245,22 +1245,23 @@ namespace gal::prometheus::inline infrastructure::string
 	constexpr auto make_wildcard_matcher(
 			const Pattern&                                       pattern,
 			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{},
-			Comparator&&                                         comparator = Comparator{})
-		noexcept(noexcept(WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), std::forward<Comparator>(comparator)}))
-		-> WildcardMatcher<Pattern, Comparator> { return WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), std::forward<Comparator>(comparator)}; }
+			Comparator                                           comparator = Comparator{}
+			) noexcept(noexcept(WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}))
+		-> WildcardMatcher<Pattern, Comparator> { return WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}; }
 
 	template<std::ranges::range Pattern, typename Comparator>
 	[[nodiscard]] constexpr auto make_wildcard_matcher(
 			const Pattern&                                       pattern,
-			Comparator&&                                         comparator = Comparator{},
-			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{})
-		noexcept(noexcept(WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), std::forward<Comparator>(comparator)}))
-		-> WildcardMatcher<Pattern, Comparator> { return WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), std::forward<Comparator>(comparator)}; }
+			Comparator                                           comparator = Comparator{},
+			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{}
+			) noexcept(noexcept(WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}))
+		-> WildcardMatcher<Pattern, Comparator> { return WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}; }
 
 	template<std::ranges::range Pattern>
 	[[nodiscard]] constexpr auto make_wildcard_matcher(
 			const Pattern&                                       pattern,
-			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard = wildcard_type<std::ranges::range_value_t<Pattern>>{})
+			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard = wildcard_type<std::ranges::range_value_t<Pattern>>{}
+			)
 		noexcept(noexcept(WildcardMatcher<Pattern>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard)}))
 		-> WildcardMatcher<Pattern> { return WildcardMatcher<Pattern>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard)}; }
 

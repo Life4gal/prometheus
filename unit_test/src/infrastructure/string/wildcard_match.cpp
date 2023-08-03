@@ -311,10 +311,7 @@ namespace
 			static_assert(make_wildcard_matcher("H?llo,*W*!")("Hello, World!"));
 			static_assert(make_wildcard_matcher("H_llo,%W%!", {'%', '_', '\\'})("Hello, World!"));
 
-			struct my_equal_to
-			{
-				constexpr auto operator()(const int num, const int character) const -> bool { return num + 48 == character; }
-			};
+			auto my_equal_to = [](const int num, const auto character) -> bool { return num + 48 == static_cast<int>(character); };
 
 			constexpr std::string_view    str1{"12*5?"};
 			constexpr std::wstring_view   str2{L"12*5?"};
@@ -322,11 +319,11 @@ namespace
 			constexpr std::u16string_view str4{u"12*5?"};
 			constexpr std::u32string_view str5{U"12*5?"};
 
-			static_assert(make_wildcard_matcher(str1, my_equal_to{})(std::array{1, 2, 3, 4, 5, 6}));
-			static_assert(make_wildcard_matcher(str2, my_equal_to{})(std::array{1, 2, 3, 4, 5, 6}));
-			static_assert(make_wildcard_matcher(str3, my_equal_to{})(std::array{1, 2, 3, 4, 5, 6}));
-			static_assert(make_wildcard_matcher(str4, my_equal_to{})(std::array{1, 2, 3, 4, 5, 6}));
-			static_assert(make_wildcard_matcher(str5, my_equal_to{})(std::array{1, 2, 3, 4, 5, 6}));
+			static_assert(make_wildcard_matcher(str1, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
+			static_assert(make_wildcard_matcher(str2, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
+			static_assert(make_wildcard_matcher(str3, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
+			static_assert(make_wildcard_matcher(str4, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
+			static_assert(make_wildcard_matcher(str5, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
 		};
 
 		"literal"_test = []
