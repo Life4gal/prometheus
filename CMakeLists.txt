@@ -204,6 +204,7 @@ set(
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/utility.hpp
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/concepts.hpp
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/aligned_union.hpp
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/wildcard_match.hpp
 
 		# traits
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/traits/numeric.hpp
@@ -215,9 +216,6 @@ set(
 		# cast
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/cast/numeric.hpp
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/cast/object.hpp
-
-		# string
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/string/wildcard_match.hpp
 )
 
 # SOURCE FILES

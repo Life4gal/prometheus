@@ -1,6 +1,6 @@
 #include <boost/ut.hpp>
 #include <prometheus/macro.hpp>
-#include <prometheus/infrastructure/string/wildcard_match.hpp>
+#include <prometheus/infrastructure/wildcard_match.hpp>
 
 using namespace boost::ut;
 using namespace gal::prometheus::string;
