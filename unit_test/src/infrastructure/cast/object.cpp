@@ -25,7 +25,12 @@ namespace
 	class Bar final : public Foo
 	{
 	public:
+		#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+		// error: two or more data types in declaration of ‘type name’
+		[[nodiscard]] int answer() const noexcept override { return 1337; } // NOLINT
+		#else
 		[[nodiscard]] auto answer() const noexcept -> int override { return 1337; }
+		#endif
 	};
 
 	GAL_PROMETHEUS_NO_DESTROY suite test_type_cast_object = []
