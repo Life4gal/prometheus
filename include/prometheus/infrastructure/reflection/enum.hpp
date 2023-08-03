@@ -36,6 +36,9 @@ namespace gal::prometheus::inline infrastructure::reflection
 		constexpr static auto size = Total;
 
 	private:
+		using data_type = std::array<meta_data_type, size>;
+		using size_type = typename data_type::size_type;
+
 		[[nodiscard]] constexpr static auto to_underlying(const value_type e) noexcept -> std::underlying_type_t<value_type> { return static_cast<std::underlying_type_t<value_type>>(e); }
 
 		bool contiguous_{false};
@@ -63,7 +66,7 @@ namespace gal::prometheus::inline infrastructure::reflection
 			if (contiguous_)
 			{
 				const auto index = EnumMeta::to_underlying(e) - EnumMeta::to_underlying(meta_.front().value);
-				return (index >= 0 && std::cmp_less(index, size)) ? &meta_[index].name : nullptr;
+				return (index >= 0 && std::cmp_less(index, size)) ? &meta_[static_cast<size_type>(index)].name : nullptr;
 			}
 
 			if (const auto it = std::ranges::find(
