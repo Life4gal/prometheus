@@ -14,7 +14,7 @@ set(
 
 set(
 		${PROJECT_NAME_PREFIX}PATCH_VERSION
-		4
+		5
 )
 
 set(${PROJECT_NAME_PREFIX}VERSION ${${PROJECT_NAME_PREFIX}MAJOR_VERSION}.${${PROJECT_NAME_PREFIX}MINOR_VERSION}.${${PROJECT_NAME_PREFIX}PATCH_VERSION})
@@ -205,6 +205,7 @@ set(
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/concepts.hpp
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/aligned_union.hpp
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/wildcard_match.hpp
+		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/function_ref.hpp
 
 		# traits
 		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/traits/numeric.hpp
