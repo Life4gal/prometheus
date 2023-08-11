@@ -254,9 +254,26 @@ else ()
 endif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
 # MODULE SOURCE
-set(
-		${PROJECT_NAME_PREFIX}MODULE_SOURCE
-	
+target_sources(
+		${PROJECT_NAME}
+		# fixme: Possible conflicts with other libraries?
+		PUBLIC
+		FILE_SET std_module
+		TYPE CXX_MODULES
+		BASE_DIRS "${PROJECT_SOURCE_DIR}"
+		FILES
+
+		$<$<CXX_COMPILER_ID:MSVC>:${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx>
+)
+
+target_sources(
+		${PROJECT_NAME}
+		PUBLIC
+		FILE_SET public_module_files
+		TYPE CXX_MODULES
+		BASE_DIRS "${PROJECT_SOURCE_DIR}"
+		FILES
+
 		# =========================
 		# TEST
 		# =========================
@@ -286,28 +303,6 @@ set(
 		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
 )
 
-# HEADER FILES
-set(
-		${PROJECT_NAME_PREFIX}HEADER_SOURCE
-
-		${PROJECT_SOURCE_DIR}/src/prometheus/macro.hpp
-
-		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/prometheus/windows.hpp>
-)
-
-target_sources(
-		${PROJECT_NAME}
-		PRIVATE
-		FILE_SET module_files
-		TYPE CXX_MODULES
-		BASE_DIRS "${PROJECT_SOURCE_DIR}"
-		FILES
-
-		$<$<CXX_COMPILER_ID:MSVC>:${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx>
-	
-		${${PROJECT_NAME_PREFIX}MODULE_SOURCE}
-)
-
 target_sources(
 		${PROJECT_NAME}
 		PUBLIC
@@ -316,7 +311,9 @@ target_sources(
 		BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
 		FILES
 
-		${${PROJECT_NAME_PREFIX}HEADER_SOURCE}
+		${PROJECT_SOURCE_DIR}/src/prometheus/macro.hpp
+
+		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/prometheus/windows.hpp>
 )
 
 # SET FLAGS
