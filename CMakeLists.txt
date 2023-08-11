@@ -6,6 +6,9 @@ if (CMAKE_VERSION VERSION_LESS "3.26")
 elseif (CMAKE_VERSION VERSION_LESS "3.27")
 	# 3.26
 	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+elseif (CMAKE_VERSION VERSION_LESS "3.28")
+	# 3.27
+	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
 else ()
 	message(FATAL_ERROR "See `https://github.com/Kitware/CMake/blob/v${CMAKE_VERSION}/Help/dev/experimental.rst`.")
 endif (CMAKE_VERSION VERSION_LESS "3.26")
@@ -26,7 +29,7 @@ set(
 
 set(
 		${PROJECT_NAME_PREFIX}PATCH_VERSION
-		5
+		6
 )
 
 set(${PROJECT_NAME_PREFIX}VERSION ${${PROJECT_NAME_PREFIX}MAJOR_VERSION}.${${PROJECT_NAME_PREFIX}MINOR_VERSION}.${${PROJECT_NAME_PREFIX}PATCH_VERSION})
@@ -204,7 +207,7 @@ add_library(
 )
 
 set(${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH ${CMAKE_BINARY_DIR}/temp_module)
-if (${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	if (NOT DEFINED ENV{VCToolsInstallDir})
 		message(FATAL_ERROR "Unable to find path to VC Tools in environment variables!")
 	endif (NOT DEFINED ENV{VCToolsInstallDir})
@@ -232,38 +235,23 @@ if (${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)
 			PROPERTIES
 			COMPILE_OPTIONS "/Wv:18"
 	)
-elseif (${PROJECT_NAME_PREFIX}PLATFORM_LINUX)
-	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-		# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_clang.cmake
-		string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
-				"${CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS}"
-				" -format=p1689 --p1689-targeted-file-name=<SOURCE> --p1689-targeted-output=<OBJECT> "
-				" --p1689-makeformat-output=<DEP_FILE>"
-				" --"
-				" <DEFINES> <INCLUDES> <FLAGS> -x c++ <SOURCE>"
-				" -MT <DYNDEP_FILE> -MD"
-				" > <DYNDEP_FILE>")
-		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "clang")
-		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "@<MODULE_MAP_FILE>")
-
-		# Default to C++ extensions being off. Clang's modules support have trouble
-		# with extensions right now.
-		set(CMAKE_CXX_EXTENSIONS OFF)
-	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-		# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_gcc.cmake
-		string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
-				"<CMAKE_CXX_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -E -x c++ <SOURCE>"
-				" -MT <DYNDEP_FILE> -MD -MF <DEP_FILE>"
-				" -fmodules-ts -fdep-file=<DYNDEP_FILE> -fdep-output=<OBJECT> -fdep-format=trtbd"
-				" -o <PREPROCESSED_SOURCE>")
-		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "gcc")
-		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "-fmodules-ts -fmodule-mapper=<MODULE_MAP_FILE> -fdep-format=trtbd -x c++")
-	endif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-elseif (${PROJECT_NAME_PREFIX}PLATFORM_MACOS)
-	message(FATAL_ERROR "FIXME: ${CMAKE_CXX_COMPILER}")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+	# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_clang.cmake
+	# Default to C++ extensions being off. Clang's modules support have trouble
+	# with extensions right now.
+	set(CMAKE_CXX_EXTENSIONS OFF)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_gcc.cmake
+	string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
+			"<CMAKE_CXX_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -E -x c++ <SOURCE>"
+			" -MT <DYNDEP_FILE> -MD -MF <DEP_FILE>"
+			" -fmodules-ts -fdep-file=<DYNDEP_FILE> -fdep-output=<OBJECT> -fdep-format=trtbd"
+			" -o <PREPROCESSED_SOURCE>")
+	set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "gcc")
+	set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "-fmodules-ts -fmodule-mapper=<MODULE_MAP_FILE> -fdep-format=trtbd -x c++")
 else ()
 	message(FATAL_ERROR "Unsupported compilers: ${CMAKE_CXX_COMPILER}")
-endif (${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)
+endif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
 # MODULE SOURCE
 set(
