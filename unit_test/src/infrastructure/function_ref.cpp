@@ -1,13 +1,16 @@
-#include <boost/ut.hpp>
-#include <prometheus/infrastructure/function_ref.hpp>
 #include <prometheus/macro.hpp>
 
-using namespace boost::ut;
-using namespace gal::prometheus;
+import std;
+import gal.prometheus.test;
+import gal.prometheus.infrastructure;
 
 namespace
 {
-	GAL_PROMETHEUS_NO_DESTROY suite test_function_ref = []
+	using namespace gal::prometheus;
+	using namespace test;
+	using namespace infrastructure;
+
+	GAL_PROMETHEUS_NO_DESTROY suite test_infrastructure_function_ref = []
 	{
 		"functor"_test = []
 		{

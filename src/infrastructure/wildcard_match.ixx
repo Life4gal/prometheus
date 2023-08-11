@@ -1,14 +1,18 @@
+// This file is part of prometheus
 // Copyright (C) 2022-2023 Life4gal <life4gal@gmail.com>
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
+module;
 
-#include <concepts>
-#include <type_traits>
-#include <stdexcept>
+#include <prometheus/macro.hpp>
 
-namespace gal::prometheus::inline infrastructure::string
+export module gal.prometheus.infrastructure:wildcard_match;
+
+import std;
+import :runtime_error.exception;
+
+export namespace gal::prometheus::infrastructure
 {
 	// https://en.cppreference.com/w/cpp/language/string_literal
 	/**
@@ -343,8 +347,7 @@ namespace gal::prometheus::inline infrastructure::string
 				SequenceIterator                                sequence_end,
 				PatternIterator                                 pattern_begin,
 				PatternIterator                                 pattern_end,
-				match_result<SequenceIterator, PatternIterator> match_result
-				) noexcept -> full_match_result<SequenceIterator, PatternIterator>
+				match_result<SequenceIterator, PatternIterator> match_result) noexcept -> full_match_result<SequenceIterator, PatternIterator>
 		{
 			return {
 					.result = match_result.result,
@@ -360,8 +363,7 @@ namespace gal::prometheus::inline infrastructure::string
 		constexpr auto make_match_result(
 				bool             result,
 				SequenceIterator sequence,
-				PatternIterator  pattern
-				) noexcept -> match_result<SequenceIterator, PatternIterator>
+				PatternIterator  pattern) noexcept -> match_result<SequenceIterator, PatternIterator>
 		{
 			return {
 					.result = result,
@@ -377,7 +379,7 @@ namespace gal::prometheus::inline infrastructure::string
 		{
 			return message == nullptr
 						? t
-						: throw std::invalid_argument(message);
+						: throw InvalidArgumentError(message);
 		}
 
 		enum class CheckSetState
@@ -407,25 +409,24 @@ namespace gal::prometheus::inline infrastructure::string
 		};
 
 		/**
-		 * @brief determine whether the target pattern has a legal set
-		 * @note after detecting the first `[`, we always think that the next position is either the first option or `!` (further, the same is true after detecting `!`)
-		 * so the following `]` will always be ignored (so `[]` and `[!]` Is not a complete set)
-		 * and ignore all the `[` contained in it (so nested sets are not supported)
-		 * @tparam EmitError if true, throw a std::invalid_argument instead return end
-		 * @tparam PatternIterator iterator type
-		 * @param begin pattern begin
-		 * @param end pattern end
-		 * @param wildcard wildcard
-		 * @param state users do not need to know the state, and generally start from the beginning (`[`) to parse
-		 * @return if it is, return the position after the last valid position (`]`) of the set, otherwise it returns begin (perhaps returning end is more intuitive, but in fact it may happen to reach end and the match is successful, so returning end is not necessarily a failure, but it is absolutely impossible to return begin when it succeeds)
+		* @brief determine whether the target pattern has a legal set
+		* @note after detecting the first `[`, we always think that the next position is either the first option or `!` (further, the same is true after detecting `!`)
+		* so the following `]` will always be ignored (so `[]` and `[!]` Is not a complete set)
+		* and ignore all the `[` contained in it (so nested sets are not supported)
+		* @tparam EmitError if true, throw a InvalidArgumentError instead return end
+		* @tparam PatternIterator iterator type
+		* @param begin pattern begin
+		* @param end pattern end
+		* @param wildcard wildcard
+		* @param state users do not need to know the state, and generally start from the beginning (`[`) to parse
+		* @return if it is, return the position after the last valid position (`]`) of the set, otherwise it returns begin (perhaps returning end is more intuitive, but in fact it may happen to reach end and the match is successful, so returning end is not necessarily a failure, but it is absolutely impossible to return begin when it succeeds)
 		*/
 		template<bool EmitError, std::input_iterator PatternIterator>
 		constexpr auto check_set_exist(
 				PatternIterator                                                                  begin,
 				PatternIterator                                                                  end,
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
-				CheckSetState                                                                    state    = CheckSetState::OPEN
-				) -> PatternIterator
+				CheckSetState                                                                    state    = CheckSetState::OPEN) -> PatternIterator
 		{
 			auto rollback = begin;
 			while (begin not_eq end)
@@ -440,7 +441,7 @@ namespace gal::prometheus::inline infrastructure::string
 							// emit error or not
 							if constexpr (EmitError)
 							{
-								// throw std::invalid_argument{"the given pattern is not a valid set"};
+								// throw InvalidArgumentError{"the given pattern is not a valid set"};
 								return just_throw_it("the given pattern is not a valid set", rollback);
 							}
 							else { return rollback; }
@@ -485,25 +486,25 @@ namespace gal::prometheus::inline infrastructure::string
 
 			if constexpr (EmitError)
 			{
-				// throw std::invalid_argument{"the given pattern is not a valid set"};
+				// throw InvalidArgumentError{"the given pattern is not a valid set"};
 				return just_throw_it("the given pattern is not a valid set", rollback);
 			}
 			else { return rollback; }
 		}
 
 		/**
-		 * @brief Determine whether the target pattern can match the sequence
-		 * @tparam SequenceIterator sequence iterator type
-		 * @tparam PatternIterator pattern iterator type
-		 * @tparam Comparator used to determine whether two wildcards are equal, and can also be customized
-		 * @param sequence_begin sequence iterator begin
-		 * @param sequence_end sequence iterator end
-		 * @param pattern_begin pattern iterator begin
-		 * @param pattern_end pattern iterator end
-		 * @param wildcard wildcard
-		 * @param comparator equal
-		 * @param state state users do not need to know the state, and generally start from the beginning (`[`) to parse
-		 * @return return a match_result, if the match is successful, the match_result has the position where the sequence matches the pattern, otherwise there is no guarantee
+		* @brief Determine whether the target pattern can match the sequence
+		* @tparam SequenceIterator sequence iterator type
+		* @tparam PatternIterator pattern iterator type
+		* @tparam Comparator used to determine whether two wildcards are equal, and can also be customized
+		* @param sequence_begin sequence iterator begin
+		* @param sequence_end sequence iterator end
+		* @param pattern_begin pattern iterator begin
+		* @param pattern_end pattern iterator end
+		* @param wildcard wildcard
+		* @param comparator equal
+		* @param state state users do not need to know the state, and generally start from the beginning (`[`) to parse
+		* @return return a match_result, if the match is successful, the match_result has the position where the sequence matches the pattern, otherwise there is no guarantee
 		*/
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator = std::equal_to<>>
 		constexpr auto match_set(
@@ -513,8 +514,7 @@ namespace gal::prometheus::inline infrastructure::string
 				PatternIterator                                                                  pattern_end,
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard   = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
 				const Comparator&                                                                comparator = Comparator{},
-				MatchSetState                                                                    state      = MatchSetState::OPEN
-				) -> match_result<SequenceIterator, PatternIterator>
+				MatchSetState                                                                    state      = MatchSetState::OPEN) -> match_result<SequenceIterator, PatternIterator>
 		{
 			while (pattern_begin not_eq pattern_end)
 			{
@@ -525,7 +525,7 @@ namespace gal::prometheus::inline infrastructure::string
 						// this character not_eq `[`
 						if (*pattern_begin not_eq wildcard.set_open)
 						{
-							// throw std::invalid_argument{"the given pattern is not a valid set"};
+							// throw InvalidArgumentError{"the given pattern is not a valid set"};
 							return just_throw_it("the given pattern is not a valid set", make_match_result(false, sequence_begin, pattern_begin));
 						}
 
@@ -634,7 +634,7 @@ namespace gal::prometheus::inline infrastructure::string
 				std::advance(pattern_begin, 1);
 			}
 
-			// throw std::invalid_argument{"the given pattern is not a valid set"};
+			// throw InvalidArgumentError{"the given pattern is not a valid set"};
 			return just_throw_it("the given pattern is not a valid set", make_match_result(false, sequence_begin, pattern_begin));
 		}
 
@@ -657,17 +657,17 @@ namespace gal::prometheus::inline infrastructure::string
 		};
 
 		/**
-		 * @brief determine whether the target pattern has a legal alt
-		 * @note the detection will ignore the nested set and alt, and return the position of the terminator corresponding to the outermost alt
-		 * @tparam EmitError if true, throw a std::invalid_argument instead return end
-		 * @tparam PatternIterator iterator type
-		 * @param begin pattern begin
-		 * @param end pattern end
-		 * @param wildcard wildcard
-		 * @param state users do not need to know the state, and generally start from the beginning (`(`) to parse
-		 * @param depth users do not need to know the depth, this is just to confirm whether we have processed all the nested content
-		 * @param is_sub users do not need to know the is_sub, this just indicates whether it is currently detecting sub-alts (`|`)
-		 * @return if it is, return the position after the last valid position (`)`) of the alt, otherwise it returns begin (perhaps returning end is more intuitive, but in fact it may happen to reach end and the match is successful, so returning end is not necessarily a failure, but it is absolutely impossible to return begin when it succeeds)
+		* @brief determine whether the target pattern has a legal alt
+		* @note the detection will ignore the nested set and alt, and return the position of the terminator corresponding to the outermost alt
+		* @tparam EmitError if true, throw a InvalidArgumentError instead return end
+		* @tparam PatternIterator iterator type
+		* @param begin pattern begin
+		* @param end pattern end
+		* @param wildcard wildcard
+		* @param state users do not need to know the state, and generally start from the beginning (`(`) to parse
+		* @param depth users do not need to know the depth, this is just to confirm whether we have processed all the nested content
+		* @param is_sub users do not need to know the is_sub, this just indicates whether it is currently detecting sub-alts (`|`)
+		* @return if it is, return the position after the last valid position (`)`) of the alt, otherwise it returns begin (perhaps returning end is more intuitive, but in fact it may happen to reach end and the match is successful, so returning end is not necessarily a failure, but it is absolutely impossible to return begin when it succeeds)
 		*/
 		template<bool EmitError, std::input_iterator PatternIterator>
 		constexpr auto check_alt_exist(
@@ -676,8 +676,7 @@ namespace gal::prometheus::inline infrastructure::string
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
 				CheckAltState                                                                    state    = CheckAltState::OPEN,
 				std::size_t                                                                      depth    = 0,
-				bool                                                                             is_sub   = false
-				) -> PatternIterator
+				bool                                                                             is_sub   = false) -> PatternIterator
 		{
 			auto rollback = begin;
 			while (begin not_eq end)
@@ -692,7 +691,7 @@ namespace gal::prometheus::inline infrastructure::string
 							// emit error or not
 							if constexpr (EmitError)
 							{
-								// throw std::invalid_argument{"the given pattern is not a valid alternative"};
+								// throw InvalidArgumentError{"the given pattern is not a valid alternative"};
 								return just_throw_it("the given pattern is not a valid alternative", rollback);
 							}
 							else { return rollback; }
@@ -757,41 +756,40 @@ namespace gal::prometheus::inline infrastructure::string
 
 			if constexpr (EmitError)
 			{
-				// throw std::invalid_argument{"the use of sets is disabled"};
+				// throw InvalidArgumentError{"the use of sets is disabled"};
 				return just_throw_it("the use of sets is disabled", rollback);
 			}
 			else { return rollback; }
 		}
 
 		/**
-		 * @brief determine whether the target pattern has sub-alternatives
-		 * @tparam PatternIterator iterator type
-		 * @param begin pattern begin
-		 * @param end pattern end
-		 * @param wildcard wildcard
-		 * @return guarantee to return the end position of the sub-alternative, and throw an exception if it does not exist
+		* @brief determine whether the target pattern has sub-alternatives
+		* @tparam PatternIterator iterator type
+		* @param begin pattern begin
+		* @param end pattern end
+		* @param wildcard wildcard
+		* @return guarantee to return the end position of the sub-alternative, and throw an exception if it does not exist
 		*/
 		template<std::input_iterator PatternIterator>
 		constexpr auto check_sub_alt_exist(
 				PatternIterator                                                                  begin,
 				PatternIterator                                                                  end,
-				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{}
-				) -> PatternIterator { return check_alt_exist<true>(begin, end, wildcard, CheckAltState::NEXT, 1, true); }
+				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{}) -> PatternIterator { return check_alt_exist<true>(begin, end, wildcard, CheckAltState::NEXT, 1, true); }
 
 		/**
-		 * @brief determine whether the target sequence can match the pattern
-		 * @tparam SequenceIterator sequence iterator type
-		 * @tparam PatternIterator pattern iterator type
-		 * @tparam Comparator equal to type
-		 * @param sequence_begin sequence begin
-		 * @param sequence_end sequence end
-		 * @param pattern_begin pattern begin
-		 * @param pattern_end pattern end
-		 * @param wildcard wildcard
-		 * @param comparator equal to
-		 * @param partial it is a partial match
-		 * @param escape escape means that the next content we will directly compare without considering it as a possible token we defined
-		 * @return does the target sequence can match the pattern?
+		* @brief determine whether the target sequence can match the pattern
+		* @tparam SequenceIterator sequence iterator type
+		* @tparam PatternIterator pattern iterator type
+		* @tparam Comparator equal to type
+		* @param sequence_begin sequence begin
+		* @param sequence_end sequence end
+		* @param pattern_begin pattern begin
+		* @param pattern_end pattern end
+		* @param wildcard wildcard
+		* @param comparator equal to
+		* @param partial it is a partial match
+		* @param escape escape means that the next content we will directly compare without considering it as a possible token we defined
+		* @return does the target sequence can match the pattern?
 		*/
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator = std::equal_to<>>
 		constexpr auto match(
@@ -802,24 +800,23 @@ namespace gal::prometheus::inline infrastructure::string
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard   = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
 				const Comparator&                                                                comparator = Comparator{},
 				bool                                                                             partial    = false,
-				bool                                                                             escape     = false
-				) -> match_result<SequenceIterator, PatternIterator>;
+				bool                                                                             escape     = false) -> match_result<SequenceIterator, PatternIterator>;
 
 		/**
-		 * @brief determine whether the target sequence can match the pattern of the two parts
-		 * @tparam SequenceIterator sequence iterator type
-		 * @tparam PatternIterator pattern iterator type
-		 * @tparam Comparator equal to type
-		 * @param sequence_begin sequence begin
-		 * @param sequence_end sequence end
-		 * @param pattern1_begin pattern1 begin
-		 * @param pattern1_end pattern1 end
-		 * @param pattern2_begin pattern2 begin
-		 * @param pattern2_end pattern2 end
-		 * @param wildcard wildcard
-		 * @param comparator equal to
-		 * @param partial it is a partial match
-		 * @return does the target sequence can match the pattern of the two parts?
+		* @brief determine whether the target sequence can match the pattern of the two parts
+		* @tparam SequenceIterator sequence iterator type
+		* @tparam PatternIterator pattern iterator type
+		* @tparam Comparator equal to type
+		* @param sequence_begin sequence begin
+		* @param sequence_end sequence end
+		* @param pattern1_begin pattern1 begin
+		* @param pattern1_end pattern1 end
+		* @param pattern2_begin pattern2 begin
+		* @param pattern2_end pattern2 end
+		* @param wildcard wildcard
+		* @param comparator equal to
+		* @param partial it is a partial match
+		* @return does the target sequence can match the pattern of the two parts?
 		*/
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator = std::equal_to<>>
 		constexpr auto match_alt(
@@ -831,8 +828,7 @@ namespace gal::prometheus::inline infrastructure::string
 				PatternIterator                                                                  pattern2_end,
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard   = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
 				const Comparator&                                                                comparator = Comparator{},
-				bool                                                                             partial    = false
-				) -> match_result<SequenceIterator, PatternIterator>
+				bool                                                                             partial    = false) -> match_result<SequenceIterator, PatternIterator>
 		{
 			// is the target sequence partial matches pattern1
 			if (auto result1 = match(
@@ -890,8 +886,7 @@ namespace gal::prometheus::inline infrastructure::string
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard,
 				const Comparator&                                                                comparator,
 				bool                                                                             partial,
-				const bool                                                                       escape
-				) -> match_result<SequenceIterator, PatternIterator>
+				const bool                                                                       escape) -> match_result<SequenceIterator, PatternIterator>
 		{
 			// not a valid pattern
 			if (pattern_begin == pattern_end)
@@ -1083,7 +1078,7 @@ namespace gal::prometheus::inline infrastructure::string
 					comparator,
 					partial);
 		}
-	}
+	}// namespace wildcard_match_detail
 
 	template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator = std::equal_to<>>
 	constexpr auto match(
@@ -1106,8 +1101,7 @@ namespace gal::prometheus::inline infrastructure::string
 						pattern_begin,
 						pattern_end,
 						wildcard,
-						comparator
-						));
+						comparator));
 	}
 
 	template<std::ranges::range Sequence, std::input_iterator PatternIterator, typename Comparator = std::equal_to<>>
@@ -1117,8 +1111,7 @@ namespace gal::prometheus::inline infrastructure::string
 			PatternIterator                                                                       pattern_begin,
 			PatternIterator                                                                       pattern_end,
 			const wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>& wildcard   = wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>{},
-			const Comparator&                                                                     comparator = Comparator{}
-			)
+			const Comparator&                                                                     comparator = Comparator{})
 		-> wildcard_match_detail::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), PatternIterator>
 	{
 		return match(
@@ -1137,8 +1130,7 @@ namespace gal::prometheus::inline infrastructure::string
 			SequenceIterator                                          sequence_end,
 			Pattern&&                                                 pattern,
 			const wildcard_type<std::ranges::range_value_t<Pattern>>& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{},
-			const Comparator&                                         comparator = Comparator{}
-			)
+			const Comparator&                                         comparator = Comparator{})
 		-> wildcard_match_detail::full_match_result<SequenceIterator, decltype(std::ranges::cbegin(std::declval<const Pattern&>()))>
 	{
 		return match(
@@ -1216,8 +1208,7 @@ namespace gal::prometheus::inline infrastructure::string
 		constexpr auto
 		operator()(
 				SequenceIterator sequence_begin,
-				SequenceIterator sequence_end
-				) const -> wildcard_match_detail::full_match_result<SequenceIterator, const_iterator>
+				SequenceIterator sequence_end) const -> wildcard_match_detail::full_match_result<SequenceIterator, const_iterator>
 		{
 			return match(
 					sequence_begin,
@@ -1245,56 +1236,47 @@ namespace gal::prometheus::inline infrastructure::string
 	constexpr auto make_wildcard_matcher(
 			const Pattern&                                       pattern,
 			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{},
-			Comparator                                           comparator = Comparator{}
-			) noexcept(noexcept(WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}))
+			Comparator                                           comparator = Comparator{}) noexcept(noexcept(WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}))
 		-> WildcardMatcher<Pattern, Comparator> { return WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}; }
 
 	template<std::ranges::range Pattern, typename Comparator>
 	[[nodiscard]] constexpr auto make_wildcard_matcher(
 			const Pattern&                                       pattern,
 			Comparator                                           comparator = Comparator{},
-			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{}
-			) noexcept(noexcept(WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}))
+			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{}) noexcept(noexcept(WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}))
 		-> WildcardMatcher<Pattern, Comparator> { return WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}; }
 
 	template<std::ranges::range Pattern>
 	[[nodiscard]] constexpr auto make_wildcard_matcher(
 			const Pattern&                                       pattern,
-			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard = wildcard_type<std::ranges::range_value_t<Pattern>>{}
-			)
-		noexcept(noexcept(WildcardMatcher<Pattern>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard)}))
+			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard = wildcard_type<std::ranges::range_value_t<Pattern>>{}) noexcept(noexcept(WildcardMatcher<Pattern>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard)}))
 		-> WildcardMatcher<Pattern> { return WildcardMatcher<Pattern>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard)}; }
 
 	namespace literals
 	{
 		constexpr auto operator""_wm(
 				const char*       str,
-				const std::size_t size)
-			noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
+				const std::size_t size) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
 			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1})) { return make_wildcard_matcher(std::basic_string_view{str, size + 1}); }
 
 		constexpr auto operator""_wm(
 				const wchar_t*    str,
-				const std::size_t size)
-			noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
+				const std::size_t size) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
 			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1})) { return make_wildcard_matcher(std::basic_string_view{str, size + 1}); }
 
 		constexpr auto operator""_wm(
 				const char8_t*    str,
-				const std::size_t size)
-			noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
+				const std::size_t size) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
 			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1})) { return make_wildcard_matcher(std::basic_string_view{str, size + 1}); }
 
 		constexpr auto operator""_wm(
 				const char16_t*   str,
-				const std::size_t size)
-			noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
+				const std::size_t size) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
 			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1})) { return make_wildcard_matcher(std::basic_string_view{str, size + 1}); }
 
 		constexpr auto operator""_wm(
 				const char32_t*   str,
-				const std::size_t size)
-			noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
+				const std::size_t size) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
 			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1})) { return make_wildcard_matcher(std::basic_string_view{str, size + 1}); }
 	}// namespace literals
 }

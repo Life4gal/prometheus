@@ -1,13 +1,16 @@
-#include <boost/ut.hpp>
-#include <prometheus/infrastructure/aligned_union.hpp>
 #include <prometheus/macro.hpp>
 
-using namespace boost::ut;
-using namespace gal::prometheus;
+import std;
+import gal.prometheus.test;
+import gal.prometheus.infrastructure;
 
 namespace
 {
-	GAL_PROMETHEUS_NO_DESTROY suite test_aligned_union = []
+	using namespace gal::prometheus;
+	using namespace test;
+	using namespace infrastructure;
+
+	GAL_PROMETHEUS_NO_DESTROY suite test_infrastructure_aligned_union = []
 	{
 		"arithmethic"_test = []
 		{

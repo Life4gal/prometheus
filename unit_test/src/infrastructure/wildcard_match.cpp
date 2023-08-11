@@ -1,13 +1,16 @@
-#include <boost/ut.hpp>
 #include <prometheus/macro.hpp>
-#include <prometheus/infrastructure/wildcard_match.hpp>
 
-using namespace boost::ut;
-using namespace gal::prometheus::string;
-using namespace gal::prometheus::string::literals;
+import std;
+import gal.prometheus.test;
+import gal.prometheus.infrastructure;
 
 namespace
 {
+	using namespace gal::prometheus;
+	using namespace test;
+	using namespace infrastructure;
+	using namespace infrastructure::literals;
+
 	struct point
 	{
 		int x;
@@ -28,7 +31,7 @@ namespace
 }
 
 template<>
-struct gal::prometheus::infrastructure::string::wildcard_type<point>
+struct infrastructure::wildcard_type<point>
 {
 	using value_type = point;
 
@@ -49,7 +52,7 @@ struct gal::prometheus::infrastructure::string::wildcard_type<point>
 
 namespace
 {
-	GAL_PROMETHEUS_NO_DESTROY suite test_string_wildcard_match = []
+	GAL_PROMETHEUS_NO_DESTROY suite test_infrastructure_wildcard_match = []
 	{
 		"basic_test"_test = []
 		{
@@ -357,18 +360,18 @@ namespace
 
 			constexpr my_point_container<13> container2 =
 			{{{{10, 1},
-			   {1234, 5678},
-			   {20, 2},
-			   {30, 3},
-			   {1234, 5678},
-			   {1234, 5678},
-			   {1234, 5678},
-			   {1234, 5678},
-			   {1234, 5678},
-			   {40, 4},
-			   {100, 1},
-			   {50, 5},
-			   {60, 6}}}};
+				{1234, 5678},
+				{20, 2},
+				{30, 3},
+				{1234, 5678},
+				{1234, 5678},
+				{1234, 5678},
+				{1234, 5678},
+				{1234, 5678},
+				{40, 4},
+				{100, 1},
+				{50, 5},
+				{60, 6}}}};
 
 			constexpr auto point_compare = [](const point& p1, const point& p2) constexpr -> bool { return p1.x * p1.y == p2.x * p2.y; };
 

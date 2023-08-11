@@ -3,28 +3,21 @@ project(
 		LANGUAGES CXX
 )
 
-file(
-		GLOB_RECURSE
-		${PROJECT_NAME}_SOURCE
-		CONFIGURE_DEPENDS
-
-		src/*.cpp
-)
-
 add_executable(
 		${PROJECT_NAME}
 
-		${${PROJECT_NAME}_SOURCE}
+		${PROJECT_SOURCE_DIR}/src/main.cpp
+
+		# =================================
+		# INFRASTRUCTURE
+		# =================================
+
+		${PROJECT_SOURCE_DIR}/src/infrastructure/cast.cpp
+		${PROJECT_SOURCE_DIR}/src/infrastructure/enum_meta.cpp
+		${PROJECT_SOURCE_DIR}/src/infrastructure/aligned_union.cpp
+		${PROJECT_SOURCE_DIR}/src/infrastructure/function_ref.cpp
+		${PROJECT_SOURCE_DIR}/src/infrastructure/wildcard_match.cpp
 )
-
-target_compile_definitions(
-		${PROJECT_NAME}
-		PUBLIC
-
-		BOOST_UT_DISABLE_MODULE
-)
-
-include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/ut/ut.cmake)
 
 target_link_libraries(
 		${PROJECT_NAME}

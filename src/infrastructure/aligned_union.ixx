@@ -1,23 +1,26 @@
+// This file is part of prometheus
 // Copyright (C) 2022-2023 Life4gal <life4gal@gmail.com>
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
+module;
 
-#include <memory>
-
-#include <prometheus/infrastructure/utility.hpp>
-#include <prometheus/infrastructure/concepts.hpp>
 #include <prometheus/macro.hpp>
 
-namespace gal::prometheus::inline infrastructure
+export module gal.prometheus.infrastructure:aligned_union;
+
+import std;
+import :concepts;
+import :functor;
+
+export namespace gal::prometheus::infrastructure
 {
 	template<typename... Ts>
-		requires (not std::is_reference_v<Ts> && ...)
+		requires(not std::is_reference_v<Ts> && ...)
 	class AlignedUnion final
 	{
 	public:
-		constexpr static std::size_t max_size	   = std::size_t{functor::max(sizeof(Ts)...)};
+		constexpr static std::size_t max_size      = functor::max(sizeof(Ts)...);
 		constexpr static std::size_t max_alignment = functor::max(alignof(Ts)...);
 
 		template<typename T>

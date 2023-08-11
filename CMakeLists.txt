@@ -1,4 +1,16 @@
-﻿cmake_minimum_required(VERSION 3.20)
+﻿cmake_minimum_required(VERSION 3.25)
+
+if (CMAKE_VERSION VERSION_LESS "3.26")
+	# 3.25
+	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "3c375311-a3c9-4396-a187-3227ef642046")
+elseif (CMAKE_VERSION VERSION_LESS "3.27")
+	# 3.26
+	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+else ()
+	message(FATAL_ERROR "See `https://github.com/Kitware/CMake/blob/v${CMAKE_VERSION}/Help/dev/experimental.rst`.")
+endif (CMAKE_VERSION VERSION_LESS "3.26")
+# turn on the dynamic depends for ninja
+set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP ON)
 
 set(PROJECT_NAME_PREFIX "GAL_PROMETHEUS_")
 
@@ -179,59 +191,9 @@ else ()
 	set(${PROJECT_NAME_PREFIX}HEADER_ATTRIBUTES)
 endif (${PROJECT_NAME_PREFIX}SYSTEM_HEADERS)
 
-# HEADER FILES
-set(
-		${PROJECT_NAME_PREFIX}HEADER
-
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/macro.hpp
-
-		# =========================
-		# PLATFORM
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/platform/windows.hpp
-
-		# =========================
-		# DEBUG
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/debug/exception.hpp
-
-		# =========================
-		# INFRASTRUCTURE
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/utility.hpp
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/concepts.hpp
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/aligned_union.hpp
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/wildcard_match.hpp
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/function_ref.hpp
-
-		# traits
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/traits/numeric.hpp
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/traits/object.hpp
-
-		# reflection
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/reflection/enum.hpp
-
-		# cast
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/cast/numeric.hpp
-		${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/infrastructure/cast/object.hpp
-)
-
-# SOURCE FILES
-set(
-		${PROJECT_NAME_PREFIX}SOURCE
-
-		${PROJECT_SOURCE_DIR}/src/debug/exception.cpp
-)
-
 # LIBRARY
 add_library(
 		${PROJECT_NAME}
-
-		${${PROJECT_NAME_PREFIX}HEADER}
-		${${PROJECT_NAME_PREFIX}SOURCE}
 )
 
 # LIBRARY ALIAS
@@ -239,6 +201,134 @@ add_library(
 		gal::${PROJECT_NAME}
 		ALIAS
 		${PROJECT_NAME}
+)
+
+set(${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH ${CMAKE_BINARY_DIR}/temp_module)
+if (${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)
+	if (NOT DEFINED ENV{VCToolsInstallDir})
+		message(FATAL_ERROR "Unable to find path to VC Tools in environment variables!")
+	endif (NOT DEFINED ENV{VCToolsInstallDir})
+
+	if (NOT EXISTS $ENV{VCToolsInstallDir})
+		message(FATAL_ERROR "Invalid VC Tools installation path!")
+	else ()
+		message(STATUS "Found VC Tools in: [$ENV{VCToolsInstallDir}]")
+	endif (NOT EXISTS $ENV{VCToolsInstallDir})
+
+	if (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
+		message(FATAL_ERROR "Cannot find std.ixx! Please check MSVC version(${CMAKE_CXX_COMPILER_VERSION})!")
+	else ()
+		message(STATUS "Found module std.ixx in: [$ENV{VCToolsInstallDir}modules\\std.ixx]")
+	endif (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
+
+	configure_file(
+			$ENV{VCToolsInstallDir}modules/std.ixx
+			${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx
+			COPYONLY
+	)
+
+	set_source_files_properties(
+			${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx
+			PROPERTIES
+			COMPILE_OPTIONS "/Wv:18"
+	)
+elseif (${PROJECT_NAME_PREFIX}PLATFORM_LINUX)
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_clang.cmake
+		string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
+				"${CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS}"
+				" -format=p1689 --p1689-targeted-file-name=<SOURCE> --p1689-targeted-output=<OBJECT> "
+				" --p1689-makeformat-output=<DEP_FILE>"
+				" --"
+				" <DEFINES> <INCLUDES> <FLAGS> -x c++ <SOURCE>"
+				" -MT <DYNDEP_FILE> -MD"
+				" > <DYNDEP_FILE>")
+		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "clang")
+		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "@<MODULE_MAP_FILE>")
+
+		# Default to C++ extensions being off. Clang's modules support have trouble
+		# with extensions right now.
+		set(CMAKE_CXX_EXTENSIONS OFF)
+	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+		# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_gcc.cmake
+		string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
+				"<CMAKE_CXX_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -E -x c++ <SOURCE>"
+				" -MT <DYNDEP_FILE> -MD -MF <DEP_FILE>"
+				" -fmodules-ts -fdep-file=<DYNDEP_FILE> -fdep-output=<OBJECT> -fdep-format=trtbd"
+				" -o <PREPROCESSED_SOURCE>")
+		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "gcc")
+		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "-fmodules-ts -fmodule-mapper=<MODULE_MAP_FILE> -fdep-format=trtbd -x c++")
+	endif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+elseif (${PROJECT_NAME_PREFIX}PLATFORM_MACOS)
+	message(FATAL_ERROR "FIXME: ${CMAKE_CXX_COMPILER}")
+else ()
+	message(FATAL_ERROR "Unsupported compilers: ${CMAKE_CXX_COMPILER}")
+endif (${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)
+
+# MODULE SOURCE
+set(
+		${PROJECT_NAME_PREFIX}MODULE_SOURCE
+	
+		# =========================
+		# TEST
+		# =========================
+	
+		${PROJECT_SOURCE_DIR}/src/test/test.ixx
+	
+		# =========================
+		# INFRASTRUCTURE
+		# =========================
+	
+		${PROJECT_SOURCE_DIR}/src/infrastructure/type_traits.ixx
+	
+		${PROJECT_SOURCE_DIR}/src/infrastructure/runtime_error.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/runtime_error_terminate_message.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/runtime_error_exception.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/runtime_error_error_code.ixx
+		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/infrastructure/runtime_error_impl_win.ixx>
+	
+		${PROJECT_SOURCE_DIR}/src/infrastructure/cast.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/enum_meta.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/functor.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/concepts.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/aligned_union.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/function_ref.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/wildcard_match.ixx
+	
+		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
+)
+
+# HEADER FILES
+set(
+		${PROJECT_NAME_PREFIX}HEADER_SOURCE
+
+		${PROJECT_SOURCE_DIR}/src/prometheus/macro.hpp
+
+		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/prometheus/windows.hpp>
+)
+
+target_sources(
+		${PROJECT_NAME}
+		PRIVATE
+		FILE_SET module_files
+		TYPE CXX_MODULES
+		BASE_DIRS "${PROJECT_SOURCE_DIR}"
+		FILES
+
+		$<$<CXX_COMPILER_ID:MSVC>:${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx>
+	
+		${${PROJECT_NAME_PREFIX}MODULE_SOURCE}
+)
+
+target_sources(
+		${PROJECT_NAME}
+		PUBLIC
+		FILE_SET header_files
+		TYPE HEADERS
+		BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+		FILES
+
+		${${PROJECT_NAME_PREFIX}HEADER_SOURCE}
 )
 
 # SET FLAGS
@@ -281,22 +371,7 @@ target_compile_definitions(
 target_compile_features(
 		${PROJECT_NAME}
 		PUBLIC
-		cxx_std_20
-)
-
-# SET INCLUDE DIRECTORY
-target_include_directories(
-		${PROJECT_NAME}
-		${${PROJECT_NAME_PREFIX}HEADER_ATTRIBUTES}
-		PUBLIC
-		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-		$<INSTALL_INTERFACE:${${PROJECT_NAME_PREFIX}INSTALL_HEADERS}/${PROJECT_NAME}-${PROJECT_VERSION}>
-)
-target_include_directories(
-		${PROJECT_NAME}
-		SYSTEM
-		PRIVATE
-		$<BUILD_INTERFACE:${${PROJECT_NAME_PREFIX}TEMP_HEADER_PATH}>
+		cxx_std_23
 )
 
 # SET DEBUG POSTFIX ==> lib${PROJECT_NAME} -> Release lib${PROJECT}d -> Debug
@@ -310,45 +385,45 @@ set_target_properties(
 		DEBUG_POSTFIX "${${PROJECT_NAME_PREFIX}DEBUG_POSTFIX}")
 
 # INSTALL TARGETS
-if (${PROJECT_NAME_PREFIX}INSTALL)
-	# PackageProject.cmake will be used to make our target installable
-	CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.10.0")
-
-	# the location where the project's version header will be placed should match the project's regular
-	# header paths
-	string(TOLOWER ${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
-
-	packageProject(
-			# the name of the target to export
-			NAME ${PROJECT_NAME}
-			# the version of the target to export
-			VERSION ${PROJECT_VERSION}
-			# (optional) install your library with a namespace (Note: do NOT add extra '::')
-			NAMESPACE ${PROJECT_NAME}
-			# a temporary directory to create the config files
-			BINARY_DIR ${PROJECT_BINARY_DIR}
-			# location of the target's public headers
-			# see target_include_directories -> BUILD_INTERFACE
-			INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
-			# should match the target's INSTALL_INTERFACE include directory
-			# see target_include_directories -> INSTALL_INTERFACE
-			INCLUDE_DESTINATION ${${PROJECT_NAME_PREFIX}INSTALL_HEADERS}/${PROJECT_NAME}-${PROJECT_VERSION}
-			# (optional) create a header containing the version info
-			# Note: that the path to headers should be lowercase
-			VERSION_HEADER "${VERSION_HEADER_LOCATION}"
-			# (optional) define the project's version compatibility, defaults to `AnyNewerVersion`
-			# supported values: `AnyNewerVersion|SameMajorVersion|SameMinorVersion|ExactVersion`
-			COMPATIBILITY AnyNewerVersion
-			# semicolon separated list of the project's dependencies
-			# see `LINK 3rd-PARTY LIBRARIES`
-			DEPENDENCIES ${${PROJECT_NAME_PREFIX}3RD_PARTY_DEPENDENCIES}
-			# (optional) option to disable the versioning of install destinations
-			DISABLE_VERSION_SUFFIX YES
-			# (optional) option to ignore target architecture for package resolution
-			# defaults to YES for header only (i.e. INTERFACE) libraries
-			ARCH_INDEPENDENT YES
-	)
-endif (${PROJECT_NAME_PREFIX}INSTALL)
+#if (${PROJECT_NAME_PREFIX}INSTALL)
+#	# PackageProject.cmake will be used to make our target installable
+#	CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.10.0")
+#
+#	# the location where the project's version header will be placed should match the project's regular
+#	# header paths
+#	string(TOLOWER ${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
+#
+#	packageProject(
+#			# the name of the target to export
+#			NAME ${PROJECT_NAME}
+#			# the version of the target to export
+#			VERSION ${PROJECT_VERSION}
+#			# (optional) install your library with a namespace (Note: do NOT add extra '::')
+#			NAMESPACE ${PROJECT_NAME}
+#			# a temporary directory to create the config files
+#			BINARY_DIR ${PROJECT_BINARY_DIR}
+#			# location of the target's public headers
+#			# see target_include_directories -> BUILD_INTERFACE
+#			INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src
+#			# should match the target's INSTALL_INTERFACE include directory
+#			# see target_include_directories -> INSTALL_INTERFACE
+#			INCLUDE_DESTINATION ${${PROJECT_NAME_PREFIX}INSTALL_HEADERS}/${PROJECT_NAME}-${PROJECT_VERSION}
+#			# (optional) create a header containing the version info
+#			# Note: that the path to headers should be lowercase
+#			VERSION_HEADER "${VERSION_HEADER_LOCATION}"
+#			# (optional) define the project's version compatibility, defaults to `AnyNewerVersion`
+#			# supported values: `AnyNewerVersion|SameMajorVersion|SameMinorVersion|ExactVersion`
+#			COMPATIBILITY AnyNewerVersion
+#			# semicolon separated list of the project's dependencies
+#			# see `LINK 3rd-PARTY LIBRARIES`
+#			DEPENDENCIES ${${PROJECT_NAME_PREFIX}3RD_PARTY_DEPENDENCIES}
+#			# (optional) option to disable the versioning of install destinations
+#			DISABLE_VERSION_SUFFIX YES
+#			# (optional) option to ignore target architecture for package resolution
+#			# defaults to YES for header only (i.e. INTERFACE) libraries
+#			ARCH_INDEPENDENT YES
+#	)
+#endif (${PROJECT_NAME_PREFIX}INSTALL)
 
 # DOCUMENTS
 if (${PROJECT_NAME_PREFIX}DOC)

@@ -1,12 +1,15 @@
-#include <boost/ut.hpp>
 #include <prometheus/macro.hpp>
-#include <prometheus/infrastructure/cast/object.hpp>
 
-using namespace boost::ut;
-using namespace gal::prometheus::cast;
+import std;
+import gal.prometheus.test;
+import gal.prometheus.infrastructure;
 
 namespace
 {
+	using namespace gal::prometheus;
+	using namespace test;
+	using namespace infrastructure;
+
 	class Foo
 	{
 	public:
@@ -27,13 +30,13 @@ namespace
 	public:
 		#if defined(GAL_PROMETHEUS_COMPILER_GNU)
 		// error: two or more data types in declaration of ‘type name’
-		[[nodiscard]] int answer() const noexcept override { return 1337; } // NOLINT
+		[[nodiscard]] int answer() const noexcept override { return 1337; }// NOLINT
 		#else
 		[[nodiscard]] auto answer() const noexcept -> int override { return 1337; }
 		#endif
 	};
 
-	GAL_PROMETHEUS_NO_DESTROY suite test_type_cast_object = []
+	GAL_PROMETHEUS_NO_DESTROY suite test_infrastructure_cast = []
 	{
 		"up_cast_reference"_test = []
 		{
@@ -147,4 +150,4 @@ namespace
 			expect((b2 == nullptr) >> fatal);
 		};
 	};
-}
+}// namespace

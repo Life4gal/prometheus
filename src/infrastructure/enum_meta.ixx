@@ -1,16 +1,19 @@
+// This file is part of prometheus
 // Copyright (C) 2022-2023 Life4gal <life4gal@gmail.com>
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
+module;
 
-#include <type_traits>
-#include <array>
-#include <algorithm>
+#include <prometheus/macro.hpp>
 
-#include <prometheus/debug/exception.hpp>
+export module gal.prometheus.infrastructure:enum_meta;
 
-namespace gal::prometheus::inline infrastructure::reflection
+import std;
+import :runtime_error.terminate_message;
+import :runtime_error.exception;
+
+export namespace gal::prometheus::infrastructure
 {
 	template<typename EnumType, typename NameType>
 		requires std::is_enum_v<EnumType>
@@ -113,22 +116,22 @@ namespace gal::prometheus::inline infrastructure::reflection
 
 		[[nodiscard]] constexpr auto contiguous() const noexcept -> bool { return contiguous_; }
 
-		/** Check if the enum has a value.
-	     *
+		/** 
+	     * @brief Check if the enum has a value.
 	     * @param e The value to lookup for the enum.
 	     * @return True if the value is found.
 	     */
 		[[nodiscard]] constexpr auto contains(const value_type e) const noexcept -> bool { return this->find(e) != nullptr; }
 
-		/** Check if the enum has a name.
-	     *
+		/** 
+	     * @brief Check if the enum has a name.
 	     * @param name The name to lookup in the enum.
 	     * @return True if the name is found.
 	     */
 		[[nodiscard]] constexpr auto contains(const name_type& name) const noexcept -> bool { return this->find(name); }
 
-		/** Check if the enum has a name.
-	     *
+		/** 
+	     * @brief Check if the enum has a name.
 	     * @param name The name to lookup in the enum.
 	     * @return True if the name is found.
 	     */
@@ -141,8 +144,8 @@ namespace gal::prometheus::inline infrastructure::reflection
 			}
 		[[nodiscard]] constexpr auto contains(const Name& name) const noexcept -> bool { return this->find(name) != nullptr; }
 
-		/** Check if the enum has a name.
-	     *
+		/** 
+	     * @brief Check if the enum has a name.
 	     * @param name The name to lookup in the enum.
 	     * @return True if the name is found.
 	     */
@@ -152,22 +155,22 @@ namespace gal::prometheus::inline infrastructure::reflection
 			return this->contains(n);
 		}
 
-		/** Get a name from an enum-value.
-	     *
+		/** 
+	     * @brief Get a name from an enum-value.
 	     * @param e The enum value to lookup.
 	     * @return The name belonging with the enum value.
-	     * @throws std::out_of_range When the value does not exist.
+	     * @throws OutOfRangeError When the value does not exist.
 	     */
 		[[nodiscard]] constexpr auto at(const value_type e) const -> const name_type&
 		{
 			if (auto* it = this->find(e);
 				it != nullptr) { return *it; }
 
-			throw std::out_of_range{"EnumMeta::at"};
+			throw OutOfRangeError{"EnumMeta::at"};
 		}
 
-		/** Get a name from an enum-value.
-	     *
+		/** 
+	     * @brief Get a name from an enum-value.
 	     * @param e The enum value to lookup.
 	     * @param default_name The default name to return when value is not found.
 	     * @return The name belonging with the enum value.
@@ -180,25 +183,25 @@ namespace gal::prometheus::inline infrastructure::reflection
 			return default_name;
 		}
 
-		/** Get an enum-value from a name.
-	     *
+		/** 
+	     * @brief Get an enum-value from a name.
 	     * @param name The name to lookup in the enum.
 	     * @return The enum-value belonging with the name.
-	     * @throws std::out_of_range When the name does not exist.
+	     * @throws OutOfRangeError When the name does not exist.
 	     */
 		[[nodiscard]] constexpr auto at(const name_type& name) const -> value_type
 		{
 			if (auto* it = this->find(name);
 				it != nullptr) { return *it; }
 
-			throw std::out_of_range{"EnumMeta::at"};
+			throw OutOfRangeError{"EnumMeta::at"};
 		}
 
-		/** Get an enum-value from a name.
-	     *
+		/** 
+	     * @brief Get an enum-value from a name.
 	     * @param name The name to lookup in the enum.
 	     * @return The enum-value belonging with the name.
-	     * @throws std::out_of_range When the name does not exist.
+	     * @throws OutOfRangeError When the name does not exist.
 	     */
 		template<typename Name>
 			requires requires(const name_type& lhs, const Name& rhs)
@@ -212,23 +215,25 @@ namespace gal::prometheus::inline infrastructure::reflection
 			if (auto* it = this->find(name);
 				it != nullptr) { return *it; }
 
-			throw std::out_of_range{"EnumMeta::at"};
+			throw OutOfRangeError{"EnumMeta::at"};
 		}
 
-		/** Get an enum-value from a name.
-	     *
+		/** 
+	     * @brief Get an enum-value from a name.
 	     * @param name The name to lookup in the enum.
 	     * @return The enum-value belonging with the name.
-	     * @throws std::out_of_range When the name does not exist.
+	     * @throws OutOfRangeError When the name does not exist.
 	     */
-		[[nodiscard]] constexpr auto at(std::convertible_to<name_type> auto&& name) const -> value_type
+		template<typename Name>
+			requires std::is_constructible_v<name_type, Name>
+		[[nodiscard]] constexpr auto at(Name&& name) const -> value_type
 		{
-			const name_type n{std::forward<decltype(name)>(name)};
+			const name_type n{std::forward<Name>(name)};
 			return this->at(n);
 		}
 
-		/** Get an enum-value from a name.
-	     *
+		/** 
+	     * @brief Get an enum-value from a name.
 	     * @param name The name to lookup in the enum.
 	     * @param default_value The default value to return when the name is not found.
 	     * @return The enum-value belonging with the name.
@@ -241,8 +246,8 @@ namespace gal::prometheus::inline infrastructure::reflection
 			return default_value;
 		}
 
-		/** Get an enum-value from a name.
-	     *
+		/** 
+	     * @brief Get an enum-value from a name.
 	     * @param name The name to lookup in the enum.
 	     * @param default_value The default value to return when the name is not found.
 	     * @return The enum-value belonging with the name.
@@ -262,20 +267,22 @@ namespace gal::prometheus::inline infrastructure::reflection
 			return default_value;
 		}
 
-		/** Get an enum-value from a name.
-	     *
+		/** 
+	     * @brief Get an enum-value from a name.
 	     * @param name The name to lookup in the enum.
 	     * @param default_value The default value to return when the name is not found.
 	     * @return The enum-value belonging with the name.
 	     */
-		[[nodiscard]] constexpr auto at(std::convertible_to<name_type> auto&& name, const value_type default_value) const -> value_type
+		template<typename Name>
+			requires std::is_constructible_v<name_type, Name>
+		[[nodiscard]] constexpr auto at(Name&& name, const value_type default_value) const noexcept(std::is_nothrow_constructible_v<name_type, Name>) -> value_type
 		{
-			const name_type n{std::forward<decltype(name)>(name)};
+			const name_type n{std::forward<Name>(name)};
 			return this->at(n, default_value);
 		}
 
-		/** Get a name from an enum-value.
-	     *
+		/** 
+	     * @brief Get a name from an enum-value.
 	     * @note It is undefined-behavior to lookup a value that does not exist in the table.
 	     * @param e The enum value to lookup.
 	     * @return The name belonging with the enum value.
@@ -287,8 +294,8 @@ namespace gal::prometheus::inline infrastructure::reflection
 			return *it;
 		}
 
-		/** Get an enum-value from a name.
-	     *
+		/** 
+	     * @brief Get an enum-value from a name.
 	     * @note It is undefined-behavior to lookup a name that does not exist in the table.
 	     * @param name The name to lookup in the enum.
 	     * @return The enum-value belonging with the name.
@@ -300,8 +307,8 @@ namespace gal::prometheus::inline infrastructure::reflection
 			return *it;
 		}
 
-		/** Get an enum-value from a name.
-	     *
+		/** 
+	     * @brief Get an enum-value from a name.
 	     * @note It is undefined-behavior to lookup a name that does not exist in the table.
 	     * @param name The name to lookup in the enum.
 	     * @return The enum-value belonging with the name.
@@ -320,15 +327,17 @@ namespace gal::prometheus::inline infrastructure::reflection
 			return *it;
 		}
 
-		/** Get an enum-value from a name.
-	     *
+		/** 
+	     * @brief Get an enum-value from a name.
 	     * @note It is undefined-behavior to lookup a name that does not exist in the table.
 	     * @param name The name to lookup in the enum.
 	     * @return The enum-value belonging with the name.
 	     */
-		[[nodiscard]] constexpr auto operator[](std::convertible_to<name_type> auto&& name) const -> value_type
+		template<typename Name>
+			requires std::is_constructible_v<Name, name_type>
+		[[nodiscard]] constexpr auto operator[](Name&& name) const noexcept(std::is_nothrow_constructible_v<name_type, Name>) -> value_type
 		{
-			const name_type n{std::forward<decltype(name)>(name)};
+			const name_type n{std::forward<Name>(name)};
 			return this->operator[](n);
 		}
 	};
@@ -352,13 +361,13 @@ namespace gal::prometheus::inline infrastructure::reflection
 	};
 
 	template<std::size_t N>
-	struct enum_meta_name<char [N]>
+	struct enum_meta_name<char[N]>
 	{
 		using type = std::basic_string_view<char>;
 	};
 
 	template<std::size_t N>
-	struct enum_meta_name<const char [N]>
+	struct enum_meta_name<const char[N]>
 	{
 		using type = std::basic_string_view<char>;
 	};
@@ -376,13 +385,13 @@ namespace gal::prometheus::inline infrastructure::reflection
 	};
 
 	template<std::size_t N>
-	struct enum_meta_name<char8_t [N]>
+	struct enum_meta_name<char8_t[N]>
 	{
 		using type = std::basic_string_view<char8_t>;
 	};
 
 	template<std::size_t N>
-	struct enum_meta_name<const char8_t [N]>
+	struct enum_meta_name<const char8_t[N]>
 	{
 		using type = std::basic_string_view<char8_t>;
 	};
@@ -400,13 +409,13 @@ namespace gal::prometheus::inline infrastructure::reflection
 	};
 
 	template<std::size_t N>
-	struct enum_meta_name<char16_t [N]>
+	struct enum_meta_name<char16_t[N]>
 	{
 		using type = std::basic_string_view<char16_t>;
 	};
 
 	template<std::size_t N>
-	struct enum_meta_name<const char16_t [N]>
+	struct enum_meta_name<const char16_t[N]>
 	{
 		using type = std::basic_string_view<char16_t>;
 	};
@@ -424,13 +433,13 @@ namespace gal::prometheus::inline infrastructure::reflection
 	};
 
 	template<std::size_t N>
-	struct enum_meta_name<char32_t [N]>
+	struct enum_meta_name<char32_t[N]>
 	{
 		using type = std::basic_string_view<char32_t>;
 	};
 
 	template<std::size_t N>
-	struct enum_meta_name<const char32_t [N]>
+	struct enum_meta_name<const char32_t[N]>
 	{
 		using type = std::basic_string_view<char32_t>;
 	};
@@ -448,13 +457,13 @@ namespace gal::prometheus::inline infrastructure::reflection
 	};
 
 	template<std::size_t N>
-	struct enum_meta_name<wchar_t [N]>
+	struct enum_meta_name<wchar_t[N]>
 	{
 		using type = std::basic_string_view<wchar_t>;
 	};
 
 	template<std::size_t N>
-	struct enum_meta_name<const wchar_t [N]>
+	struct enum_meta_name<const wchar_t[N]>
 	{
 		using type = std::basic_string_view<wchar_t>;
 	};
@@ -466,5 +475,6 @@ namespace gal::prometheus::inline infrastructure::reflection
 	enum_meta_data(const EnumType&, const NameType&) -> enum_meta_data<EnumType, enum_meta_name_type<NameType>>;
 
 	template<typename EnumType, typename NameType, typename... Reset>
+	// ReSharper disable once CppInconsistentNaming
 	EnumMeta(const EnumType&, const NameType&, const Reset&...) -> EnumMeta<EnumType, enum_meta_name_type<NameType>, (sizeof...(Reset) + 2) / 2>;
 }
