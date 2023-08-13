@@ -17,6 +17,7 @@ add_executable(
 		${PROJECT_SOURCE_DIR}/src/infrastructure/aligned_union.cpp
 		${PROJECT_SOURCE_DIR}/src/infrastructure/function_ref.cpp
 		${PROJECT_SOURCE_DIR}/src/infrastructure/wildcard_match.cpp
+		${PROJECT_SOURCE_DIR}/src/infrastructure/plane.cpp
 )
 
 target_link_libraries(
