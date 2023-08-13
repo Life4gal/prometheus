@@ -14,5 +14,6 @@ export import :concepts;
 export import :aligned_union;
 export import :function_ref;
 export import :wildcard_match;
+export import :plane;
 
 export namespace gal::prometheus::infrastructure {}
