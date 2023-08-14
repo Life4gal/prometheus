@@ -5,18 +5,29 @@
 
 #pragma once
 
-#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-#define GAL_PROMETHEUS_UNREACHABLE() __assume(0)
-#define GAL_PROMETHEUS_DEBUG_TRAP() __debugbreak()
-#define GAL_PROMETHEUS_IMPORTED_SYMBOL __declspec(dllimport)
-#define GAL_PROMETHEUS_EXPORTED_SYMBOL __declspec(dllexport)
-#define GAL_PROMETHEUS_LOCAL_SYMBOL
+// fixme: std::unreachable() / [[assume]]
 
-#define GAL_PROMETHEUS_DISABLE_WARNING_PUSH __pragma(warning(push))
-#define GAL_PROMETHEUS_DISABLE_WARNING_POP __pragma(warning(pop))
-#define GAL_PROMETHEUS_DISABLE_WARNING(warningNumber) __pragma(warning(disable \
-																		   : warningNumber))
+#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+	#define GAL_PROMETHEUS_ASSUME(condition) __assume(condition)
+	#define GAL_PROMETHEUS_UNREACHABLE() GAL_PROMETHEUS_ASSUME(0)
+	#define GAL_PROMETHEUS_DEBUG_TRAP() __debugbreak()
+	#define GAL_PROMETHEUS_IMPORTED_SYMBOL __declspec(dllimport)
+	#define GAL_PROMETHEUS_EXPORTED_SYMBOL __declspec(dllexport)
+	#define GAL_PROMETHEUS_LOCAL_SYMBOL
+
+	#define GAL_PROMETHEUS_DISABLE_WARNING_PUSH __pragma(warning(push))
+	#define GAL_PROMETHEUS_DISABLE_WARNING_POP __pragma(warning(pop))
+	#define GAL_PROMETHEUS_DISABLE_WARNING(warningNumber) __pragma(warning(disable \
+																			   : warningNumber))
 #elif defined(GAL_PROMETHEUS_COMPILER_GNU)
+	#define GAL_PROMETHEUS_ASSUME(condition) \
+		do \
+		{ \
+			if (not(condition)) \
+			{ \
+				GAL_PROMETHEUS_UNREACHABLE(); \
+			} \
+		} while (false)
 	#define GAL_PROMETHEUS_UNREACHABLE() __builtin_unreachable()
 	#define GAL_PROMETHEUS_DEBUG_TRAP() __builtin_trap()
 	#define GAL_PROMETHEUS_IMPORTED_SYMBOL __attribute__((visibility("default")))
@@ -29,6 +40,7 @@
 	#define GAL_PROMETHEUS_PRIVATE_DO_PRAGMA(X) _Pragma(#X)
 	#define GAL_PROMETHEUS_DISABLE_WARNING(warningName) GAL_PROMETHEUS_PRIVATE_DO_PRAGMA(GCC diagnostic ignored #warningName)
 #elif defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) || defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) || defined(GAL_PROMETHEUS_COMPILER_CLANG)
+	#define GAL_PROMETHEUS_ASSUME(condition) __builtin_assume(not not(condition))
 	#define GAL_PROMETHEUS_UNREACHABLE() __builtin_unreachable()
 	#define GAL_PROMETHEUS_DEBUG_TRAP() __builtin_trap()
 	#define GAL_PROMETHEUS_IMPORTED_SYMBOL __attribute__((visibility("default")))
@@ -160,46 +172,51 @@
 #define GAL_PROMETHEUS_TO_STRING(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_DO_NOT_USE_TO_STRING_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(__VA_ARGS__)
 
 // =========================
-// MODULE: gal.infrastructure:exception
+// MODULE: gal.prometheus.infrastructure:exception
 // =========================
 
-#define GAL_PROMETHEUS_DEBUG_SET_TERMINATE_REASON(...) \
-	::gal::prometheus::infrastructure::g_terminate_reason.store("[" __FILE__ ":" GAL_PROMETHEUS_TO_STRING(__LINE__) "] -> " __VA_ARGS__, std::memory_order::relaxed)
+// fixme
+#if defined(NDEBUG)
+	#define GAL_PROMETHEUS_DEBUG 0
+#else
+	#define GAL_PROMETHEUS_DEBUG 1
+#endif
 
-#define GAL_PROMETHEUS_DEBUG_ASSERT(expression, ...)                                                                                          \
-	do {                                                                                                                                      \
-		if (not std::is_constant_evaluated()) \
-		{ \
-			if (not static_cast<bool>(expression))                                                                                                \
-			{                                                                                                                                     \
-				GAL_PROMETHEUS_DEBUG_SET_TERMINATE_REASON("[ASSERT FAILED]: \"" __VA_ARGS__ "\" --> {" GAL_PROMETHEUS_TO_STRING(expression) "}"); \
-				GAL_PROMETHEUS_DEBUG_TRAP();                                                                                                      \
-			}                                                                                                                                     \
-		} \
-	} while (false)
+#define GAL_PROMETHEUS_DEBUG_CALL_DEBUGGER_OR_TERMINATE(message) try_debug_or_terminate("[" __FILE__ ":" GAL_PROMETHEUS_TO_STRING(__LINE__) "] -> " message)
 
-#define GAL_PROMETHEUS_DEBUG_ASSUME(expression, ...) GAL_PROMETHEUS_DEBUG_ASSERT(expression __VA_OPT__(, ) __VA_ARGS__)
+#define GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK(debug_type, expression, ...) \
+	do {                                                                                                                                                \
+			if (not std::is_constant_evaluated())                                                                                                           \
+			{                                                                                                                                               \
+				if (not static_cast<bool>(expression))                                                                                                      \
+				{                                                                                                                                           \
+					GAL_PROMETHEUS_DEBUG_CALL_DEBUGGER_OR_TERMINATE("[" debug_type "]: \"" __VA_ARGS__ "\" --> {" GAL_PROMETHEUS_TO_STRING(expression) "}"); \
+					GAL_PROMETHEUS_DEBUG_TRAP();                                                                                                            \
+				}                                                                                                                                           \
+			}                                                                                                                                               \
+		} while (false)
 
-#define GAL_PROMETHEUS_DEBUG_NOT_NULL(pointer, ...)                                                                                          \
-	do {                                                                                                                                     \
-		if (not std::is_constant_evaluated())                                                                                                   \
-		{                                                                                                                                        \
-			if (pointer == nullptr)                                                                                                              \
-			{                                                                                                                                    \
-				GAL_PROMETHEUS_DEBUG_SET_TERMINATE_REASON("[NOT-NULL FAILED]: \"" __VA_ARGS__ "\" --> {" GAL_PROMETHEUS_TO_STRING(pointer) "}"); \
-				GAL_PROMETHEUS_DEBUG_TRAP();                                                                                                     \
-			}                                                                                                                                    \
-		}\
-	} while (false)
+#if GAL_PROMETHEUS_DEBUG
+	#define GAL_PROMETHEUS_DEBUG_ASSUME(expression, ...) GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK("ASSUME-CHECK", expression __VA_OPT__(, ) __VA_ARGS__)
+#else
+	#define GAL_PROMETHEUS_DEBUG_ASSUME(expression, ...) GAL_PROMETHEUS_ASSUME(expression)
+#endif
 
-#define GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED(...)                                        \
-	do {                                                                                                                                         \
-		if (not std::is_constant_evaluated())                                                                                                    \
-		{                                                                                                                                        \
-			if (pointer == nullptr)                                                                                                              \
-			{                                                                                                                                    \
-				GAL_PROMETHEUS_DEBUG_SET_TERMINATE_REASON("[NOT IMPLEMENTED]: \"" __VA_ARGS__ "\""); \
-				GAL_PROMETHEUS_DEBUG_TRAP();                                                                                                     \
-			}                                                                                                                                    \
-		}                                                                                                                                        \
-	} while (false)
+#if GAL_PROMETHEUS_DEBUG
+	#define GAL_PROMETHEUS_DEBUG_NOT_NULL(pointer, ...) GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK("NOT-NULL-CHECK", pointer != nullptr __VA_OPT__(, ) __VA_ARGS__)
+#else
+	#define GAL_PROMETHEUS_DEBUG_NOT_NULL(pointer, ...) GAL_PROMETHEUS_ASSUME(pointer != nullptr)
+#endif
+
+#if GAL_PROMETHEUS_DEBUG
+	#define GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED(...) GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK("NOT-IMPLEMENTED", 0 __VA_OPT__(, )__VA_ARGS__);
+#else
+	#define GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED(...) GAL_PROMETHEUS_UNREACHABLE()
+#endif
+
+#if GAL_PROMETHEUS_DEBUG
+	#define GAL_PROMETHEUS_DEBUG_UNREACHABLE(...) GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK("UNRECHABLE-CHECK", 0 __VA_OPT__(, ) __VA_ARGS__)
+#else
+	#define GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED(...) GAL_PROMETHEUS_UNREACHABLE()
+#endif
+
