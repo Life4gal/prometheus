@@ -6,6 +6,7 @@
 export module gal.prometheus.coroutine;
 
 export import :task;
+export import :generator;
 
 export namespace gal::prometheus::coroutine
 {
