@@ -327,6 +327,14 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/infrastructure/plane.ixx
 	
 		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
+
+		# =========================
+		# COROUTINE
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/coroutine/task.ixx
+
+		${PROJECT_SOURCE_DIR}/src/coroutine/coroutine.ixx
 )
 
 target_sources(
