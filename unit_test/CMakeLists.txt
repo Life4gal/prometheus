@@ -24,6 +24,7 @@ add_executable(
 		# =================================
 
 		${PROJECT_SOURCE_DIR}/src/coroutine/task.cpp
+		${PROJECT_SOURCE_DIR}/src/coroutine/generator.cpp
 )
 
 target_link_libraries(
