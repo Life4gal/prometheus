@@ -12,8 +12,6 @@ namespace gal::prometheus::coroutine
 	export
 	{
 		template<typename ReturnType>
-		class Promise;
-		template<typename ReturnType>
 		class Task;
 	}
 
@@ -48,69 +46,66 @@ namespace gal::prometheus::coroutine
 		auto result() -> void;
 	};
 
-	export
+	template<typename ReturnType>
+	class TaskPromise final : public P<ReturnType>
 	{
-		template<typename ReturnType>
-		class Promise final : public P<ReturnType>
+		friend P<ReturnType>;
+
+	public:
+		using return_type = ReturnType;
+		using task_type = Task<return_type>;
+		using promise_type = TaskPromise;
+		using coroutine_handle = std::coroutine_handle<promise_type>;
+		using continuation_type = std::coroutine_handle<>;
+
+		struct awaitable
 		{
-			friend P<ReturnType>;
-
-		public:
-			using return_type = ReturnType;
-			using task_type = Task<return_type>;
-			using promise_type = Promise;
-			using coroutine_handle = std::coroutine_handle<promise_type>;
-			using continuation_type = std::coroutine_handle<>;
-
-			struct awaitable
-			{
-				[[nodiscard]] constexpr auto await_ready() const noexcept -> bool
-				{
-					(void)this;
-					return false;
-				}
-
-				template<typename PromiseType>
-				[[nodiscard]] constexpr auto await_suspend(std::coroutine_handle<PromiseType> coroutine) noexcept -> continuation_type
-				{
-					auto& promise = coroutine.promise();
-					return promise.continuation_ ? promise.continuation_ : std::noop_coroutine();
-				}
-
-				constexpr auto await_resume() const noexcept -> void { (void)this; }
-			};
-
-		private:
-			continuation_type  continuation_{nullptr};
-			std::exception_ptr exception_{nullptr};
-
-		public:
-			[[nodiscard]] constexpr auto initial_suspend() const noexcept -> std::suspend_always
+			[[nodiscard]] constexpr auto await_ready() const noexcept -> bool
 			{
 				(void)this;
-				return {};
+				return false;
 			}
 
-			[[nodiscard]] constexpr auto final_suspend() noexcept -> awaitable
+			template<typename PromiseType>
+			[[nodiscard]] constexpr auto await_suspend(std::coroutine_handle<PromiseType> coroutine) noexcept -> continuation_type
 			{
-				(void)this;
-				return {};
+				auto& promise = coroutine.promise();
+				return promise.continuation_ ? promise.continuation_ : std::noop_coroutine();
 			}
 
-			[[nodiscard]] constexpr auto get_return_object() noexcept -> task_type { return task_type{coroutine_handle::from_promise(*this)}; }
-
-			constexpr auto unhandled_exception() noexcept -> void { exception_ = std::current_exception(); }
-
-			constexpr auto continuation(const continuation_type continuation) noexcept -> void { continuation_ = continuation; }
-
-			[[nodiscard]] constexpr auto has_exception() const noexcept -> bool { return exception_.operator bool(); }
+			constexpr auto await_resume() const noexcept -> void { (void)this; }
 		};
-	}
+
+	private:
+		continuation_type  continuation_{nullptr};
+		std::exception_ptr exception_{nullptr};
+
+	public:
+		[[nodiscard]] constexpr auto initial_suspend() const noexcept -> std::suspend_always
+		{
+			(void)this;
+			return {};
+		}
+
+		[[nodiscard]] constexpr auto final_suspend() noexcept -> awaitable
+		{
+			(void)this;
+			return {};
+		}
+
+		[[nodiscard]] constexpr auto get_return_object() noexcept -> task_type { return task_type{coroutine_handle::from_promise(*this)}; }
+
+		constexpr auto unhandled_exception() noexcept -> void { exception_ = std::current_exception(); }
+
+		constexpr auto continuation(const continuation_type continuation) noexcept -> void { continuation_ = continuation; }
+
+		[[nodiscard]] constexpr auto has_exception() const noexcept -> bool { return exception_.operator bool(); }
+	};
 
 	template<typename ReturnType>
 	constexpr auto P<ReturnType>::result() & -> ReturnType&
 	{
-		if (auto& self = *static_cast<const Promise<ReturnType>*>(this);
+		if (auto& self = *static_cast<const TaskPromise<ReturnType>*>(this);
 			self.exception_) { std::rethrow_exception(self.exception_); }
 		return value_;
 	}
@@ -118,7 +113,7 @@ namespace gal::prometheus::coroutine
 	template<typename ReturnType>
 	constexpr auto P<ReturnType>::result() && -> ReturnType&&
 	{
-		if (auto& self = *static_cast<Promise<ReturnType>*>(this);
+		if (auto& self = *static_cast<TaskPromise<ReturnType>*>(this);
 			self.exception_) { std::rethrow_exception(self.exception_); }
 		return std::move(value_);
 	}
@@ -126,7 +121,7 @@ namespace gal::prometheus::coroutine
 	/* constexpr */
 	inline auto P<void>::result() -> void
 	{
-		if (const auto& self = *static_cast<Promise<void>*>(this);// NOLINT
+		if (const auto& self = *static_cast<TaskPromise<void>*>(this);// NOLINT
 			self.exception_) { std::rethrow_exception(self.exception_); }
 	}
 
@@ -136,7 +131,7 @@ namespace gal::prometheus::coroutine
 		class [[nodiscard]] Task final
 		{
 		public:
-			using promise_type = Promise<ReturnType>;
+			using promise_type = TaskPromise<ReturnType>;
 			using task_type = Task;
 
 			using return_type = typename promise_type::return_type;
@@ -226,4 +221,4 @@ namespace gal::prometheus::coroutine
 			constexpr auto operator co_await() && noexcept -> awaitable { return {.coroutine = coroutine_}; }
 		};
 	}
-}
+}// namespace gal::prometheus::coroutine

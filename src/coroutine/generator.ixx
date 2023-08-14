@@ -17,7 +17,7 @@ namespace gal::prometheus::coroutine
 	}
 
 	template<typename ReturnType>
-	class Promise final
+	class GeneratorPromise final
 	{
 	public:
 		using return_type = ReturnType;
@@ -25,7 +25,7 @@ namespace gal::prometheus::coroutine
 
 		using generator_type = Generator<return_type>;
 
-		using promise_type = Promise;
+		using promise_type = GeneratorPromise;
 		using coroutine_handle = std::coroutine_handle<promise_type>;
 
 	private:
@@ -102,7 +102,7 @@ namespace gal::prometheus::coroutine
 		using reference = typename generator_type::reference;
 
 	private:
-		using promise_type = Promise<value_type>;
+		using promise_type = GeneratorPromise<value_type>;
 		using coroutine_handle = typename promise_type::coroutine_handle;
 
 		coroutine_handle coroutine_;
@@ -147,7 +147,7 @@ namespace gal::prometheus::coroutine
 			using reference = std::add_lvalue_reference_t<return_type>;
 			using iterator = Iterator<Generator<return_type>>;
 
-			using promise_type = Promise<return_type>;
+			using promise_type = GeneratorPromise<return_type>;
 			using coroutine_handle = typename promise_type::coroutine_handle;
 
 		private:
@@ -194,4 +194,4 @@ namespace gal::prometheus::coroutine
 			}
 		};
 	}
-}
+}// namespace gal::prometheus::coroutine
