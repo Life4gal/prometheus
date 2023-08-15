@@ -325,6 +325,7 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/infrastructure/function_ref.ixx
 		${PROJECT_SOURCE_DIR}/src/infrastructure/wildcard_match.ixx
 		${PROJECT_SOURCE_DIR}/src/infrastructure/plane.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/string.ixx
 	
 		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
 
