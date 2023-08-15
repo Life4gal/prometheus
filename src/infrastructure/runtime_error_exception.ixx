@@ -50,4 +50,13 @@ export namespace gal::prometheus::infrastructure
 	public:
 		using RuntimeError::RuntimeError;
 	};
+
+	/**
+	 * @brief Exception thrown during string parsing on an error.
+	 */
+	class StringParseError final : public RuntimeError
+	{
+	public:
+		using RuntimeError::RuntimeError;
+	};
 }// namespace gal::prometheus::infrastructure
