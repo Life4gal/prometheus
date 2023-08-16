@@ -49,11 +49,11 @@ namespace gal::prometheus::infrastructure
 			[[nodiscard]] constexpr auto operator()(element lhs, const value_type rhs) noexcept(noexcept(lhs == rhs)) -> bool { return lhs == rhs; }
 		};
 
-		[[nodiscard]] constexpr explicit(false) operator std::basic_string_view<value_type>() const noexcept { return std::basic_string_view<value_type>{derived_type::value, derived_type::size}; }
+		[[nodiscard]] constexpr explicit(false) operator std::basic_string_view<value_type>() const noexcept { return std::basic_string_view<value_type>{static_cast<const derived_type&>(*this).value, static_cast<const derived_type&>(*this).size}; }
 
 		[[nodiscard]] constexpr static auto as_string_view() noexcept -> std::basic_string_view<value_type> { return std::basic_string_view<value_type>{derived_type::value, derived_type::size}; }
 
-		[[nodiscard]] constexpr explicit operator std::basic_string<value_type>() const noexcept { return std::basic_string<value_type>{derived_type::value, derived_type::size}; }
+		[[nodiscard]] constexpr explicit operator std::basic_string<value_type>() const noexcept { return std::basic_string<value_type>{static_cast<const derived_type&>(*this).value, static_cast<const derived_type&>(*this).size}; }
 
 		[[nodiscard]] constexpr static auto as_string() noexcept -> std::basic_string<value_type> { return std::basic_string<value_type>{derived_type::value, derived_type::size}; }
 
