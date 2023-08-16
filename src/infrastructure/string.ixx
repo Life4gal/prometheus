@@ -627,6 +627,18 @@ namespace gal::prometheus::infrastructure
 	// basic_fixed_string
 	export
 	{
+		template<typename T>
+		using basic_fixed_string_view = std::basic_string_view<T>;
+
+		template<typename T, std::size_t N>
+		struct basic_fixed_string;
+
+		template<typename>
+		struct is_fixed_string : std::false_type {};
+
+		template<typename T, std::size_t N>
+		struct is_fixed_string<basic_fixed_string<T, N>> : std::true_type {};
+
 		template<typename T, std::size_t N>
 		struct basic_fixed_string : string_base<basic_fixed_string<T, N>, T, std::size_t>
 		{
@@ -636,13 +648,42 @@ namespace gal::prometheus::infrastructure
 			using iterator = const value_type*;
 			using const_iterator = const value_type*;
 
-			constexpr static size_type  max_size{N};
-			constexpr static size_type  size{max_size};
-			constexpr static value_type value[max_size]{};
-		};
+			constexpr static size_type max_size{N};
+			constexpr static size_type size{max_size};
 
-		template<typename T>
-		using basic_fixed_string_view = std::basic_string_view<T>;
+			value_type value[max_size];
+
+			constexpr basic_fixed_string() noexcept
+				: value{} {}
+
+			template<std::size_t M>
+			constexpr explicit(false) basic_fixed_string(const value_type (&string)[M]) noexcept
+				requires (M >= N) { std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + N, value); }
+
+			constexpr explicit(false) operator basic_fixed_string_view<value_type>() const noexcept { return basic_fixed_string_view<value_type>{value, size}; }
+
+			template<size_type L, size_type R>
+			friend constexpr auto operator==(const basic_fixed_string<value_type, L>& lhs, const basic_fixed_string<value_type, R>& rhs) noexcept -> bool { return lhs.operator basic_fixed_string_view<value_type>() == rhs.operator basic_fixed_string_view<value_type>(); }
+
+			template<typename String>
+				requires (not is_fixed_string<String>::value) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
+			friend constexpr auto operator==(const basic_fixed_string& lhs, const String& rhs) noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> bool { return lhs.operator basic_fixed_string_view<value_type>() == basic_fixed_string_view<value_type>{rhs}; }
+
+			template<typename String>
+				requires (not is_fixed_string<String>::value) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
+			friend constexpr auto operator==(const String& lhs, const basic_fixed_string& rhs) noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> bool { return basic_fixed_string_view<value_type>{lhs} == rhs.operator basic_fixed_string_view<value_type>(); }
+
+			template<size_type L, size_type R>
+			friend constexpr auto operator<=>(const basic_fixed_string<value_type, L>& lhs, const basic_fixed_string<value_type, R>& rhs) noexcept -> auto { return lhs.operator basic_fixed_string_view<value_type>() <=> rhs.operator basic_fixed_string_view<value_type>(); }
+
+			template<typename String>
+				requires (not is_fixed_string<String>::value) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
+			friend constexpr auto operator<=>(const basic_fixed_string& lhs, const String& rhs) noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> auto { return lhs.operator basic_fixed_string_view<value_type>() <=> basic_fixed_string_view<value_type>{rhs}; }
+
+			template<typename String>
+				requires (not is_fixed_string<String>::value) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
+			friend constexpr auto operator<=>(const String& lhs, const basic_fixed_string& rhs) noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> auto { return basic_fixed_string_view<value_type>{lhs} <=> rhs.operator basic_fixed_string_view<value_type>(); }
+		};
 
 		template<typename, typename>
 		struct basic_bilateral_fixed_string;
@@ -666,18 +707,16 @@ namespace gal::prometheus::infrastructure
 			using iterator = typename left_type::iterator;
 			using const_iterator = typename left_type::const_iterator;
 
-			constexpr static size_type left_max_size  = left_type::template max_size;
-			constexpr static size_type left_size      = left_type::template size;
-			constexpr static size_type right_max_size = right_type::template max_size;
-			constexpr static size_type right_size     = right_type::template size;
+			left_type  left_value;
+			right_type right_value;
 
-			[[nodiscard]] constexpr static const_iterator left_begin() noexcept { return left_type::template begin(); }
+			[[nodiscard]] constexpr const_iterator left_begin() noexcept { return left_value.begin(); }
 
-			[[nodiscard]] constexpr static const_iterator left_end() noexcept { return left_type::template end(); }
+			[[nodiscard]] constexpr const_iterator left_end() noexcept { return left_value.end(); }
 
-			[[nodiscard]] constexpr static const_iterator right_begin() noexcept { return right_type::template begin(); }
+			[[nodiscard]] constexpr const_iterator right_begin() noexcept { return right_value.begin(); }
 
-			[[nodiscard]] constexpr static const_iterator right_end() noexcept { return right_type::template end(); }
+			[[nodiscard]] constexpr const_iterator right_end() noexcept { return right_value.end(); }
 		};
 
 		template<typename, typename>
@@ -911,4 +950,25 @@ namespace gal::prometheus::infrastructure
 		// ReSharper disable once CppInconsistentNaming
 		using u32char_multiple_array = basic_multiple_char_array<FirstString, RemainingStrings...>;
 	}
+}
+
+export namespace std
+{
+	// for `std::totally_ordered_with`
+	template<typename FixedString, typename String, template<typename> typename Q1, template<typename> typename Q2>
+		requires
+		gal::prometheus::infrastructure::is_fixed_string<FixedString>::value and
+		std::is_constructible_v<gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>, String>
+	struct basic_common_reference<FixedString, String, Q1, Q2>
+	{
+		using type = gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>;
+	};
+
+	template<typename String, typename FixedString, template<typename> typename Q1, template<typename> typename Q2>
+		requires gal::prometheus::infrastructure::is_fixed_string<FixedString>::value and
+				std::is_constructible_v<gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>, String>
+	struct basic_common_reference<String, FixedString, Q1, Q2>
+	{
+		using type = gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>;
+	};
 }
