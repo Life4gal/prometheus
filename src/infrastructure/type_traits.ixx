@@ -49,6 +49,15 @@ export namespace gal::prometheus::infrastructure::traits
 	concept integral = is_integral_v<T>;
 
 	template<typename T>
+	struct is_floating_point : std::is_floating_point<T> {};
+
+	template<typename T>
+	constexpr bool is_floating_point_v = is_floating_point<T>::value;
+
+	template<typename T>
+	concept floating_point = is_floating_point_v<T>;
+
+	template<typename T>
 	struct is_arithmetic : std::is_arithmetic<T> { };
 
 	template<typename T>

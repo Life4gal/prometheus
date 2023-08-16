@@ -16,5 +16,6 @@ export import :function_ref;
 export import :wildcard_match;
 export import :plane;
 export import :string;
+export import :charconv;
 
 export namespace gal::prometheus::infrastructure {}
