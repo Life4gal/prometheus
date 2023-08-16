@@ -326,6 +326,7 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/infrastructure/wildcard_match.ixx
 		${PROJECT_SOURCE_DIR}/src/infrastructure/plane.ixx
 		${PROJECT_SOURCE_DIR}/src/infrastructure/string.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/charconv.ixx
 	
 		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
 
@@ -337,6 +338,15 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/coroutine/generator.ixx
 
 		${PROJECT_SOURCE_DIR}/src/coroutine/coroutine.ixx
+
+		# =========================
+		# I18N
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/i18n/iso_639.ixx
+		${PROJECT_SOURCE_DIR}/src/i18n/iso_3166.ixx
+
+		${PROJECT_SOURCE_DIR}/src/i18n/i18n.ixx
 )
 
 target_sources(
