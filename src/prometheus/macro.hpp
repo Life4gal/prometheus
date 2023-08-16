@@ -98,6 +98,14 @@
 	[]<bool AlwaysFalse>() { static_assert(AlwaysFalse, "[UNREACHABLE BRANCH]: \"" __VA_ARGS__ "\""); }(); \
 	GAL_PROMETHEUS_UNREACHABLE()
 
+#if __has_cpp_attribute(__cpp_if_consteval)
+	#define GAL_PROMETHEUS_IF_CONSTANT_EVALUATED if consteval
+	#define GAL_PROMETHEUS_IF_NOT_CONSTANT_EVALUATED if not consteval
+#else
+	#define GAL_PROMETHEUS_IF_CONSTANT_EVALUATED if (std::is_constant_evaluated())
+	#define GAL_PROMETHEUS_IF_NOT_CONSTANT_EVALUATED if (not std::is_constant_evaluated())
+#endif
+
 #define GAL_PROMETHEUS_PRIVATE_STRING_CAT(lhs, rhs) lhs##rhs
 #define GAL_PROMETHEUS_STRING_CAT(lhs, rhs) GAL_PROMETHEUS_PRIVATE_STRING_CAT(lhs, rhs)
 
@@ -186,7 +194,7 @@
 
 #define GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK(debug_type, expression, ...) \
 	do {                                                                                                                                                \
-			if (not std::is_constant_evaluated())                                                                                                           \
+			GAL_PROMETHEUS_IF_NOT_CONSTANT_EVALUATED                                                                                                           \
 			{                                                                                                                                               \
 				if (not static_cast<bool>(expression))                                                                                                      \
 				{                                                                                                                                           \
