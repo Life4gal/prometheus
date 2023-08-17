@@ -7,6 +7,7 @@ export module gal.prometheus.i18n;
 
 export import :iso_639;
 export import :iso_3166;
+export import :iso_15924;
 
 export namespace gal::prometheus::i18n
 {

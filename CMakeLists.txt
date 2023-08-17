@@ -345,6 +345,7 @@ target_sources(
 
 		${PROJECT_SOURCE_DIR}/src/i18n/iso_639.ixx
 		${PROJECT_SOURCE_DIR}/src/i18n/iso_3166.ixx
+		${PROJECT_SOURCE_DIR}/src/i18n/iso_15924.ixx
 
 		${PROJECT_SOURCE_DIR}/src/i18n/i18n.ixx
 )
