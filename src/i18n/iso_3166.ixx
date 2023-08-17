@@ -70,6 +70,7 @@ namespace gal::prometheus::i18n
 
 	[[nodiscard]] consteval auto make_iso_3166_code_info_database() noexcept -> auto
 	{
+		// https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes#Current_ISO_3166_country_codes
 		constexpr ISO3166::code_info data[]{
 				{"AF", "AFG", 4},
 				{"AL", "ALB", 8},
