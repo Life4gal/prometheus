@@ -12,8 +12,16 @@ export module gal.prometheus.i18n:iso_639;
 import std;
 import gal.prometheus.infrastructure;
 
+#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+	#define WORKAROUND_C2248 1
+#else
+	#define WORKAROUND_C2248 0
+#endif
+
 export namespace gal::prometheus::i18n
 {
+	class IETFLanguageTag;
+
 	/**
 	 * @brief ISO-639 language code.
 	 *
@@ -27,6 +35,8 @@ export namespace gal::prometheus::i18n
 	// ReSharper disable once CppInconsistentNaming
 	class [[nodiscard]] ISO639 final
 	{
+		friend IETFLanguageTag;
+
 	public:
 		// Encoded as follows:
 		// [0:4]: the first letter
@@ -57,6 +67,8 @@ export namespace gal::prometheus::i18n
 						if (c >= 'A' and c <= 'Z') { return c - 'A' + 1; }
 
 						if (c >= '1' and c <= '5') { return c - '1' + 27; }
+
+						GAL_PROMETHEUS_DEBUG_UNREACHABLE();
 					}());
 
 			GAL_PROMETHEUS_DEBUG_ASSUME(value <= 0x1f);
@@ -64,6 +76,16 @@ export namespace gal::prometheus::i18n
 			value_ &= ~(0x1f << shift);
 			value_ |= value << shift;
 		}
+
+		#if WORKAROUND_C2248
+		// Normally we would choose to add a constructor_tag struct and specify a couple of public constructors whose arguments require passing in constructor_tag to solve this problem.
+		// However, unfortunately this leads to ICE (when using modules)
+		// Hello MSVC?
+	public:
+		#endif
+
+		constexpr ISO639() noexcept
+			: value_{0} {}
 
 		constexpr explicit ISO639(const value_type value) noexcept
 			: value_{value} {}
@@ -102,7 +124,7 @@ export namespace gal::prometheus::i18n
 
 		[[nodiscard]] constexpr auto empty() const noexcept -> bool { return value() == 0; }
 
-		[[nodiscard]] constexpr explicit operator bool() const noexcept { return not empty(); }
+		[[nodiscard]] constexpr auto matches(const ISO639& other) const noexcept -> bool { return empty() or *this == other; }
 
 		[[nodiscard]] constexpr auto code() const noexcept -> std::basic_string<element_type>;
 
@@ -133,6 +155,8 @@ export namespace gal::prometheus::i18n
 {
 	constexpr auto ISO639::parse(const std::basic_string_view<element_type> string) noexcept -> std::optional<ISO639>
 	{
+		if (string.empty()) { return ISO639{0}; }
+
 		// GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW_STRING_PARSE_ERROR(
 		// 		string.size() == 2 or string.size() == 3,
 		// 		"ISO-639 incorrect length, got '{}'", string.size());
@@ -153,7 +177,7 @@ export namespace gal::prometheus::i18n
 			ISO639 result{0};
 			result.set<0>(string[0]);
 			result.set<1>(string[1]);
-			if (string.size() > 2) { result.set<3>(string[3]); }
+			if (string.size() > 2) { result.set<2>(string[2]); }
 			return result;
 		}
 
@@ -167,7 +191,7 @@ export namespace gal::prometheus::i18n
 		std::basic_string<element_type> result{};
 		result.push_back(v1);
 		result.push_back(v2);
-		result.push_back(v3);
+		if (v3 != 0) { result.push_back(v3); }
 
 		return result;
 	}
