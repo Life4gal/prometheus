@@ -16,12 +16,16 @@ namespace gal::prometheus::i18n
 {
 	export
 	{
+		class IETFLanguageTag;
+
 		/**
 		 * @brief ISO-3166 country code.
 		 */
 		// ReSharper disable once CppInconsistentNaming
 		class ISO3166 final
 		{
+			friend IETFLanguageTag;
+
 		public:
 			using value_type = std::uint16_t;
 
@@ -45,6 +49,9 @@ namespace gal::prometheus::i18n
 		private:
 			value_type value_;
 
+			constexpr ISO3166() noexcept
+				: value_{0} {}
+
 			constexpr explicit ISO3166(const value_type value) noexcept
 				: value_{value} {}
 
@@ -55,7 +62,7 @@ namespace gal::prometheus::i18n
 
 			[[nodiscard]] constexpr auto empty() const noexcept -> bool { return value() == 0; }
 
-			[[nodiscard]] constexpr explicit operator bool() const noexcept { return not empty(); }
+			[[nodiscard]] constexpr auto matches(const ISO3166& other) const noexcept -> bool { return empty() or *this == other; }
 
 			[[nodiscard]] constexpr auto code2() const noexcept -> std::basic_string<element_type>;
 
@@ -501,14 +508,16 @@ namespace gal::prometheus::i18n
 		{
 			GAL_PROMETHEUS_DEBUG_ASSUME(value() < code_info_max_size);
 
-			return iso_3166_code_info_mapping_number_to_code2[static_cast<decltype(iso_3166_code_info_mapping_number_to_code2)::size_type>(value())].operator std::basic_string<element_type>();
+			const auto result = iso_3166_code_info_mapping_number_to_code2[static_cast<decltype(iso_3166_code_info_mapping_number_to_code2)::size_type>(value())];
+			return result.operator std::basic_string<element_type>();
 		}
 
 		constexpr auto ISO3166::code3() const noexcept -> std::basic_string<element_type>
 		{
 			GAL_PROMETHEUS_DEBUG_ASSUME(value() < code_info_max_size);
 
-			return iso_3166_code_info_mapping_number_to_code3[static_cast<decltype(iso_3166_code_info_mapping_number_to_code3)::size_type>(value())].operator std::basic_string<element_type>();
+			const auto result = iso_3166_code_info_mapping_number_to_code3[static_cast<decltype(iso_3166_code_info_mapping_number_to_code3)::size_type>(value())];
+			return result.operator std::basic_string<element_type>();
 		}
 	}
 }
