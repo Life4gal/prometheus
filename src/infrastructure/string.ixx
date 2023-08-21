@@ -645,7 +645,7 @@ namespace gal::prometheus::infrastructure
 			using value_type = T;
 			using size_type = std::size_t;
 
-			using iterator = const value_type*;
+			using iterator = value_type*;
 			using const_iterator = const value_type*;
 
 			constexpr static size_type max_size{N};
@@ -658,9 +658,21 @@ namespace gal::prometheus::infrastructure
 
 			template<std::size_t M>
 			constexpr explicit(false) basic_fixed_string(const value_type (&string)[M]) noexcept
-				requires (M >= N) { std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + N, value); }
+				requires (M >= N) { std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + size, value); }
+
+			template<std::ranges::range String>
+				requires std::is_same_v<std::ranges::range_value_t<String>, value_type>
+			constexpr explicit basic_fixed_string(const String& string) noexcept { std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + N, value); }
 
 			constexpr explicit(false) operator basic_fixed_string_view<value_type>() const noexcept { return basic_fixed_string_view<value_type>{value, size}; }
+
+			[[nodiscard]] constexpr auto begin() noexcept -> iterator { return value; }
+
+			[[nodiscard]] constexpr auto begin() const noexcept -> iterator { return value; }
+
+			[[nodiscard]] constexpr auto end() noexcept -> iterator { return value + size; }
+
+			[[nodiscard]] constexpr auto end() const noexcept -> iterator { return value + size; }
 
 			template<size_type L, size_type R>
 			friend constexpr auto operator==(const basic_fixed_string<value_type, L>& lhs, const basic_fixed_string<value_type, R>& rhs) noexcept -> bool { return lhs.operator basic_fixed_string_view<value_type>() == rhs.operator basic_fixed_string_view<value_type>(); }
