@@ -8,6 +8,7 @@ export module gal.prometheus.i18n;
 export import :iso_639;
 export import :iso_3166;
 export import :iso_15924;
+export import :ietf_language_tag;
 
 export namespace gal::prometheus::i18n
 {
