@@ -95,6 +95,142 @@ export namespace gal::prometheus::infrastructure
 		return static_cast<char>(std::tolower(c));
 	}
 
+	constexpr auto to_lower(std::basic_string<char>& string) noexcept -> void
+	{
+		std::ranges::for_each(
+				string,
+				[](char& c) noexcept -> void { c = to_lower(c); });
+	}
+
+	[[nodiscard]] constexpr auto to_lower(const std::basic_string_view<char> string) noexcept -> std::string
+	{
+		std::string result{};
+		result.reserve(string.size());
+
+		std::ranges::for_each(
+				string,
+				[&result](const char c) noexcept -> void { result.push_back(to_lower(c)); });
+
+		return result;
+	}
+
+	constexpr auto to_tittle(std::basic_string<char>& string) noexcept -> void
+	{
+		std::ranges::for_each(
+				string,
+				[first = true](char& c) mutable noexcept -> void
+				{
+					if (first)
+					{
+						c     = to_upper(c);
+						first = false;
+					}
+					else if (c == ' ') { first = true; }
+					else { c = to_lower(c); }
+				});
+	}
+
+	[[nodiscard]] constexpr auto to_tittle(const std::basic_string_view<char> string) noexcept -> std::string
+	{
+		std::string result{};
+		result.reserve(string.size());
+
+		std::ranges::for_each(
+				string,
+				[&result, first = true](const char c) mutable noexcept -> void
+				{
+					char this_char;
+					if (first)
+					{
+						this_char = to_upper(c);
+						first     = false;
+					}
+					else if (c == ' ')
+					{
+						this_char = c;
+						first     = true;
+					}
+					else { this_char = to_lower(c); }
+
+					result.push_back(this_char);
+				});
+
+		return result;
+	}
+
+	// @see infrastructure.string.ixx
+	// ------------------------------------------------------------
+	// begin
+	// ------------------------------------------------------------
+
+	template<typename T, std::size_t N>
+	struct basic_fixed_string;
+
+	template<std::size_t N>
+	[[nodiscard]] constexpr auto is_upper(const basic_fixed_string<char, N> string) noexcept -> bool { return std::ranges::all_of(string, static_cast<auto (*)(char c) noexcept -> bool>(is_upper)); }
+
+	template<std::size_t N>
+	[[nodiscard]] constexpr auto is_lower(const basic_fixed_string<char, N> string) noexcept -> bool { return std::ranges::all_of(string, static_cast<auto (*)(char c) noexcept -> bool>(is_lower)); }
+
+	template<std::size_t N>
+	[[nodiscard]] constexpr auto is_alpha(const basic_fixed_string<char, N> string) noexcept -> bool { return std::ranges::all_of(string, static_cast<auto (*)(char c) noexcept -> bool>(is_alpha)); }
+
+
+	template<std::size_t N>
+	[[nodiscard]] constexpr auto is_digit(const basic_fixed_string<char, N> string) noexcept -> bool { return std::ranges::all_of(string, static_cast<auto (*)(char c) noexcept -> bool>(is_digit)); }
+
+	template<std::size_t N>
+	[[nodiscard]] constexpr auto is_alpha_digit(const basic_fixed_string<char, N> string) noexcept -> bool { return std::ranges::all_of(string, static_cast<auto (*)(char c) noexcept -> bool>(is_alpha_digit)); }
+
+	template<std::size_t N>
+	[[nodiscard]] constexpr auto to_upper(const basic_fixed_string<char, N> string) noexcept -> basic_fixed_string<char, N>
+	{
+		basic_fixed_string<char, N> result{string};
+
+		std::ranges::for_each(
+				result,
+				[](char& c) noexcept -> void { c = to_upper(c); });
+
+		return result;
+	}
+
+	template<std::size_t N>
+	[[nodiscard]] constexpr auto to_lower(const basic_fixed_string<char, N> string) noexcept -> basic_fixed_string<char, N>
+	{
+		basic_fixed_string<char, N> result{string};
+
+		std::ranges::for_each(
+				result,
+				[](char& c) noexcept -> void { c = to_lower(c); });
+
+		return result;
+	}
+
+	template<std::size_t N>
+	[[nodiscard]] constexpr auto to_tittle(const basic_fixed_string<char, N> string) noexcept -> basic_fixed_string<char, N>
+	{
+		basic_fixed_string<char, N> result{string};
+
+		std::ranges::for_each(
+				result,
+				[first = true](char& c) mutable noexcept -> void
+				{
+					if (first)
+					{
+						c     = to_upper(c);
+						first = false;
+					}
+					else if (c == ' ') { first = true; }
+					else { c = to_lower(c); }
+				});
+
+		return result;
+	}
+
+	// ------------------------------------------------------------
+	// end
+	// ------------------------------------------------------------
+
 	template<traits::integral T, bool Throw = true>
 	[[nodiscard]] constexpr auto from_string(const std::basic_string_view<char> string, int base = 10) noexcept(not Throw) -> std::conditional_t<Throw, T, std::optional<T>>
 	{
@@ -102,9 +238,21 @@ export namespace gal::prometheus::infrastructure
 		const auto end   = string.data() + string.size();
 
 		T result;
-		if (
-			const auto [last, error_code] = std::from_chars(begin, end, result, base);
-			error_code != std::errc{} or last != end
+
+		// fixme:
+		// 	C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\MSVC\14.38.32919\include\utility(154): error C2752: "std::tuple_size<_Ty>": more than one partial specialization matches the template argument list
+		//	          with
+		//	          [
+		//	              _Ty=const std::from_chars_result
+		//	          ]
+		//	  C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\MSVC\14.38.32919\include\utility(604): note: maybe "std::tuple_size<const _Tuple>"
+		//	  C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\MSVC\14.38.32919\include\utility(604): note: or        "std::tuple_size<const _Tuple>"
+		// const auto [last, error_code] = std::from_chars(begin, end, result, base);
+		const auto from_chars_result = std::from_chars(begin, end, result, base);
+		const auto last              = from_chars_result.ptr;
+		const auto error_code        = from_chars_result.ec;
+
+		if (error_code != std::errc{} or last != end
 		)
 		{
 			if constexpr (Throw) { GAL_PROMETHEUS_RUNTIME_THROW_STRING_PARSE_ERROR("Can not convert string [{}] to integer", string); }
