@@ -37,6 +37,16 @@ namespace gal::prometheus::i18n
 			{
 				code_info_code4_type code4;
 				value_type           number;
+
+				constexpr code_info() noexcept
+					: code4{"????"},
+					number{9999} {}
+
+				// https://en.wikipedia.org/wiki/IETF_language_tag#Syntax_of_language_tags
+				// An optional script subtag, based on a four-letter script code from ISO 15924 (usually written in Title Case);
+				constexpr code_info(const element_type (&c)[5], const value_type n) noexcept
+					: code4{infrastructure::to_tittle(code_info_code4_type{c})},
+					number{n} { }
 			};
 
 			// 001 ~ 999
@@ -373,19 +383,21 @@ namespace gal::prometheus::i18n
 			// code
 			if (infrastructure::is_alpha(string) and string.size() == 4)
 			{
+				const auto target = infrastructure::to_tittle(string);
+
 				// ReSharper disable once CppTooWideScopeInitStatement
 				const auto it = std::ranges::lower_bound(
 						iso_15924_code_info_mapping_code4_to_number,
-						string,
+						target,
 						std::ranges::less{},
 						&iso_15924_code4_to_number_mapping::first);
 
 				// GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW_STRING_PARSE_ERROR(
-				// 		it != iso_15924_code_info_mapping_code4_to_number.end() and it->first == string,
+				// 		it != iso_15924_code_info_mapping_code4_to_number.end() and it->first == target,
 				// 		"Invalid ISO-15924 script code '{}'",
-				// 		string);
+				// 		target);
 
-				if (it != iso_15924_code_info_mapping_code4_to_number.end() and it->first == string) { return ISO15924{it->second}; }
+				if (it != iso_15924_code_info_mapping_code4_to_number.end() and it->first == target) { return ISO15924{it->second}; }
 
 				return std::nullopt;
 			}
