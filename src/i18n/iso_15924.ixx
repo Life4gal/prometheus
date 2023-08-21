@@ -16,12 +16,16 @@ namespace gal::prometheus::i18n
 {
 	export
 	{
+		class IETFLanguageTag;
+
 		/**
 		 * @brief ISO-15924 script code.
 		 */
 		// ReSharper disable once CppInconsistentNaming
 		class ISO15924
 		{
+			friend IETFLanguageTag;
+
 		public:
 			using value_type = std::uint16_t;
 
@@ -43,6 +47,9 @@ namespace gal::prometheus::i18n
 		private:
 			value_type value_;
 
+			constexpr ISO15924() noexcept
+				: value_{0} {}
+
 			constexpr explicit ISO15924(const value_type value) noexcept
 				: value_{value} {}
 
@@ -53,7 +60,7 @@ namespace gal::prometheus::i18n
 
 			[[nodiscard]] constexpr auto empty() const noexcept -> bool { return value() == 0; }
 
-			[[nodiscard]] constexpr explicit operator bool() const noexcept { return not empty(); }
+			[[nodiscard]] constexpr auto matches(const ISO15924& other) const noexcept -> bool { return empty() or *this == other; }
 
 			[[nodiscard]] constexpr auto code4() const noexcept -> std::basic_string<element_type>;
 
@@ -346,7 +353,25 @@ namespace gal::prometheus::i18n
 	{
 		constexpr auto ISO15924::parse(const std::basic_string_view<element_type> string) noexcept -> std::optional<ISO15924>
 		{
-			if (string.size() == 4)
+			// number
+			if (infrastructure::is_digit(string))
+			{
+				if (const auto result = infrastructure::from_string<value_type, false>(string);
+					result.has_value())
+				{
+					// GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW_STRING_PARSE_ERROR(
+					// 		*result < code_info_max_size,
+					// 		"ISO-15924 number must be between 001 and 999, got '{}'",
+					// 		string);
+
+					if (*result < code_info_max_size) { return ISO15924{*result}; }
+				}
+
+				return std::nullopt;
+			}
+
+			// code
+			if (infrastructure::is_alpha(string) and string.size() == 4)
 			{
 				// ReSharper disable once CppTooWideScopeInitStatement
 				const auto it = std::ranges::lower_bound(
@@ -372,7 +397,8 @@ namespace gal::prometheus::i18n
 		{
 			GAL_PROMETHEUS_DEBUG_ASSUME(value() < code_info_max_size);
 
-			return iso_15924_code_info_mapping_number_to_code4[static_cast<decltype(iso_15924_code_info_mapping_number_to_code4)::size_type>(value())].operator std::basic_string<element_type>();
+			const auto result = iso_15924_code_info_mapping_number_to_code4[static_cast<decltype(iso_15924_code_info_mapping_number_to_code4)::size_type>(value())];
+			return result.operator std::basic_string<element_type>();
 		}
 	}
 }
