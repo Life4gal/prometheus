@@ -668,11 +668,11 @@ namespace gal::prometheus::infrastructure
 
 			[[nodiscard]] constexpr auto begin() noexcept -> iterator { return value; }
 
-			[[nodiscard]] constexpr auto begin() const noexcept -> iterator { return value; }
+			[[nodiscard]] constexpr auto begin() const noexcept -> const_iterator { return value; }
 
 			[[nodiscard]] constexpr auto end() noexcept -> iterator { return value + size; }
 
-			[[nodiscard]] constexpr auto end() const noexcept -> iterator { return value + size; }
+			[[nodiscard]] constexpr auto end() const noexcept -> const_iterator { return value + size; }
 
 			template<size_type L, size_type R>
 			friend constexpr auto operator==(const basic_fixed_string<value_type, L>& lhs, const basic_fixed_string<value_type, R>& rhs) noexcept -> bool { return lhs.operator basic_fixed_string_view<value_type>() == rhs.operator basic_fixed_string_view<value_type>(); }
