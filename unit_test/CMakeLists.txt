@@ -26,6 +26,15 @@ add_executable(
 
 		${PROJECT_SOURCE_DIR}/src/coroutine/task.cpp
 		${PROJECT_SOURCE_DIR}/src/coroutine/generator.cpp
+
+		# =================================
+		# I18N
+		# =================================
+
+		${PROJECT_SOURCE_DIR}/src/i18n/iso_639.cpp
+		${PROJECT_SOURCE_DIR}/src/i18n/iso_3166.cpp
+		${PROJECT_SOURCE_DIR}/src/i18n/iso_15924.cpp
+		${PROJECT_SOURCE_DIR}/src/i18n/ietf_language_tag.cpp
 )
 
 target_link_libraries(
