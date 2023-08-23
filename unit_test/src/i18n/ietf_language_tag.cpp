@@ -27,6 +27,7 @@ namespace
 
 				expect((result.has_value()) >> fatal);
 				expect((result->operator std::string() == "aa"_sv) >> fatal);
+				expect((std::format("{}", *result) == "aa"_sv) >> fatal);
 			}
 			{
 				// language + region
@@ -38,7 +39,8 @@ namespace
 					const auto        result = IETFLanguageTag::parse(string);
 
 					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
+			expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
+			expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
 				}
 				{
 					const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number());
@@ -46,6 +48,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
+					expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
 				}
 			}
 			{
@@ -58,6 +61,7 @@ namespace
 
 				expect((result.has_value()) >> fatal);
 				expect((result->operator std::string() == "aa-Latn-ET"_sv) >> fatal);
+				expect((std::format("{}", *result) == "aa-Latn-ET"_sv) >> fatal);
 			}
 			{
 				// Optional variant sub-tags, separated by hyphens, each composed of five to eight letters, or of four characters starting with a digit
@@ -67,6 +71,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "aa"_sv) >> fatal);
+					expect((std::format("{}", *result) == "aa"_sv) >> fatal);
 				}
 				{
 					{
@@ -75,6 +80,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
+						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
 					}
 					{
 						const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number()) + "-polyton";
@@ -82,6 +88,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
+						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
 					}
 				}
 				{
@@ -90,6 +97,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "aa-Latn-ET"_sv) >> fatal);
+					expect((std::format("{}", *result) == "aa-Latn-ET"_sv) >> fatal);
 				}
 			}
 			{
@@ -100,6 +108,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "aa"_sv) >> fatal);
+					expect((std::format("{}", *result) == "aa"_sv) >> fatal);
 				}
 				{
 					{
@@ -108,6 +117,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
+						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
 					}
 					{
 						const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number()) + "-u-cu-usd";
@@ -115,6 +125,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
+						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
 					}
 				}
 				{
@@ -123,6 +134,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "aa-Latn-ET"_sv) >> fatal);
+					expect((std::format("{}", *result) == "aa-Latn-ET"_sv) >> fatal);
 				}
 			}
 			{
@@ -133,6 +145,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "aa"_sv) >> fatal);
+					expect((std::format("{}", *result) == "aa"_sv) >> fatal);
 				}
 				{
 					{
@@ -141,6 +154,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
+						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
 					}
 					{
 						const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number()) + "-x-private";
@@ -148,6 +162,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
+						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
 					}
 				}
 				{
@@ -156,6 +171,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "aa-Latn-ET"_sv) >> fatal);
+					expect((std::format("{}", *result) == "aa-Latn-ET"_sv) >> fatal);
 				}
 			}
 			// haz-Arab-AF
@@ -169,6 +185,7 @@ namespace
 
 				expect((result.has_value()) >> fatal);
 				expect((result->operator std::string() == "haz"_sv) >> fatal);
+				expect((std::format("{}", *result) == "haz"_sv) >> fatal);
 			}
 			{
 				// language + region
@@ -181,6 +198,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
+					expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
 				}
 				{
 					const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number());
@@ -188,6 +206,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
+					expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
 				}
 			}
 			{
@@ -200,6 +219,7 @@ namespace
 
 				expect((result.has_value()) >> fatal);
 				expect((result->operator std::string() == "haz-Arab-AF"_sv) >> fatal);
+				expect((std::format("{}", *result) == "haz-Arab-AF"_sv) >> fatal);
 			}
 			{
 				// Optional variant sub-tags, separated by hyphens, each composed of five to eight letters, or of four characters starting with a digit
@@ -209,6 +229,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "haz"_sv) >> fatal);
+					expect((std::format("{}", *result) == "haz"_sv) >> fatal);
 				}
 				{
 					{
@@ -217,6 +238,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
+						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
 					}
 					{
 						const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number()) + "-polyton";
@@ -224,6 +246,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
+						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
 					}
 				}
 				{
@@ -232,6 +255,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "haz-Arab-AF"_sv) >> fatal);
+					expect((std::format("{}", *result) == "haz-Arab-AF"_sv) >> fatal);
 				}
 			}
 			{
@@ -242,6 +266,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "haz"_sv) >> fatal);
+					expect((std::format("{}", *result) == "haz"_sv) >> fatal);
 				}
 				{
 					{
@@ -250,6 +275,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
+						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
 					}
 					{
 						const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number()) + "-u-cu-usd";
@@ -257,6 +283,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
+						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
 					}
 				}
 				{
@@ -265,6 +292,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "haz-Arab-AF"_sv) >> fatal);
+					expect((std::format("{}", *result) == "haz-Arab-AF"_sv) >> fatal);
 				}
 			}
 			{
@@ -275,6 +303,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "haz"_sv) >> fatal);
+					expect((std::format("{}", *result) == "haz"_sv) >> fatal);
 				}
 				{
 					{
@@ -283,6 +312,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
+						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
 					}
 					{
 						const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number()) + "-x-private";
@@ -290,6 +320,7 @@ namespace
 
 						expect((result.has_value()) >> fatal);
 						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
+						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
 					}
 				}
 				{
@@ -298,6 +329,7 @@ namespace
 
 					expect((result.has_value()) >> fatal);
 					expect((result->operator std::string() == "haz-Arab-AF"_sv) >> fatal);
+					expect((std::format("{}", *result) == "haz-Arab-AF"_sv) >> fatal);
 				}
 			}
 		};

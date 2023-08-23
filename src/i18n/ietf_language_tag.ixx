@@ -2343,12 +2343,16 @@ export namespace std
 	template<>
 	struct formatter<gal::prometheus::i18n::IETFLanguageTag>//: formatter<std::basic_string<gal::prometheus::i18n::IETFLanguageTag::element_type>>
 	{
+		using char_type = gal::prometheus::i18n::IETFLanguageTag::element_type;
+
+		constexpr auto parse(basic_format_parse_context<char_type>& parse_context) const noexcept -> basic_format_parse_context<char_type>::iterator { return parse_context.end(); }
+
 		/*constexpr*/
 		auto format(const gal::prometheus::i18n::IETFLanguageTag& tag, format_context& context) const -> format_context::iterator
 		{
-			// return formatter<std::basic_string<gal::prometheus::i18n::IETFLanguageTag::element_type>>::format(tag.operator std::basic_string<gal::prometheus::i18n::IETFLanguageTag::element_type>(), context);
+			// return formatter<std::basic_string<char_type>>::format(tag.operator std::basic_string<char_type>(), context);
 			auto       it     = context.out();
-			const auto string = tag.operator std::basic_string<gal::prometheus::i18n::IETFLanguageTag::element_type>();
+			const auto string = tag.operator std::basic_string<char_type>();
 			std::ranges::for_each(
 					string,
 					[&it](const char c) { it = c; });
