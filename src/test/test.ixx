@@ -2006,6 +2006,20 @@ namespace gal::prometheus::test
 				};
 				return named{{name, size}, {}};
 			}
+
+			constexpr auto operator""_sv(const char* name, decltype(sizeof("")) size)
+			{
+				struct named : std::string_view, detail::op
+				{
+					using value_type = std::string_view;
+					[[nodiscard]] constexpr operator value_type() const { return {*this}; }// NOLINT
+					[[nodiscard]] constexpr auto operator==(const value_type other) const -> bool
+					{
+						return this->operator value_type() == other;
+					}
+				};
+				return named{{name, size}, {}};
+			}
 		}// namespace literals
 
 		namespace operators
@@ -2753,6 +2767,7 @@ namespace gal::prometheus::test
 	{
 		using literals::operator""_test;
 
+		using literals::operator""_sv;
 		using literals::operator""_b;
 		using literals::operator""_i;
 		using literals::operator""_s;
