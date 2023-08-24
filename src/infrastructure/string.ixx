@@ -624,9 +624,24 @@ namespace gal::prometheus::infrastructure
 			) -> bool { return static_cast<const derived_type&>(*this).template value<Index>().template match<Container>(container); }
 	};
 
+	// fixme: error C3520: "Cs": parameter pack must be expanded in this context
+	#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+	#define WORKAROUND_C3520 1
+	#else
+	#define WORKAROUND_C3520 0
+	#endif
+
+	#if WORKAROUND_C3520
+	template<typename T, T... Cs>
+	constexpr std::size_t workaround_c3520_char_array_real_size = sizeof...(Cs) - ((Cs == 0) or ...);
+	#endif
+
 	// basic_fixed_string
 	export
 	{
+		template<typename T, T... Cs>
+		struct basic_char_array;
+
 		template<typename T>
 		using basic_fixed_string_view = std::basic_string_view<T>;
 
@@ -638,6 +653,12 @@ namespace gal::prometheus::infrastructure
 
 		template<typename T, std::size_t N>
 		struct is_fixed_string<basic_fixed_string<T, N>> : std::true_type {};
+
+		template<typename T>
+		constexpr auto is_fixed_string_v = is_fixed_string<T>::value;
+
+		template<typename T>
+		concept fixed_string_t = is_fixed_string_v<T>;
 
 		template<typename T, std::size_t N>
 		struct basic_fixed_string : string_base<basic_fixed_string<T, N>, T, std::size_t>
@@ -657,8 +678,19 @@ namespace gal::prometheus::infrastructure
 				: value{} {}
 
 			template<std::size_t M>
-			constexpr explicit(false) basic_fixed_string(const value_type (&string)[M]) noexcept
-				requires (M >= N) { std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + size, value); }
+				requires(M >= N)
+			constexpr explicit(false) basic_fixed_string(const value_type (&string)[M]) noexcept { std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + size, value); }
+
+			template<value_type... Cs>
+				requires(
+					#if WORKAROUND_C3520
+					workaround_c3520_char_array_real_size<value_type, Cs...>
+					#else
+					// DO NOT USE `basic_char_array<T, Cs...>::size`!
+					sizeof...(Cs) - ((Cs == 0) or ...) 
+					#endif
+					>= N)
+			constexpr explicit(false) basic_fixed_string(const basic_char_array<value_type, Cs...>& char_array) noexcept { std::ranges::copy(std::ranges::begin(char_array), std::ranges::begin(char_array) + N, value); }
 
 			template<std::ranges::range String>
 				requires std::is_same_v<std::ranges::range_value_t<String>, value_type>
@@ -678,24 +710,41 @@ namespace gal::prometheus::infrastructure
 			friend constexpr auto operator==(const basic_fixed_string<value_type, L>& lhs, const basic_fixed_string<value_type, R>& rhs) noexcept -> bool { return lhs.operator basic_fixed_string_view<value_type>() == rhs.operator basic_fixed_string_view<value_type>(); }
 
 			template<typename String>
-				requires (not is_fixed_string<String>::value) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
+				requires (not is_fixed_string_v<String>) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
 			friend constexpr auto operator==(const basic_fixed_string& lhs, const String& rhs) noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> bool { return lhs.operator basic_fixed_string_view<value_type>() == basic_fixed_string_view<value_type>{rhs}; }
 
 			template<typename String>
-				requires (not is_fixed_string<String>::value) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
+				requires(not is_fixed_string_v<String>) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
 			friend constexpr auto operator==(const String& lhs, const basic_fixed_string& rhs) noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> bool { return basic_fixed_string_view<value_type>{lhs} == rhs.operator basic_fixed_string_view<value_type>(); }
 
 			template<size_type L, size_type R>
 			friend constexpr auto operator<=>(const basic_fixed_string<value_type, L>& lhs, const basic_fixed_string<value_type, R>& rhs) noexcept -> auto { return lhs.operator basic_fixed_string_view<value_type>() <=> rhs.operator basic_fixed_string_view<value_type>(); }
 
 			template<typename String>
-				requires (not is_fixed_string<String>::value) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
+				requires(not is_fixed_string_v<String>) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
 			friend constexpr auto operator<=>(const basic_fixed_string& lhs, const String& rhs) noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> auto { return lhs.operator basic_fixed_string_view<value_type>() <=> basic_fixed_string_view<value_type>{rhs}; }
 
 			template<typename String>
-				requires (not is_fixed_string<String>::value) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
+				requires(not is_fixed_string_v<String>) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
 			friend constexpr auto operator<=>(const String& lhs, const basic_fixed_string& rhs) noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> auto { return basic_fixed_string_view<value_type>{lhs} <=> rhs.operator basic_fixed_string_view<value_type>(); }
 		};
+
+		#if GAL_PROMETHEUS_WORKAROUND_MODULE_EXPORT_CTAD
+		template<typename T, std::size_t N>
+		basic_fixed_string(const T (&string)[N]) -> basic_fixed_string<T, N>;
+
+		template<typename T, T... Cs>
+		// DO NOT USE `basic_char_array<T, Cs...>::size`!
+		basic_fixed_string(basic_char_array<T, Cs...> char_array) ->
+			basic_fixed_string<T,
+								#if WORKAROUND_C3520
+								workaround_c3520_char_array_real_size<T, Cs...>
+								#else
+								// DO NOT USE `basic_char_array<T, Cs...>::size`!
+								sizeof...(Cs) - ((Cs == 0) or ...)
+								#endif
+			>;
+		#endif
 
 		template<typename, typename>
 		struct basic_bilateral_fixed_string;
@@ -730,6 +779,15 @@ namespace gal::prometheus::infrastructure
 
 			[[nodiscard]] constexpr const_iterator right_end() noexcept { return right_value.end(); }
 		};
+
+		#if GAL_PROMETHEUS_WORKAROUND_MODULE_EXPORT_CTAD
+		template<typename T, std::size_t Left, std::size_t Right>
+		basic_bilateral_fixed_string(const T (&left)[Left], const T (&right)[Right]) -> basic_bilateral_fixed_string<basic_fixed_string<T, Left>, basic_fixed_string<T, Right>>;
+
+		template<typename T, T... Left, T... Right>
+		// DO NOT USE `basic_char_array<T, Cs...>::size`!
+		basic_bilateral_fixed_string(const basic_char_array<T, Left...>& left, const basic_char_array<T, Right...>& right) -> basic_bilateral_fixed_string<basic_fixed_string<T, sizeof...(Left) - ((Left == 0) or ...)>, basic_fixed_string<T, sizeof...(Right) - ((Right == 0) or ...)>>;
+		#endif
 
 		template<typename, typename>
 		struct basic_bilateral_fixed_string_view;
@@ -844,6 +902,12 @@ namespace gal::prometheus::infrastructure
 			[[nodiscard]] constexpr static const_iterator begin() noexcept { return std::ranges::begin(value); }
 
 			[[nodiscard]] constexpr static const_iterator end() noexcept { return std::ranges::end(value); }
+
+			template<std::size_t N = max_size>
+				requires(N <= max_size)
+			[[nodiscard]] constexpr explicit(false) operator basic_fixed_string<value_type, N>() const noexcept { return basic_fixed_string<value_type, N>{basic_fixed_string_view<value_type>{value, N}}; }
+
+			[[nodiscard]] constexpr static auto as_fixed_string() noexcept { return basic_fixed_string<value_type, max_size>{basic_fixed_string_view<value_type>{value, size}}; }
 		};
 
 		template<typename, typename>
@@ -967,18 +1031,15 @@ namespace gal::prometheus::infrastructure
 export namespace std
 {
 	// for `std::totally_ordered_with`
-	template<typename FixedString, typename String, template<typename> typename Q1, template<typename> typename Q2>
-		requires
-		gal::prometheus::infrastructure::is_fixed_string<FixedString>::value and
-		std::is_constructible_v<gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>, String>
+	template<gal::prometheus::infrastructure::fixed_string_t FixedString, typename String, template<typename> typename Q1, template<typename> typename Q2>
+		requires std::is_constructible_v<gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>, String>
 	struct basic_common_reference<FixedString, String, Q1, Q2>
 	{
 		using type = gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>;
 	};
 
-	template<typename String, typename FixedString, template<typename> typename Q1, template<typename> typename Q2>
-		requires gal::prometheus::infrastructure::is_fixed_string<FixedString>::value and
-				std::is_constructible_v<gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>, String>
+	template<typename String, gal::prometheus::infrastructure::fixed_string_t FixedString, template<typename> typename Q1, template<typename> typename Q2>
+		requires std::is_constructible_v<gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>, String>
 	struct basic_common_reference<String, FixedString, Q1, Q2>
 	{
 		using type = gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>;
