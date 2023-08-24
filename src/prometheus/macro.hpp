@@ -106,6 +106,20 @@
 	#define GAL_PROMETHEUS_IF_NOT_CONSTANT_EVALUATED if (not std::is_constant_evaluated())
 #endif
 
+#if __has_cpp_attribute(__cpp_lib_start_lifetime_as)
+	#define GAL_PROMETHEUS_START_LIFETIME_AS(type, ptr) std::start_lifetime_as<type>(ptr)
+#else
+	#define GAL_PROMETHEUS_START_LIFETIME_AS(type, ptr) \
+		[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_T>(GAL_PROMETHEUS_START_LIFETIME_AS_T p)                                                                           \
+		{                                                                                                                           \
+			if constexpr (std::is_const_v<GAL_PROMETHEUS_START_LIFETIME_AS_T>) { return reinterpret_cast<std::add_const_t<std::add_pointer_t<type>>>(p); } \
+			else { return reinterpret_cast<std::add_pointer_t<type>>(p); }                                                          \
+		}(ptr)
+#endif
+
+// fixme
+#define GAL_PROMETHEUS_WORKAROUND_MODULE_EXPORT_CTAD 0
+
 #define GAL_PROMETHEUS_PRIVATE_STRING_CAT(lhs, rhs) lhs##rhs
 #define GAL_PROMETHEUS_STRING_CAT(lhs, rhs) GAL_PROMETHEUS_PRIVATE_STRING_CAT(lhs, rhs)
 
