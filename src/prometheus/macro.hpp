@@ -112,7 +112,7 @@
 	#define GAL_PROMETHEUS_START_LIFETIME_AS(type, ptr) \
 		[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_T>(GAL_PROMETHEUS_START_LIFETIME_AS_T p)                                                                           \
 		{                                                                                                                           \
-			if constexpr (std::is_const_v<GAL_PROMETHEUS_START_LIFETIME_AS_T>) { return reinterpret_cast<std::add_const_t<std::add_pointer_t<type>>>(p); } \
+			if constexpr (std::is_const_v<std::remove_pointer_t<GAL_PROMETHEUS_START_LIFETIME_AS_T>>) { return reinterpret_cast<std::add_pointer_t<std::add_const_t<type>>>(p); } \
 			else { return reinterpret_cast<std::add_pointer_t<type>>(p); }                                                          \
 		}(ptr)
 #endif
