@@ -327,6 +327,7 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/infrastructure/plane.ixx
 		${PROJECT_SOURCE_DIR}/src/infrastructure/string.ixx
 		${PROJECT_SOURCE_DIR}/src/infrastructure/charconv.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/memory.ixx
 	
 		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
 
@@ -349,6 +350,18 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/i18n/ietf_language_tag.ixx
 
 		${PROJECT_SOURCE_DIR}/src/i18n/i18n.ixx
+
+		# =========================
+		# CHARS
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/chars/converter.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/category.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/ascii.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/cp_1252.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/utf_8.ixx
+
+		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
 )
 
 target_sources(
