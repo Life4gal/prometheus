@@ -17,5 +17,6 @@ export import :wildcard_match;
 export import :plane;
 export import :string;
 export import :charconv;
+export import :memory;
 
 export namespace gal::prometheus::infrastructure {}
