@@ -35,6 +35,14 @@ add_executable(
 		${PROJECT_SOURCE_DIR}/src/i18n/iso_3166.cpp
 		${PROJECT_SOURCE_DIR}/src/i18n/iso_15924.cpp
 		${PROJECT_SOURCE_DIR}/src/i18n/ietf_language_tag.cpp
+
+		# =================================
+		# CHARS
+		# =================================
+
+		${PROJECT_SOURCE_DIR}/src/chars/ascii.cpp
+		${PROJECT_SOURCE_DIR}/src/chars/cp_1252.cpp
+		#${PROJECT_SOURCE_DIR}/src/chars/utf_8.cpp
 )
 
 target_link_libraries(
