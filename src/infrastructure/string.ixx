@@ -706,8 +706,13 @@ namespace gal::prometheus::infrastructure
 
 			[[nodiscard]] constexpr auto end() const noexcept -> const_iterator { return value + size; }
 
-			template<size_type L, size_type R>
-			friend constexpr auto operator==(const basic_fixed_string<value_type, L>& lhs, const basic_fixed_string<value_type, R>& rhs) noexcept -> bool { return lhs.operator basic_fixed_string_view<value_type>() == rhs.operator basic_fixed_string_view<value_type>(); }
+			template<size_type M>
+			constexpr auto operator==(const basic_fixed_string<value_type, M>& other) const noexcept -> bool
+			{
+				if constexpr (M != size) { return false; }
+
+				return this->operator basic_fixed_string_view<value_type>() == other.operator basic_fixed_string_view<value_type>();
+			}
 
 			template<typename String>
 				requires (not is_fixed_string_v<String>) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
@@ -737,12 +742,12 @@ namespace gal::prometheus::infrastructure
 		// DO NOT USE `basic_char_array<T, Cs...>::size`!
 		basic_fixed_string(basic_char_array<T, Cs...> char_array) ->
 			basic_fixed_string<T,
-								#if WORKAROUND_C3520
+		#if WORKAROUND_C3520
 								workaround_c3520_char_array_real_size<T, Cs...>
-								#else
+		#else
 								// DO NOT USE `basic_char_array<T, Cs...>::size`!
 								sizeof...(Cs) - ((Cs == 0) or ...)
-								#endif
+		#endif
 			>;
 		#endif
 
