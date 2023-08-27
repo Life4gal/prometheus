@@ -79,49 +79,41 @@ namespace
 			std::u8string identity{};
 			identity.reserve(100);
 			for (int i = 0; i < 100; ++i) { generate_string(generate_code_point(), identity); }
-		
+
 			for (std::u8string::size_type i = 0; i < identity.size(); ++i)
 			{
 				for (std::u8string::size_type j = i; j < identity.size(); ++j)
 				{
 					const auto origin = identity.substr(i, j - i);
-		
+
 					if (not is_valid_split(origin)) { continue; }
-		
+
 					const auto result = CharConverter<char_map_category_utf_8, char_map_category_utf_8>{}.operator()<std::u8string>(origin);
-		
-					// expect((origin == result) >> fatal);
-					if (origin != result)
-					{
-						expect(origin == result);
-					}
+
+					expect((origin == result) >> fatal);
 				}
 			}
 		};
-		
+
 		"move_check"_test = []
 		{
 			std::u8string identity{};
 			identity.reserve(100);
 			for (int i = 0; i < 100; ++i) { generate_string(generate_code_point(), identity); }
-		
+
 			for (std::u8string::size_type i = 0; i < identity.size(); ++i)
 			{
 				for (std::u8string::size_type j = i; j < identity.size(); ++j)
 				{
 					const auto origin = identity.substr(i, j - i);
-		
+
 					if (not is_valid_split(origin)) { continue; }
-		
+
 					auto       copy   = origin;
 					const auto result = CharConverter<char_map_category_utf_8, char_map_category_utf_8>{}.operator()<std::u8string>(std::move(copy));
-		
+
 					expect((copy.empty() == "moved"_b) >> fatal);
-					// expect((origin == result) >> fatal);
-					if (origin != result)
-					{
-						expect(origin == result);
-					}
+					expect((origin == result) >> fatal);
 				}
 			}
 		};
@@ -144,20 +136,29 @@ namespace
 					"\u00e0 abc "  // fallback
 					"\ufffd abc"   // repl
 			};
-		
-			for (std::string::size_type i = 0; i < text_with_invalid_chars.size(); ++i)
+
+			const std::u8string real_text_with_invalid_chars =
+					std::ranges::to<std::u8string>(
+							text_with_invalid_chars |
+							std::views::transform(
+									[](const auto c) { return infrastructure::char_cast<char8_t>(c); }
+									)
+							);
+
+			for (std::string::size_type i = 0; i < real_text_with_invalid_chars.size(); ++i)
 			{
-				for (std::string::size_type j = i; j < text_with_invalid_chars.size(); ++j)
+				for (std::string::size_type j = i; j < real_text_with_invalid_chars.size(); ++j)
 				{
-					const auto origin = text_with_invalid_chars.substr(i, j - i);
-		
+					const auto origin = real_text_with_invalid_chars.substr(i, j - i);
+
 					if (not is_valid_split(origin)) { continue; }
-		
+
 					const auto expected = text_after_conversion.substr(i, j - i);
-		
+
 					const auto result = CharConverter<char_map_category_utf_8, char_map_category_utf_8>{}.operator()<std::u8string>(origin);
-		
-					expect((expected == result) >> fatal);
+
+					// expect((expected == result) >> fatal);
+					expect((expected == result)) << std::format("({}:{})", i, j);
 				}
 			}
 		};
