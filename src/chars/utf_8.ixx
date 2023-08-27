@@ -63,7 +63,13 @@ export namespace gal::prometheus::chars
 			GAL_PROMETHEUS_DEBUG_ASSUME(length >= 2);
 
 			// First part of the code-point.
-			auto code_point = infrastructure::char_cast<code_point_type>((first_code_unit << length) >> length);
+			auto                     code_point =
+					[length](char8_t code_uint) -> code_point_type
+					{
+						code_uint <<= length;
+						code_uint >>= length;
+						return infrastructure::char_cast<code_point_type>(code_uint);
+					}(first_code_unit);
 
 			// Read the first continuation code-unit which is always here.
 			if (const auto code_unit = infrastructure::char_cast<char8_t>(*begin);
@@ -104,7 +110,7 @@ export namespace gal::prometheus::chars
 						// range
 						(code_point < 0x110'000) and
 						// not a surrogate
-						(code_point >= 0xd'800 and code_point < 0xe'000) and
+						(code_point < 0xd'800 or code_point >= 0xe'000) and
 						// not overlong encoded
 						(length == infrastructure::narrow_cast<std::uint8_t>((code_point > 0x7f) + (code_point > 0x7ff) + (code_point > 0xffff) + 1));
 				not valid) { return {0xfffd, false}; }
