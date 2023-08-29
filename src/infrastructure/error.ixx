@@ -7,10 +7,10 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:runtime_error;
+export module gal.prometheus.infrastructure:error;
 
-export import :runtime_error.terminate_message;
-export import :runtime_error.exception;
-export import :runtime_error.error_code;
+export import :error.debug;
+export import :error.exception;
+export import :error.platform;
 
-import :runtime_error.impl;
+import :error.impl;

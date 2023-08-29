@@ -3,13 +3,13 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-export module gal.prometheus.infrastructure:runtime_error.terminate_message;
+export module gal.prometheus.infrastructure:error.debug;
 
 import std;
 
 export namespace gal::prometheus::infrastructure
 {
-	inline std::atomic<const char*> g_terminate_reason{nullptr};
+	inline std::atomic<const char*> g_debug_terminate_reason{nullptr};
 
 	/**
 	 * @brief This will check if a debugger exists and potentially launch the Just-In-Time debugger if one is configured.
@@ -24,7 +24,7 @@ export namespace gal::prometheus::infrastructure
 		if (not try_wakeup_debugger())
 		{
 			std::cerr << std::format("Unexpected behavior occurred but did not run under the debugger, terminate the program. \nReason. {}\n", message);
-			g_terminate_reason.store(message, std::memory_order_relaxed);
+			g_debug_terminate_reason.store(message, std::memory_order_relaxed);
 			std::terminate();
 		}
 	}

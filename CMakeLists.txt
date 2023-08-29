@@ -311,11 +311,11 @@ target_sources(
 	
 		${PROJECT_SOURCE_DIR}/src/infrastructure/type_traits.ixx
 	
-		${PROJECT_SOURCE_DIR}/src/infrastructure/runtime_error.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/runtime_error_terminate_message.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/runtime_error_exception.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/runtime_error_error_code.ixx
-		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/infrastructure/runtime_error_impl_win.ixx>
+		${PROJECT_SOURCE_DIR}/src/infrastructure/error.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/error_debug.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/error_exception.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/error_platform.ixx
+		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/infrastructure/error_impl_win.ixx>
 	
 		${PROJECT_SOURCE_DIR}/src/infrastructure/cast.ixx
 		${PROJECT_SOURCE_DIR}/src/infrastructure/enum_meta.ixx

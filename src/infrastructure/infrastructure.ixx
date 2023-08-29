@@ -6,7 +6,7 @@
 export module gal.prometheus.infrastructure;
 
 export import :type_traits;
-export import :runtime_error;
+export import :error;
 export import :cast;
 export import :enum_meta;
 export import :functor;

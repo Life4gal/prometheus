@@ -10,7 +10,7 @@ module;
 export module gal.prometheus.infrastructure:wildcard_match;
 
 import std;
-import :runtime_error.exception;
+import :error.exception;
 
 export namespace gal::prometheus::infrastructure
 {

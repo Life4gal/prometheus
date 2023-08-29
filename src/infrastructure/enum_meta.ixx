@@ -10,8 +10,8 @@ module;
 export module gal.prometheus.infrastructure:enum_meta;
 
 import std;
-import :runtime_error.terminate_message;
-import :runtime_error.exception;
+import :error.debug;
+import :error.exception;
 
 export namespace gal::prometheus::infrastructure
 {

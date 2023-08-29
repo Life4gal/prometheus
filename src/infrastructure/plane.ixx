@@ -10,7 +10,7 @@ module;
 export module gal.prometheus.infrastructure:plane;
 
 import std;
-import :runtime_error.terminate_message;
+import :error.debug;
 import :concepts;
 
 // https://en.cppreference.com/w/cpp/language/operator_member_access

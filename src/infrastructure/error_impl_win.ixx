@@ -7,12 +7,12 @@ module;
 
 #include <prometheus/windows.hpp>
 
-export module gal.prometheus.infrastructure:runtime_error.impl;
+export module gal.prometheus.infrastructure:error.impl;
 
 import std;
 import :cast;
-import :runtime_error.error_code;
-import :runtime_error.exception;
+import :error.platform;
+import :error.exception;
 
 namespace gal::prometheus::infrastructure
 {

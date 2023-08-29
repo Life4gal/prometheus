@@ -11,8 +11,8 @@ export module gal.prometheus.infrastructure:cast;
 
 import std;
 import :type_traits;
-import :runtime_error.terminate_message;
-import :runtime_error.exception;
+import :error.debug;
+import :error.exception;
 
 namespace gal::prometheus::infrastructure
 {

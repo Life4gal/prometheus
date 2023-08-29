@@ -11,8 +11,8 @@ export module gal.prometheus.infrastructure:charconv;
 
 import std;
 import :type_traits;
-import :runtime_error.exception;
-import :runtime_error.terminate_message;
+import :error.exception;
+import :error.debug;
 
 export namespace gal::prometheus::infrastructure
 {

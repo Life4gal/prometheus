@@ -11,7 +11,7 @@ export module gal.prometheus.infrastructure:function_ref;
 
 import std;
 import :aligned_union;
-import :runtime_error.terminate_message;
+import :error.debug;
 
 namespace gal::prometheus::infrastructure
 {
