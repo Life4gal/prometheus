@@ -102,19 +102,59 @@
 	#define GAL_PROMETHEUS_IF_CONSTANT_EVALUATED if consteval
 	#define GAL_PROMETHEUS_IF_NOT_CONSTANT_EVALUATED if not consteval
 #else
-	#define GAL_PROMETHEUS_IF_CONSTANT_EVALUATED if (std::is_constant_evaluated())
-	#define GAL_PROMETHEUS_IF_NOT_CONSTANT_EVALUATED if (not std::is_constant_evaluated())
+#define GAL_PROMETHEUS_IF_CONSTANT_EVALUATED if (std::is_constant_evaluated())
+#define GAL_PROMETHEUS_IF_NOT_CONSTANT_EVALUATED if (not std::is_constant_evaluated())
+#endif
+
+// fixme
+#if __has_cpp_attribute(__cpp_lib_is_implicit_lifetime)
+	#define GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(type) std::is_implicit_lifetime_v<type>
+#else
+#define GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(type) std::is_standard_layout_v<type> and std::is_trivial_v<type>
 #endif
 
 #if __has_cpp_attribute(__cpp_lib_start_lifetime_as)
 	#define GAL_PROMETHEUS_START_LIFETIME_AS(type, ptr) std::start_lifetime_as<type>(ptr)
+	#define GAL_PROMETHEUS_START_LIFETIME_AS_ARRAY(type, ptr) std::start_lifetime_as_array<type>(ptr)
 #else
-	#define GAL_PROMETHEUS_START_LIFETIME_AS(type, ptr) \
-		[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_T>(GAL_PROMETHEUS_START_LIFETIME_AS_T p)                                                                           \
-		{                                                                                                                           \
-			if constexpr (std::is_const_v<std::remove_pointer_t<GAL_PROMETHEUS_START_LIFETIME_AS_T>>) { return reinterpret_cast<std::add_pointer_t<std::add_const_t<type>>>(p); } \
-			else { return reinterpret_cast<std::add_pointer_t<type>>(p); }                                                          \
-		}(ptr)
+#define GAL_PROMETHEUS_START_LIFETIME_AS(type, ptr) \
+				[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>(GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE gal_prometheus_start_lifetime_as_p)                                                                           \
+					requires(std::is_trivially_copyable_v<type> && GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(type)) \
+				{                                                                                                                           \
+					if constexpr (std::is_const_v<std::remove_pointer_t<GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>>) \
+					{ \
+						return reinterpret_cast<std::add_pointer_t<std::add_const_t<type>>>(gal_prometheus_start_lifetime_as_p); \
+					} \
+					else \
+					{ \
+						auto*		gal_prometheus_start_lifetime_as_dest	= gal_prometheus_start_lifetime_as_p;         \
+						const auto* gal_prometheus_start_lifetime_as_source = gal_prometheus_start_lifetime_as_p;                                                                                                                                    \
+						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_dest);                                                                                                                       \
+						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_source);                                                                                                                     \
+						auto* gal_prometheus_start_lifetime_as_moved = static_cast<std::add_pointer_t<type>>(std::memmove(gal_prometheus_start_lifetime_as_dest, gal_prometheus_start_lifetime_as_source, sizeof(type)));                                                         \
+						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_moved); \
+						return std::launder(gal_prometheus_start_lifetime_as_moved); \
+					}                                                          \
+				}(ptr)
+#define GAL_PROMETHEUS_START_LIFETIME_AS_ARRAY(type, ptr, size)                                                                                                                           \
+				[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>(GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE gal_prometheus_start_lifetime_as_p)                                                                                                                                                      \
+					requires(std::is_array_v<type> and std::is_trivially_copyable_v<std::remove_extent_t<type>> && GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(std::remove_extent_t<type>))                                                                                                                                                      \
+				{                                                                                                                                                                                                                                          \
+					if constexpr (std::is_const_v<std::remove_pointer_t<GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>>) \
+					{ \
+						return reinterpret_cast<std::add_pointer_t<std::add_const_t<std::remove_extent_t<type>>>>(gal_prometheus_start_lifetime_as_p);                                                   \
+					} \
+					else \
+					{ \
+						auto*		gal_prometheus_start_lifetime_as_dest	= gal_prometheus_start_lifetime_as_p;                                                                                                                                   \
+						const auto* gal_prometheus_start_lifetime_as_source = gal_prometheus_start_lifetime_as_p;                                                                                                                                   \
+						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_dest);                                                                                                                                                       \
+						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_source);                                                                                                                   \
+						auto* gal_prometheus_start_lifetime_as_moved = static_cast<std::add_pointer_t<std::remove_extent_t<type>>>(std::memmove(gal_prometheus_start_lifetime_as_dest, gal_prometheus_start_lifetime_as_source, sizeof(type) * size));                                                                  \
+						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_moved); \
+						return std::launder(gal_prometheus_start_lifetime_as_moved);                                                                     \
+					}                                                                                                                                 \
+				}(ptr)
 #endif
 
 // fixme
@@ -201,7 +241,7 @@
 #if defined(NDEBUG)
 	#define GAL_PROMETHEUS_DEBUG 0
 #else
-	#define GAL_PROMETHEUS_DEBUG 1
+#define GAL_PROMETHEUS_DEBUG 1
 #endif
 
 #define GAL_PROMETHEUS_DEBUG_CALL_DEBUGGER_OR_TERMINATE(message) ::gal::prometheus::infrastructure::try_debug_or_terminate("[" __FILE__ ":" GAL_PROMETHEUS_TO_STRING(__LINE__) "] -> " message)
@@ -219,25 +259,25 @@
 		} while (false)
 
 #if GAL_PROMETHEUS_DEBUG
-	#define GAL_PROMETHEUS_DEBUG_ASSUME(expression, ...) GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK("ASSUME-CHECK", expression __VA_OPT__(, ) __VA_ARGS__)
+#define GAL_PROMETHEUS_DEBUG_ASSUME(expression, ...) GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK("ASSUME-CHECK", expression __VA_OPT__(, ) __VA_ARGS__)
 #else
 	#define GAL_PROMETHEUS_DEBUG_ASSUME(expression, ...) GAL_PROMETHEUS_ASSUME(expression)
 #endif
 
 #if GAL_PROMETHEUS_DEBUG
-	#define GAL_PROMETHEUS_DEBUG_NOT_NULL(pointer, ...) GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK("NOT-NULL-CHECK", pointer != nullptr __VA_OPT__(, ) __VA_ARGS__)
+#define GAL_PROMETHEUS_DEBUG_NOT_NULL(pointer, ...) GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK("NOT-NULL-CHECK", pointer != nullptr __VA_OPT__(, ) __VA_ARGS__)
 #else
 	#define GAL_PROMETHEUS_DEBUG_NOT_NULL(pointer, ...) GAL_PROMETHEUS_ASSUME(pointer != nullptr)
 #endif
 
 #if GAL_PROMETHEUS_DEBUG
-	#define GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED(...) GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK("NOT-IMPLEMENTED", 0 __VA_OPT__(, )__VA_ARGS__);
+#define GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED(...) GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK("NOT-IMPLEMENTED", 0 __VA_OPT__(, )__VA_ARGS__);
 #else
 	#define GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED(...) GAL_PROMETHEUS_UNREACHABLE()
 #endif
 
 #if GAL_PROMETHEUS_DEBUG
-	#define GAL_PROMETHEUS_DEBUG_UNREACHABLE(...) \
+#define GAL_PROMETHEUS_DEBUG_UNREACHABLE(...) \
 		GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK("UNRECHABLE-CHECK", 0 __VA_OPT__(, ) __VA_ARGS__); \
 		GAL_PROMETHEUS_UNREACHABLE()
 #else
