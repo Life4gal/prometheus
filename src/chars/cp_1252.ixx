@@ -107,45 +107,45 @@ namespace gal::prometheus::chars
 			[[nodiscard]] constexpr auto do_read(Begin& begin, [[maybe_unused]] const End end) const noexcept -> std::pair<code_point_type, bool>
 			{
 				const auto result = [begin]() noexcept -> std::pair<code_point_type, bool>
-						{
-							// https://en.wikipedia.org/wiki/Windows-1252#Codepage_layout
-							switch (const auto code_point = infrastructure::char_cast<code_point_type>(*begin))
-							{
-								case 0x80: { return {0x20ac, true}; }
-								case 0x81: { return {0x81, true}; }
-								case 0x82: { return {0x201a, true}; }
-								case 0x83: { return {0x0192, true}; }
-								case 0x84: { return {0x201e, true}; }
-								case 0x85: { return {0x2026, true}; }
-								case 0x86: { return {0x2020, true}; }
-								case 0x87: { return {0x2021, true}; }
-								case 0x88: { return {0x02c6, true}; }
-								case 0x89: { return {0x2030, true}; }
-								case 0x8a: { return {0x0160, true}; }
-								case 0x8b: { return {0x2039, true}; }
-								case 0x8c: { return {0x0152, true}; }
-								case 0x8d: { return {0x8d, true}; }
-								case 0x8e: { return {0x017d, true}; }
-								case 0x8f: { return {0x8f, true}; }
-								case 0x90: { return {0x90, true}; }
-								case 0x91: { return {0x2018, true}; }
-								case 0x92: { return {0x2019, true}; }
-								case 0x93: { return {0x201c, true}; }
-								case 0x94: { return {0x201d, true}; }
-								case 0x95: { return {0x2022, true}; }
-								case 0x96: { return {0x2013, true}; }
-								case 0x97: { return {0x2014, true}; }
-								case 0x98: { return {0x02dc, true}; }
-								case 0x99: { return {0x2122, true}; }
-								case 0x9a: { return {0x0161, true}; }
-								case 0x9b: { return {0x203a, true}; }
-								case 0x9c: { return {0x0153, true}; }
-								case 0x9d: { return {0x9d, true}; }
-								case 0x9e: { return {0x017e, true}; }
-								case 0x9f: { return {0x0178, true}; }
-								default: { return {code_point, true}; }
-							}
-						}();
+				{
+					// https://en.wikipedia.org/wiki/Windows-1252#Codepage_layout
+					switch (const auto code_point = infrastructure::char_cast<code_point_type>(*begin))
+					{
+						case 0x80: { return {0x20ac, true}; }
+						case 0x81: { return {0x81, true}; }
+						case 0x82: { return {0x201a, true}; }
+						case 0x83: { return {0x0192, true}; }
+						case 0x84: { return {0x201e, true}; }
+						case 0x85: { return {0x2026, true}; }
+						case 0x86: { return {0x2020, true}; }
+						case 0x87: { return {0x2021, true}; }
+						case 0x88: { return {0x02c6, true}; }
+						case 0x89: { return {0x2030, true}; }
+						case 0x8a: { return {0x0160, true}; }
+						case 0x8b: { return {0x2039, true}; }
+						case 0x8c: { return {0x0152, true}; }
+						case 0x8d: { return {0x8d, true}; }
+						case 0x8e: { return {0x017d, true}; }
+						case 0x8f: { return {0x8f, true}; }
+						case 0x90: { return {0x90, true}; }
+						case 0x91: { return {0x2018, true}; }
+						case 0x92: { return {0x2019, true}; }
+						case 0x93: { return {0x201c, true}; }
+						case 0x94: { return {0x201d, true}; }
+						case 0x95: { return {0x2022, true}; }
+						case 0x96: { return {0x2013, true}; }
+						case 0x97: { return {0x2014, true}; }
+						case 0x98: { return {0x02dc, true}; }
+						case 0x99: { return {0x2122, true}; }
+						case 0x9a: { return {0x0161, true}; }
+						case 0x9b: { return {0x203a, true}; }
+						case 0x9c: { return {0x0153, true}; }
+						case 0x9d: { return {0x9d, true}; }
+						case 0x9e: { return {0x017e, true}; }
+						case 0x9f: { return {0x0178, true}; }
+						default: { return {code_point, true}; }
+					}
+				}();
 				std::ranges::advance(begin, 1);
 				return result;
 			}
@@ -155,12 +155,12 @@ namespace gal::prometheus::chars
 			{
 				(void)this;
 
-				GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x110'000);
-				GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd'800 and code_point < 0xe'000));
+				GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x11'0000);
+				GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd800 and code_point < 0xe000));
 
 				if (code_point < 0x2dd) { *dest = infrastructure::char_cast<value_type>(cp_1252_database_0000_02dc[code_point]); }
-				else if (code_point < 0x2'000) { *dest = infrastructure::char_cast<value_type>(char_placeholder); }
-				else if (code_point < 0x2'123) { *dest = infrastructure::char_cast<value_type>(cp_1252_database_2000_2122[code_point - 0x2'000]); }
+				else if (code_point < 0x2000) { *dest = infrastructure::char_cast<value_type>(char_placeholder); }
+				else if (code_point < 0x2123) { *dest = infrastructure::char_cast<value_type>(cp_1252_database_2000_2122[code_point - 0x2000]); }
 				else { *dest = infrastructure::char_cast<value_type>(char_placeholder); }
 
 				std::ranges::advance(dest, 1);
@@ -170,8 +170,8 @@ namespace gal::prometheus::chars
 			{
 				(void)this;
 
-				GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x110'000);
-				GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd'800 and code_point < 0xe'000));
+				GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x11'0000);
+				GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd800 and code_point < 0xe000));
 
 				if (code_point < 0x2dd)
 				{
@@ -179,9 +179,9 @@ namespace gal::prometheus::chars
 					return {infrastructure::narrow_cast<std::uint8_t>(1), cp_1252_database_0000_02dc[code_point] != char_placeholder};
 				}
 
-				if (code_point < 0x2'000) { return {infrastructure::narrow_cast<std::uint8_t>(1), false}; }
+				if (code_point < 0x2000) { return {infrastructure::narrow_cast<std::uint8_t>(1), false}; }
 
-				if (code_point < 0x2'123) { return {infrastructure::narrow_cast<std::uint8_t>(1), cp_1252_database_2000_2122[infrastructure::wide_cast<std::size_t>(code_point) - 0x2000] != char_placeholder}; }
+				if (code_point < 0x2123) { return {infrastructure::narrow_cast<std::uint8_t>(1), cp_1252_database_2000_2122[infrastructure::wide_cast<std::size_t>(code_point) - 0x2000] != char_placeholder}; }
 
 				return {infrastructure::narrow_cast<std::uint8_t>(1), false};
 			}

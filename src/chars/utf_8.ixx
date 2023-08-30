@@ -93,7 +93,7 @@ export namespace gal::prometheus::chars
 				if (begin == end) { return {0xfffd, false}; }
 
 				const auto code_unit = infrastructure::char_cast<char8_t>(*begin);
-				if ((code_unit & 0b11'000'000) != 0b10'000'000)
+				if ((code_unit & 0b1100'0000) != 0b1000'0000)
 				{
 					// Unexpected end of sequence.
 					return {0xfffd, false};
@@ -103,14 +103,14 @@ export namespace gal::prometheus::chars
 
 				// shift in the next 6 bits.
 				code_point <<= 6;
-				code_point |= code_unit & 0b00'111'111;
+				code_point |= code_unit & 0b0011'1111;
 			}
 
 			if (const auto valid =
 						// range
-						(code_point < 0x110'000) and
+						(code_point < 0x11'0000) and
 						// not a surrogate
-						(code_point < 0xd'800 or code_point >= 0xe'000) and
+						(code_point < 0xd800 or code_point >= 0xe000) and
 						// not overlong encoded
 						(length == infrastructure::narrow_cast<std::uint8_t>((code_point > 0x7f) + (code_point > 0x7ff) + (code_point > 0xffff) + 1));
 				not valid) { return {0xfffd, false}; }
@@ -138,8 +138,8 @@ export namespace gal::prometheus::chars
 		{
 			(void)this;
 
-			GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x110'000);
-			GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd'800 and code_point < 0xe'000));
+			GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x11'0000);
+			GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd800 and code_point < 0xe000));
 
 			const auto num_code_uint = infrastructure::narrow_cast<std::uint8_t>((code_point > 0x7f) + (code_point > 0x7ff) + (code_point > 0xffff));
 			const auto leading_ones  = num_code_uint == 0 ? 0 : infrastructure::char_cast<std::int8_t>(infrastructure::narrow_cast<std::uint8_t>(0x80)) >> num_code_uint;
@@ -153,7 +153,7 @@ export namespace gal::prometheus::chars
 			{
 				shift -= 6;
 
-				const auto code_unit = infrastructure::truncate<std::uint8_t>(code_point >> shift) & 0b00'111'111 | 0b10'000'000;
+				const auto code_unit = infrastructure::truncate<std::uint8_t>(code_point >> shift) & 0b0011'1111 | 0b1000'0000;
 
 				*dest = infrastructure::char_cast<value_type>(code_unit);
 				std::ranges::advance(dest, 1);
@@ -164,8 +164,8 @@ export namespace gal::prometheus::chars
 		{
 			(void)this;
 
-			GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x110'000);
-			GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd'800 and code_point < 0xe'000));
+			GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x11'0000);
+			GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd800 and code_point < 0xe000));
 
 			return {infrastructure::narrow_cast<std::uint8_t>((code_point > 0x7f) + (code_point > 0x7ff) + (code_point > 0xffff) + 1), true};
 		}
