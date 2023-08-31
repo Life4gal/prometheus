@@ -17,9 +17,11 @@ export namespace gal::prometheus::chars
 	constexpr infrastructure::fixed_string char_map_category_ascii{"ascii"};
 	constexpr infrastructure::fixed_string char_map_category_cp_1252{"cp-1252"};
 	constexpr infrastructure::fixed_string char_map_category_utf_8{"utf-8"};
+	constexpr infrastructure::fixed_string char_map_category_utf_16{"utf-16"};
 #else
 	constexpr infrastructure::fixed_string<sizeof("ascii")> char_map_category_ascii{"ascii"};
 	constexpr infrastructure::fixed_string<sizeof("cp-1252")> char_map_category_cp_1252{"cp-1252"};
 	constexpr infrastructure::fixed_string<sizeof("utf-8")>	  char_map_category_utf_8{"utf-8"};
+	constexpr infrastructure::fixed_string<sizeof("utf-16")>	  char_map_category_utf_16{"utf-16"};
 #endif
 }

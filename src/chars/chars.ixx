@@ -11,6 +11,7 @@ export import :category;
 export import :ascii;
 export import :cp_1252;
 export import :utf_8;
+export import :utf_16;
 
 export namespace gal::prometheus::chars
 {
