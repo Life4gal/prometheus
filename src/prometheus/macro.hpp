@@ -138,11 +138,11 @@
 				}(ptr)
 #define GAL_PROMETHEUS_START_LIFETIME_AS_ARRAY(type, ptr, size)                                                                                                                           \
 				[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>(GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE gal_prometheus_start_lifetime_as_p)                                                                                                                                                      \
-					requires(std::is_array_v<type> and std::is_trivially_copyable_v<std::remove_extent_t<type>> && GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(std::remove_extent_t<type>))                                                                                                                                                      \
+					requires(std::is_trivially_copyable_v<type> && GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(type))                                                                                                                                                      \
 				{                                                                                                                                                                                                                                          \
 					if constexpr (std::is_const_v<std::remove_pointer_t<GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>>) \
 					{ \
-						return reinterpret_cast<std::add_pointer_t<std::add_const_t<std::remove_extent_t<type>>>>(gal_prometheus_start_lifetime_as_p);                                                   \
+						return reinterpret_cast<std::add_pointer_t<std::add_const_t<type>>>(gal_prometheus_start_lifetime_as_p);                                                   \
 					} \
 					else \
 					{ \
@@ -150,7 +150,7 @@
 						const auto* gal_prometheus_start_lifetime_as_source = gal_prometheus_start_lifetime_as_p;                                                                                                                                   \
 						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_dest);                                                                                                                                                       \
 						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_source);                                                                                                                   \
-						auto* gal_prometheus_start_lifetime_as_moved = static_cast<std::add_pointer_t<std::remove_extent_t<type>>>(std::memmove(gal_prometheus_start_lifetime_as_dest, gal_prometheus_start_lifetime_as_source, sizeof(type) * size));                                                                  \
+						auto* gal_prometheus_start_lifetime_as_moved = static_cast<std::add_pointer_t<type>>(std::memmove(gal_prometheus_start_lifetime_as_dest, gal_prometheus_start_lifetime_as_source, sizeof(type) * size));                                                                  \
 						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_moved); \
 						return std::launder(gal_prometheus_start_lifetime_as_moved);                                                                     \
 					}                                                                                                                                 \
