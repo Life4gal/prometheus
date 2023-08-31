@@ -328,6 +328,7 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/infrastructure/string.ixx
 		${PROJECT_SOURCE_DIR}/src/infrastructure/charconv.ixx
 		${PROJECT_SOURCE_DIR}/src/infrastructure/memory.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/compiler.ixx
 	
 		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
 
@@ -360,6 +361,7 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/chars/ascii.ixx
 		${PROJECT_SOURCE_DIR}/src/chars/cp_1252.ixx
 		${PROJECT_SOURCE_DIR}/src/chars/utf_8.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/utf_16.ixx
 
 		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
 )

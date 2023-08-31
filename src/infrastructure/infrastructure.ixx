@@ -18,5 +18,6 @@ export import :plane;
 export import :string;
 export import :charconv;
 export import :memory;
+export import :compiler;
 
 export namespace gal::prometheus::infrastructure {}
