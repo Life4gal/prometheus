@@ -77,11 +77,15 @@ export namespace gal::prometheus::chars
 		 *
 		 * @note The implementation of this function must set the high-bit of each non-ASCII character.
 		 */
-		template<std::input_iterator Iterator>
+		template<std::contiguous_iterator Iterator>
 		[[nodiscard]] constexpr auto chunk_read(const Iterator source) const noexcept -> chunk_type
 		{
-			const auto* p = GAL_PROMETHEUS_START_LIFETIME_AS(chunk_type, std::addressof(*source));
-			return _mm_loadu_si128(p);
+			if constexpr (requires { { rep().do_chunk_read(source) } -> std::same_as<chunk_type>; }) { return rep().do_chunk_read(source); }
+			else
+			{
+				const auto* p = GAL_PROMETHEUS_START_LIFETIME_AS(chunk_type, std::addressof(*source));
+				return _mm_loadu_si128(p);
+			}
 		}
 
 		/**
@@ -90,22 +94,15 @@ export namespace gal::prometheus::chars
 		 * @param chunk A chunk of 16 ascii characters. bit 7 is always '0'.
 		 */
 		// template<std::output_iterator<typename derived_type::value_type> Iterator>
-		template<std::input_or_output_iterator Iterator>
+		template<std::contiguous_iterator Iterator>
 		constexpr auto chunk_write(const Iterator dest, const chunk_type chunk) const noexcept -> void
 		{
-			auto* p = GAL_PROMETHEUS_START_LIFETIME_AS(chunk_type, std::addressof(*dest));
-			_mm_storeu_si128(p, chunk);
-		}
-
-		constexpr auto chunk_size(const chunk_type chunk) const noexcept -> std::size_t
-		{
-			(void)this;
-
-			const auto mask = _mm_movemask_epi8(chunk);
-			if (mask == 0) { return 0; }
-
-			static_assert(sizeof(chunk_type) == 16);
-			return std::countr_zero(infrastructure::truncate<std::uint16_t>(mask));
+			if constexpr (requires { { rep().do_chunk_write(dest, chunk) } -> std::same_as<void>; }) { return rep().do_chunk_write(dest, chunk); }
+			else
+			{
+				auto* p = GAL_PROMETHEUS_START_LIFETIME_AS(chunk_type, std::addressof(*dest));
+				_mm_storeu_si128(p, chunk);
+			}
 		}
 	};
 
@@ -126,7 +123,7 @@ export namespace gal::prometheus::chars
 		using chunk_type = typename encoder_from::chunk_type;
 
 	private:
-		template<std::input_iterator Begin, std::sentinel_for<Begin> End>
+		template<std::contiguous_iterator Begin, std::sentinel_for<Begin> End>
 		[[nodiscard]] constexpr auto do_size(const Begin begin, const End end) const noexcept -> std::pair<std::size_t, bool>
 		{
 			constexpr auto step = sizeof(chunk_type);
@@ -141,11 +138,12 @@ export namespace gal::prometheus::chars
 				while (std::ranges::distance(it, end) >= step)
 				{
 					const auto chunk = from.chunk_read(it);
-					if (const auto size = from.chunk_size(chunk);
-						size != 0)
+					if (const auto mask = _mm_movemask_epi8(chunk);
+						mask != 0)
 					{
 						// This chunk contains non-ASCII characters.
-
+						static_assert(sizeof(chunk_type) == 16);
+						const auto size = std::countr_zero(infrastructure::truncate<std::uint16_t>(mask));
 						std::ranges::advance(it, size);
 						count += size;
 						break;
@@ -171,7 +169,7 @@ export namespace gal::prometheus::chars
 		template<std::ranges::contiguous_range Range>
 		[[nodiscard]] constexpr auto do_size(const Range& range) const noexcept -> std::pair<std::size_t, bool> { return do_size(std::ranges::begin(range), std::ranges::end(range)); }
 
-		template<std::input_iterator Begin, std::sentinel_for<Begin> End, std::output_iterator<typename std::iterator_traits<Begin>::value_type> Dest>
+		template<std::contiguous_iterator Begin, std::sentinel_for<Begin> End, std::output_iterator<typename std::iterator_traits<Begin>::value_type> Dest>
 		constexpr auto do_convert(const Begin begin, const End end, Dest dest) const noexcept -> void
 		{
 			constexpr auto step = sizeof(chunk_type);
