@@ -45,11 +45,12 @@ export namespace gal::prometheus::chars
 
 			std::basic_string_view string{&code_unit, 1};
 
-			auto begin = string.begin();
-			return fallback_encoder_type{}.read(begin, string.end());
+			auto       begin           = string.begin();
+			const auto [code_point, _] = fallback_encoder_type{}.read(begin, string.end());
+			return {code_point, false};
 		}
 
-		template<std::input_iterator Begin, std::sentinel_for<Begin> End>
+		template<std::input_iterator Begin, std::sentinel_for<Begin>End>
 		[[nodiscard]] constexpr auto do_read(Begin& begin, const End end, const char8_t first_code_unit) const noexcept -> std::pair<code_point_type, bool>
 		{
 			if (begin == end or (first_code_unit & 0xc0) == 0x80)
@@ -117,7 +118,7 @@ export namespace gal::prometheus::chars
 			return {code_point, true};
 		}
 
-		template<std::input_iterator Begin, std::sentinel_for<Begin> End>
+		template<std::input_iterator Begin, std::sentinel_for<Begin>End>
 		[[nodiscard]] constexpr auto do_read(Begin& begin, const End end) const noexcept -> std::pair<code_point_type, bool>
 		{
 			const auto first_code_uint = infrastructure::char_cast<char8_t>(*begin);
@@ -133,7 +134,7 @@ export namespace gal::prometheus::chars
 			return do_read(begin, end, first_code_uint);
 		}
 
-		template<std::output_iterator<value_type> Iterator>
+		template<std::output_iterator<value_type>Iterator>
 		constexpr auto do_write(Iterator& dest, const code_point_type code_point) const noexcept -> void
 		{
 			(void)this;
