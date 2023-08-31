@@ -122,43 +122,33 @@ namespace
 		{
 			constexpr std::u8string_view text_with_invalid_chars{
 					u8"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
-					"\xfe ascii "      // ascii
-					"\xe0\x80\x80 abc "// invalid overlong
-					"\xed\xa0\xad abc "// surrogate
-					"\xe0 abc "        // short
-					"\xe0\x80 abc"     // short
+					u8"\xfe ascii "      // 
+					u8"\xe0\x80\x80 abc "// 
+					u8"\xed\xa0\xad abc "// 
+					u8"\xe0 abc "        // 
+					u8"\xe0\x80 abc"     // 
 			};
 			constexpr std::u8string_view text_after_conversion{
 					u8"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
-					"\u00fe ascii "// fallback
-					"\ufffd abc "  // repl
-					"\ufffd abc "  // repl
-					"\u00e0 abc "  // fallback
-					"\ufffd abc"   // repl
+					u8"\u00fe ascii "          // 
+					u8"\u00e0\u0080\u0080 abc "// 
+					u8"\ufffd abc "            // 
+					u8"\u00e0 abc "            // 
+					u8"\ufffd abc"             // 
 			};
 
-			const std::u8string real_text_with_invalid_chars =
-					std::ranges::to<std::u8string>(
-							text_with_invalid_chars |
-							std::views::transform(
-									[](const auto c) { return infrastructure::char_cast<char8_t>(c); }
-									)
-							);
-
-			for (std::string::size_type i = 0; i < real_text_with_invalid_chars.size(); ++i)
+			for (std::string::size_type i = 0; i < text_with_invalid_chars.size(); ++i)
 			{
-				for (std::string::size_type j = i; j < real_text_with_invalid_chars.size(); ++j)
+				for (std::string::size_type j = i; j < text_with_invalid_chars.size(); ++j)
 				{
-					const auto origin = real_text_with_invalid_chars.substr(i, j - i);
+					const auto origin = text_with_invalid_chars.substr(i, j - i);
 
 					if (not is_valid_split(origin)) { continue; }
 
-					const auto expected = text_after_conversion.substr(i, j - i);
+					const auto result   = CharConverter<char_map_category_utf_8, char_map_category_utf_8>{}.operator()<std::u8string>(origin);
+					const auto expected = text_after_conversion.substr(i, result.size());
 
-					const auto result = CharConverter<char_map_category_utf_8, char_map_category_utf_8>{}.operator()<std::u8string>(origin);
-
-					// expect((expected == result) >> fatal);
-					expect((expected == result)) << std::format("({}:{})", i, j);
+					expect((expected == result) >> fatal);
 				}
 			}
 		};
