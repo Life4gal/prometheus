@@ -43,7 +43,7 @@ export namespace gal::prometheus::infrastructure
 	/**
 	 * @brief Exception thrown during string parsing on an error.
 	 */
-	class StringParseError final : public RuntimeError
+	class StringParseError : public RuntimeError
 	{
 	public:
 		using RuntimeError::RuntimeError;
@@ -59,13 +59,13 @@ export namespace gal::prometheus::infrastructure
 		using Exception::Exception;
 	};
 
-	class InvalidArgumentError final : public LogicError
+	class InvalidArgumentError : public LogicError
 	{
 	public:
 		using LogicError::LogicError;
 	};
 
-	class OutOfRangeError final : public LogicError
+	class OutOfRangeError : public LogicError
 	{
 	public:
 		using LogicError::LogicError;

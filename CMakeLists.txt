@@ -329,6 +329,8 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/infrastructure/charconv.ixx
 		${PROJECT_SOURCE_DIR}/src/infrastructure/memory.ixx
 		${PROJECT_SOURCE_DIR}/src/infrastructure/compiler.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/string_pool.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/command_line_parser.ixx
 	
 		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
 

@@ -19,5 +19,7 @@ export import :string;
 export import :charconv;
 export import :memory;
 export import :compiler;
+export import :string_pool;
+export import :command_line_parser;
 
 export namespace gal::prometheus::infrastructure {}
