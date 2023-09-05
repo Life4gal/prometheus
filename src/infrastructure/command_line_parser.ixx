@@ -28,6 +28,8 @@ namespace gal::prometheus::infrastructure
 	template<regex_string_type Range>
 	using regex_match_result_type = std::match_results<typename Range::const_iterator>;
 	template<regex_string_type Range>
+	using regex_sub_match_type = typename regex_match_result_type<Range>::value_type;
+	template<regex_string_type Range>
 	using regex_token_iterator = std::regex_token_iterator<typename Range::const_iterator>;
 
 	template<regex_string_type Range>
@@ -64,18 +66,12 @@ namespace gal::prometheus::infrastructure
 	// ReSharper restore CppTemplateArgumentsCanBeDeduced
 	// ReSharper restore StringLiteralTypo
 
+	#if defined(GAL_PROMETHEUS_DEBUG)
+	#define GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED
+	#endif
+
 	export
 	{
-		class CommandLineOptionArgumentTypeError final : public StringParseError
-		{
-		public:
-			CommandLineOptionArgumentTypeError(
-					const std::string_view text,
-					const std::string_view required_type
-					)
-				: StringParseError{std::format("Cannot parse `{}` as `{}`.", text, required_type)} {}
-		};
-
 		class CommandLineOptionNameFormatError final : public StringParseError
 		{
 		public:
@@ -118,10 +114,10 @@ namespace gal::prometheus::infrastructure
 	{
 		enum class Base
 		{
-			BINARY,
-			OCTAL,
-			DECIMAL,
-			HEXADECIMAL,
+			BINARY = 2,
+			OCTAL = 8,
+			DECIMAL = 10,
+			HEXADECIMAL = 16,
 		};
 
 		bool is_negative;
@@ -137,7 +133,18 @@ namespace gal::prometheus::infrastructure
 		std::basic_string_view<regex_char_type> value;
 	};
 
-	using descriptor_comma_list = std::vector<std::basic_string<regex_char_type>>;
+	template<typename Range>
+	[[nodiscard]] constexpr auto sub_match_to_string_view(const regex_sub_match_type<Range>& sub_match) noexcept -> std::basic_string_view<regex_char_type> { return std::basic_string_view<regex_char_type>{sub_match.first, sub_match.second}; }
+
+	template<regex_string_type Range>
+	using descriptor_list =
+	std::remove_cvref_t<
+		decltype(                                                                                                            //
+			std::ranges::subrange{std::declval<regex_token_iterator<Range>>(), std::declval<regex_token_iterator<Range>>()} |//
+			std::views::transform(sub_match_to_string_view<Range>) |                                                         //
+			std::views::common
+		)
+	>;
 
 	template<bool True, regex_string_type Range>
 	[[nodiscard]] auto parse_boolean(const Range& range) -> descriptor_boolean
@@ -152,13 +159,25 @@ namespace gal::prometheus::infrastructure
 	}
 
 	template<regex_string_type Range>
-	[[nodiscard]] auto parse_integer(const Range& range) -> descriptor_integer
+	[[nodiscard]] auto parse_integer(const Range& range) ->
+		#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+		std::expected<descriptor_integer, std::string>
+		#else
+		std::optional<descriptor_integer>
+		#endif
 	{
 		const static auto regex = make_regex(pattern_integer);
 
 		regex_match_result_type<Range> result;
 		regex_match(range, result, regex);
-		if (result.size() != 3) { throw CommandLineOptionArgumentTypeError{range, compiler::type_name<descriptor_integer>()}; }
+		if (result.size() != 3)
+		{
+			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<descriptor_integer>())};
+			#else
+			return std::nullopt;
+			#endif
+		}
 
 		const auto is_negative = result[1] == '-';
 
@@ -166,69 +185,90 @@ namespace gal::prometheus::infrastructure
 		const std::basic_string_view sub_string{sub.first, sub.second};
 		if (sub_string.starts_with("0b"))
 		{
-			return {
+			return descriptor_integer{
 					.is_negative = is_negative,
 					.base = descriptor_integer::Base::BINARY,
 					.value = sub_string.substr(2)};
 		}
 		if (sub_string.starts_with("0x"))
 		{
-			return {
+			return descriptor_integer{
 					.is_negative = is_negative,
 					.base = descriptor_integer::Base::HEXADECIMAL,
 					.value = sub_string.substr(2)};
 		}
 		if (sub_string.starts_with('0'))
 		{
-			return {
+			return descriptor_integer{
 					.is_negative = is_negative,
 					.base = descriptor_integer::Base::OCTAL,
 					.value = sub_string.substr(1)};
 		}
-		return {
+		return descriptor_integer{
 				.is_negative = is_negative,
 				.base = descriptor_integer::Base::DECIMAL,
 				.value = sub_string};
 	}
 
 	template<regex_string_type Range>
-	[[nodiscard]] auto parse_option(const Range& range) -> descriptor_option
+	[[nodiscard]] auto parse_option(const Range& range) ->
+		#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+		std::expected<descriptor_option, std::string>
+		#else
+		std::optional<descriptor_option>
+		#endif
 	{
 		const static auto regex = make_regex(pattern_option);
 
 		regex_match_result_type<Range> result;
 		regex_match(range, result, regex);
-		if (result.size() != 5) { throw CommandLineOptionArgumentTypeError{range, compiler::type_name<descriptor_option>()}; }
+		if (result.size() != 5)
+		{
+			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<descriptor_option>())};
+			#else
+			return std::nullopt;
+			#endif
+		}
 
 		if (result.length(4) > 0)
 		{
-			return {
+			return descriptor_option{
 					.name = {result[4].first, result[4].second},
 					.value = ""};
 		}
 
-		return {
+		return descriptor_option{
 				.name = {result[1].first, result[1].second},
 				.value = {result[3].first, result[3].second}};
 	}
 
 	template<regex_string_type Range>
-	[[nodiscard]] auto parse_list(const Range& range) -> auto//descriptor_comma_list
+	[[nodiscard]] auto parse_list(const Range& range) ->
+		#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+		std::expected<descriptor_list<Range>, std::string>
+		#else
+		std::optional<descriptor_list<Range>>
+		#endif
 	{
 		const static auto regex           = make_regex(pattern_list);
 		const static auto regex_separator = make_regex(pattern_list_separator);
 
 		regex_match_result_type<Range> result;
 		regex_match(range, result, regex);
-		if (result.size() != 3) { throw CommandLineOptionArgumentTypeError{range, compiler::type_name<descriptor_comma_list>()}; }
+		if (result.size() != 3)
+		{
+			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<descriptor_list<Range>>())};
+			#else
+			return std::nullopt;
+			#endif
+		}
 
 		regex_token_iterator<Range> token_iterator{result[0].first, result[0].second, regex_separator, -1};
 
-		// return std::ranges::to<descriptor_comma_list>(
-		// 		std::ranges::subrange{token_iterator, regex_token_iterator<Range>{}} |
-		// 		std::views::transform([](const auto& sm) { return descriptor_comma_list::value_type{sm}; }));
 		return std::ranges::subrange{token_iterator, regex_token_iterator<Range>{}} |
-				std::views::transform([](const auto& sm) { return std::basic_string_view<regex_char_type>{sm.first, sm.second}; }) |
+				std::views::transform(sub_match_to_string_view<Range>) |
 				std::views::common;
 	}
 
@@ -237,46 +277,83 @@ namespace gal::prometheus::infrastructure
 		// boolean
 		template<typename T, regex_string_type Range>
 			requires std::is_same_v<T, bool>
-		[[nodiscard]] auto operator()(const Range& range) -> T
+		[[nodiscard]] auto operator()(const Range& range) ->
+			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+			std::expected<bool, std::string>
+			#else
+			std::optional<bool>
+			#endif
 		{
 			if (parse_boolean<true>(range)) { return true; }
 
 			if (parse_boolean<false>(range)) { return false; }
 
-			throw CommandLineOptionArgumentTypeError{range, compiler::type_name<bool>()};
+			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<bool>())};
+			#else
+			return std::nullopt;
+			#endif
 		}
 
 		// integral
 		// not bool, avoid ambiguous
 		template<traits::integral T, regex_string_type Range>
 			requires(not std::is_same_v<T, bool>)
-		[[nodiscard]] auto operator()(const Range& range) -> T
+		[[nodiscard]] auto operator()(const Range& range) ->
+			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+			std::expected<T, std::string>
+			#else
+			std::optional<T>
+			#endif
 		{
-			const auto& [is_negative, base, value] = parse_integer(range);
-			const auto  base_num                   = [](const descriptor_integer::Base b)noexcept -> int
+			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+			return parse_integer(range)
+					.and_then(
+							[&range](const descriptor_integer& descriptor) -> std::expected<T, std::string>
+							{
+								const auto& [is_negative, base, value] = descriptor;
+								const auto  base_num                   = static_cast<int>(base);
+
+								using type = std::make_unsigned_t<T>;
+								type result;
+								if (
+									const auto [last, error] = std::from_chars(value.data(), value.data() + value.size(), result, base_num);
+									error != std::errc{} or last != value.data() + value.size()) { return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<type>())}; }
+
+								if (is_negative)
+								{
+									if constexpr (not std::numeric_limits<T>::is_signed) { return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<type>())}; }
+
+									return static_cast<T>(-static_cast<T>(result - 1) - 1);
+								}
+
+								return result;
+							});
+			#else
+			if (const auto descriptor = parse_integer(range);
+				descriptor.has_value())
 			{
-				if (b == descriptor_integer::Base::BINARY) { return 2; }
-				if (b == descriptor_integer::Base::OCTAL) { return 8; }
-				if (b == descriptor_integer::Base::DECIMAL) { return 10; }
-				if (b == descriptor_integer::Base::HEXADECIMAL) { return 16; }
-				GAL_PROMETHEUS_DEBUG_UNREACHABLE("Unknown base");
-			}(base);
+				const auto& [is_negative, base, value] = *descriptor;
+				const auto  base_num                   = static_cast<int>(base);
 
-			using type = std::make_unsigned_t<T>;
-			type result;
-			if (
-				const auto [last, error] = std::from_chars(value.data(), value.data() + value.size(), result, base_num);
-				error != std::errc{} or last != value.data() + value.size()
-			) { throw CommandLineOptionArgumentTypeError{range, compiler::type_name<type>()}; }
+				using type = std::make_unsigned_t<T>;
+				type result;
+				if (
+					const auto [last, error] = std::from_chars(value.data(), value.data() + value.size(), result, base_num);
+					error != std::errc{} or last != value.data() + value.size()) { return std::nullopt; }
 
-			if (is_negative)
-			{
-				if constexpr (not std::numeric_limits<T>::is_signed) { throw CommandLineOptionArgumentTypeError{range, compiler::type_name<type>()}; }
+				if (is_negative)
+				{
+					if constexpr (not std::numeric_limits<T>::is_signed) { return std::nullopt; }
 
-				return static_cast<T>(-static_cast<T>(result - 1) - 1);
+					return static_cast<T>(-static_cast<T>(result - 1) - 1);
+				}
+
+				return result;
 			}
 
-			return result;
+			return std::nullopt;
+			#endif
 		}
 
 		// list
@@ -285,32 +362,66 @@ namespace gal::prometheus::infrastructure
 			requires(not std::is_constructible_v<OutRange, Range>) and
 					requires
 					{
-						std::declval<string_parse_functor&>().operator()<std::ranges::range_value_t<OutRange>>(std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(parse_list(std::declval<const Range&>()))>>>());
+						std::declval<string_parse_functor&>().operator()<std::ranges::range_value_t<OutRange>>(std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(parse_list(std::declval<const Range&>()).value())>>>());
 					}
 		auto operator()(const Range& range, OutRange& out) -> void
 		{
 			const auto list = parse_list(range);
+			if (not list.has_value()) { return; }
 
-			if constexpr (requires { out.reserve(list.size()); }) { out.reserve(list.size() + out.size()); }
+			if constexpr (const auto view = *list;
+				std::is_same_v<
+					std::remove_cvref_t<decltype(std::declval<string_parse_functor&>().operator()<std::ranges::range_value_t<OutRange>>(std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(view)>>>()))>,//
+					std::ranges::range_value_t<OutRange>>                                                                                                                                                                            //
+			)
+			{
+				std::ranges::for_each(
+						view,
+						[this, &out](const auto& string) -> void//
+						{
+							if constexpr (requires { out.emplace_back(this->operator()<std::ranges::range_value_t<OutRange>>(string)); })//
+							{
+								out.emplace_back(this->operator()<std::ranges::range_value_t<OutRange>>(string));
+							}
+							else if constexpr (requires { out.push_back(this->operator()<std::ranges::range_value_t<OutRange>>(string)); })//
+							{
+								out.push_back(this->operator()<std::ranges::range_value_t<OutRange>>(string));
+							}
+							else if constexpr (requires { out.emplace(this->operator()<std::ranges::range_value_t<OutRange>>(string)); })//
+							{
+								out.emplace(this->operator()<std::ranges::range_value_t<OutRange>>(string));
+							}
+							else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+						});
+			}
+			else
+			{
+				OutRange tmp_out{};
+				if constexpr (requires { tmp_out.reserve(std::ranges::distance(view)); }) { tmp_out.reserve(std::ranges::distance(view)); }
 
-			std::ranges::for_each(
-					list,
-					[this, &out](const auto& string) -> void//
+				for (auto it = std::ranges::begin(view); it != std::ranges::end(view); std::ranges::advance(it, 1))
+				{
+					auto value = this->operator()<std::ranges::range_value_t<OutRange>>(*it);
+					if (not value.has_value()) { return; }
+
+					if constexpr (requires { tmp_out.emplace_back(*std::move(value)); })//
 					{
-						if constexpr (requires { out.emplace_back(this->operator()<std::ranges::range_value_t<OutRange>>(string)); })//
-						{
-							out.emplace_back(this->operator()<std::ranges::range_value_t<OutRange>>(string));
-						}
-						else if constexpr (requires { out.push_back(this->operator()<std::ranges::range_value_t<OutRange>>(string)); })//
-						{
-							out.push_back(this->operator()<std::ranges::range_value_t<OutRange>>(string));
-						}
-						else if constexpr (requires { out.emplace(this->operator()<std::ranges::range_value_t<OutRange>>(string)); })//
-						{
-							out.emplace(this->operator()<std::ranges::range_value_t<OutRange>>(string));
-						}
-						else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
-					});
+						out.emplace_back(*std::move(value));
+					}
+					else if constexpr (requires { out.push_back(*std::move(value)); })//
+					{
+						out.push_back(*std::move(value));
+					}
+					else if constexpr (requires { out.emplace(*std::move(value)); })//
+					{
+						out.emplace(*std::move(value));
+					}
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				}
+
+				if constexpr (requires { out.reserve(tmp_out.size()); }) { out.reserve(tmp_out.size() + out.size()); }
+				std::ranges::move(tmp_out, std::back_inserter(out));
+			}
 		}
 
 		// list
@@ -344,7 +455,7 @@ namespace gal::prometheus::infrastructure
 	static int		  g_argc = 0;
 	static char* const* g_argv = nullptr;
 
-	__attribute__((constructor)) auto do_read_command_line(const int		   argc, const char* argv[])  -> void
+	__attribute__((constructor)) auto do_read_command_line(const int	 argc, const char* argv[])  -> void
 	{
 		g_argc = argc;
 		g_argv = argv;
@@ -474,11 +585,24 @@ namespace gal::prometheus::infrastructure
 				{
 					std::declval<string_parse_functor&>().operator()<T>(std::declval<string_view_type>());
 				}
-			[[nodiscard]] auto as() const -> T
+			[[nodiscard]] auto as() const -> std::optional<T>
 			{
-				if (not set()) { throw CommandLineOptionRequiredNotSetError{option_short_format_.empty() ? option_long_format_ : option_short_format_}; }
+				if (not set()) { return std::nullopt; }
 
-				return string_parse_functor{}.operator()<T>(current_value_);
+				if constexpr (std::is_same_v<std::remove_cvref_t<decltype(std::declval<string_parse_functor&>().operator()<T>(std::declval<string_view_type>()))>, T>) { return string_parse_functor{}.operator()<T>(current_value_); }
+				else
+				{
+					auto value = string_parse_functor{}.operator()<T>(current_value_);
+					#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+					if (value.has_value()) { return *std::move(value); }
+
+					// fixme: error log
+					(void)value;
+					return std::nullopt;
+					#else
+					return value;
+					#endif
+				}
 			}
 
 			[[nodiscard]] auto help() const -> string_type
@@ -599,17 +723,23 @@ namespace gal::prometheus::infrastructure
 						{
 							const auto option = parse_option(string);
 
-							auto it = option_list_.find(option.name);
-							if (it == option_list_.end())
+							if (not option.has_value())
 							{
-								unmatched.emplace_back(option.name);
+								unmatched.emplace_back(string);
 								return;
 							}
 
-							auto another_it = option_list_.find(option.name == it->second.option_short_format_ ? it->second.option_long_format_ : it->second.option_short_format_);
+							auto it = option_list_.find(option->name);
+							if (it == option_list_.end())
+							{
+								unmatched.emplace_back(option->name);
+								return;
+							}
+
+							auto another_it = option_list_.find(option->name == it->second.option_short_format_ ? it->second.option_long_format_ : it->second.option_short_format_);
 
 							// Since we allow `--option`, we are not sure here whether the string is `--option` or `--option`.
-							if (option.value.empty())
+							if (option->value.empty())
 							{
 								if (std::ranges::starts_with(string, string_view_type{"--"}))
 								{
@@ -628,7 +758,7 @@ namespace gal::prometheus::infrastructure
 							}
 							else
 							{
-								const auto allocated_value = string_pool_.append(option.value);
+								const auto allocated_value = string_pool_.append(option->value);
 								it->second.set_value(allocated_value);
 
 								if (another_it != option_list_.end()) { another_it->second.set_value(allocated_value); }
@@ -687,12 +817,15 @@ namespace gal::prometheus::infrastructure
 			-> CommandLineOptionAppender&
 		{
 			const auto option_names = parse_list(option);
-			const auto option_size  = std::ranges::distance(option_names);
+			if (not option_names.has_value()) { throw CommandLineOptionNameFormatError{option}; }
+
+			const auto option_view = *option_names;
+			const auto option_size = std::ranges::distance(option_view);
 
 			if (option_size != 1 and option_size != 2) { throw CommandLineOptionNameFormatError{option}; }
 
-			const auto o1 = string_view_type{*std::ranges::begin(option_names)};
-			const auto o2 = option_size == 2 ? string_view_type{*std::ranges::next(std::ranges::begin(option_names), 1)} : string_view_type{};
+			const auto o1 = string_view_type{*std::ranges::begin(option_view)};
+			const auto o2 = option_size == 2 ? string_view_type{*std::ranges::next(std::ranges::begin(option_view), 1)} : string_view_type{};
 
 			auto op = (o1.size() < o2.size()) ? option_type{o1, o2, description, value, help_if_error} : option_type{o2, o1, description, value, help_if_error};
 			parser_.get().add_option(op);
