@@ -21,23 +21,23 @@ namespace gal::prometheus::infrastructure
 				Function     function,
 				const Ts&... ts
 				)
-		const noexcept((std::is_nothrow_invocable_r_v<bool, Function, Ts> && ...))
-			-> bool requires(std::is_invocable_r_v<bool, Function, Ts> && ...)
+		const noexcept((std::is_nothrow_invocable_r_v<bool, Function, Ts> and ...))
+			-> bool requires(std::is_invocable_r_v<bool, Function, Ts> and ...)
 		{
 			if constexpr (sizeof...(ts) == 0) { return true; }
 
-			return (function(ts) && ...);
+			return (function(ts) and ...);
 		}
 
 		template<typename... Ts>
 		[[nodiscard]] constexpr auto operator()(const Ts&... ts)
 		const
-			noexcept((std::is_nothrow_invocable_r_v<bool, decltype(Functor), Ts> && ...))
-			-> bool requires((std::is_invocable_r_v<bool, decltype(Functor), Ts> && ...))
+			noexcept((std::is_nothrow_invocable_r_v<bool, decltype(Functor), Ts> and ...))
+			-> bool requires((std::is_invocable_r_v<bool, decltype(Functor), Ts> and ...))
 		{
 			if constexpr (sizeof...(ts) == 0) { return true; }
 
-			return (Functor(ts) && ...);
+			return (Functor(ts) and ...);
 		}
 	};
 
@@ -49,23 +49,23 @@ namespace gal::prometheus::infrastructure
 				Function     function,
 				const Ts&... ts
 				)
-		const noexcept((std::is_nothrow_invocable_r_v<bool, Function, Ts> && ...))
-			-> bool requires(std::is_invocable_r_v<bool, Function, Ts> && ...)
+		const noexcept((std::is_nothrow_invocable_r_v<bool, Function, Ts> and ...))
+			-> bool requires(std::is_invocable_r_v<bool, Function, Ts> and ...)
 		{
 			if constexpr (sizeof...(ts) == 0) { return true; }
 
-			return (function(ts) || ...);
+			return (function(ts) or ...);
 		}
 
 		template<typename... Ts>
 		[[nodiscard]] constexpr auto operator()(const Ts&... ts)
 		const
-			noexcept((std::is_nothrow_invocable_r_v<bool, decltype(Functor), Ts> && ...))
-			-> bool requires(std::is_invocable_r_v<bool, decltype(Functor), Ts> && ...)
+			noexcept((std::is_nothrow_invocable_r_v<bool, decltype(Functor), Ts> and ...))
+			-> bool requires(std::is_invocable_r_v<bool, decltype(Functor), Ts> and ...)
 		{
 			if constexpr (sizeof...(ts) == 0) { return true; }
 
-			return (Functor(ts) || ...);
+			return (Functor(ts) or ...);
 		}
 	};
 
@@ -77,23 +77,23 @@ namespace gal::prometheus::infrastructure
 				Function     function,
 				const Ts&... ts
 				)
-		const noexcept((std::is_nothrow_invocable_r_v<bool, Function, Ts> && ...))
-			-> bool requires(std::is_invocable_r_v<bool, Function, Ts> && ...)
+		const noexcept((std::is_nothrow_invocable_r_v<bool, Function, Ts> and ...))
+			-> bool requires(std::is_invocable_r_v<bool, Function, Ts> and ...)
 		{
 			if constexpr (sizeof...(ts) == 0) { return true; }
 
-			return !(function(ts) || ...);
+			return not(function(ts) or ...);
 		}
 
 		template<typename... Ts>
 		[[nodiscard]] constexpr auto operator()(const Ts&... ts)
 		const
-			noexcept((std::is_nothrow_invocable_r_v<bool, decltype(Functor), Ts> && ...))
-			-> bool requires(std::is_invocable_r_v<bool, decltype(Functor), Ts> && ...)
+			noexcept((std::is_nothrow_invocable_r_v<bool, decltype(Functor), Ts> and ...))
+			-> bool requires(std::is_invocable_r_v<bool, decltype(Functor), Ts> and ...)
 		{
 			if constexpr (sizeof...(ts) == 0) { return true; }
 
-			return !(Functor(ts) || ...);
+			return not(Functor(ts) or ...);
 		}
 	};
 
@@ -107,9 +107,9 @@ namespace gal::prometheus::infrastructure
 				const Ts&... reset
 				)
 		const noexcept(
-			noexcept(Functor(lhs, rhs)) &&
-			noexcept((Functor(lhs, reset) && ...)) &&
-			noexcept((Functor(rhs, reset) && ...))
+			noexcept(Functor(lhs, rhs)) and            //
+			noexcept((Functor(lhs, reset) and ...)) and//
+			noexcept((Functor(rhs, reset) and ...))    //
 		)
 			-> const auto&
 		{
@@ -131,6 +131,29 @@ namespace gal::prometheus::infrastructure
 
 			constexpr invoker_max max;
 			constexpr invoker_min min;
+
+			template<typename... Callable>
+			struct overloaded : Callable...
+			{
+				using Callable::operator()...;
+			};
+
+			template<typename FunctionType>
+			struct y_combinator
+			{
+				using function_type = FunctionType;
+
+				function_type function;
+
+				template<typename... Args>
+				constexpr auto operator()(Args&&... args) const
+					noexcept(std::is_nothrow_invocable_v<function_type, decltype(*this), Args...>) -> decltype(auto)//
+				{
+					// we pass ourselves to f, then the arguments.
+					// the lambda should take the first argument as `auto&& self` or similar.
+					return std::invoke(function, *this, std::forward<Args>(args)...);
+				}
+			};
 		}
 	}
 }
