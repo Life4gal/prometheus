@@ -15,6 +15,7 @@ import :error.exception;
 import :error.debug;
 import :compiler;
 import :type_traits;
+import :functor;
 import :string_pool;
 
 namespace gal::prometheus::infrastructure
@@ -466,8 +467,6 @@ namespace gal::prometheus::infrastructure
 	{
 		template<regex_string_type StringType, regex_string_type StringViewType>
 		class CommandLineOption;
-		template<regex_string_type StringType, regex_string_type StringViewType>
-		class CommandLineOptionAppender;
 		template<regex_string_type StringType = std::basic_string<regex_char_type>>
 		class CommandLineOptionParser;
 
@@ -478,10 +477,8 @@ namespace gal::prometheus::infrastructure
 			using string_type = StringType;
 			using string_view_type = StringViewType;
 
-			using appender_type = CommandLineOptionAppender<string_type, string_view_type>;
 			using parser_type = CommandLineOptionParser<string_type>;
 
-			friend appender_type;
 			friend parser_type;
 
 		private:
@@ -524,8 +521,6 @@ namespace gal::prometheus::infrastructure
 
 			string_view_type option_short_format_;
 			string_view_type option_long_format_;
-			string_view_type description_;
-			string_view_type help_if_error_;
 
 			value_type       value_;
 			string_view_type current_value_;
@@ -538,12 +533,10 @@ namespace gal::prometheus::infrastructure
 
 			template<typename AllocateFunction>
 				requires std::is_same_v<std::invoke_result_t<AllocateFunction, string_view_type>, string_view_type>
-			constexpr auto reborn(AllocateFunction allocator) -> void
+			constexpr auto respawn(AllocateFunction allocator) -> void
 			{
 				option_short_format_ = allocator(option_short_format_);
 				option_long_format_  = allocator(option_long_format_);
-				description_         = allocator(description_);
-				help_if_error_       = allocator(help_if_error_);
 
 				if (not value_.dv.value.empty()) { value_.dv = {allocator(value_.dv.value)}; }
 				if (not value_.iv.value.empty()) { value_.iv = {allocator(value_.iv.value)}; }
@@ -555,28 +548,24 @@ namespace gal::prometheus::infrastructure
 			constexpr CommandLineOption(
 					const string_view_type option_short_format,
 					const string_view_type option_long_format,
-					const string_view_type description,
-					const value_type       value,
-					const string_view_type help_if_error) noexcept
+					const value_type       value) noexcept
 				: option_short_format_{option_short_format},
 				option_long_format_{option_long_format},
-				description_{description},
-				help_if_error_{help_if_error},
 				value_{value},
 				// `Defaults` use implicit_value, if the option is given `explicitly` the `default_value` is used, if the option is given `explicitly` and a value is specified the specified value is used.
 				current_value_{value_.iv} { }
 
 			[[nodiscard]] constexpr auto set() const noexcept -> bool { return not current_value_.empty(); }
 
-			[[nodiscard]] constexpr auto has_default() const noexcept -> bool { return not value_.combination_value_.dv.empty(); }
+			[[nodiscard]] constexpr auto has_default() const noexcept -> bool { return not value_.dv.empty(); }
 
-			[[nodiscard]] constexpr auto default_value() const noexcept -> string_view_type { return value_.combination_value_.dv; }
+			[[nodiscard]] constexpr auto default_value() const noexcept -> string_view_type { return value_.dv; }
 
 			[[nodiscard]] constexpr auto is_default() const noexcept -> bool { return current_value_ == default_value(); }
 
-			[[nodiscard]] constexpr auto has_implicit() const noexcept -> bool { return not value_.combination_value_.iv.empty(); }
+			[[nodiscard]] constexpr auto has_implicit() const noexcept -> bool { return not value_.iv.empty(); }
 
-			[[nodiscard]] constexpr auto implicit_value() const noexcept -> string_view_type { return value_.combination_value_.iv; }
+			[[nodiscard]] constexpr auto implicit_value() const noexcept -> string_view_type { return value_.iv; }
 
 			[[nodiscard]] constexpr auto is_implicit() const noexcept -> bool { return current_value_ == implicit_value(); }
 
@@ -596,67 +585,13 @@ namespace gal::prometheus::infrastructure
 					#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
 					if (value.has_value()) { return *std::move(value); }
 
-					// fixme: error log
-					(void)value;
+					std::cerr << std::format("Cannot parse `{}` as `{}`.", current_value_, compiler::type_name<T>());
 					return std::nullopt;
 					#else
 					return value;
 					#endif
 				}
 			}
-
-			[[nodiscard]] auto help() const -> string_type
-			{
-				(void)this;
-				GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED();
-
-				return {};
-			}
-		};
-
-		template<regex_string_type StringType, regex_string_type StringViewType>
-		class CommandLineOptionAppender
-		{
-		public:
-			using string_type = StringType;
-			using string_view_type = StringViewType;
-
-			using option_type = CommandLineOption<string_type, string_view_type>;
-			using parser_type = CommandLineOptionParser<string_type>;
-
-			using value_type = typename option_type::value_type;
-			using default_value_type = typename option_type::default_value_type;
-			using implicit_value_type = typename option_type::implicit_value_type;
-
-			friend parser_type;
-
-		private:
-			std::reference_wrapper<parser_type> parser_;
-
-			explicit CommandLineOptionAppender(
-					std::reference_wrapper<parser_type> parser
-					) noexcept
-				: parser_{parser} {}
-
-		public:
-			auto operator()(
-					string_view_type option,
-					string_view_type description,
-					value_type       value         = value_type{},
-					string_view_type help_if_error = {}) -> CommandLineOptionAppender&;
-
-			auto operator()(
-					const string_view_type   option,
-					const string_view_type   description,
-					const default_value_type default_value,
-					const string_view_type   help_if_error = {}
-					) -> CommandLineOptionAppender& { return this->operator()(option, description, default_value + implicit_value_type{}, help_if_error); }
-
-			auto operator()(
-					const string_view_type    option,
-					const string_view_type    description,
-					const implicit_value_type default_value,
-					const string_view_type    help_if_error = {}) -> CommandLineOptionAppender& { return this->operator()(option, description, default_value + default_value_type{}, help_if_error); }
 		};
 
 		template<regex_string_type StringType>
@@ -668,13 +603,8 @@ namespace gal::prometheus::infrastructure
 			using string_view_type = typename string_pool_type::view_type;
 
 			using option_type = CommandLineOption<string_type, string_view_type>;
-			using appender_type = CommandLineOptionAppender<string_type, string_view_type>;
-
-			using option_list_type = std::unordered_map<string_view_type, option_type>;
-
-			using list_size_type = typename option_list_type::size_type;
-
-			friend appender_type;
+			using option_list_type = std::unordered_map<string_view_type, std::shared_ptr<option_type>>;
+			using option_list_size_type = typename option_list_type::size_type;
 
 			[[nodiscard]] constexpr static auto default_value(const string_view_type value) noexcept -> typename option_type::default_value_type { return option_type::default_value(value); }
 
@@ -683,34 +613,99 @@ namespace gal::prometheus::infrastructure
 		private:
 			string_pool_type string_pool_;
 
-			string_view_type this_program_;
-			string_view_type about_this_program_;
-
 			option_list_type option_list_;
 
 			bool allow_unrecognized_;
 
-			auto do_add_option(const string_view_type name, option_type option) -> void
+			auto add_option(std::shared_ptr<option_type> option) -> void
 			{
-				const auto [_, inserted] = option_list_.emplace(name, option);
-				if (not inserted) { throw CommandLineOptionAlreadyExistsError{name}; }
+				option->respawn([this](const string_view_type value) -> string_view_type { return string_pool_.append(value); });
+
+				auto do_add_option = [this](const string_view_type name, std::shared_ptr<option_type> o) -> void
+				{
+					const auto [_, inserted] = option_list_.emplace(name, std::move(o));
+					if (not inserted) { throw CommandLineOptionAlreadyExistsError{name}; }
+				};
+
+				if (not option->option_short_format_.empty()) { do_add_option(option->option_short_format_, option); }
+				do_add_option(option->option_long_format_, option);
 			}
 
-			auto add_option(option_type option) -> void
+			auto add_alias(const string_view_type alias_name, const string_view_type target_option_name) -> void
 			{
-				option.reborn([this](const string_view_type value) -> string_view_type { return string_pool_.append(value); });
+				const auto target_option_it = option_list_.find(target_option_name);
+				if (target_option_it == option_list_.end()) { throw CommandLineOptionRequiredNotPresentError{target_option_name}; }
 
-				if (not option.option_short_format_.empty()) { do_add_option(option.option_short_format_, option); }
-				do_add_option(option.option_long_format_, option);
+				if (const auto it = option_list_.find(alias_name);
+					it != option_list_.end()) { throw CommandLineOptionAlreadyExistsError{alias_name}; }
+
+				option_list_.emplace(alias_name, target_option_it->second);
 			}
 
 		public:
-			CommandLineOptionParser(const string_view_type this_program, const string_view_type about_this_program, const bool allow_unrecognized = false)
-				: this_program_{this_program},
-				about_this_program_{about_this_program},
-				allow_unrecognized_{allow_unrecognized} {}
+			explicit CommandLineOptionParser(const bool allow_unrecognized = false) noexcept
+				: allow_unrecognized_{allow_unrecognized} {}
 
-			[[nodiscard]] auto options() noexcept -> appender_type { return appender_type{*this}; }
+			[[nodiscard]] auto options() noexcept -> auto
+			{
+				return functor::y_combinator{
+						functor::overloaded{
+								[this](auto& self, const string_view_type option, const typename option_type::value_type value) -> auto& {
+									const auto option_names = parse_list(option);
+									if (not option_names.has_value()) { throw CommandLineOptionNameFormatError{option}; }
+
+									const auto option_view = *option_names;
+									const auto option_size = std::ranges::distance(option_view);
+
+									if (option_size != 1 and option_size != 2) { throw CommandLineOptionNameFormatError{option}; }
+
+									const auto o1 = string_view_type{*std::ranges::begin(option_view)};
+									const auto o2 = option_size == 2 ? string_view_type{*std::ranges::next(std::ranges::begin(option_view), 1)} : string_view_type{};
+
+									const auto short_format = o1.size() < o2.size() ? o1 : o2;
+									const auto long_format  = o1.size() < o2.size() ? o2 : o1;
+
+									auto o = std::make_shared<option_type>(short_format, long_format, value);
+									add_option(o);
+
+									return self;
+								},
+								[](auto& self, const string_view_type option, const typename option_type::implicit_value_type value) -> auto& {
+									std::invoke(self, option, value + typename option_type::default_value_type{});
+									return self;
+								},
+								[](auto& self, const string_view_type option, const typename option_type::default_value_type value) -> auto& {
+									std::invoke(self, option, value + typename option_type::implicit_value_type{});
+									return self;
+								},
+								[](auto& self, const string_view_type option) -> auto& {
+									std::invoke(self, option, typename option_type::value_type{});
+									return self;
+								},
+						}};
+			}
+
+			[[nodiscard]] auto aliases() noexcept -> auto
+			{
+				return functor::y_combinator{
+						[this](auto& self, const string_view_type alias_name, const string_view_type target_option_name) -> auto& {
+							const auto option_names = parse_list(alias_name);
+							if (not option_names.has_value()) { throw CommandLineOptionNameFormatError{alias_name}; }
+
+							const auto option_view = *option_names;
+							const auto option_size = std::ranges::distance(option_view);
+
+							if (option_size != 1 and option_size != 2) { throw CommandLineOptionNameFormatError{alias_name}; }
+
+							const auto o1 = string_view_type{*std::ranges::begin(option_view)};
+							const auto o2 = option_size == 2 ? string_view_type{*std::ranges::next(std::ranges::begin(option_view), 1)} : string_view_type{};
+
+							add_alias(o1, target_option_name);
+							if (not o2.empty()) { add_alias(o2, target_option_name); }
+
+							return self;
+						}};
+			}
 
 			auto parse(const std::span<const string_view_type> args) -> void
 			{
@@ -736,32 +731,24 @@ namespace gal::prometheus::infrastructure
 								return;
 							}
 
-							auto another_it = option_list_.find(option->name == it->second.option_short_format_ ? it->second.option_long_format_ : it->second.option_short_format_);
-
 							// Since we allow `--option`, we are not sure here whether the string is `--option` or `--option`.
 							if (option->value.empty())
 							{
 								if (std::ranges::starts_with(string, string_view_type{"--"}))
 								{
 									// --option
-									it->second.set_value_default();
-
-									if (another_it != option_list_.end()) { another_it->second.set_value_default(); }
+									it->second->set_value_default();
 								}
 								else
 								{
 									// -option
-									it->second.set_value();
-
-									if (another_it != option_list_.end()) { another_it->second.set_value(); }
+									it->second->set_value();
 								}
 							}
 							else
 							{
 								const auto allocated_value = string_pool_.append(option->value);
-								it->second.set_value(allocated_value);
-
-								if (another_it != option_list_.end()) { another_it->second.set_value(allocated_value); }
+								it->second->set_value(allocated_value);
 							}
 						});
 
@@ -779,7 +766,7 @@ namespace gal::prometheus::infrastructure
 								options.push_back('\n');
 							});
 
-					std::cerr << options;
+					std::cerr << std::format("Unrecognized option:\n {}", options);
 
 					if (not allow_unrecognized_) { throw CommandLineOptionUnrecognizedError{options}; }
 				}
@@ -787,50 +774,17 @@ namespace gal::prometheus::infrastructure
 
 			auto parse() -> void { return parse(std::span<const string_view_type>{g_argv, g_argc}); }
 
-			[[nodiscard]] auto help() const -> string_type
-			{
-				(void)this;
-				GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED();
-
-				return {};
-			}
-
 			auto contains(const string_view_type arg_name) const -> bool { return option_list_.contains(arg_name); }
 
-			auto count(const string_view_type arg_name) const -> list_size_type { return option_list_.count(arg_name); }
+			auto count(const string_view_type arg_name) const -> option_list_size_type { return option_list_.count(arg_name); }
 
 			auto operator[](const string_view_type arg_name) const -> const option_type&
 			{
 				const auto it = option_list_.find(arg_name);
 				if (it == option_list_.end()) { throw CommandLineOptionRequiredNotPresentError{arg_name}; }
 
-				return it->second;
+				return *it->second;
 			}
 		};
-
-		template<regex_string_type StringType, regex_string_type StringViewType>
-		auto CommandLineOptionAppender<StringType, StringViewType>::operator()(
-				string_view_type option,
-				string_view_type description,
-				value_type       value,
-				string_view_type help_if_error)
-			-> CommandLineOptionAppender&
-		{
-			const auto option_names = parse_list(option);
-			if (not option_names.has_value()) { throw CommandLineOptionNameFormatError{option}; }
-
-			const auto option_view = *option_names;
-			const auto option_size = std::ranges::distance(option_view);
-
-			if (option_size != 1 and option_size != 2) { throw CommandLineOptionNameFormatError{option}; }
-
-			const auto o1 = string_view_type{*std::ranges::begin(option_view)};
-			const auto o2 = option_size == 2 ? string_view_type{*std::ranges::next(std::ranges::begin(option_view), 1)} : string_view_type{};
-
-			auto op = (o1.size() < o2.size()) ? option_type{o1, o2, description, value, help_if_error} : option_type{o2, o1, description, value, help_if_error};
-			parser_.get().add_option(op);
-
-			return *this;
-		}
 	}
 }
