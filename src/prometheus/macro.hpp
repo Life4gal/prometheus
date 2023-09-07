@@ -157,9 +157,6 @@
 				}(ptr)
 #endif
 
-// fixme
-#define GAL_PROMETHEUS_WORKAROUND_MODULE_EXPORT_CTAD 0
-
 #define GAL_PROMETHEUS_PRIVATE_STRING_CAT(lhs, rhs) lhs##rhs
 #define GAL_PROMETHEUS_STRING_CAT(lhs, rhs) GAL_PROMETHEUS_PRIVATE_STRING_CAT(lhs, rhs)
 

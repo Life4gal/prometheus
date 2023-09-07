@@ -106,10 +106,10 @@ export namespace gal::prometheus::chars
 		}
 	};
 
-	template<infrastructure::fixed_string Category>
+	template<infrastructure::basic_fixed_string Category>
 	class CharMap;
 
-	template<infrastructure::fixed_string From, infrastructure::fixed_string To>
+	template<infrastructure::basic_fixed_string From, infrastructure::basic_fixed_string To>
 	class CharConverter
 	{
 	public:
@@ -212,7 +212,7 @@ export namespace gal::prometheus::chars
 		 * @param end An iterator pointing one beyond the last character to be converted, or a sentinel.
 		 * @return The converted text.
 		 */
-		template<std::ranges::contiguous_range String = std::basic_string<value_type_to>, std::input_iterator Begin, std::sentinel_for<Begin> End>
+		template<std::ranges::contiguous_range String = std::basic_string<value_type_to>, std::contiguous_iterator Begin, std::sentinel_for<Begin> End>
 			requires requires(String& string) { string.resize(std::declval<typename String::size_type>()); }
 		[[nodiscard]] constexpr auto  operator()(const Begin begin, const End end) const noexcept -> String
 		{
@@ -259,7 +259,7 @@ export namespace gal::prometheus::chars
 		 * @param e The endianness of characters in the array, used as a hint.
 		 * @return The converted text.
 		 */
-		template<std::ranges::range String = std::basic_string<value_type_to>, std::input_iterator Iterator>
+		template<std::ranges::contiguous_range String = std::basic_string<value_type_to>, std::contiguous_iterator Iterator>
 			requires requires(String& string) { string.resize(std::declval<typename String::size_type>()); }
 		[[nodiscard]] constexpr auto  operator()(const Iterator iterator, const std::size_t size, std::endian e) const noexcept -> String
 		{
@@ -269,7 +269,7 @@ export namespace gal::prometheus::chars
 			const auto num_chars = size / sizeof(value_type_from);
 
 			const auto real_endian = from.endian(iterator, size, e);
-			if (real_endian == std::endian::native and infrastructure::is_floor_align(std::addressof(*iterator))) { return convert<String>(reinterpret_cast<const value_type_from*>(std::addressof(*iterator)), reinterpret_cast<const value_type_from*>(std::addressof(*iterator)) + num_chars); }
+			if (real_endian == std::endian::native and infrastructure::is_floor_align(std::addressof(*iterator))) { return this->template operator()<String>(reinterpret_cast<const value_type_from*>(std::addressof(*iterator)), reinterpret_cast<const value_type_from*>(std::addressof(*iterator)) + num_chars); }
 
 			String result{};
 			result.resize(static_cast<typename String::size_type>(num_chars));
@@ -282,7 +282,7 @@ export namespace gal::prometheus::chars
 						[](auto& c) -> void { c = std::byteswap(c); });
 			}
 
-			return convert<String>(std::move(result));
+			return this->template operator()<String>(std::move(result));
 		}
 	};
 }
