@@ -12,20 +12,20 @@ add_executable(
 		# INFRASTRUCTURE
 		# =================================
 
-		${PROJECT_SOURCE_DIR}/src/infrastructure/cast.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/enum_meta.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/aligned_union.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/function_ref.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/wildcard_match.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/plane.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/string.cpp
+		#${PROJECT_SOURCE_DIR}/src/infrastructure/cast.cpp
+		#${PROJECT_SOURCE_DIR}/src/infrastructure/enum_meta.cpp
+		#${PROJECT_SOURCE_DIR}/src/infrastructure/aligned_union.cpp
+		#${PROJECT_SOURCE_DIR}/src/infrastructure/function_ref.cpp
+		#${PROJECT_SOURCE_DIR}/src/infrastructure/wildcard_match.cpp
+		#${PROJECT_SOURCE_DIR}/src/infrastructure/plane.cpp
+		#${PROJECT_SOURCE_DIR}/src/infrastructure/string.cpp
 
 		# =================================
 		# COROUTINE
 		# =================================
 
-		${PROJECT_SOURCE_DIR}/src/coroutine/task.cpp
-		${PROJECT_SOURCE_DIR}/src/coroutine/generator.cpp
+		#${PROJECT_SOURCE_DIR}/src/coroutine/task.cpp
+		#${PROJECT_SOURCE_DIR}/src/coroutine/generator.cpp
 
 		# =================================
 		# I18N
@@ -40,10 +40,10 @@ add_executable(
 		# CHARS
 		# =================================
 
-		${PROJECT_SOURCE_DIR}/src/chars/ascii.cpp
-		${PROJECT_SOURCE_DIR}/src/chars/cp_1252.cpp
-		${PROJECT_SOURCE_DIR}/src/chars/utf_8.cpp
-		${PROJECT_SOURCE_DIR}/src/chars/utf_16.cpp
+		#${PROJECT_SOURCE_DIR}/src/chars/ascii.cpp
+		#${PROJECT_SOURCE_DIR}/src/chars/cp_1252.cpp
+		#${PROJECT_SOURCE_DIR}/src/chars/utf_8.cpp
+		#${PROJECT_SOURCE_DIR}/src/chars/utf_16.cpp
 )
 
 target_link_libraries(

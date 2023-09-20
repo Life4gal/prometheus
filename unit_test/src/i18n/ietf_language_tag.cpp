@@ -10,676 +10,706 @@ namespace
 	using namespace test;
 	using namespace i18n;
 
-	GAL_PROMETHEUS_NO_DESTROY suite test_i18n_ietf_language_tag = []
+	GAL_PROMETHEUS_NO_DESTROY suite<"i18n.ietf_language_tag"> _ = []
 	{
 		"parse"_test = []
 		{
-			// fixme: For some (unknown) reason, compile-time constants always produce the wrong result (a default constructed value).
-
-			// aa-Latn-ET
+			"aa-Latn-ET"_test = []
 			{
-				// language
-				static_assert(IETFLanguageTag::parse("aa").has_value());
-				// static_assert(IETFLanguageTag::parse("aa")->operator std::string() == "aa");
-
-				const std::string string{"aa"};
-				const auto        result = IETFLanguageTag::parse(string);
-
-				expect((result.has_value()) >> fatal);
-				expect((result->operator std::string() == "aa"_sv) >> fatal);
-				expect((std::format("{}", *result) == "aa"_sv) >> fatal);
-			}
-			{
-				// language + region
+				"language"_test = []
 				{
-					// static_assert(IETFLanguageTag::parse("aa-ET").has_value());
-					// static_assert(IETFLanguageTag::parse("aa-ET")->operator std::string() == "aa-ET");
+					const std::string string{"aa"};
+					const auto		  result = IETFLanguageTag::parse(string);
 
-					const std::string string{"aa-ET"};
-					const auto        result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+					expect(result->operator std::string() == "aa"_s) << fatal;
+					expect(std::format("{}", *result) == "aa"_s) << fatal;
+				};
 
-					expect((result.has_value()) >> fatal);
-			expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
-			expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
-				}
-				{
-					const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number());
-					const auto        result = IETFLanguageTag::parse(string);
-
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
-					expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
-				}
-			}
-			{
-				// language + script + region
-				// static_assert(IETFLanguageTag::parse("aa-Latn-ET").has_value());
-				// static_assert(IETFLanguageTag::parse("aa-Latn-ET")->operator std::string() == "aa-Latn-ET");
-
-				const std::string string{"aa-Latn-ET"};
-				const auto        result = IETFLanguageTag::parse(string);
-
-				expect((result.has_value()) >> fatal);
-				expect((result->operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-				expect((std::format("{}", *result) == "aa-Latn-ET"_sv) >> fatal);
-			}
-			{
-				// Optional variant sub-tags, separated by hyphens, each composed of five to eight letters, or of four characters starting with a digit
-				{
-					const std::string string{"aa-polyton"};
-					const auto        result = IETFLanguageTag::parse(string);
-
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "aa"_sv) >> fatal);
-					expect((std::format("{}", *result) == "aa"_sv) >> fatal);
-				}
+				"language+region"_test = []
 				{
 					{
-						const std::string string{"aa-ET-polyton"};
-						const auto        result = IETFLanguageTag::parse(string);
+						const std::string string{"aa-ET"};
+						const auto		  result = IETFLanguageTag::parse(string);
 
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
-						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "aa-ET"_s) << fatal;
+						expect(std::format("{}", *result) == "aa-ET"_s) << fatal;
 					}
 					{
-						const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number()) + "-polyton";
-						const auto        result = IETFLanguageTag::parse(string);
+						const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number());
+						const auto		  result = IETFLanguageTag::parse(string);
 
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
-						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "aa-ET"_s) << fatal;
+						expect(std::format("{}", *result) == "aa-ET"_s) << fatal;
 					}
-				}
-				{
-					const std::string string{"aa-Latn-ET-polyton"};
-					const auto        result = IETFLanguageTag::parse(string);
+				};
 
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-					expect((std::format("{}", *result) == "aa-Latn-ET"_sv) >> fatal);
-				}
-			}
+				"language+script+region"_test = []
+				{
+					const std::string string{"aa-Latn-ET"};
+					const auto		  result = IETFLanguageTag::parse(string);
+
+					expect(result.has_value()) << fatal;
+					expect(result->operator std::string() == "aa-Latn-ET"_s) << fatal;
+					expect(std::format("{}", *result) == "aa-Latn-ET"_s) << fatal;
+				};
+
+				"Optional variant sub-tags, separated by hyphens, each composed of five to eight letters, or of four characters starting with a digit"_test = []
+				{
+					{
+						const std::string string{"aa-polyton"};
+						const auto		  result = IETFLanguageTag::parse(string);
+
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "aa"_s) << fatal;
+						expect(std::format("{}", *result) == "aa"_s) << fatal;
+					}
+					{
+						{
+							const std::string string{"aa-ET-polyton"};
+							const auto result = IETFLanguageTag::parse(string);
+
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "aa-ET"_s) << fatal;
+							expect(std::format("{}", *result) == "aa-ET"_s) << fatal;
+						}
+						{
+							const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number()) + "-polyton";
+							const auto		  result = IETFLanguageTag::parse(string);
+
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "aa-ET"_s) << fatal;
+							expect(std::format("{}", *result) == "aa-ET"_s) << fatal;
+						}
+					}
+					{
+						const std::string string{"aa-Latn-ET-polyton"};
+						const auto		  result = IETFLanguageTag::parse(string);
+
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "aa-Latn-ET"_s) << fatal;
+						expect(std::format("{}", *result) == "aa-Latn-ET"_s) << fatal;
+					}
+				};
+
+				"Optional extension sub-tags, separated by hyphens, each composed of a single character, except the letter x, and a hyphen followed by one or more sub-tags of two to eight characters each, separated by hyphens"_test = []
+				{
+					{
+						const std::string string{"aa-u-cu-usd"};
+						const auto		  result = IETFLanguageTag::parse(string);
+
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "aa"_s) << fatal;
+						expect(std::format("{}", *result) == "aa"_s) << fatal;
+					}
+					{
+						{
+							const std::string string{"aa-ET-u-cu-usd"};
+							const auto result = IETFLanguageTag::parse(string);
+
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "aa-ET"_s) << fatal;
+							expect(std::format("{}", *result) == "aa-ET"_s) << fatal;
+						}
+						{
+							const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number()) + "-u-cu-usd";
+							const auto		  result = IETFLanguageTag::parse(string);
+
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "aa-ET"_s) << fatal;
+							expect(std::format("{}", *result) == "aa-ET"_s) << fatal;
+						}
+					}
+					{
+						const std::string string{"aa-Latn-ET-u-cu-usd"};
+						const auto		  result = IETFLanguageTag::parse(string);
+
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "aa-Latn-ET"_s) << fatal;
+						expect(std::format("{}", *result) == "aa-Latn-ET"_s) << fatal;
+					}
+				};
+
+				"An optional private-use subtag, composed of the letter x and a hyphen followed by sub-tags of one to eight characters each, separated by hyphens"_test = []
+				{
+					{
+						const std::string string{"aa-x-private"};
+						const auto		  result = IETFLanguageTag::parse(string);
+
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "aa"_s) << fatal;
+						expect(std::format("{}", *result) == "aa"_s) << fatal;
+					}
+					{
+						{
+							const std::string string{"aa-ET-x-private"};
+							const auto result = IETFLanguageTag::parse(string);
+
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "aa-ET"_s) << fatal;
+							expect(std::format("{}", *result) == "aa-ET"_s) << fatal;
+						}
+						{
+							const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number()) + "-x-private";
+							const auto		  result = IETFLanguageTag::parse(string);
+
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "aa-ET"_s) << fatal;
+							expect(std::format("{}", *result) == "aa-ET"_s) << fatal;
+						}
+					}
+					{
+						const std::string string{"aa-Latn-ET-x-private"};
+						const auto		  result = IETFLanguageTag::parse(string);
+
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "aa-Latn-ET"_s) << fatal;
+						expect(std::format("{}", *result) == "aa-Latn-ET"_s) << fatal;
+					}
+				};
+			};
+
+			"haz-Arab-AF"_test = []
 			{
-				// Optional extension sub-tags, separated by hyphens, each composed of a single character, except the letter x, and a hyphen followed by one or more sub-tags of two to eight characters each, separated by hyphens
+				"language"_test = []
 				{
-					const std::string string{"aa-u-cu-usd"};
-					const auto        result = IETFLanguageTag::parse(string);
+					const std::string string{"haz"};
+					const auto		  result = IETFLanguageTag::parse(string);
 
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "aa"_sv) >> fatal);
-					expect((std::format("{}", *result) == "aa"_sv) >> fatal);
-				}
-				{
-					{
-						const std::string string{"aa-ET-u-cu-usd"};
-						const auto        result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+					expect(result->operator std::string() == "haz"_s) << fatal;
+					expect(std::format("{}", *result) == "haz"_s) << fatal;
+				};
 
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
-						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
-					}
-					{
-						const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number()) + "-u-cu-usd";
-						const auto        result = IETFLanguageTag::parse(string);
-
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
-						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
-					}
-				}
-				{
-					const std::string string{"aa-Latn-ET-u-cu-usd"};
-					const auto        result = IETFLanguageTag::parse(string);
-
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-					expect((std::format("{}", *result) == "aa-Latn-ET"_sv) >> fatal);
-				}
-			}
-			{
-				// An optional private-use subtag, composed of the letter x and a hyphen followed by sub-tags of one to eight characters each, separated by hyphens
-				{
-					const std::string string{"aa-x-private"};
-					const auto        result = IETFLanguageTag::parse(string);
-
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "aa"_sv) >> fatal);
-					expect((std::format("{}", *result) == "aa"_sv) >> fatal);
-				}
+				"language+region"_test = []
 				{
 					{
-						const std::string string{"aa-ET-x-private"};
-						const auto        result = IETFLanguageTag::parse(string);
+						const std::string string{"haz-AF"};
+						const auto		  result = IETFLanguageTag::parse(string);
 
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
-						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "haz-AF"_s) << fatal;
+						expect(std::format("{}", *result) == "haz-AF"_s) << fatal;
 					}
 					{
-						const std::string string = "aa-" + std::format("{:0>3}", ISO3166::parse("ET")->number()) + "-x-private";
-						const auto        result = IETFLanguageTag::parse(string);
+						const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number());
+						const auto		  result = IETFLanguageTag::parse(string);
 
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "aa-ET"_sv) >> fatal);
-						expect((std::format("{}", *result) == "aa-ET"_sv) >> fatal);
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "haz-AF"_s) << fatal;
+						expect(std::format("{}", *result) == "haz-AF"_s) << fatal;
 					}
-				}
+				};
+
+				"language+script+region"_test = []
 				{
-					const std::string string{"aa-Latn-ET-x-private"};
-					const auto        result = IETFLanguageTag::parse(string);
+					const std::string string{"haz-Arab-AF"};
+					const auto		  result = IETFLanguageTag::parse(string);
 
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-					expect((std::format("{}", *result) == "aa-Latn-ET"_sv) >> fatal);
-				}
-			}
-			// haz-Arab-AF
-			{
-				// language
-				static_assert(IETFLanguageTag::parse("haz").has_value());
-				// static_assert(IETFLanguageTag::parse("haz")->operator std::string() == "haz");
+					expect(result.has_value()) << fatal;
+					expect(result->operator std::string() == "haz-Arab-AF"_s) << fatal;
+					expect(std::format("{}", *result) == "haz-Arab-AF"_s) << fatal;
+				};
 
-				const std::string string{"haz"};
-				const auto        result = IETFLanguageTag::parse(string);
-
-				expect((result.has_value()) >> fatal);
-				expect((result->operator std::string() == "haz"_sv) >> fatal);
-				expect((std::format("{}", *result) == "haz"_sv) >> fatal);
-			}
-			{
-				// language + region
-				{
-					// static_assert(IETFLanguageTag::parse("haz-AF").has_value());
-					// static_assert(IETFLanguageTag::parse("haz-AF")->operator std::string() == "haz-AF");
-
-					const std::string string{"haz-AF"};
-					const auto        result = IETFLanguageTag::parse(string);
-
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
-					expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
-				}
-				{
-					const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number());
-					const auto        result = IETFLanguageTag::parse(string);
-
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
-					expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
-				}
-			}
-			{
-				// language + script + region
-				// static_assert(IETFLanguageTag::parse("haz-Arab-AF").has_value());
-				// static_assert(IETFLanguageTag::parse("haz-Arab-AF")->operator std::string() == "haz-Arab-AF");
-
-				const std::string string{"haz-Arab-AF"};
-				const auto        result = IETFLanguageTag::parse(string);
-
-				expect((result.has_value()) >> fatal);
-				expect((result->operator std::string() == "haz-Arab-AF"_sv) >> fatal);
-				expect((std::format("{}", *result) == "haz-Arab-AF"_sv) >> fatal);
-			}
-			{
-				// Optional variant sub-tags, separated by hyphens, each composed of five to eight letters, or of four characters starting with a digit
-				{
-					const std::string string{"haz-polyton"};
-					const auto        result = IETFLanguageTag::parse(string);
-
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "haz"_sv) >> fatal);
-					expect((std::format("{}", *result) == "haz"_sv) >> fatal);
-				}
+				"Optional variant sub-tags, separated by hyphens, each composed of five to eight letters, or of four characters starting with a digit"_test = []
 				{
 					{
-						const std::string string{"haz-AF-polyton"};
-						const auto        result = IETFLanguageTag::parse(string);
+						const std::string string{"haz-polyton"};
+						const auto		  result = IETFLanguageTag::parse(string);
 
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
-						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "haz"_s) << fatal;
+						expect(std::format("{}", *result) == "haz"_s) << fatal;
 					}
 					{
-						const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number()) + "-polyton";
-						const auto        result = IETFLanguageTag::parse(string);
+						{
+							const std::string string{"haz-AF-polyton"};
+							const auto result = IETFLanguageTag::parse(string);
 
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
-						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
-					}
-				}
-				{
-					const std::string string{"haz-Arab-AF-polyton"};
-					const auto        result = IETFLanguageTag::parse(string);
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "haz-AF"_s) << fatal;
+							expect(std::format("{}", *result) == "haz-AF"_s) << fatal;
+						}
+						{
+							const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number()) + "-polyton";
+							const auto		  result = IETFLanguageTag::parse(string);
 
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "haz-Arab-AF"_sv) >> fatal);
-					expect((std::format("{}", *result) == "haz-Arab-AF"_sv) >> fatal);
-				}
-			}
-			{
-				// Optional extension sub-tags, separated by hyphens, each composed of a single character, except the letter x, and a hyphen followed by one or more sub-tags of two to eight characters each, separated by hyphens
-				{
-					const std::string string{"haz-u-cu-usd"};
-					const auto        result = IETFLanguageTag::parse(string);
-
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "haz"_sv) >> fatal);
-					expect((std::format("{}", *result) == "haz"_sv) >> fatal);
-				}
-				{
-					{
-						const std::string string{"haz-AF-u-cu-usd"};
-						const auto        result = IETFLanguageTag::parse(string);
-
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
-						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "haz-AF"_s) << fatal;
+							expect(std::format("{}", *result) == "haz-AF"_s) << fatal;
+						}
 					}
 					{
-						const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number()) + "-u-cu-usd";
-						const auto        result = IETFLanguageTag::parse(string);
+						const std::string string{"haz-Arab-AF-polyton"};
+						const auto		  result = IETFLanguageTag::parse(string);
 
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
-						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "haz-Arab-AF"_s) << fatal;
+						expect(std::format("{}", *result) == "haz-Arab-AF"_s) << fatal;
 					}
-				}
-				{
-					const std::string string{"haz-Arab-AF-u-cu-usd"};
-					const auto        result = IETFLanguageTag::parse(string);
+				};
 
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "haz-Arab-AF"_sv) >> fatal);
-					expect((std::format("{}", *result) == "haz-Arab-AF"_sv) >> fatal);
-				}
-			}
-			{
-				// An optional private-use subtag, composed of the letter x and a hyphen followed by sub-tags of one to eight characters each, separated by hyphens
-				{
-					const std::string string{"haz-x-private"};
-					const auto        result = IETFLanguageTag::parse(string);
-
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "haz"_sv) >> fatal);
-					expect((std::format("{}", *result) == "haz"_sv) >> fatal);
-				}
+				"Optional extension sub-tags, separated by hyphens, each composed of a single character, except the letter x, and a hyphen followed by one or more sub-tags of two to eight characters each, separated by hyphens"_test = []
 				{
 					{
-						const std::string string{"haz-AF-x-private"};
-						const auto        result = IETFLanguageTag::parse(string);
+						const std::string string{"haz-u-cu-usd"};
+						const auto		  result = IETFLanguageTag::parse(string);
 
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
-						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "haz"_s) << fatal;
+						expect(std::format("{}", *result) == "haz"_s) << fatal;
 					}
 					{
-						const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number()) + "-x-private";
-						const auto        result = IETFLanguageTag::parse(string);
+						{
+							const std::string string{"haz-AF-u-cu-usd"};
+							const auto result = IETFLanguageTag::parse(string);
 
-						expect((result.has_value()) >> fatal);
-						expect((result->operator std::string() == "haz-AF"_sv) >> fatal);
-						expect((std::format("{}", *result) == "haz-AF"_sv) >> fatal);
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "haz-AF"_s) << fatal;
+							expect(std::format("{}", *result) == "haz-AF"_s) << fatal;
+						}
+						{
+							const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number()) + "-u-cu-usd";
+							const auto		  result = IETFLanguageTag::parse(string);
+
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "haz-AF"_s) << fatal;
+							expect(std::format("{}", *result) == "haz-AF"_s) << fatal;
+						}
 					}
-				}
-				{
-					const std::string string{"haz-Arab-AF-x-private"};
-					const auto        result = IETFLanguageTag::parse(string);
+					{
+						const std::string string{"haz-Arab-AF-u-cu-usd"};
+						const auto		  result = IETFLanguageTag::parse(string);
 
-					expect((result.has_value()) >> fatal);
-					expect((result->operator std::string() == "haz-Arab-AF"_sv) >> fatal);
-					expect((std::format("{}", *result) == "haz-Arab-AF"_sv) >> fatal);
-				}
-			}
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "haz-Arab-AF"_s) << fatal;
+						expect(std::format("{}", *result) == "haz-Arab-AF"_s) << fatal;
+					}
+				};
+
+				"An optional private-use subtag, composed of the letter x and a hyphen followed by sub-tags of one to eight characters each, separated by hyphens"_test = []
+				{
+					{
+						const std::string string{"haz-x-private"};
+						const auto		  result = IETFLanguageTag::parse(string);
+
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "haz"_s) << fatal;
+						expect(std::format("{}", *result) == "haz"_s) << fatal;
+					}
+					{
+						{
+							const std::string string{"haz-AF-x-private"};
+							const auto result = IETFLanguageTag::parse(string);
+
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "haz-AF"_s) << fatal;
+							expect(std::format("{}", *result) == "haz-AF"_s) << fatal;
+						}
+						{
+							const std::string string = "haz-" + std::format("{:0>3}", ISO3166::parse("AF")->number()) + "-x-private";
+							const auto		  result = IETFLanguageTag::parse(string);
+
+							expect(result.has_value()) << fatal;
+							expect(result->operator std::string() == "haz-AF"_s) << fatal;
+							expect(std::format("{}", *result) == "haz-AF"_s) << fatal;
+						}
+					}
+					{
+						const std::string string{"haz-Arab-AF-x-private"};
+						const auto		  result = IETFLanguageTag::parse(string);
+
+						expect(result.has_value()) << fatal;
+						expect(result->operator std::string() == "haz-Arab-AF"_s) << fatal;
+						expect(std::format("{}", *result) == "haz-Arab-AF"_s) << fatal;
+					}
+				};
+			};
 		};
 
 		"shrink"_test = []
 		{
-			// aa-Latn-ET
+			"aa-Latn-ET"_test = []
 			{
-				// language
-				const std::string string{"aa"};
+				"language"_test = []
+				{
+					const std::string string{"aa"};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto shrink_result = result->shrink();
-				expect((shrink_result.operator std::string() == "aa"_sv) >> fatal);
-			}
+					const auto shrink_result = result->shrink();
+					expect(shrink_result.operator std::string() == "aa"_s) << fatal;
+				};
+
+				"language+region"_test = []
+				{
+					const std::string string{"aa-ET"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto shrink_result = result->shrink();
+					expect(shrink_result.operator std::string() == "aa"_s) << fatal;
+				};
+
+				"language+script+region"_test = []
+				{
+					const std::string string{"aa-Latn-ET"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto shrink_result = result->shrink();
+					expect(shrink_result.operator std::string() == "aa"_s) << fatal;
+				};
+			};
+
+			"en-Latn-US"_test = []
 			{
-				// language + region
-				const std::string string{"aa-ET"};
+				"language"_test = []
+				{
+					const std::string string{"en"};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto shrink_result = result->shrink();
-				expect((shrink_result.operator std::string() == "aa"_sv) >> fatal);
-			}
-			{
-				// language + script + region
-				const std::string string{"aa-Latn-ET"};
+					const auto shrink_result = result->shrink();
+					expect(shrink_result.operator std::string() == "en"_s) << fatal;
+				};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+				"language+region"_test = []
+				{
+					const std::string string{"en-US"};
 
-				const auto shrink_result = result->shrink();
-				expect((shrink_result.operator std::string() == "aa"_sv) >> fatal);
-			}
-			// en-Latn-US
-			{
-				// language
-				const std::string string{"en"};
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto shrink_result = result->shrink();
+					expect(shrink_result.operator std::string() == "en"_s) << fatal;
+				};
 
-				const auto shrink_result = result->shrink();
-				expect((shrink_result.operator std::string() == "en"_sv) >> fatal);
-			}
-			{
-				// language + region
-				const std::string string{"en-US"};
+				"language+script+region"_test = []
+				{
+					const std::string string{"en-Latn-US"};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto shrink_result = result->shrink();
-				expect((shrink_result.operator std::string() == "en"_sv) >> fatal);
-			}
-			{
-				// language + script + region
-				const std::string string{"en-Latn-US"};
-
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
-
-				const auto shrink_result = result->shrink();
-				expect((shrink_result.operator std::string() == "en"_sv) >> fatal);
-			}
+					const auto shrink_result = result->shrink();
+					expect(shrink_result.operator std::string() == "en"_s) << fatal;
+				};
+			};
 		};
 
 		"expand"_test = []
 		{
-			// aa-Latn-ET
+			"aa-Latn-ET"_test = []
 			{
-				// language
-				const std::string string{"aa"};
+				"language"_test = []
+				{
+					const std::string string{"aa"};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto expand_result = result->expand();
-				expect((expand_result.operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-			}
-			{
-				// language + region
-				const std::string string{"aa-ET"};
+					const auto expand_result = result->expand();
+					expect(expand_result.operator std::string() == "aa-Latn-ET"_s) << fatal;
+				};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+				"language+region"_test = []
+				{
+					const std::string string{"aa-ET"};
 
-				const auto expand_result = result->expand();
-				expect((expand_result.operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-			}
-			{
-				// language + script + region
-				const std::string string{"aa-Latn-ET"};
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto expand_result = result->expand();
+					expect(expand_result.operator std::string() == "aa-Latn-ET"_s) << fatal;
+				};
 
-				const auto expand_result = result->expand();
-				expect((expand_result.operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-			}
+				"language+script+region"_test = []
+				{
+					const std::string string{"aa-Latn-ET"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto expand_result = result->expand();
+					expect(expand_result.operator std::string() == "aa-Latn-ET"_s) << fatal;
+				};
+			};
 		};
 
 		"variants"_test = []
 		{
-			// aa-Latn-ET
+			"aa-Latn-ET"_test = []
 			{
-				// language
-				const std::string string{"aa"};
+				"language"_test = []
+				{
+					const std::string string{"aa"};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto variants_result = result->variants();
-				expect((variants_result.size() == 1_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "aa"_sv) >> fatal);
-			}
-			{
-				// language + region
-				const std::string string{"aa-ET"};
+					const auto variants_result = result->variants();
+					expect(variants_result.size() == 1_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "aa"_s) << fatal;
+				};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+				"language+region"_test = []
+				{
+					const std::string string{"aa-ET"};
 
-				const auto variants_result = result->variants();
-				expect((variants_result.size() == 2_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "aa-ET"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "aa"_sv) >> fatal);
-			}
-			{
-				// language + script + region
-				const std::string string{"aa-Latn-ET"};
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto variants_result = result->variants();
+					expect(variants_result.size() == 2_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "aa-ET"_s) << fatal;
+					expect(variants_result[1].operator std::string() == "aa"_s) << fatal;
+				};
 
-				const auto variants_result = result->variants();
-				expect((variants_result.size() == 4_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "aa-ET"_sv) >> fatal);
-				expect((variants_result[2].operator std::string() == "aa-Latn"_sv) >> fatal);
-				expect((variants_result[3].operator std::string() == "aa"_sv) >> fatal);
-			}
+				"language+script+region"_test = []
+				{
+					const std::string string{"aa-Latn-ET"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto variants_result = result->variants();
+					expect(variants_result.size() == 4_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "aa-Latn-ET"_s) << fatal;
+					expect(variants_result[1].operator std::string() == "aa-ET"_s) << fatal;
+					expect(variants_result[2].operator std::string() == "aa-Latn"_s) << fatal;
+					expect(variants_result[3].operator std::string() == "aa"_s) << fatal;
+				};
+			};
 		};
 
 		"canonical_variants"_test = []
 		{
-			// aa-Latn-ET
+			"aa-Latn-ET"_test = []
 			{
-				// language
-				const std::string string{"aa"};
+				"language"_test = []
+				{
+					const std::string string{"aa"};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto variants_result = result->canonical_variants();
-				expect((variants_result.size() == 1_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "aa"_sv) >> fatal);
-			}
+					const auto variants_result = result->canonical_variants();
+					expect(variants_result.size() == 1_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "aa"_s) << fatal;
+				};
+
+				"language+region"_test = []
+				{
+					const std::string string{"aa-ET"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto variants_result = result->canonical_variants();
+					expect(variants_result.size() == 2_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "aa-ET"_s) << fatal;
+					expect(variants_result[1].operator std::string() == "aa"_s) << fatal;
+				};
+
+				"language+script+region"_test = []
+				{
+					const std::string string{"aa-Latn-ET"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto variants_result = result->canonical_variants();
+					expect(variants_result.size() == 4_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "aa-Latn-ET"_s) << fatal;
+					expect(variants_result[1].operator std::string() == "aa-ET"_s) << fatal;
+					expect(variants_result[2].operator std::string() == "aa-Latn"_s) << fatal;
+					expect(variants_result[3].operator std::string() == "aa"_s) << fatal;
+				};
+			};
+
+			"en-Latn-US"_test = []
 			{
-				// language + region
-				const std::string string{"aa-ET"};
+				"language"_test = []
+				{
+					const std::string string{"en"};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto variants_result = result->canonical_variants();
-				expect((variants_result.size() == 2_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "aa-ET"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "aa"_sv) >> fatal);
-			}
+					const auto variants_result = result->canonical_variants();
+					expect(variants_result.size() == 1_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "en"_s) << fatal;
+				};
+
+				"langugae+region"_test = []
+				{
+					const std::string string{"en-US"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto variants_result = result->canonical_variants();
+					expect(variants_result.size() == 2_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "en-US"_s) << fatal;
+					expect(variants_result[1].operator std::string() == "en"_s) << fatal;
+				};
+
+				"language+script+region"_test = []
+				{
+					const std::string string{"en-Latn-US"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto variants_result = result->canonical_variants();
+					expect(variants_result.size() == 4_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "en-Latn-US"_s) << fatal;
+					expect(variants_result[1].operator std::string() == "en-US"_s) << fatal;
+					expect(variants_result[2].operator std::string() == "en-Latn"_s) << fatal;
+					expect(variants_result[3].operator std::string() == "en"_s) << fatal;
+				};
+			};
+
+			"en-Latn-GB"_test = []
 			{
-				// language + script + region
-				const std::string string{"aa-Latn-ET"};
-
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
-
-				const auto variants_result = result->canonical_variants();
-				expect((variants_result.size() == 4_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "aa-ET"_sv) >> fatal);
-				expect((variants_result[2].operator std::string() == "aa-Latn"_sv) >> fatal);
-				expect((variants_result[3].operator std::string() == "aa"_sv) >> fatal);
-			}
-			// en-Latn-US
-			{
-				// language
-				const std::string string{"en"};
-
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
-
-				const auto variants_result = result->canonical_variants();
-				expect((variants_result.size() == 1_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "en"_sv) >> fatal);
-			}
-			{
-				// language + region
-				const std::string string{"en-US"};
-
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
-
-				const auto variants_result = result->canonical_variants();
-				expect((variants_result.size() == 2_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "en-US"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "en"_sv) >> fatal);
-			}
-			{
-				// language + script + region
-				const std::string string{"en-Latn-US"};
-
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
-
-				const auto variants_result = result->canonical_variants();
-				expect((variants_result.size() == 4_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "en-Latn-US"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "en-US"_sv) >> fatal);
-				expect((variants_result[2].operator std::string() == "en-Latn"_sv) >> fatal);
-				expect((variants_result[3].operator std::string() == "en"_sv) >> fatal);
-			}
-			// en-Latn-GB
-			{
-				// language + script + region
 				const std::string string{"en-Latn-GB"};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+				const auto		  result = IETFLanguageTag::parse(string);
+				expect(result.has_value()) << fatal;
 
 				const auto variants_result = result->canonical_variants();
-				expect((variants_result.size() == 2_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "en-Latn-GB"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "en-GB"_sv) >> fatal);
-			}
+				expect(variants_result.size() == 2_auto) << fatal;
+				expect(variants_result[0].operator std::string() == "en-Latn-GB"_s) << fatal;
+				expect(variants_result[1].operator std::string() == "en-GB"_s) << fatal;
+			};
 		};
 
 		"all_variants"_test = []
 		{
-			// aa-Latn-ET
+			"aa-Latn-ET"_test = []
 			{
-				// language
-				const std::string string{"aa"};
+				"language"_test = []
+				{
+					const std::string string{"aa"};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto variants_result = result->all_variants();
-				expect((variants_result.size() == 4_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "aa"_sv) >> fatal);
+					const auto variants_result = result->all_variants();
+					expect(variants_result.size() == 4_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "aa"_s) << fatal;
 
-				expect((variants_result[1].operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-				expect((variants_result[2].operator std::string() == "aa-ET"_sv) >> fatal);
-				expect((variants_result[3].operator std::string() == "aa-Latn"_sv) >> fatal);
-			}
+					expect(variants_result[1].operator std::string() == "aa-Latn-ET"_s) << fatal;
+					expect(variants_result[2].operator std::string() == "aa-ET"_s) << fatal;
+					expect(variants_result[3].operator std::string() == "aa-Latn"_s) << fatal;
+				};
+
+				"language+region"_test = []
+				{
+					const std::string string{"aa-ET"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto variants_result = result->all_variants();
+					expect(variants_result.size() == 4_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "aa-ET"_s) << fatal;
+					expect(variants_result[1].operator std::string() == "aa"_s) << fatal;
+
+					expect(variants_result[2].operator std::string() == "aa-Latn-ET"_s) << fatal;
+					expect(variants_result[3].operator std::string() == "aa-Latn"_s) << fatal;
+				};
+
+				"language+script+region"_test = []
+				{
+					const std::string string{"aa-Latn-ET"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto variants_result = result->all_variants();
+					expect(variants_result.size() == 4_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "aa-Latn-ET"_s) << fatal;
+					expect(variants_result[1].operator std::string() == "aa-ET"_s) << fatal;
+					expect(variants_result[2].operator std::string() == "aa-Latn"_s) << fatal;
+					expect(variants_result[3].operator std::string() == "aa"_s) << fatal;
+				};
+			};
+
+			"en-Latn-US"_test = []
 			{
-				// language + region
-				const std::string string{"aa-ET"};
+				"language"_test = []
+				{
+					const std::string string{"en"};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
 
-				const auto variants_result = result->all_variants();
-				expect((variants_result.size() == 4_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "aa-ET"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "aa"_sv) >> fatal);
+					const auto variants_result = result->all_variants();
+					expect(variants_result.size() == 4_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "en"_s) << fatal;
 
-				expect((variants_result[2].operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-				expect((variants_result[3].operator std::string() == "aa-Latn"_sv) >> fatal);
-			}
+					expect(variants_result[1].operator std::string() == "en-Latn-US"_s) << fatal;
+					expect(variants_result[2].operator std::string() == "en-US"_s) << fatal;
+					expect(variants_result[3].operator std::string() == "en-Latn"_s) << fatal;
+				};
+
+				"language+region"_test = []
+				{
+					const std::string string{"en-US"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto variants_result = result->all_variants();
+					expect(variants_result.size() == 4_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "en-US"_s) << fatal;
+					expect(variants_result[1].operator std::string() == "en"_s) << fatal;
+
+					expect(variants_result[2].operator std::string() == "en-Latn-US"_s) << fatal;
+					expect(variants_result[3].operator std::string() == "en-Latn"_s) << fatal;
+				};
+
+				"language+script+region"_test = []
+				{
+					const std::string string{"en-Latn-US"};
+
+					const auto		  result = IETFLanguageTag::parse(string);
+					expect(result.has_value()) << fatal;
+
+					const auto variants_result = result->all_variants();
+					expect(variants_result.size() == 4_auto) << fatal;
+					expect(variants_result[0].operator std::string() == "en-Latn-US"_s) << fatal;
+					expect(variants_result[1].operator std::string() == "en-US"_s) << fatal;
+					expect(variants_result[2].operator std::string() == "en-Latn"_s) << fatal;
+					expect(variants_result[3].operator std::string() == "en"_s) << fatal;
+				};
+			};
+
+			"en-Latn-GB"_test = []
 			{
-				// language + script + region
-				const std::string string{"aa-Latn-ET"};
-
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
-
-				const auto variants_result = result->all_variants();
-				expect((variants_result.size() == 4_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "aa-Latn-ET"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "aa-ET"_sv) >> fatal);
-				expect((variants_result[2].operator std::string() == "aa-Latn"_sv) >> fatal);
-				expect((variants_result[3].operator std::string() == "aa"_sv) >> fatal);
-			}
-			// en-Latn-US
-			{
-				// language
-				const std::string string{"en"};
-
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
-
-				const auto variants_result = result->all_variants();
-				expect((variants_result.size() == 4_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "en"_sv) >> fatal);
-
-				expect((variants_result[1].operator std::string() == "en-Latn-US"_sv) >> fatal);
-				expect((variants_result[2].operator std::string() == "en-US"_sv) >> fatal);
-				expect((variants_result[3].operator std::string() == "en-Latn"_sv) >> fatal);
-			}
-			{
-				// language + region
-				const std::string string{"en-US"};
-
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
-
-				const auto variants_result = result->all_variants();
-				expect((variants_result.size() == 4_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "en-US"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "en"_sv) >> fatal);
-
-				expect((variants_result[2].operator std::string() == "en-Latn-US"_sv) >> fatal);
-				expect((variants_result[3].operator std::string() == "en-Latn"_sv) >> fatal);
-			}
-			{
-				// language + script + region
-				const std::string string{"en-Latn-US"};
-
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
-
-				const auto variants_result = result->all_variants();
-				expect((variants_result.size() == 4_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "en-Latn-US"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "en-US"_sv) >> fatal);
-				expect((variants_result[2].operator std::string() == "en-Latn"_sv) >> fatal);
-				expect((variants_result[3].operator std::string() == "en"_sv) >> fatal);
-			}
-			// en-Latn-GB
-			{
-				// language + script + region
 				const std::string string{"en-Latn-GB"};
 
-				const auto result = IETFLanguageTag::parse(string);
-				expect((result.has_value()) >> fatal);
+				const auto		  result = IETFLanguageTag::parse(string);
+				expect(result.has_value()) << fatal;
 
 				const auto variants_result = result->all_variants();
-				expect((variants_result.size() == 6_ull) >> fatal);
-				expect((variants_result[0].operator std::string() == "en-Latn-GB"_sv) >> fatal);
-				expect((variants_result[1].operator std::string() == "en-GB"_sv) >> fatal);
-				expect((variants_result[2].operator std::string() == "en-Latn"_sv) >> fatal);
-				expect((variants_result[3].operator std::string() == "en"_sv) >> fatal);
+				expect(variants_result.size() == 6_auto) << fatal;
+				expect(variants_result[0].operator std::string() == "en-Latn-GB"_s) << fatal;
+				expect(variants_result[1].operator std::string() == "en-GB"_s) << fatal;
+				expect(variants_result[2].operator std::string() == "en-Latn"_s) << fatal;
+				expect(variants_result[3].operator std::string() == "en"_s) << fatal;
 
-				expect((variants_result[4].operator std::string() == "en-Latn-US"_sv) >> fatal);
-				expect((variants_result[5].operator std::string() == "en-US"_sv) >> fatal);
-			}
+				expect(variants_result[4].operator std::string() == "en-Latn-US"_s) << fatal;
+				expect(variants_result[5].operator std::string() == "en-US"_s) << fatal;
+			};
 		};
 
 		"static variants"_test = []
@@ -694,19 +724,19 @@ namespace
 					*IETFLanguageTag::parse("fr-Latn-US")};
 
 			const auto result = IETFLanguageTag::variants(languages);
-			expect((result.size() == 12_ull) >> fatal);
-			expect((result[0].operator std::string() == "en-Latn-US"_sv) >> fatal);
-			expect((result[1].operator std::string() == "en-US"_sv) >> fatal);
-			expect((result[2].operator std::string() == "en-Latn"_sv) >> fatal);
-			expect((result[3].operator std::string() == "en"_sv) >> fatal);
-			expect((result[4].operator std::string() == "en-Latn-GB"_sv) >> fatal);
-			expect((result[5].operator std::string() == "en-GB"_sv) >> fatal);
-			expect((result[6].operator std::string() == "fr-Latn-US"_sv) >> fatal);
-			expect((result[7].operator std::string() == "fr-US"_sv) >> fatal);
-			expect((result[8].operator std::string() == "fr-Latn"_sv) >> fatal);
-			expect((result[9].operator std::string() == "fr"_sv) >> fatal);
-			expect((result[10].operator std::string() == "fr-Latn-FR"_sv) >> fatal);
-			expect((result[11].operator std::string() == "fr-FR"_sv) >> fatal);
+			expect(result.size() == 12_auto) << fatal;
+			expect(result[0].operator std::string() == "en-Latn-US"_s) << fatal;
+			expect(result[1].operator std::string() == "en-US"_s) << fatal;
+			expect(result[2].operator std::string() == "en-Latn"_s) << fatal;
+			expect(result[3].operator std::string() == "en"_s) << fatal;
+			expect(result[4].operator std::string() == "en-Latn-GB"_s) << fatal;
+			expect(result[5].operator std::string() == "en-GB"_s) << fatal;
+			expect(result[6].operator std::string() == "fr-Latn-US"_s) << fatal;
+			expect(result[7].operator std::string() == "fr-US"_s) << fatal;
+			expect(result[8].operator std::string() == "fr-Latn"_s) << fatal;
+			expect(result[9].operator std::string() == "fr"_s) << fatal;
+			expect(result[10].operator std::string() == "fr-Latn-FR"_s) << fatal;
+			expect(result[11].operator std::string() == "fr-FR"_s) << fatal;
 		};
 	};
 }// namespace

@@ -11,50 +11,50 @@ namespace
 	using namespace test;
 	using namespace i18n;
 
-	GAL_PROMETHEUS_NO_DESTROY suite test_i18n_iso_15924 = []
+	GAL_PROMETHEUS_NO_DESTROY suite<"i18n.iso_15924"> _ = []
 	{
 		"parse"_test = []
 		{
 			// adlm / 166
-			static_assert(ISO15924::parse("adlm").has_value());
-			static_assert(ISO15924::parse("adlm")->code4() == "Adlm");
-			static_assert(ISO15924::parse("adlm")->number() == 166);
+			expect(constant<ISO15924::parse("adlm").has_value()> and ISO15924::parse("adlm").has_value() == "ISO15924::parse(\"adlm\").has_value()"_b);
+			expect(constant<ISO15924::parse("adlm")->code4() == "Adlm"_s> and ISO15924::parse("adlm")->code4() == "Adlm"_s);
+			expect(constant<ISO15924::parse("adlm")->number() == 166_auto> and ISO15924::parse("adlm")->number() == 166_auto);
 
-			static_assert(ISO15924::parse("Adlm").has_value());
-			static_assert(ISO15924::parse("Adlm")->code4() == "Adlm");
-			static_assert(ISO15924::parse("Adlm")->number() == 166);
-			static_assert(ISO15924::parse("aDlm").has_value());
-			static_assert(ISO15924::parse("aDlm")->code4() == "Adlm");
-			static_assert(ISO15924::parse("aDlm")->number() == 166);
-			static_assert(ISO15924::parse("adLm").has_value());
-			static_assert(ISO15924::parse("adLm")->code4() == "Adlm");
-			static_assert(ISO15924::parse("adLm")->number() == 166);
-			static_assert(ISO15924::parse("adlM").has_value());
-			static_assert(ISO15924::parse("adlM")->code4() == "Adlm");
-			static_assert(ISO15924::parse("adlM")->number() == 166);
+			expect(constant<ISO15924::parse("Adlm").has_value()> and ISO15924::parse("Adlm").has_value() == "ISO15924::parse(\"Adlm\").has_value()"_b);
+			expect(constant<ISO15924::parse("Adlm")->code4() == "Adlm"_s> and ISO15924::parse("Adlm")->code4() == "Adlm"_s);
+			expect(constant<ISO15924::parse("Adlm")->number() == 166_auto> and ISO15924::parse("Adlm")->number() == 166_auto);
+			expect(constant<ISO15924::parse("aDlm").has_value()> and ISO15924::parse("aDlm").has_value() == "ISO15924::parse(\"aDlm\").has_value()"_b);
+			expect(constant<ISO15924::parse("aDlm")->code4() == "Adlm"_s> and ISO15924::parse("aDlm")->code4() == "Adlm"_s);
+			expect(constant<ISO15924::parse("aDlm")->number() == 166_auto> and ISO15924::parse("aDlm")->number() == 166_auto);
+			expect(constant<ISO15924::parse("adLm").has_value()> and ISO15924::parse("adLm").has_value() == "ISO15924::parse(\"adLm\").has_value()"_b);
+			expect(constant<ISO15924::parse("adLm")->code4() == "Adlm"_s> and ISO15924::parse("adLm")->code4() == "Adlm"_s);
+			expect(constant<ISO15924::parse("adLm")->number() == 166_auto> and ISO15924::parse("adLm")->number() == 166_auto);
+			expect(constant<ISO15924::parse("adlM").has_value()> and ISO15924::parse("adlM").has_value() == "ISO15924::parse(\"adlM\").has_value()"_b);
+			expect(constant<ISO15924::parse("adlM")->code4() == "Adlm"_s> and ISO15924::parse("adlM")->code4() == "Adlm"_s);
+			expect(constant<ISO15924::parse("adlM")->number() == 166_auto> and ISO15924::parse("adlM")->number() == 166_auto);
 
-			static_assert(ISO15924::parse("166").has_value());
-			static_assert(ISO15924::parse("166")->code4() == "Adlm");
-			static_assert(ISO15924::parse("166")->number() == 166);
+			expect(constant<ISO15924::parse("166").has_value()> and ISO15924::parse("166").has_value() == "ISO15924::parse(\"166\").has_value()"_b);
+			expect(constant<ISO15924::parse("166")->code4() == "Adlm"_s> and ISO15924::parse("166")->code4() == "Adlm"_s);
+			expect(constant<ISO15924::parse("166")->number() == 166_auto> and ISO15924::parse("166")->number() == 166_auto);
 
-			static_assert(ISO15924::parse("0")->number() == 0);
-			static_assert(ISO15924::parse("01")->number() == 1);
-			static_assert(ISO15924::parse("10")->number() == 10);
-			static_assert(ISO15924::parse("100")->number() == 100);
-			static_assert(ISO15924::parse("010")->number() == 10);
-			static_assert(ISO15924::parse("999")->number() == 999);
-			static_assert(not ISO15924::parse("1000").has_value());
+			expect(constant<ISO15924::parse("0")->number() == 0_auto> and ISO15924::parse("0")->number() == 0_auto);
+			expect(constant<ISO15924::parse("01")->number() == 1_auto> and ISO15924::parse("01")->number() == 1_auto);
+			expect(constant<ISO15924::parse("10")->number() == 10_auto> and ISO15924::parse("10")->number() == 10_auto);
+			expect(constant<ISO15924::parse("100")->number() == 100_auto> and ISO15924::parse("100")->number() == 100_auto);
+			expect(constant<ISO15924::parse("010")->number() == 10_auto> and ISO15924::parse("010")->number() == 10_auto);
+			expect(constant<ISO15924::parse("999")->number() == 999_auto> and ISO15924::parse("999")->number() == 999_auto);
+			expect(constant<not ISO15924::parse("1000").has_value()> and ISO15924::parse("1000").has_value() != "not ISO15924::parse(\"1000\").has_value()"_b);
 
-			static_assert(not ISO15924::parse("").has_value());
-			static_assert(not ISO15924::parse("?").has_value());
-			static_assert(not ISO15924::parse("??").has_value());
-			static_assert(not ISO15924::parse("???").has_value());
-			static_assert(not ISO15924::parse("????").has_value());
+			expect(constant<not ISO15924::parse("").has_value()> and ISO15924::parse("").has_value() != "not ISO15924::parse(\"\").has_value()"_b);
+			expect(constant<not ISO15924::parse("?").has_value()> and ISO15924::parse("?").has_value() != "not ISO15924::parse(\"?\").has_value()"_b);
+			expect(constant<not ISO15924::parse("??").has_value()> and ISO15924::parse("??").has_value() != "not ISO15924::parse(\"??\").has_value()"_b);
+			expect(constant<not ISO15924::parse("???").has_value()> and ISO15924::parse("???").has_value() != "not ISO15924::parse(\"???\").has_value()"_b);
+			expect(constant<not ISO15924::parse("????").has_value()> and ISO15924::parse("????").has_value() != "not ISO15924::parse(\"????\").has_value()"_b);
 		};
 
 		"hash"_test = []
 		{
-			expect((std::hash<ISO15924>{}(*ISO15924::parse("adlm")) == std::hash<ISO15924>{}(*ISO15924::parse("166"))) >> fatal);
+			expect(that % std::hash<ISO15924>{}(*ISO15924::parse("adlm")) == std::hash<ISO15924>{}(*ISO15924::parse("166"))) << fatal;
 			//
 		};
 	};
