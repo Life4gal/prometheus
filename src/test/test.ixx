@@ -646,10 +646,31 @@ namespace gal::prometheus::test
 						typename rebind_left_type::operand_type_no_alias,
 						typename rebind_right_type::operand_type_no_alias>;
 				}
+
 				else if constexpr (requires { rebind_left_type::value == rebind_right_type::value; }) { return rebind_left_type::value == rebind_right_type::value; }
 				else if constexpr (requires { rebind_left_type::value == right_; }) { return rebind_left_type::value == right_; }
 				else if constexpr (requires { left_ == rebind_right_type::value; }) { return left_ == rebind_right_type::value; }
-				else { return left_ == right_; }
+				else if constexpr (requires { left_ == right_; }) { return left_ == right_; }
+
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value == static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value == static_cast<rebind_left_type>(rebind_right_type::value); }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) == rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) == rebind_right_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value == static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value == static_cast<rebind_left_type>(right_); }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) == right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) == right_; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ == static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ == static_cast<rebind_left_type>(rebind_right_type::value); }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) == rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) == rebind_right_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ == static_cast<rebind_left_type>(right_); }) { return left_ == static_cast<rebind_left_type>(right_); }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) == right_; }) { return static_cast<rebind_right_type>(left_) == right_; }
+
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value == rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value == rebind_left_type{rebind_right_type::value}; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} == rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} == rebind_right_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value == rebind_left_type{right_}; }) { return rebind_left_type::value == rebind_left_type{right_}; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} == right_; }) { return rebind_right_type{rebind_left_type::value} == right_; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ == rebind_left_type{rebind_right_type::value}; }) { return left_ == rebind_left_type{rebind_right_type::value}; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} == rebind_right_type::value; }) { return rebind_right_type{left_} == rebind_right_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ == rebind_left_type{right_}; }) { return left_ == rebind_left_type{right_}; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} == right_; }) { return rebind_right_type{left_} == right_; }
+
+				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
 			}
 
 		public:
@@ -765,7 +786,35 @@ namespace gal::prometheus::test
 				else if constexpr (requires { utility::math::abs(left_ - rebind_right_type::value) < rebind_epsilon_type::value; }) { return utility::math::abs(left_ - rebind_right_type::value) < rebind_epsilon_type::value; }
 				else if constexpr (requires { utility::math::abs(rebind_left_type::value - right_) < epsilon_; }) { return utility::math::abs(rebind_left_type::value - right_) < epsilon_; }
 				else if constexpr (requires { utility::math::abs(left_ - rebind_right_type::value) < epsilon_; }) { return utility::math::abs(left_ - rebind_right_type::value) < epsilon_; }
-				else { return utility::math::abs(left_ - right_) < epsilon_; }
+				else if constexpr (requires { utility::math::abs(left_ - right_) < epsilon_; }) { return utility::math::abs(left_ - right_) < epsilon_; }
+
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(rebind_right_type::value)) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(rebind_right_type::value)) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - rebind_right_type::value) < rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - rebind_right_type::value) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) < rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) < rebind_epsilon_type::value; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) < rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) < epsilon_; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) < epsilon_; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) < epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) < epsilon_; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) < epsilon_; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) < epsilon_; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) < epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) < epsilon_; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(right_)) < epsilon_; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(right_)) < epsilon_; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - right_) < epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - right_) < epsilon_; }
+
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{rebind_right_type::value}) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{rebind_right_type::value}) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - rebind_right_type::value) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - rebind_right_type::value) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) < rebind_epsilon_type::value; }) { return utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) < rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) < epsilon_; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) < epsilon_; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) < epsilon_; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) < epsilon_; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) < epsilon_; }) { return utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) < epsilon_; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) < epsilon_; }) { return utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) < epsilon_; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{right_}) < epsilon_; }) { return utility::math::abs(left_ - rebind_left_type{right_}) < epsilon_; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - right_) < epsilon_; }) { return utility::math::abs(rebind_right_type{left_} - right_) < epsilon_; }
+
+				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
 			}
 
 		public:
@@ -823,10 +872,31 @@ namespace gal::prometheus::test
 						typename rebind_left_type::operand_type_no_alias,
 						typename rebind_right_type::operand_type_no_alias>;
 				}
+
 				else if constexpr (requires { rebind_left_type::value != rebind_right_type::value; }) { return rebind_left_type::value != rebind_right_type::value; }
 				else if constexpr (requires { rebind_left_type::value != right_; }) { return rebind_left_type::value != right_; }
 				else if constexpr (requires { left_ != rebind_right_type::value; }) { return left_ != rebind_right_type::value; }
-				else { return left_ != right_; }
+				else if constexpr (requires { left_ != right_; }) { return left_ != right_; }
+
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value != static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value != static_cast<rebind_left_type>(rebind_right_type::value); }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) != rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) != rebind_right_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value != static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value != static_cast<rebind_left_type>(right_); }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) != right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) != right_; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ != static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ != static_cast<rebind_left_type>(rebind_right_type::value); }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) != rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) != rebind_right_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ != static_cast<rebind_left_type>(right_); }) { return left_ != static_cast<rebind_left_type>(right_); }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) != right_; }) { return static_cast<rebind_right_type>(left_) != right_; }
+
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value != rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value != rebind_left_type{rebind_right_type::value}; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} != rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} != rebind_right_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value != rebind_left_type{right_}; }) { return rebind_left_type::value != rebind_left_type{right_}; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} != right_; }) { return rebind_right_type{rebind_left_type::value} != right_; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ != rebind_left_type{rebind_right_type::value}; }) { return left_ != rebind_left_type{rebind_right_type::value}; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} != rebind_right_type::value; }) { return rebind_right_type{left_} != rebind_right_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ != rebind_left_type{right_}; }) { return left_ != rebind_left_type{right_}; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} != right_; }) { return rebind_right_type{left_} != right_; }
+
+				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
 			}
 
 		public:
@@ -936,7 +1006,35 @@ namespace gal::prometheus::test
 				else if constexpr (requires { utility::math::abs(left_ - rebind_right_type::value) > rebind_epsilon_type::value; }) { return utility::math::abs(left_ - rebind_right_type::value) > rebind_epsilon_type::value; }
 				else if constexpr (requires { utility::math::abs(rebind_left_type::value - right_) > epsilon_; }) { return utility::math::abs(rebind_left_type::value - right_) > epsilon_; }
 				else if constexpr (requires { utility::math::abs(left_ - rebind_right_type::value) > epsilon_; }) { return utility::math::abs(left_ - rebind_right_type::value) > epsilon_; }
-				else { return utility::math::abs(left_ - right_) > epsilon_; }
+				else if constexpr (requires { utility::math::abs(left_ - right_) > epsilon_; }) { return utility::math::abs(left_ - right_) > epsilon_; }
+
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(rebind_right_type::value)) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(rebind_right_type::value)) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - rebind_right_type::value) > rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - rebind_right_type::value) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) > rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) > rebind_epsilon_type::value; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) > rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) > epsilon_; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) > epsilon_; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) > epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) > epsilon_; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) > epsilon_; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) > epsilon_; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) > epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) > epsilon_; }
+				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(right_)) > epsilon_; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(right_)) > epsilon_; }
+				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - right_) > epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - right_) > epsilon_; }
+
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{rebind_right_type::value}) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{rebind_right_type::value}) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - rebind_right_type::value) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - rebind_right_type::value) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) > rebind_epsilon_type::value; }) { return utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) > rebind_epsilon_type::value; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) > epsilon_; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) > epsilon_; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) > epsilon_; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) > epsilon_; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) > epsilon_; }) { return utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) > epsilon_; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) > epsilon_; }) { return utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) > epsilon_; }
+				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{right_}) > epsilon_; }) { return utility::math::abs(left_ - rebind_left_type{right_}) > epsilon_; }
+				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - right_) > epsilon_; }) { return utility::math::abs(rebind_right_type{left_} - right_) > epsilon_; }
+
+				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
 			}
 
 		public:
@@ -996,7 +1094,27 @@ namespace gal::prometheus::test
 							if constexpr (requires { rebind_left_type::value > rebind_right_type::value; }) { return rebind_left_type::value > rebind_right_type::value; }
 							else if constexpr (requires { rebind_left_type::value > right_; }) { return rebind_left_type::value > right_; }
 							else if constexpr (requires { left_ > rebind_right_type::value; }) { return left_ > rebind_right_type::value; }
-							else { return left_ > right_; }
+							else if constexpr (requires { left_ > right_; }) { return left_ > right_; }
+
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value > static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value > static_cast<rebind_left_type>(rebind_right_type::value); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) > rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) > rebind_right_type::value; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value > static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value > static_cast<rebind_left_type>(right_); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) > right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) > right_; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ > static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ > static_cast<rebind_left_type>(rebind_right_type::value); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) > rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) > rebind_right_type::value; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ > static_cast<rebind_left_type>(right_); }) { return left_ > static_cast<rebind_left_type>(right_); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) > right_; }) { return static_cast<rebind_right_type>(left_) > right_; }
+
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value > rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value > rebind_left_type{rebind_right_type::value}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} > rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} > rebind_right_type::value; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value > rebind_left_type{right_}; }) { return rebind_left_type::value > rebind_left_type{right_}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} > right_; }) { return rebind_right_type{rebind_left_type::value} > right_; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ > rebind_left_type{rebind_right_type::value}; }) { return left_ > rebind_left_type{rebind_right_type::value}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} > rebind_right_type::value; }) { return rebind_right_type{left_} > rebind_right_type::value; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ > rebind_left_type{right_}; }) { return left_ > rebind_left_type{right_}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} > right_; }) { return rebind_right_type{left_} > right_; }
+
+							else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
 						}()} { }
 
 			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
@@ -1040,7 +1158,27 @@ namespace gal::prometheus::test
 							if constexpr (requires { rebind_left_type::value >= rebind_right_type::value; }) { return rebind_left_type::value >= rebind_right_type::value; }
 							else if constexpr (requires { rebind_left_type::value >= right_; }) { return rebind_left_type::value >= right_; }
 							else if constexpr (requires { left_ >= rebind_right_type::value; }) { return left_ >= rebind_right_type::value; }
-							else { return left_ >= right_; }
+							else if constexpr (requires { left_ >= right_; }) { return left_ >= right_; }
+
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value >= static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value >= static_cast<rebind_left_type>(rebind_right_type::value); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) >= rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) >= rebind_right_type::value; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value >= static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value >= static_cast<rebind_left_type>(right_); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) >= right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) >= right_; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ >= static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ >= static_cast<rebind_left_type>(rebind_right_type::value); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) >= rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) >= rebind_right_type::value; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ >= static_cast<rebind_left_type>(right_); }) { return left_ >= static_cast<rebind_left_type>(right_); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) >= right_; }) { return static_cast<rebind_right_type>(left_) >= right_; }
+
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value >= rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value >= rebind_left_type{rebind_right_type::value}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} >= rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} >= rebind_right_type::value; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value >= rebind_left_type{right_}; }) { return rebind_left_type::value >= rebind_left_type{right_}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} >= right_; }) { return rebind_right_type{rebind_left_type::value} >= right_; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ >= rebind_left_type{rebind_right_type::value}; }) { return left_ >= rebind_left_type{rebind_right_type::value}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} >= rebind_right_type::value; }) { return rebind_right_type{left_} >= rebind_right_type::value; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ >= rebind_left_type{right_}; }) { return left_ >= rebind_left_type{right_}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} >= right_; }) { return rebind_right_type{left_} >= right_; }
+
+							else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
 						}()} { }
 
 			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
@@ -1081,7 +1219,27 @@ namespace gal::prometheus::test
 							if constexpr (requires { rebind_left_type::value < rebind_right_type::value; }) { return rebind_left_type::value < rebind_right_type::value; }
 							else if constexpr (requires { rebind_left_type::value < right_; }) { return rebind_left_type::value < right_; }
 							else if constexpr (requires { left_ < rebind_right_type::value; }) { return left_ < rebind_right_type::value; }
-							else { return left_ < right_; }
+							else if constexpr (requires { left_ < right_; }) { return left_ < right_; }
+
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value < static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value < static_cast<rebind_left_type>(rebind_right_type::value); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) < rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) < rebind_right_type::value; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value < static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value < static_cast<rebind_left_type>(right_); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) < right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) < right_; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ < static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ < static_cast<rebind_left_type>(rebind_right_type::value); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) < rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) < rebind_right_type::value; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ < static_cast<rebind_left_type>(right_); }) { return left_ < static_cast<rebind_left_type>(right_); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) < right_; }) { return static_cast<rebind_right_type>(left_) < right_; }
+
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value < rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value < rebind_left_type{rebind_right_type::value}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} < rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} < rebind_right_type::value; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value < rebind_left_type{right_}; }) { return rebind_left_type::value < rebind_left_type{right_}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} < right_; }) { return rebind_right_type{rebind_left_type::value} < right_; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ < rebind_left_type{rebind_right_type::value}; }) { return left_ < rebind_left_type{rebind_right_type::value}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} < rebind_right_type::value; }) { return rebind_right_type{left_} < rebind_right_type::value; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ < rebind_left_type{right_}; }) { return left_ < rebind_left_type{right_}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} < right_; }) { return rebind_right_type{left_} < right_; }
+
+							else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
 						}()} { }
 
 			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
@@ -1122,7 +1280,27 @@ namespace gal::prometheus::test
 							if constexpr (requires { rebind_left_type::value <= rebind_right_type::value; }) { return rebind_left_type::value <= rebind_right_type::value; }
 							else if constexpr (requires { rebind_left_type::value <= right_; }) { return rebind_left_type::value <= right_; }
 							else if constexpr (requires { left_ <= rebind_right_type::value; }) { return left_ <= rebind_right_type::value; }
-							else { return left_ <= right_; }
+							else if constexpr (requires { left_ <= right_; }) { return left_ <= right_; }
+
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value <= static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value <= static_cast<rebind_left_type>(rebind_right_type::value); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) <= rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) <= rebind_right_type::value; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value <= static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value <= static_cast<rebind_left_type>(right_); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) <= right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) <= right_; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ <= static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ <= static_cast<rebind_left_type>(rebind_right_type::value); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) <= rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) <= rebind_right_type::value; }
+							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ <= static_cast<rebind_left_type>(right_); }) { return left_ <= static_cast<rebind_left_type>(right_); }
+							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) <= right_; }) { return static_cast<rebind_right_type>(left_) <= right_; }
+
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value <= rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value <= rebind_left_type{rebind_right_type::value}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} <= rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} <= rebind_right_type::value; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value <= rebind_left_type{right_}; }) { return rebind_left_type::value <= rebind_left_type{right_}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} <= right_; }) { return rebind_right_type{rebind_left_type::value} <= right_; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ <= rebind_left_type{rebind_right_type::value}; }) { return left_ <= rebind_left_type{rebind_right_type::value}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} <= rebind_right_type::value; }) { return rebind_right_type{left_} <= rebind_right_type::value; }
+							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ <= rebind_left_type{right_}; }) { return left_ <= rebind_left_type{right_}; }
+							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} <= right_; }) { return rebind_right_type{left_} <= right_; }
+
+							else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
 						}()} { }
 
 			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
@@ -2758,7 +2936,8 @@ namespace gal::prometheus::test
 		using as_d = as<double>;
 		using as_ld = as<long double>;
 		using as_b = as<bool>;
-		using as_s = as<std::string_view>;
+		using as_s = as<std::string>;
+		using as_sv = as<std::string_view>;
 
 		constexpr tag_fatal                    fatal{};
 		constexpr tag_skip                     skip{};
