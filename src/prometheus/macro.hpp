@@ -95,7 +95,7 @@
 #endif
 
 #define GAL_PROMETHEUS_STATIC_UNREACHABLE(...)                                                             \
-	[]<bool AlwaysFalse>() { static_assert(AlwaysFalse, "[UNREACHABLE BRANCH]: \"" __VA_ARGS__ "\""); }(); \
+	[]<bool AlwaysFalse = false>() { static_assert(AlwaysFalse, "[UNREACHABLE BRANCH]" __VA_OPT__(":\"") __VA_ARGS__ __VA_OPT__("\"")); }(); \
 	GAL_PROMETHEUS_UNREACHABLE()
 
 #if __has_cpp_attribute(__cpp_if_consteval)
