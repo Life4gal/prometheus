@@ -37,6 +37,11 @@ namespace gal::prometheus::test
 		constexpr static categories_type::value_type value = "skip";
 	};
 
+	struct tag_silence
+	{
+		constexpr static categories_type::value_type value = "silence";
+	};
+
 	// The color used to print the results of test case execution.
 	struct color_type
 	{
@@ -248,6 +253,10 @@ namespace gal::prometheus::test
 		public:
 			std::string_view name;
 		};
+
+		class EventSilenceBegin : public Event {};
+
+		class EventSilenceEnd : public Event {};
 
 		template<operand::expression_t Expression>
 		class EventAssertionPass : public Event
@@ -1634,6 +1643,11 @@ namespace gal::prometheus::test
 		// todo: custom color
 		color_type color_;
 
+		// Whether the current scope does not output message
+		bool silence_scope_;
+		// Whether the current assertion does not output message
+		bool silence_assertion_;
+
 		[[nodiscard]] constexpr auto get_test_full_name() const noexcept -> std::string
 		{
 			std::string result;
@@ -1768,15 +1782,18 @@ namespace gal::prometheus::test
 						{
 							out_ << result.report_string;
 
-							std::ranges::for_each(
-									result.nested_result,
-									[this, &self](
-									const auto& pair) -> void
-									{
-										const auto& [name, nested_result] = pair;
+							if (not silence_scope_)
+							[[unlikely]]
+							{
+								std::ranges::for_each(
+										result.nested_result,
+										[this, &self](const auto& pair) -> void
+										{
+											const auto& [name, nested_result] = pair;
 
-										self(*nested_result);
-									});
+											self(*nested_result);
+										});
+							}
 						}};
 
 				do_bump(*active_scope_);
@@ -1837,7 +1854,9 @@ namespace gal::prometheus::test
 					std::addressof(results_.emplace(std::string{global_scope_name}, result_type{}).first->second)},
 			// out_{std::cout.rdbuf()},
 			// out_saved_{std::cout.rdbuf()}
-			out_{std::cout}
+			out_{std::cout},
+			silence_scope_{false},
+			silence_assertion_{false}
 		{
 			// todo: parse command line option
 		}
@@ -1941,21 +1960,39 @@ namespace gal::prometheus::test
 			scope_pop(test_end.name);
 		}
 
+		template<bool Scope>
+		auto on(const events::EventSilenceBegin&) -> void
+		{
+			if constexpr (Scope) { silence_scope_ = true; }
+			else { silence_assertion_ = true; }
+		}
+
+		template<bool Scope>
+		auto on(const events::EventSilenceEnd&) -> void
+		{
+			if constexpr (Scope) { silence_scope_ = false; }
+			else { silence_assertion_ = false; }
+		}
+
 		template<operand::expression_t Expression>
 		auto on(const events::EventAssertionPass<Expression>& assertion_pass) -> void
 		{
-			std::format_to(
-					std::back_inserter(active_scope_->report_string),
-					"{:{}}[{}:{}] {}[{}]{} - {}PASSED{} \n",
-					"",
-					(active_test_.size() - 1) * 2,
-					assertion_pass.location.file_name(),
-					assertion_pass.location.line(),
-					color_.expression,
-					operand::expression_to_string(assertion_pass.expression),
-					color_.none,
-					color_.pass,
-					color_.none);
+			if (not silence_assertion_)
+			[[unlikely]]
+			{
+				std::format_to(
+						std::back_inserter(active_scope_->report_string),
+						"{:{}}[{}:{}] {}[{}]{} - {}PASSED{} \n",
+						"",
+						(active_test_.size() - 1) * 2,
+						assertion_pass.location.file_name(),
+						assertion_pass.location.line(),
+						color_.expression,
+						operand::expression_to_string(assertion_pass.expression),
+						color_.none,
+						color_.pass,
+						color_.none);
+			}
 
 			active_scope_->total_assertions_passed += 1;
 		}
@@ -1963,18 +2000,22 @@ namespace gal::prometheus::test
 		template<operand::expression_t Expression>
 		auto on(const events::EventAssertionFail<Expression>& assertion_fail) -> void
 		{
-			std::format_to(
-					std::back_inserter(active_scope_->report_string),
-					"{:{}}[{}:{}] {}[{}]{} - {}FAILED{} \n",
-					"",
-					(active_test_.size() - 1) * 2,
-					assertion_fail.location.file_name(),
-					assertion_fail.location.line(),
-					color_.expression,
-					operand::expression_to_string(assertion_fail.expression),
-					color_.none,
-					color_.fail,
-					color_.none);
+			if (not silence_assertion_)
+			[[unlikely]]
+			{
+				std::format_to(
+						std::back_inserter(active_scope_->report_string),
+						"{:{}}[{}:{}] {}[{}]{} - {}FAILED{} \n",
+						"",
+						(active_test_.size() - 1) * 2,
+						assertion_fail.location.file_name(),
+						assertion_fail.location.line(),
+						color_.expression,
+						operand::expression_to_string(assertion_fail.expression),
+						color_.none,
+						color_.fail,
+						color_.none);
+			}
 
 			active_scope_->total_assertions_failed += 1;
 
@@ -1994,54 +2035,62 @@ namespace gal::prometheus::test
 
 		auto on(const events::EventAssertionFatal& assertion_fatal) const -> void
 		{
+			if (not silence_assertion_)
+			[[unlikely]]
+			{
+				std::format_to(
+						std::back_inserter(active_scope_->report_string),
+						"{:{}}^^^ {}FATAL ERROR{}\n",
+						"",
+						(active_test_.size() - 1) * 2 + (
+							// '['
+							1 +
+							// file_name
+							std::string_view::traits_type::length(assertion_fatal.location.file_name())) +
+						// ':'
+						1 +
+						// line
+						[]<typename T>(T line)
+						{
+							T result = 0;
+							while (line)
+							{
+								result += 1;
+								line /= 10;
+							}
+							return result;
+						}(assertion_fatal.location.line()) +
+						// "] ["
+						3,
+						color_.fatal,
+						color_.none);
+			}
+
 			active_scope_->total_assertions_failed += 1;
 			active_scope_->status = result_type::Status::FATAL;
-
-			std::format_to(
-					std::back_inserter(active_scope_->report_string),
-					"{:{}}^^^ {}FATAL ERROR{}\n",
-					"",
-					(active_test_.size() - 1) * 2 + (
-						// '['
-						1 +
-						// file_name
-						std::string_view::traits_type::length(assertion_fatal.location.file_name())) +
-					// ':'
-					1 +
-					// line
-					[]<typename T>(T line)
-					{
-						T result = 0;
-						while (line)
-						{
-							result += 1;
-							line /= 10;
-						}
-						return result;
-					}(assertion_fatal.location.line()) +
-					// "] ["
-					3,
-					color_.fatal,
-					color_.none);
 		}
 
 		template<operand::expression_t Expression>
 		auto on([[maybe_unused]] const events::EventAssertionFatalSkip<Expression>& assertion_fatal_skip) -> void
 		{
-			active_scope_->total_assertions_failed += 1;
+			if (not silence_assertion_)
+			[[unlikely]]
+			{
+				std::format_to(
+						std::back_inserter(active_scope_->report_string),
+						"{:{}}[{}:{}] {}[{}]{} - {}SKIPPED{} \n",
+						"",
+						(active_test_.size() - 1) * 2,
+						assertion_fatal_skip.location.file_name(),
+						assertion_fatal_skip.location.line(),
+						color_.expression,
+						operand::expression_to_string(assertion_fatal_skip.expression),
+						color_.none,
+						color_.fatal,
+						color_.none);
+			}
 
-			std::format_to(
-					std::back_inserter(active_scope_->report_string),
-					"{:{}}[{}:{}] {}[{}]{} - {}SKIPPED{} \n",
-					"",
-					(active_test_.size() - 1) * 2,
-					assertion_fatal_skip.location.file_name(),
-					assertion_fatal_skip.location.line(),
-					color_.expression,
-					operand::expression_to_string(assertion_fatal_skip.expression),
-					color_.none,
-					color_.fatal,
-					color_.none);
+			active_scope_->total_assertions_failed += 1;
 		}
 
 		template<typename MessageType>
@@ -2173,6 +2222,8 @@ namespace gal::prometheus::test
 		reporter_type reporter_;
 
 		suite_list_type suites_;
+
+		// todo: Allows users to set which tests need to be executed.
 		categories_type categories_should_run_;
 
 		std::size_t fails_;
@@ -2181,6 +2232,7 @@ namespace gal::prometheus::test
 
 		constexpr auto run(const bool report_summary_required = false) noexcept -> bool try
 		{
+			// todo: Allow users to filter which suites need to be executed (via suite_name)
 			std::ranges::for_each(
 					suites_,
 					[this](const suite_type& suite) -> void
@@ -2253,6 +2305,14 @@ namespace gal::prometheus::test
 
 			reporter_.on(test.operator events::EventTestBegin());
 
+			const bool silence = std::ranges::contains(test.categories, tag_silence::value);
+			if (silence)
+			{
+				// for scope
+				// note: after test begin
+				reporter_.template on<true>(events::EventSilenceBegin{});
+			}
+
 			try { std::invoke(test); }
 			// see on(const events::EventAssertionFatal& fatal)
 			// catch (const events::EventAssertionFatal&)
@@ -2272,10 +2332,23 @@ namespace gal::prometheus::test
 			}
 
 			reporter_.on(test.operator events::EventTestEnd());
+
+			if (silence)
+			{
+				// for scope
+				// note: after test end
+				reporter_.template on<true>(events::EventSilenceEnd{});
+			}
 		}
 
 		template<typename MessageType>
 		constexpr auto on(const events::EventLog<MessageType>& log) -> void { reporter_.on(log); }
+
+		// for assertion
+		constexpr auto on(const events::EventSilenceBegin& silence_begin) -> void { reporter_.template on<false>(silence_begin); }
+
+		// for assertion
+		constexpr auto on(const events::EventSilenceEnd& silence_end) -> void { reporter_.template on<false>(silence_end); }
 
 		template<operand::expression_t Expression>
 		constexpr auto on(const events::EventAssertion<Expression>& assertion) -> bool
@@ -2465,8 +2538,11 @@ namespace gal::prometheus::test
 			template<operand::expression_t Expression>
 			struct expression
 			{
-				Expression e;
+				using dispatched_type_no_alias = Expression;
 
+				dispatched_type_no_alias e;
+
+				// note: satisfy requirement operand::is_expression_v --> call expect
 				[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return e; }
 
 				template<typename Rhs>
@@ -2499,13 +2575,75 @@ namespace gal::prometheus::test
 						const Rhs& rhs
 						) const noexcept -> operand::OperandCompareLessEqual<Expression, Rhs> { return {e, rhs}; }
 
-				[[nodiscard]] constexpr auto operator not() const noexcept -> operand::OperandLogicalNot<Expression> { return {*this}; }
+				[[nodiscard]] constexpr auto operator not() const noexcept -> operand::OperandLogicalNot<Expression> { return {e}; }
 			};
 
 		public:
 			template<operand::expression_t Expression>
 			[[nodiscard]] constexpr auto operator%(const Expression& e) const noexcept -> expression<Expression> { return {.e = e}; }
 		};
+
+		class DispatcherSilence
+		{
+		public:
+			template<operand::expression_t Expression>
+			struct silence_expression
+			{
+				using dispatched_type_no_alias = Expression;
+
+				dispatched_type_no_alias e;
+
+				// note: satisfy requirement operand::is_expression_v --> call expect
+				[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return e; }
+
+				template<typename Rhs>
+				[[nodiscard]] constexpr auto operator==(
+						const Rhs& rhs
+						) const noexcept -> silence_expression<operand::OperandCompareEqual<Expression, Rhs>> { return {.e = {e, rhs}}; }
+
+				template<typename Rhs>
+				[[nodiscard]] constexpr auto operator!=(
+						const Rhs& rhs
+						) const noexcept -> silence_expression<operand::OperandCompareNotEqual<Expression, Rhs>> { return {.e = {e, rhs}}; }
+
+				template<typename Rhs>
+				[[nodiscard]] constexpr auto operator>(
+						const Rhs& rhs
+						) const noexcept -> silence_expression<operand::OperandCompareGreaterThan<Expression, Rhs>> { return {.e = {e, rhs}}; }
+
+				template<typename Rhs>
+				[[nodiscard]] constexpr auto operator>=(
+						const Rhs& rhs
+						) const noexcept -> silence_expression<operand::OperandCompareGreaterEqual<Expression, Rhs>> { return {.e = {e, rhs}}; }
+
+				template<typename Rhs>
+				[[nodiscard]] constexpr auto operator<(
+						const Rhs& rhs
+						) const noexcept -> silence_expression<operand::OperandCompareLessThan<Expression, Rhs>> { return {.e = {e, rhs}}; }
+
+				template<typename Rhs>
+				[[nodiscard]] constexpr auto operator<=(
+						const Rhs& rhs
+						) const noexcept -> silence_expression<operand::OperandCompareLessEqual<Expression, Rhs>> { return {.e = {e, rhs}}; }
+
+				[[nodiscard]] constexpr auto operator not() const noexcept -> silence_expression<operand::OperandLogicalNot<Expression>> { return {.e = {e}}; }
+			};
+
+			template<operand::expression_t Expression>
+			[[nodiscard]] constexpr auto operator%(const Expression& e) const noexcept -> silence_expression<Expression> { return {.e = e}; }
+		};
+
+		template<typename>
+		constexpr auto is_silence_expression_v = false;
+		template<operand::expression_t Expression>
+		constexpr auto is_silence_expression_v<DispatcherSilence::silence_expression<Expression>> = true;
+
+		// avoid ambiguous
+		template<typename>
+		constexpr auto is_dispatched_expression_v = false;
+		template<typename E>
+			requires requires { typename E::dispatched_type_no_alias; }
+		constexpr auto is_dispatched_expression_v<E> = true;
 
 		template<operand::expression_t Expression>
 		class DispatcherExpect
@@ -2713,6 +2851,8 @@ namespace gal::prometheus::test
 				) noexcept -> operand::OperandCompareNotEqual<std::decay_t<Range>, std::decay_t<Range>> { return {static_cast<Range&&>(lhs), static_cast<Range&&>(rhs)}; }
 
 		template<operand::operand_t Lhs, typename Rhs>
+		// workaround: dispatched expression, avoid ambiguous
+			requires (not dispatcher::is_dispatched_expression_v<Rhs>)
 		[[nodiscard]] constexpr auto operator==(
 				const Lhs& lhs,
 				const Rhs& rhs
@@ -2733,6 +2873,8 @@ namespace gal::prometheus::test
 		template<typename Lhs, operand::operand_t Rhs>
 		// avoid ambiguous
 			requires(not operand::is_operand_v<Lhs> and not std::is_floating_point_v<Lhs>)
+					// workaround: dispatched expression, avoid ambiguous
+					and (not dispatcher::is_dispatched_expression_v<Lhs>)
 		[[nodiscard]] constexpr auto operator==(
 				const Lhs& lhs,
 				const Rhs& rhs
@@ -2751,6 +2893,8 @@ namespace gal::prometheus::test
 				) noexcept -> operand::OperandCompareApprox<Lhs, operand::OperandConstantFloatingPoint<Value, DenominatorSize>, typename operand::OperandConstantFloatingPoint<Value, DenominatorSize>::value_type> { return {lhs, rhs, operand::OperandConstantFloatingPoint<Value, DenominatorSize>::epsilon}; }
 
 		template<operand::operand_t Lhs, typename Rhs>
+		// workaround: dispatched expression, avoid ambiguous
+			requires(not dispatcher::is_dispatched_expression_v<Rhs>)
 		[[nodiscard]] constexpr auto operator!=(
 				const Lhs& lhs,
 				const Rhs& rhs
@@ -2771,6 +2915,8 @@ namespace gal::prometheus::test
 		template<typename Lhs, operand::operand_t Rhs>
 		// avoid ambiguous
 			requires(not operand::is_operand_v<Lhs> and not std::is_floating_point_v<Lhs>)
+					// workaround: dispatched expression, avoid ambiguous
+					and (not dispatcher::is_dispatched_expression_v<Lhs>)
 		[[nodiscard]] constexpr auto operator!=(
 				const Lhs& lhs,
 				const Rhs& rhs
@@ -2790,6 +2936,8 @@ namespace gal::prometheus::test
 
 		template<typename Lhs, typename Rhs>
 			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
+					// workaround: dispatched expression, avoid ambiguous
+					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
 		[[nodiscard]] constexpr auto operator>(
 				const Lhs& lhs,
 				const Rhs& rhs
@@ -2797,6 +2945,8 @@ namespace gal::prometheus::test
 
 		template<typename Lhs, typename Rhs>
 			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
+					// workaround: dispatched expression, avoid ambiguous
+					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
 		[[nodiscard]] constexpr auto operator>=(
 				const Lhs& lhs,
 				const Rhs& rhs
@@ -2804,6 +2954,8 @@ namespace gal::prometheus::test
 
 		template<typename Lhs, typename Rhs>
 			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
+					// workaround: dispatched expression, avoid ambiguous
+					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
 		[[nodiscard]] constexpr auto operator<(
 				const Lhs& lhs,
 				const Rhs& rhs
@@ -2811,6 +2963,8 @@ namespace gal::prometheus::test
 
 		template<typename Lhs, typename Rhs>
 			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
+					// workaround: dispatched expression, avoid ambiguous
+					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
 		[[nodiscard]] constexpr auto operator<=(
 				const Lhs& lhs,
 				const Rhs& rhs
@@ -2818,6 +2972,8 @@ namespace gal::prometheus::test
 
 		template<typename Lhs, typename Rhs>
 			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
+					// workaround: dispatched expression, avoid ambiguous
+					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
 		[[nodiscard]] constexpr auto operator and(
 				const Lhs& lhs,
 				const Rhs& rhs
@@ -2825,12 +2981,16 @@ namespace gal::prometheus::test
 
 		template<typename Lhs, typename Rhs>
 			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
+					// workaround: dispatched expression, avoid ambiguous
+					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
 		[[nodiscard]] constexpr auto operator or(
 				const Lhs& lhs,
 				const Rhs& rhs
 				) noexcept -> operand::OperandLogicalOr<Lhs, Rhs> { return {lhs, rhs}; }
 
 		template<operand::operand_t T>
+		// workaround: dispatched expression, avoid ambiguous
+			requires (not dispatcher::is_dispatched_expression_v<T>)
 		[[nodiscard]] constexpr auto operator not(const T t) noexcept -> operand::OperandLogicalNot<T> { return {t}; }
 
 		template<typename Test>
@@ -2865,6 +3025,24 @@ namespace gal::prometheus::test
 			return test;
 		}
 
+		template<typename Test>
+		// [[nodiscard]] constexpr auto operator/(const tag_silence, Test test) noexcept -> Test//
+		[[nodiscard]] constexpr auto operator/(const dispatcher::DispatcherSilence&, Test test) noexcept -> Test//
+			requires requires { test.add_categories(categories_type{tag_silence::value}); }
+		{
+			test.add_categories(categories_type{tag_silence::value});
+			return test;
+		}
+
+		template<typename Test>
+		// [[nodiscard]] constexpr auto operator/(Test test, const tag_silence) noexcept -> Test//
+		[[nodiscard]] constexpr auto operator/(Test test, const dispatcher::DispatcherSilence&) noexcept -> Test//
+			requires requires { test.add_categories(categories_type{tag_silence::value}); }
+		{
+			test.add_categories(categories_type{tag_silence::value});
+			return test;
+		}
+
 		constexpr auto operator/(const categories_type& lhs, const categories_type& rhs) noexcept -> categories_type
 		{
 			categories_type result{lhs};
@@ -2886,6 +3064,25 @@ namespace gal::prometheus::test
 			categories_type result{lhs};
 
 			result.emplace_back(tag_skip::value);
+
+			return result;
+		}
+
+		// constexpr auto operator/(const tag_silence, const categories_type& rhs) noexcept -> categories_type
+		constexpr auto operator/(const dispatcher::DispatcherSilence&, const categories_type& rhs) noexcept -> categories_type
+		{
+			categories_type result{tag_silence::value};
+			result.append_range(rhs);
+
+			return result;
+		}
+
+		// constexpr auto operator/(const categories_type& lhs, const tag_silence) noexcept -> categories_type
+		constexpr auto operator/(const categories_type& lhs, const dispatcher::DispatcherSilence&) noexcept -> categories_type
+		{
+			categories_type result{lhs};
+
+			result.emplace_back(tag_silence::value);
 
 			return result;
 		}
@@ -2939,10 +3136,12 @@ namespace gal::prometheus::test
 		using as_s = as<std::string>;
 		using as_sv = as<std::string_view>;
 
-		constexpr tag_fatal                    fatal{};
-		constexpr tag_skip                     skip{};
-		constexpr dispatcher::DispatcherLogger logger{};
-		constexpr dispatcher::DispatcherThat   that{};
+		constexpr tag_fatal fatal{};
+		constexpr tag_skip  skip{};
+		// constexpr tag_silence				   silence{};
+		constexpr dispatcher::DispatcherLogger  logger{};
+		constexpr dispatcher::DispatcherThat    that{};
+		constexpr dispatcher::DispatcherSilence silence{};
 		using test = dispatcher::DispatcherTest;
 		using should = test;
 		constexpr auto category = [](const std::string_view name) -> categories_type { return {name}; };
@@ -2983,14 +3182,27 @@ namespace gal::prometheus::test
 		constexpr auto expect(
 				const Expression&           expression,
 				const std::source_location& location = std::source_location::current()
-				) -> dispatcher::DispatcherExpect<Expression>
+				) -> auto
 		{
-			return dispatcher::DispatcherExpect<Expression>{
-					dispatcher::register_event<Expression>(events::EventAssertion<Expression>{
-							.location = location,
-							.expression = expression
-					})
-			};
+			// workaround, silence expression vvv
+			if constexpr (dispatcher::is_silence_expression_v<Expression>)
+			{
+				dispatcher::register_event<typename Expression::dispatched_type_no_alias>(events::EventSilenceBegin{});
+				const auto result = dispatcher::register_event<typename Expression::dispatched_type_no_alias>(events::EventAssertion<typename Expression::dispatched_type_no_alias>{.location = location, .expression = expression.e});
+				dispatcher::register_event<typename Expression::dispatched_type_no_alias>(events::EventSilenceEnd{});
+				return dispatcher::DispatcherExpect<typename Expression::dispatched_type_no_alias>{result};
+			}
+			// ^^^ workaround, silence expression end
+			else
+			{
+				return dispatcher::DispatcherExpect<Expression>{
+						dispatcher::register_event<Expression>(
+								events::EventAssertion<Expression>{
+										.location = location,
+										.expression = expression}
+								)
+				};
+			}
 		}
 
 		template<typename ExceptionType = void, std::invocable InvocableType>
