@@ -24,8 +24,8 @@ add_executable(
 		# COROUTINE
 		# =================================
 
-		#${PROJECT_SOURCE_DIR}/src/coroutine/task.cpp
-		#${PROJECT_SOURCE_DIR}/src/coroutine/generator.cpp
+		${PROJECT_SOURCE_DIR}/src/coroutine/task.cpp
+		${PROJECT_SOURCE_DIR}/src/coroutine/generator.cpp
 
 		# =================================
 		# I18N

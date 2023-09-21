@@ -10,7 +10,7 @@ namespace
 	using namespace test;
 	using namespace coroutine;
 
-	GAL_PROMETHEUS_NO_DESTROY suite test_coroutine_generator = []
+	GAL_PROMETHEUS_NO_DESTROY suite<"coroutine.generator"> _ = []
 	{
 		"0~10"_test = []
 		{
@@ -19,7 +19,7 @@ namespace
 			for (int       i = 0;
 				const auto each: generator)
 			{
-				expect((each == _i{i}) >> fatal);
+				expect(each == as_i{i}) << fatal;
 				++i;
 			}
 		};
@@ -41,11 +41,11 @@ namespace
 				for (int       i = 0;
 					const auto each: generator)
 				{
-					expect((each == _i{i}) >> fatal);
+					expect(each == as_i{i}) << fatal;
 					++i;
 				}
 			}
-			catch (const std::runtime_error& e) { expect((e.what() == std::string_view{"catch me + 5"}) >> fatal); }
+			catch (const std::runtime_error& e) { expect(e.what() == std::string_view{"catch me + 5"}) << fatal; }
 		};
 
 		"0~10 with unique_ptr"_test = []
@@ -57,7 +57,7 @@ namespace
 				for (int        i = 0;
 					const auto& each: generator)
 				{
-					expect((*each == _i{i}) >> fatal);
+					expect(*each == as_i{i}) << fatal;
 					++i;
 				}
 			}
@@ -69,7 +69,7 @@ namespace
 				for (int   i = 0;
 					auto&& each: generator)
 				{
-					expect((*each == _i{i}) >> fatal);
+					expect(*each == as_i{i}) << fatal;
 					++i;
 				}
 			}
@@ -90,7 +90,8 @@ namespace
 			for (int       current = 0;
 				const auto each: generator)
 			{
-				expect((each == _i{current}) >> fatal);
+				// silence -> avoid spam
+				expect(silence % each == as_i{current}) << fatal;
 				++current;
 
 				if (constexpr int max = 1024;
