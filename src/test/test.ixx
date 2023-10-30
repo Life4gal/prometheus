@@ -14,1736 +14,1708 @@ export module gal.prometheus.test;
 import std;
 import gal.prometheus.infrastructure;
 
-export namespace gal::prometheus::test {}// namespace gal::prometheus::test
-
-namespace gal::prometheus::test
+namespace gal::prometheus
 {
-	// namespace test
-	// Global Configuration
-	struct config;
-	// Default Reporter
-	class Reporter;
-	// Executor, user can specify a customized reporter
-	template<typename ReporterType = Reporter>
-	class Executor;
-
-	// Specify the category of test cases, used to filter test cases that do not need to be executed.
-	using categories_type = std::vector<std::string_view>;
-
-	struct tag_fatal { };
-
-	struct tag_skip
+	export namespace test
 	{
-		constexpr static categories_type::value_type value = "skip";
-	};
-
-	struct tag_silence
-	{
-		constexpr static categories_type::value_type value = "silence";
-	};
-
-	// The color used to print the results of test case execution.
-	struct color_type
-	{
-		std::string_view none = "\033[0m";
-
-		std::string_view fail  = "\033[31m\033[7m";
-		std::string_view pass  = "\033[32m\033[7m";
-		std::string_view skip  = "\033[33m\033[7m";
-		std::string_view fatal = "\033[35m\033[7m";
-
-		std::string_view suite      = "\033[34m\033[7m";
-		std::string_view test       = "\033[36m\033[7m";
-		std::string_view expression = "\033[38;5;207m\033[7m";
-		std::string_view message    = "\033[38;5;27m\033[7m";
-	};
-
-	// namespace test::operand
-	// OperandXXX
-
-	namespace operand
-	{
-		class Operand { };
-
-		template<typename O>
-		constexpr auto is_operand_v = std::is_base_of_v<Operand, O>;
-		template<typename O>
-		concept operand_t = is_operand_v<O>;
-		template<typename Expression>
-		constexpr auto is_expression_v =
-				// 1 < i
-				std::is_convertible_v<Expression, bool> or
-				// OperandCompareLess{OperandConstantIntegral<1>{}, i}
-				operand::is_operand_v<Expression>;
-		template<typename Expression>
-		concept expression_t = is_expression_v<Expression>;
-	}// namespace operand
-
-	// namespace test::events
-	// EventXXX
-
-	namespace events
-	{
-		class Event { };
-
-		template<typename E>
-		constexpr auto is_event = std::is_base_of_v<Event, E>;
-		template<typename E>
-		concept event_t = is_event<E>;
-	}// namespace events
-
-	// namespace test::dispatcher
-	// DispatcherXXX
-
-	// namespace test::literals
-	// xxx_operator
-
-	// namespace test::operators
-	// lhs [== / != / > / >= / < / <= / and / or / not] rhs
-
-	struct config
-	{
-		// Terminate the program immediately if the assertion fails.
-		inline static bool fast_fail = false;
-		// Terminate the program after n failed assertions (per suite).
-		inline static auto abort_after_n_failures = std::numeric_limits<std::size_t>::max();
-	};
-
-	namespace utility
-	{
-		namespace literals
+		// The color used to print the results of test case execution.
+		struct color_type
 		{
-			template<std::integral T, char... Cs>
-				requires(((Cs >= '0' and Cs <= '9') or Cs == '\'') and ...)
-			[[nodiscard]] consteval auto to_integral() noexcept -> T
+			std::string_view none = "\033[0m";
+
+			std::string_view fail  = "\033[31m\033[7m";
+			std::string_view pass  = "\033[32m\033[7m";
+			std::string_view skip  = "\033[33m\033[7m";
+			std::string_view fatal = "\033[35m\033[7m";
+
+			std::string_view suite      = "\033[34m\033[7m";
+			std::string_view test       = "\033[36m\033[7m";
+			std::string_view expression = "\033[38;5;207m\033[7m";
+			std::string_view message    = "\033[38;5;27m\033[7m";
+		};
+
+		struct config
+		{
+			// Terminate the program immediately if the assertion fails.
+			inline static bool fast_fail = false;
+			// Terminate the program after n failed assertions (per suite).
+			inline static auto abort_after_n_failures = std::numeric_limits<std::size_t>::max();
+		};
+
+		// Specify the category of test cases, used to filter test cases that do not need to be executed.
+		using categories_type = std::vector<std::string_view>;
+	}
+
+	namespace no_adl::test
+	{
+		// namespace test
+		// Global Configuration
+		struct config;
+		// Default Reporter
+		class Reporter;
+		// Executor, user can specify a customized reporter
+		template<typename ReporterType = Reporter>
+		class Executor;
+
+		using categories_type = prometheus::test::categories_type;
+
+		struct tag_fatal { };
+
+		struct tag_skip
+		{
+			constexpr static categories_type::value_type value = "@@__internal-skip__@@";
+		};
+
+		struct tag_silence
+		{
+			constexpr static categories_type::value_type value = "@@__internal-silence__@@";
+		};
+
+		struct tag_ignore_pass
+		{
+			constexpr static categories_type::value_type value = "@@__internal-ignore_pass__@@";
+		};
+
+		// namespace test::operand
+		// OperandXXX
+
+		namespace operand
+		{
+			class Operand { };
+
+			template<typename O>
+			constexpr auto is_operand_v = std::is_base_of_v<Operand, O>;
+			template<typename O>
+			concept operand_t = is_operand_v<O>;
+			template<typename Expression>
+			constexpr auto is_expression_v =
+					// 1 < i
+					std::is_convertible_v<Expression, bool> or
+					std::is_constructible_v<bool, Expression> or
+					// OperandCompareLess{OperandConstantIntegral<1>{}, i}
+					operand::is_operand_v<Expression>;
+			template<typename Expression>
+			concept expression_t = is_expression_v<Expression>;
+		}// namespace operand
+
+		// namespace test::events
+		// EventXXX
+
+		namespace events
+		{
+			class Event { };
+
+			template<typename E>
+			constexpr auto is_event = std::is_base_of_v<Event, E>;
+			template<typename E>
+			concept event_t = is_event<E>;
+		}// namespace events
+
+		// namespace test::dispatcher
+		// DispatcherXXX
+
+		// namespace test::literals
+		// xxx_operator
+
+		// namespace test::operators
+		// lhs [== / != / > / >= / < / <= / and / or / not] rhs
+
+		namespace utility
+		{
+			namespace literals
 			{
-				T result{0};
-
-				(
-					(
-						result = Cs == '\''
-									?//
-									result
-									:                                                     //
-									result * static_cast<T>(10) + static_cast<T>(Cs - '0')//
-					),
-					...);
-
-				return result;
-			}
-
-			template<std::floating_point T, char... Cs>
-				requires(((Cs >= '0' and Cs <= '9') or Cs == '\'' or Cs == '.') and ...)
-			[[nodiscard]] consteval auto to_floating_point() noexcept -> T
-			{
-				auto result   = static_cast<T>(0);
-				auto fraction = static_cast<T>(0.1);
-
-				bool past = false;
-				((
-						result = Cs == '\''
-									?//
-									result
-									://
-									(
-										Cs == '.'
-											?//
-											(past = true, result)
-											://
-											(past
-												?//
-												[](T& f, const T r) noexcept -> T
-												{
-													const auto ret = r + static_cast<T>(Cs - '0') * f;
-													f *= static_cast<T>(0.1);
-													return ret;
-												}(fraction, result)
-												:                                                       //
-												result * static_cast<T>(10) + static_cast<T>(Cs - '0')))//
-					),
-					...);
-
-				return result;
-			}
-
-			template<char... Cs>
-				requires(((Cs >= '0' and Cs <= '9') or Cs == '\'' or Cs == '.') and ...)
-			[[nodiscard]] consteval auto to_numerator_size() noexcept -> std::size_t
-			{
-				std::size_t num = 0;
-
-				bool found = false;
-				((
-						Cs == '.'
-							?//
-							(found = true, (void)found)
-							://
-							(num += not found and Cs != '\'', (void)found)),
-					...);
-
-				return num;
-			}
-
-			template<char... Cs>
-				requires(((Cs >= '0' and Cs <= '9') or Cs == '\'' or Cs == '.') and ...)
-			[[nodiscard]] consteval auto to_denominator_size() noexcept -> std::size_t
-			{
-				std::size_t num = 0;
-
-				bool found = false;
-				((
-						Cs == '.'
-							?//
-							(found = true, (void)found)
-							://
-							(num += found and Cs != '\'', (void)found)),
-					...);
-
-				return num;
-			}
-
-			template<char C, char...>
-			constexpr static auto front = C;
-		}// namespace literals
-
-		namespace math
-		{
-			template<typename T>
-			[[nodiscard]] constexpr auto abs(const T value) noexcept -> T//
-				requires requires { std::abs(value); }
-			{
-				GAL_PROMETHEUS_IF_CONSTANT_EVALUATED { return value > 0 ? value : -value; }
-
-				return std::abs(value);
-			}
-		}// namespace math
-	}    // namespace utility
-
-	export namespace events
-	{
-		class EventSuiteBegin : public Event
-		{
-		public:
-			std::string_view     name;
-			std::source_location location;
-		};
-
-		class EventSuiteEnd : public Event
-		{
-		public:
-			std::string_view     name;
-			std::source_location location;
-		};
-
-		class EventTestBegin : public Event
-		{
-		public:
-			std::string_view     name;
-			std::source_location location;
-		};
-
-		class EventTestSkip : public Event
-		{
-		public:
-			std::string_view name;
-		};
-
-		class EventTestEnd : public Event
-		{
-		public:
-			std::string_view name;
-		};
-
-		class EventSilenceBegin : public Event {};
-
-		class EventSilenceEnd : public Event {};
-
-		template<operand::expression_t Expression>
-		class EventAssertionPass : public Event
-		{
-		public:
-			std::source_location location;
-			Expression           expression;
-		};
-
-		template<operand::expression_t Expression>
-		class EventAssertionFail : public Event
-		{
-		public:
-			std::source_location location;
-			Expression           expression;
-		};
-
-		class EventAssertionFatal : public Event
-		{
-		public:
-			std::source_location location;
-		};
-
-		template<operand::expression_t Expression>
-		class EventAssertionFatalSkip : public Event
-		{
-		public:
-			std::source_location location;
-			Expression           expression;
-		};
-
-		template<typename MessageType>
-			requires requires
-			{
-				std::declval<std::string>().append_range(std::declval<MessageType>());
-			}
-		class EventLog : public Event
-		{
-		public:
-			using message_type = MessageType;
-
-			message_type message;
-		};
-
-		EventLog(const char*) -> EventLog<std::basic_string_view<char>>;
-		template<std::size_t N>
-		EventLog(const char (&)[N]) -> EventLog<std::basic_string_view<char>>;
-
-		class EventException : public Event
-		{
-		public:
-			std::string_view message;
-
-			[[nodiscard]] constexpr auto what() const noexcept -> std::string_view { return message; }
-		};
-
-		class EventSummary : public Event { };
-
-		template<operand::expression_t Expression>
-		class EventAssertion : public Event
-		{
-		public:
-			std::source_location location;
-			Expression           expression;
-
-			[[nodiscard]] constexpr explicit operator EventAssertionPass<Expression>() const noexcept { return {.location = location, .expression = expression}; }
-
-			[[nodiscard]] constexpr explicit operator EventAssertionFail<Expression>() const noexcept { return {.location = location, .expression = expression}; }
-
-			[[nodiscard]] constexpr explicit operator EventAssertionFatalSkip<Expression>() const noexcept { return {.location = location, .expression = expression}; }
-		};
-
-		struct none { };
-
-		template<typename InvocableType, typename Arg = none>
-			requires std::is_invocable_v<InvocableType> or std::is_invocable_v<InvocableType, Arg>
-		class EventTest : public Event
-		{
-		public:
-			std::string_view     name;
-			std::source_location location;
-
-			categories_type categories;
-
-			mutable InvocableType invocable;
-			mutable Arg           arg;
-
-			constexpr auto operator()() const -> void
-			{
-				return []<typename I, typename A>(I&& i, A&& a) -> void
+				template<std::integral T, char... Cs>
+					requires(((Cs >= '0' and Cs <= '9') or Cs == '\'') and ...)
+				[[nodiscard]] consteval auto to_integral() noexcept -> T
 				{
-					if constexpr (requires { std::invoke(std::forward<I>(i)); }) { std::invoke(std::forward<I>(i)); }
-					else if constexpr (requires { std::invoke(std::forward<I>(i), std::forward<A>(a)); }) { std::invoke(std::forward<I>(i), std::forward<A>(a)); }
-					else if constexpr (requires { std::invoke(i.template operator()<A>()); }) { std::invoke(i.template operator()<A>()); }
-					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
-				}(invocable, arg);
-			}
+					T result{0};
 
-			[[nodiscard]] constexpr explicit operator EventTestBegin() const noexcept { return {.name = name, .location = location}; }
+					(
+						(
+							result = Cs == '\''
+								         ?//
+								         result
+								         :                                                     //
+								         result * static_cast<T>(10) + static_cast<T>(Cs - '0')//
+						),
+						...);
 
-			[[nodiscard]] constexpr explicit operator EventTestEnd() const noexcept { return {.name = name}; }
+					return result;
+				}
 
-			[[nodiscard]] constexpr explicit operator EventTestSkip() const noexcept { return {.name = name}; }
-		};
+				template<std::floating_point T, char... Cs>
+					requires(((Cs >= '0' and Cs <= '9') or Cs == '\'' or Cs == '.') and ...)
+				[[nodiscard]] consteval auto to_floating_point() noexcept -> T
+				{
+					auto result   = static_cast<T>(0);
+					auto fraction = static_cast<T>(0.1);
 
-		class EventSuite : public Event
-		{
-		public:
-			std::string_view     name;
-			std::source_location location;
+					bool past = false;
+					((
+							result = Cs == '\''
+								         ?//
+								         result
+								         ://
+								         (
+									         Cs == '.'
+										         ?//
+										         (past = true, result)
+										         ://
+										         (past
+											          ?//
+											          [](T& f, const T r) noexcept -> T
+											          {
+												          const auto ret = r + static_cast<T>(Cs - '0') * f;
+												          f *= static_cast<T>(0.1);
+												          return ret;
+											          }(fraction, result)
+											          :                                                       //
+											          result * static_cast<T>(10) + static_cast<T>(Cs - '0')))//
+						),
+						...);
 
-			void (*function)();
+					return result;
+				}
 
-			constexpr auto operator()() -> void { std::invoke(function); }
-			constexpr auto operator()() const -> void { std::invoke(function); }
+				template<char... Cs>
+					requires(((Cs >= '0' and Cs <= '9') or Cs == '\'' or Cs == '.') and ...)
+				[[nodiscard]] consteval auto to_numerator_size() noexcept -> std::size_t
+				{
+					std::size_t num = 0;
 
-			[[nodiscard]] constexpr explicit operator EventSuiteBegin() const noexcept { return {.name = name, .location = location}; }
+					bool found = false;
+					((
+							Cs == '.'
+								?//
+								(found = true, (void)found)
+								://
+								(num += not found and Cs != '\'', (void)found)),
+						...);
 
-			[[nodiscard]] constexpr explicit operator EventSuiteEnd() const noexcept { return {.name = name, .location = location}; }
-		};
-	}// namespace events
+					return num;
+				}
 
-	namespace operand
-	{
-		constexpr auto expression_to_string = []<typename T>(const T& expression) noexcept -> decltype(auto)
-		{
-			if constexpr (is_operand_v<T>) { return expression.to_string(); }
-			else { return std::format("{}", expression); }
-		};
+				template<char... Cs>
+					requires(((Cs >= '0' and Cs <= '9') or Cs == '\'' or Cs == '.') and ...)
+				[[nodiscard]] consteval auto to_denominator_size() noexcept -> std::size_t
+				{
+					std::size_t num = 0;
 
-		template<typename T>
-		class OperandType : public Operand
-		{
-		public:
-			using operand_type_no_alias = T;
+					bool found = false;
+					((
+							Cs == '.'
+								?//
+								(found = true, (void)found)
+								://
+								(num += found and Cs != '\'', (void)found)),
+						...);
 
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string_view
+					return num;
+				}
+
+				template<char C, char...>
+				constexpr static auto front = C;
+			}// namespace literals
+
+			namespace math
 			{
-				(void)this;
-				return infrastructure::compiler::type_name<T>();
-			}
-		};
+				template<typename T>
+				[[nodiscard]] constexpr auto abs(const T value) noexcept -> T//
+					requires requires { std::abs(value); }
+				{
+					GAL_PROMETHEUS_IF_CONSTANT_EVALUATED { return value > 0 ? value : -value; }
 
-		template<typename T>
-		constexpr auto is_operand_type_v = false;
-		template<typename T>
-		constexpr auto is_operand_type_v<OperandType<T>> = true;
+					return std::abs(value);
+				}
+			}// namespace math
+		}    // namespace utility
 
-		template<typename T>
-		class OperandValue : public Operand
+		export namespace events
 		{
-		public:
-			using value_type = T;
-
-		private:
-			value_type value_;
-
-		public:
-			constexpr explicit(false) OperandValue(
-					const value_type& value
-					) noexcept(std::is_nothrow_copy_constructible_v<value_type>)//
-				requires std::is_copy_constructible_v<value_type>
-				: value_{value} { }
-
-			constexpr explicit(false) OperandValue(
-					value_type&& value
-					) noexcept(std::is_nothrow_move_constructible_v<value_type>)//
-				requires std::is_move_constructible_v<value_type>
-				: value_{std::move(value)} { }
-
-			template<typename... Args>
-				requires std::is_constructible_v<value_type, Args...>
-			constexpr explicit OperandValue(
-					Args&&... args
-					) noexcept(std::is_nothrow_constructible_v<value_type, Args...>)
-				: value_{std::forward<Args>(args)...} { }
-
-			// for compare
-			[[nodiscard]] constexpr explicit(false) operator value_type() const noexcept//
-				requires std::is_trivially_copyable_v<value_type> { return value_; }
-
-			// for compare
-			[[nodiscard]] constexpr explicit(false) operator const value_type&() const noexcept//
-				requires(not std::is_trivially_copyable_v<value_type>) { return value_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{}", value_); }
-		};
-
-		template<std::integral T>
-		class OperandValue<T> : public Operand
-		{
-		public:
-			using value_type = T;
-
-		private:
-			value_type value_;
-
-		public:
-			constexpr explicit(false) OperandValue(const value_type value) noexcept
-				: value_{value} { }
-
-			// for compare
-			[[nodiscard]] constexpr explicit(false) operator value_type() const noexcept { return value_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{}", value_); }
-		};
-
-		template<std::floating_point T>
-		class OperandValue<T> : public Operand
-		{
-		public:
-			using value_type = T;
-
-			constexpr static auto epsilon = std::numeric_limits<T>::epsilon();
-
-		private:
-			value_type value_;
-
-		public:
-			constexpr explicit(false) OperandValue(const value_type value) noexcept
-				: value_{value} { }
-
-			// for compare
-			[[nodiscard]] constexpr explicit(false) operator value_type() const noexcept { return value_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{:.6g}", value_); }
-		};
-
-		template<char Value>
-		class OperandConstantCharacter : public Operand
-		{
-		public:
-			using value_type = char;
-
-			constexpr static value_type value = Value;
-
-			// for compare
-			[[nodiscard]] constexpr explicit(false) operator value_type() const noexcept { return value; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{}", value); }
-		};
-
-		template<std::integral auto Value>
-		class OperandConstantIntegral : public Operand
-		{
-		public:
-			using value_type = std::remove_cvref_t<decltype(Value)>;
-
-			constexpr static value_type value = Value;
-
-			// for compare
-			[[nodiscard]] constexpr explicit(false) operator value_type() const noexcept { return value; }
-
-			[[nodiscard]] constexpr auto operator-() const noexcept ->
-				OperandConstantIntegral<-static_cast<std::make_signed_t<value_type>>(value)> { return {}; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{}", value); }
-		};
-
-		template<std::floating_point auto Value, std::size_t DenominatorSize>
-		class OperandConstantFloatingPoint : public Operand
-		{
-		public:
-			using value_type = std::remove_cvref_t<decltype(Value)>;
-
-			constexpr static value_type value   = Value;
-			constexpr static value_type epsilon = [](std::size_t n) noexcept -> value_type
+			class EventSuiteBegin : public Event
 			{
-				auto epsilon = static_cast<value_type>(1);
-				while (n--) { epsilon /= static_cast<value_type>(10); }
-				return epsilon;
-			}(DenominatorSize);
+			public:
+				std::string_view     name;
+				std::source_location location;
+			};
 
-			// for compare
-			[[nodiscard]] constexpr explicit(false) operator value_type() const noexcept { return value; }
+			class EventSuiteEnd : public Event
+			{
+			public:
+				std::string_view     name;
+				std::source_location location;
+			};
 
-			[[nodiscard]] constexpr auto operator-() const noexcept -> OperandConstantFloatingPoint<-value, DenominatorSize> { return {}; }
+			class EventTestBegin : public Event
+			{
+			public:
+				std::string_view     name;
+				std::source_location location;
+			};
 
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{:.6g}", value); }
-		};
+			class EventTestSkip : public Event
+			{
+			public:
+				std::string_view name;
+			};
 
-		template<char... Cs>
-		class OperandConstantAuto : public Operand
+			class EventTestEnd : public Event
+			{
+			public:
+				std::string_view name;
+			};
+
+			class EventSilenceBegin : public Event { };
+
+			class EventSilenceEnd : public Event { };
+
+			class EventIgnorePassBegin : public Event { };
+
+			class EventIgnorePassEnd : public Event { };
+
+			template<operand::expression_t Expression>
+			class EventAssertionPass : public Event
+			{
+			public:
+				std::source_location location;
+				Expression           expression;
+			};
+
+			template<operand::expression_t Expression>
+			class EventAssertionFail : public Event
+			{
+			public:
+				std::source_location location;
+				Expression           expression;
+			};
+
+			class EventAssertionFatal : public Event
+			{
+			public:
+				std::source_location location;
+			};
+
+			template<operand::expression_t Expression>
+			class EventAssertionFatalSkip : public Event
+			{
+			public:
+				std::source_location location;
+				Expression           expression;
+			};
+
+			template<typename MessageType>
+				requires requires
+				{
+					std::declval<std::string>().append_range(std::declval<MessageType>());
+				}
+			class EventLog : public Event
+			{
+			public:
+				using message_type = MessageType;
+
+				message_type message;
+			};
+
+			EventLog(const char*) -> EventLog<std::basic_string_view<char>>;
+			template<std::size_t N>
+			EventLog(const char (&)[N]) -> EventLog<std::basic_string_view<char>>;
+
+			class EventException : public Event
+			{
+			public:
+				std::string_view message;
+
+				[[nodiscard]] constexpr auto what() const noexcept -> std::string_view { return message; }
+			};
+
+			class EventSummary : public Event { };
+
+			template<operand::expression_t Expression>
+			class EventAssertion : public Event
+			{
+			public:
+				std::source_location location;
+				Expression           expression;
+
+				[[nodiscard]] constexpr explicit operator EventAssertionPass<Expression>() const noexcept { return {.location = location, .expression = expression}; }
+
+				[[nodiscard]] constexpr explicit operator EventAssertionFail<Expression>() const noexcept { return {.location = location, .expression = expression}; }
+
+				[[nodiscard]] constexpr explicit operator EventAssertionFatalSkip<Expression>() const noexcept { return {.location = location, .expression = expression}; }
+			};
+
+			struct none { };
+
+			template<typename InvocableType, typename Arg = none>
+				requires std::is_invocable_v<InvocableType> or std::is_invocable_v<InvocableType, Arg>
+			class EventTest : public Event
+			{
+			public:
+				std::string_view     name;
+				std::source_location location;
+
+				categories_type categories;
+
+				mutable InvocableType invocable;
+				mutable Arg           arg;
+
+				constexpr auto operator()() const -> void
+				{
+					return []<typename I, typename A>(I&& i, A&& a) -> void
+					{
+						if constexpr (requires { std::invoke(std::forward<I>(i)); }) { std::invoke(std::forward<I>(i)); }
+						else if constexpr (requires { std::invoke(std::forward<I>(i), std::forward<A>(a)); }) { std::invoke(std::forward<I>(i), std::forward<A>(a)); }
+						else if constexpr (requires { std::invoke(i.template operator()<A>()); }) { std::invoke(i.template operator()<A>()); }
+						else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+					}(invocable, arg);
+				}
+
+				[[nodiscard]] constexpr explicit operator EventTestBegin() const noexcept { return {.name = name, .location = location}; }
+
+				[[nodiscard]] constexpr explicit operator EventTestEnd() const noexcept { return {.name = name}; }
+
+				[[nodiscard]] constexpr explicit operator EventTestSkip() const noexcept { return {.name = name}; }
+			};
+
+			class EventSuite : public Event
+			{
+			public:
+				std::string_view     name;
+				std::source_location location;
+
+				void (*function)();
+
+				constexpr auto operator()() -> void { std::invoke(function); }
+				constexpr auto operator()() const -> void { std::invoke(function); }
+
+				[[nodiscard]] constexpr explicit operator EventSuiteBegin() const noexcept { return {.name = name, .location = location}; }
+
+				[[nodiscard]] constexpr explicit operator EventSuiteEnd() const noexcept { return {.name = name, .location = location}; }
+			};
+		}// namespace events
+
+		namespace operand
 		{
-		public:
+			constexpr auto range_to_string = []<std::ranges::range Range>(const Range& r) noexcept -> std::string
+			{
+				std::string result{};
+
+				result.append_range(infrastructure::compiler::type_name<Range>());
+				result.push_back('{');
+				std::ranges::for_each(
+						r,
+						[&result, done = false](const auto& v) mutable -> void
+						{
+							if (done) { result.push_back(','); }
+							done = true;
+
+							std::format_to(
+									std::back_inserter(result),
+									"{}",
+									v);
+						});
+				result.push_back('}');
+
+				return result;
+			};
+
+			constexpr auto expression_to_string = []<typename T>(const T& expression) noexcept -> decltype(auto)
+			{
+				if constexpr (std::is_constructible_v<std::string_view, T> or std::is_convertible_v<T, std::string_view>) { return std::string_view{expression}; }
+				else if constexpr (requires { expression.to_string(); }) { return expression.to_string(); }
+				else { return std::format("{}", expression); }
+			};
+
 			template<typename T>
-			struct representation;
-
-			template<char C>
-			struct representation<OperandConstantCharacter<C>>
+			class OperandType : public Operand
 			{
-				using type = OperandConstantCharacter<utility::literals::front<Cs...>>;
+			public:
+				using operand_type_no_alias = T;
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string_view
+				{
+					(void)this;
+					return infrastructure::compiler::type_name<T>();
+				}
 			};
 
-			template<std::integral T>
-			struct representation<T>
+			template<typename T>
+			constexpr auto is_operand_type_v = false;
+			template<typename T>
+			constexpr auto is_operand_type_v<OperandType<T>> = true;
+			template<typename T>
+			concept operand_type_t = is_operand_type_v<T>;
+
+			template<typename T>
+			class OperandValue : public Operand
 			{
-				using type = std::conditional_t<std::is_same_v<T, char>, OperandConstantCharacter<utility::literals::front<Cs...>>, OperandConstantIntegral<utility::literals::to_integral<T, Cs...>()>>;
+			public:
+				using value_type = T;
+
+			private:
+				value_type value_;
+
+			public:
+				constexpr explicit(false) OperandValue(const value_type& value) noexcept(std::is_nothrow_copy_constructible_v<value_type>)//
+					requires std::is_copy_constructible_v<value_type>
+					: value_{value} { }
+
+				constexpr explicit(false) OperandValue(value_type&& value) noexcept(std::is_nothrow_move_constructible_v<value_type>)//
+					requires std::is_move_constructible_v<value_type>
+					: value_{std::move(value)} { }
+
+				template<typename... Args>
+					requires std::is_constructible_v<value_type, Args...>
+				constexpr explicit OperandValue(Args&&... args) noexcept(std::is_nothrow_constructible_v<value_type, Args...>)
+					: value_{std::forward<Args>(args)...} { }
+
+				[[nodiscard]] constexpr auto value() const noexcept -> const value_type& { return value_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{}", value_); }
 			};
 
-			template<std::integral auto Value>
-			struct representation<OperandConstantIntegral<Value>>
+			template<>
+			class OperandValue<bool> : public Operand
 			{
-				using type = OperandConstantIntegral<utility::literals::to_integral<OperandConstantIntegral<Value>::value_type, Cs...>()>;
+			public:
+				using value_type = std::string_view;
+
+				value_type message;
+
+				// force construct from string_view
+				constexpr explicit OperandValue(const value_type m) noexcept
+					: message{m} {}
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string_view { return message; }
 			};
 
 			template<std::floating_point T>
-			struct representation<T>
+			class OperandValue<T> : public Operand
 			{
-				using type = OperandConstantFloatingPoint<utility::literals::to_floating_point<T, Cs...>(), utility::literals::to_denominator_size<Cs...>()>;
+			public:
+				using value_type = T;
+
+			private:
+				value_type value_;
+				value_type epsilon_;
+
+			public:
+				constexpr explicit(false) OperandValue(const value_type value, const value_type epsilon = std::numeric_limits<T>::epsilon()) noexcept
+					: value_{value},
+					  epsilon_{epsilon} {}
+
+				[[nodiscard]] constexpr auto value() const noexcept -> value_type { return value_; }
+
+				[[nodiscard]] constexpr auto epsilon() const noexcept -> value_type { return epsilon_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{:.6g}", value_); }
+			};
+
+			template<typename>
+			constexpr auto is_operand_value_v = false;
+			template<typename T>
+			constexpr auto is_operand_value_v<OperandValue<T>> = true;
+			template<typename T>
+			concept operand_value_t = is_operand_value_v<T>;
+			template<typename>
+			constexpr auto is_operand_value_boolean_v = false;
+			template<>
+			constexpr auto is_operand_value_boolean_v<OperandValue<bool>> = true;
+			template<typename T>
+			concept operand_value_boolean_t = is_operand_value_boolean_v<T>;
+			template<typename>
+			constexpr auto is_operand_value_floating_point_v = false;
+			template<std::floating_point T>
+			constexpr auto is_operand_value_floating_point_v<OperandValue<T>> = true;
+			template<typename T>
+			concept operand_value_floating_point_t = is_operand_value_floating_point_v<T>;
+
+			template<char Value>
+			class OperandConstantCharacter : public Operand
+			{
+			public:
+				using value_type = char;
+
+				constexpr static value_type value = Value;
+
+				[[nodiscard]] constexpr static auto to_string() noexcept -> std::string { return std::format("{}", value); }
+			};
+
+			template<std::integral auto Value>
+			class OperandConstantIntegral : public Operand
+			{
+			public:
+				using value_type = std::remove_cvref_t<decltype(Value)>;
+
+				constexpr static value_type value = Value;
+
+				[[nodiscard]] constexpr auto operator-() const noexcept -> OperandConstantIntegral<-static_cast<std::make_signed_t<value_type>>(value)> { return {}; }
+
+				[[nodiscard]] constexpr static auto to_string() noexcept -> std::string { return std::format("{}", value); }
 			};
 
 			template<std::floating_point auto Value, std::size_t DenominatorSize>
-			struct representation<OperandConstantFloatingPoint<Value, DenominatorSize>>
+			class OperandConstantFloatingPoint : public Operand
 			{
-				using type = OperandConstantFloatingPoint<utility::literals::to_floating_point<OperandConstantFloatingPoint<Value, DenominatorSize>::value_type, Cs...>(), utility::literals::to_denominator_size<Cs...>()>;
+			public:
+				using value_type = std::remove_cvref_t<decltype(Value)>;
+
+				constexpr static value_type  value            = Value;
+				constexpr static std::size_t denominator_size = DenominatorSize;
+				constexpr static value_type  epsilon          = [](std::size_t n) noexcept -> value_type
+				{
+					auto epsilon = static_cast<value_type>(1);
+					while (n--) { epsilon /= static_cast<value_type>(10); }
+					return epsilon;
+				}(DenominatorSize);
+
+				[[nodiscard]] constexpr auto operator-() const noexcept -> OperandConstantFloatingPoint<-value, DenominatorSize> { return {}; }
+
+				[[nodiscard]] constexpr static auto to_string() noexcept -> std::string { return std::format("{:.6g}", value); }
+			};
+
+			template<char... Cs>
+			class OperandConstantAuto : public Operand
+			{
+			public:
+				template<typename T>
+				struct representation;
+
+				template<char C>
+				struct representation<OperandConstantCharacter<C>>
+				{
+					using type = OperandConstantCharacter<utility::literals::front<Cs...>>;
+				};
+
+				template<std::integral T>
+				struct representation<T>
+				{
+					using type = std::conditional_t<std::is_same_v<T, char>, OperandConstantCharacter<utility::literals::front<Cs...>>, OperandConstantIntegral<utility::literals::to_integral<T, Cs...>()>>;
+				};
+
+				template<std::integral auto Value>
+				struct representation<OperandConstantIntegral<Value>>
+				{
+					using type = OperandConstantIntegral<utility::literals::to_integral<OperandConstantIntegral<Value>::value_type, Cs...>()>;
+				};
+
+				template<std::floating_point T>
+				struct representation<T>
+				{
+					using type = OperandConstantFloatingPoint<utility::literals::to_floating_point<T, Cs...>(), utility::literals::to_denominator_size<Cs...>()>;
+				};
+
+				template<std::floating_point auto Value, std::size_t DenominatorSize>
+				struct representation<OperandConstantFloatingPoint<Value, DenominatorSize>>
+				{
+					using type = OperandConstantFloatingPoint<utility::literals::to_floating_point<OperandConstantFloatingPoint<Value, DenominatorSize>::value_type, Cs...>(), utility::literals::to_denominator_size<Cs...>()>;
+				};
+
+				template<typename T>
+				using rebind = typename representation<T>::type;
+			};
+
+			template<typename>
+			constexpr auto is_operand_constant_v = false;
+			template<char Value>
+			constexpr auto is_operand_constant_v<OperandConstantCharacter<Value>> = true;
+			template<std::integral auto Value>
+			constexpr auto is_operand_constant_v<OperandConstantIntegral<Value>> = true;
+			template<std::floating_point auto Value, std::size_t DenominatorSize>
+			constexpr auto is_operand_constant_v<OperandConstantFloatingPoint<Value, DenominatorSize>> = true;
+			template<char... Cs>
+			constexpr auto is_operand_constant_v<OperandConstantAuto<Cs...>> = true;
+			template<typename T>
+			concept operand_constant_t = is_operand_constant_v<T>;
+
+			template<typename>
+			constexpr auto is_operand_constant_character_v = false;
+			template<char Value>
+			constexpr auto is_operand_constant_character_v<OperandConstantCharacter<Value>> = true;
+			template<typename T>
+			concept operand_constant_character_t = is_operand_constant_character_v<T>;
+			template<typename>
+			constexpr auto is_operand_constant_integral_v = false;
+			template<std::integral auto Value>
+			constexpr auto is_operand_constant_integral_v<OperandConstantIntegral<Value>> = true;
+			template<typename T>
+			concept operand_constant_integral_t = is_operand_constant_integral_v<T>;
+			template<typename T>
+			constexpr auto is_operand_constant_floating_point_v = false;
+			template<std::floating_point auto Value, std::size_t DenominatorSize>
+			constexpr auto is_operand_constant_floating_point_v<OperandConstantFloatingPoint<Value, DenominatorSize>> = true;
+			template<typename T>
+			concept operand_constant_floating_point_t = is_operand_constant_floating_point_v<T>;
+			template<typename>
+			constexpr auto is_operand_constant_auto_v = false;
+			template<char... Cs>
+			constexpr auto is_operand_constant_auto_v<OperandConstantAuto<Cs...>> = true;
+			template<typename T>
+			concept operand_constant_auto_t = is_operand_constant_auto_v<T>;
+
+			class OperandCompareIdentity : public Operand
+			{
+			public:
+				using value_type = OperandValue<bool>;
+
+			private:
+				value_type value_;
+				bool       result_;
+
+			public:
+				constexpr OperandCompareIdentity(const value_type& value, const bool result) noexcept
+					: value_{value},
+					  result_{result} {}
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> decltype(auto) { return value_.to_string(); }
+			};
+
+			template<typename L, typename R>
+				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
+			class OperandCompareEqual : public Operand
+			{
+			public:
+				using left_type = L;
+				using right_type = R;
+
+			private:
+				left_type  left_;
+				right_type right_;
+				bool       result_;
+
+				[[nodiscard]] constexpr auto do_check() const noexcept -> bool
+				{
+					using std::operator==;
+
+					if constexpr (is_operand_type_v<left_type> and is_operand_type_v<right_type>)
+					{
+						return std::is_same_v<
+							typename left_type::operand_type_no_alias,
+							typename right_type::operand_type_no_alias
+						>;
+					}
+
+					else if constexpr (requires { left_type::value == right_type::value; }) { return left_type::value == right_type::value; }
+					else if constexpr (requires { left_type::value == right_; }) { return left_type::value == right_; }
+					else if constexpr (requires { left_ == right_type::value; }) { return left_ == right_type::value; }
+					else if constexpr (requires { left_ == right_; }) { return left_ == right_; }
+
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value == static_cast<left_type>(right_type::value); }) { return left_type::value == static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) == right_type::value; }) { return static_cast<right_type>(left_type::value) == right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value == static_cast<left_type>(right_); }) { return left_type::value == static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) == right_; }) { return static_cast<right_type>(left_type::value) == right_; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ == static_cast<left_type>(right_type::value); }) { return left_ == static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) == right_type::value; }) { return static_cast<right_type>(left_) == right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ == static_cast<left_type>(right_); }) { return left_ == static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) == right_; }) { return static_cast<right_type>(left_) == right_; }
+
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value == left_type{right_type::value}; }) { return left_type::value == left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} == right_type::value; }) { return right_type{left_type::value} == right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value == left_type{right_}; }) { return left_type::value == left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} == right_; }) { return right_type{left_type::value} == right_; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ == left_type{right_type::value}; }) { return left_ == left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} == right_type::value; }) { return right_type{left_} == right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ == left_type{right_}; }) { return left_ == left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} == right_; }) { return right_type{left_} == right_; }
+
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				}
+
+			public:
+				template<typename Left, typename Right>
+				constexpr explicit(false) OperandCompareEqual(Left&& left, Right&& right) noexcept
+					: left_{std::forward<Left>(left)},
+					  right_{std::forward<Right>(right)},
+					  result_{do_check()} { }
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
+				{
+					if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} == {}", expression_to_string(left_type{}), expression_to_string(right_)); }
+					else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} == {}", expression_to_string(left_), expression_to_string(right_type{})); }
+					else
+					{
+						const auto left_string = [this]
+						{
+							if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
+							else { return expression_to_string(left_); }
+						}();
+						const auto right_string = [this]
+						{
+							if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
+							else { return expression_to_string(right_); }
+						}();
+
+						return std::format("{} == {}", left_string, right_string);
+					}
+				}
+			};
+
+			template<typename L, typename R, typename Epsilon>
+				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
+			class OperandCompareApprox : public Operand
+			{
+			public:
+				using left_type = L;
+				using right_type = R;
+				using epsilon_type = Epsilon;
+
+			private:
+				left_type    left_;
+				right_type   right_;
+				epsilon_type epsilon_;
+				bool         result_;
+
+				[[nodiscard]] constexpr auto do_check() noexcept -> bool
+				{
+					using std::operator==;
+					using std::operator-;
+					using std::operator<;
+
+					if constexpr (requires { utility::math::abs(left_type::value - right_type::value) < epsilon_type::value; }) { return utility::math::abs(left_type::value - right_type::value) < epsilon_type::value; }
+					else if constexpr (requires { utility::math::abs(left_type::value - right_) < epsilon_type::value; }) { return utility::math::abs(left_type::value - right_) < epsilon_type::value; }
+					else if constexpr (requires { utility::math::abs(left_ - right_type::value) < epsilon_type::value; }) { return utility::math::abs(left_ - right_type::value) < epsilon_type::value; }
+					else if constexpr (requires { utility::math::abs(left_type::value - right_) < epsilon_; }) { return utility::math::abs(left_type::value - right_) < epsilon_; }
+					else if constexpr (requires { utility::math::abs(left_ - right_type::value) < epsilon_; }) { return utility::math::abs(left_ - right_type::value) < epsilon_; }
+					else if constexpr (requires { utility::math::abs(left_ - right_) < epsilon_; }) { return utility::math::abs(left_ - right_) < epsilon_; }
+
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - static_cast<left_type>(right_type::value)) < epsilon_type::value; }) { return utility::math::abs(left_type::value - static_cast<left_type>(right_type::value)) < epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_type::value) - right_type::value) < epsilon_type::value; }) { return utility::math::abs(static_cast<right_type>(left_type::value) - right_type::value) < epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - static_cast<left_type>(right_)) < epsilon_type::value; }) { return utility::math::abs(left_type::value - static_cast<left_type>(right_)) < epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_type::value) - right_) < epsilon_type::value; }) { return utility::math::abs(static_cast<right_type>(left_type::value) - right_) < epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_ - static_cast<left_type>(right_type::value)) < epsilon_type::value; }) { return utility::math::abs(left_ - static_cast<left_type>(right_type::value)) < epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_) - right_type::value) < epsilon_type::value; }) { return utility::math::abs(static_cast<right_type>(left_) - right_type::value) < epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - static_cast<left_type>(right_)) < epsilon_; }) { return utility::math::abs(left_type::value - static_cast<left_type>(right_)) < epsilon_; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_type::value) - right_) < epsilon_; }) { return utility::math::abs(static_cast<right_type>(left_type::value) - right_) < epsilon_; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_ - static_cast<left_type>(right_type::value)) < epsilon_; }) { return utility::math::abs(left_ - static_cast<left_type>(right_type::value)) < epsilon_; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_) - right_type::value) < epsilon_; }) { return utility::math::abs(static_cast<right_type>(left_) - right_type::value) < epsilon_; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_ - static_cast<left_type>(right_)) < epsilon_; }) { return utility::math::abs(left_ - static_cast<left_type>(right_)) < epsilon_; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_) - right_) < epsilon_; }) { return utility::math::abs(static_cast<right_type>(left_) - right_) < epsilon_; }
+
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - left_type{right_type::value}) < epsilon_type::value; }) { return utility::math::abs(left_type::value - left_type{right_type::value}) < epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_type::value} - right_type::value) < epsilon_type::value; }) { return utility::math::abs(right_type{left_type::value} - right_type::value) < epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - left_type{right_}) < epsilon_type::value; }) { return utility::math::abs(left_type::value - left_type{right_}) < epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_type::value} - right_) < epsilon_type::value; }) { return utility::math::abs(right_type{left_type::value} - right_) < epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_ - left_type{right_type::value}) < epsilon_type::value; }) { return utility::math::abs(left_ - left_type{right_type::value}) < epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_} - right_type::value) < epsilon_type::value; }) { return utility::math::abs(right_type{left_} - right_type::value) < epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - left_type{right_}) < epsilon_; }) { return utility::math::abs(left_type::value - left_type{right_}) < epsilon_; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_type::value} - right_) < epsilon_; }) { return utility::math::abs(right_type{left_type::value} - right_) < epsilon_; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_ - left_type{right_type::value}) < epsilon_; }) { return utility::math::abs(left_ - left_type{right_type::value}) < epsilon_; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_} - right_type::value) < epsilon_; }) { return utility::math::abs(right_type{left_} - right_type::value) < epsilon_; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_ - left_type{right_}) < epsilon_; }) { return utility::math::abs(left_ - left_type{right_}) < epsilon_; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_} - right_) < epsilon_; }) { return utility::math::abs(right_type{left_} - right_) < epsilon_; }
+
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				}
+
+			public:
+				constexpr explicit(false) OperandCompareApprox(
+						const left_type&    left,
+						const right_type&   right,
+						const epsilon_type& epsilon) noexcept
+					: left_{left},
+					  right_{right},
+					  epsilon_{epsilon},
+					  result_{do_check()} {}
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
+				{
+					if constexpr (is_operand_constant_auto_v<left_type>)
+					{
+						if constexpr (is_operand_constant_auto_v<epsilon_type>) { return std::format("{} ≈≈ {} (+/- {})", expression_to_string(left_type{}), expression_to_string(right_), expression_to_string(epsilon_type{})); }
+						else { return std::format("{} ≈≈ {} (+/- {})", expression_to_string(left_type{}), expression_to_string(right_), expression_to_string(epsilon_)); }
+					}
+					else if constexpr (is_operand_constant_auto_v<right_type>)
+					{
+						if constexpr (is_operand_constant_auto_v<epsilon_type>) { return std::format("{} ≈≈ {} (+/- {})", expression_to_string(left_), expression_to_string(right_type{}), expression_to_string(epsilon_type{})); }
+						else { return std::format("{} ≈≈ {} (+/- {})", expression_to_string(left_), expression_to_string(right_type{}), expression_to_string(epsilon_)); }
+					}
+					else { return std::format("{} ≈≈ {} (+/- {})", expression_to_string(left_), expression_to_string(right_), expression_to_string(epsilon_)); }
+				}
+			};
+
+			template<typename L, typename R>
+				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
+			class OperandCompareNotEqual : public Operand
+			{
+			public:
+				using left_type = L;
+				using right_type = R;
+
+			private:
+				left_type  left_;
+				right_type right_;
+				bool       result_;
+
+				[[nodiscard]] constexpr auto do_check() const noexcept -> bool
+				{
+					using std::operator==;
+					using std::operator!=;
+
+					if constexpr (is_operand_type_v<left_type> and is_operand_type_v<right_type>)
+					{
+						return not std::is_same_v<
+							typename left_type::operand_type_no_alias,
+							typename right_type::operand_type_no_alias
+						>;
+					}
+
+					else if constexpr (requires { left_type::value != right_type::value; }) { return left_type::value != right_type::value; }
+					else if constexpr (requires { left_type::value != right_; }) { return left_type::value != right_; }
+					else if constexpr (requires { left_ != right_type::value; }) { return left_ != right_type::value; }
+					else if constexpr (requires { left_ != right_; }) { return left_ != right_; }
+
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value != static_cast<left_type>(right_type::value); }) { return left_type::value != static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) != right_type::value; }) { return static_cast<right_type>(left_type::value) != right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value != static_cast<left_type>(right_); }) { return left_type::value != static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) != right_; }) { return static_cast<right_type>(left_type::value) != right_; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ != static_cast<left_type>(right_type::value); }) { return left_ != static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) != right_type::value; }) { return static_cast<right_type>(left_) != right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ != static_cast<left_type>(right_); }) { return left_ != static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) != right_; }) { return static_cast<right_type>(left_) != right_; }
+
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value != left_type{right_type::value}; }) { return left_type::value != left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} != right_type::value; }) { return right_type{left_type::value} != right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value != left_type{right_}; }) { return left_type::value != left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} != right_; }) { return right_type{left_type::value} != right_; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ != left_type{right_type::value}; }) { return left_ != left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} != right_type::value; }) { return right_type{left_} != right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ != left_type{right_}; }) { return left_ != left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} != right_; }) { return right_type{left_} != right_; }
+
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				}
+
+			public:
+				template<typename Left, typename Right>
+				constexpr explicit(false) OperandCompareNotEqual(Left&& left, Right&& right) noexcept
+					: left_{std::forward<Left>(left)},
+					  right_{std::forward<Right>(right)},
+					  result_{do_check()} {}
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
+				{
+					if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} != {}", expression_to_string(left_type{}), expression_to_string(right_)); }
+					else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} != {}", expression_to_string(left_), expression_to_string(right_type{})); }
+					else
+					{
+						const auto left_string = [this]
+						{
+							if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
+							else { return expression_to_string(left_); }
+						}();
+						const auto right_string = [this]
+						{
+							if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
+							else { return expression_to_string(right_); }
+						}();
+
+						return std::format("{} != {}", left_string, right_string);
+					}
+				}
+			};
+
+			template<typename L, typename R, typename Epsilon>
+				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
+			class OperandCompareNotApprox : public Operand
+			{
+			public:
+				using left_type = L;
+				using right_type = R;
+				using epsilon_type = Epsilon;
+
+			private:
+				left_type    left_;
+				right_type   right_;
+				epsilon_type epsilon_;
+				bool         result_;
+
+				[[nodiscard]] constexpr auto do_check() noexcept -> bool
+				{
+					using std::operator==;
+					using std::operator!=;
+					using std::operator-;
+					using std::operator>;
+
+					if constexpr (requires { utility::math::abs(left_type::value - right_type::value) > epsilon_type::value; }) { return utility::math::abs(left_type::value - right_type::value) > epsilon_type::value; }
+					else if constexpr (requires { utility::math::abs(left_type::value - right_) > epsilon_type::value; }) { return utility::math::abs(left_type::value - right_) > epsilon_type::value; }
+					else if constexpr (requires { utility::math::abs(left_ - right_type::value) > epsilon_type::value; }) { return utility::math::abs(left_ - right_type::value) > epsilon_type::value; }
+					else if constexpr (requires { utility::math::abs(left_type::value - right_) > epsilon_; }) { return utility::math::abs(left_type::value - right_) > epsilon_; }
+					else if constexpr (requires { utility::math::abs(left_ - right_type::value) > epsilon_; }) { return utility::math::abs(left_ - right_type::value) > epsilon_; }
+					else if constexpr (requires { utility::math::abs(left_ - right_) > epsilon_; }) { return utility::math::abs(left_ - right_) > epsilon_; }
+
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - static_cast<left_type>(right_type::value)) > epsilon_type::value; }) { return utility::math::abs(left_type::value - static_cast<left_type>(right_type::value)) > epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_type::value) - right_type::value) > epsilon_type::value; }) { return utility::math::abs(static_cast<right_type>(left_type::value) - right_type::value) > epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - static_cast<left_type>(right_)) > epsilon_type::value; }) { return utility::math::abs(left_type::value - static_cast<left_type>(right_)) > epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_type::value) - right_) > epsilon_type::value; }) { return utility::math::abs(static_cast<right_type>(left_type::value) - right_) > epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_ - static_cast<left_type>(right_type::value)) > epsilon_type::value; }) { return utility::math::abs(left_ - static_cast<left_type>(right_type::value)) > epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_) - right_type::value) > epsilon_type::value; }) { return utility::math::abs(static_cast<right_type>(left_) - right_type::value) > epsilon_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - static_cast<left_type>(right_)) > epsilon_; }) { return utility::math::abs(left_type::value - static_cast<left_type>(right_)) > epsilon_; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_type::value) - right_) > epsilon_; }) { return utility::math::abs(static_cast<right_type>(left_type::value) - right_) > epsilon_; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_ - static_cast<left_type>(right_type::value)) > epsilon_; }) { return utility::math::abs(left_ - static_cast<left_type>(right_type::value)) > epsilon_; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_) - right_type::value) > epsilon_; }) { return utility::math::abs(static_cast<right_type>(left_) - right_type::value) > epsilon_; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { utility::math::abs(left_ - static_cast<left_type>(right_)) > epsilon_; }) { return utility::math::abs(left_ - static_cast<left_type>(right_)) > epsilon_; }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { utility::math::abs(static_cast<right_type>(left_) - right_) > epsilon_; }) { return utility::math::abs(static_cast<right_type>(left_) - right_) > epsilon_; }
+
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - left_type{right_type::value}) > epsilon_type::value; }) { return utility::math::abs(left_type::value - left_type{right_type::value}) > epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_type::value} - right_type::value) > epsilon_type::value; }) { return utility::math::abs(right_type{left_type::value} - right_type::value) > epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - left_type{right_}) > epsilon_type::value; }) { return utility::math::abs(left_type::value - left_type{right_}) > epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_type::value} - right_) > epsilon_type::value; }) { return utility::math::abs(right_type{left_type::value} - right_) > epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_ - left_type{right_type::value}) > epsilon_type::value; }) { return utility::math::abs(left_ - left_type{right_type::value}) > epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_} - right_type::value) > epsilon_type::value; }) { return utility::math::abs(right_type{left_} - right_type::value) > epsilon_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_type::value - left_type{right_}) > epsilon_; }) { return utility::math::abs(left_type::value - left_type{right_}) > epsilon_; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_type::value} - right_) > epsilon_; }) { return utility::math::abs(right_type{left_type::value} - right_) > epsilon_; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_ - left_type{right_type::value}) > epsilon_; }) { return utility::math::abs(left_ - left_type{right_type::value}) > epsilon_; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_} - right_type::value) > epsilon_; }) { return utility::math::abs(right_type{left_} - right_type::value) > epsilon_; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { utility::math::abs(left_ - left_type{right_}) > epsilon_; }) { return utility::math::abs(left_ - left_type{right_}) > epsilon_; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { utility::math::abs(right_type{left_} - right_) > epsilon_; }) { return utility::math::abs(right_type{left_} - right_) > epsilon_; }
+
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				}
+
+			public:
+				constexpr explicit(false) OperandCompareNotApprox(
+						const left_type&    left,
+						const right_type&   right,
+						const epsilon_type& epsilon) noexcept
+					: left_{left},
+					  right_{right},
+					  epsilon_{epsilon},
+					  result_{do_check()} {}
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
+				{
+					if constexpr (is_operand_constant_auto_v<left_type>)
+					{
+						if constexpr (is_operand_constant_auto_v<epsilon_type>) { return std::format("{} !≈ {} (+/- {})", expression_to_string(left_type{}), expression_to_string(right_), expression_to_string(epsilon_type{})); }
+						else { return std::format("{} !≈ {} (+/- {})", expression_to_string(left_type{}), expression_to_string(right_), expression_to_string(epsilon_)); }
+					}
+					else if constexpr (is_operand_constant_auto_v<right_type>)
+					{
+						if constexpr (is_operand_constant_auto_v<epsilon_type>) { return std::format("{} !≈ {} (+/- {})", expression_to_string(left_), expression_to_string(right_type{}), expression_to_string(epsilon_type{})); }
+						else { return std::format("{} !≈ {} (+/- {})", expression_to_string(left_), expression_to_string(right_type{}), expression_to_string(epsilon_)); }
+					}
+					else { return std::format("{} !≈ {} (+/- {})", expression_to_string(left_), expression_to_string(right_), expression_to_string(epsilon_)); }
+				}
+			};
+
+			template<typename L, typename R>
+				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
+			class OperandCompareGreaterThan : public Operand
+			{
+			public:
+				using left_type = L;
+				using right_type = R;
+
+			private:
+				left_type  left_;
+				right_type right_;
+				bool       result_;
+
+				[[nodiscard]] constexpr auto do_check() const noexcept -> bool
+				{
+					using std::operator>;
+
+					if constexpr (requires { left_type::value > right_type::value; }) { return left_type::value > right_type::value; }
+					else if constexpr (requires { left_type::value > right_; }) { return left_type::value > right_; }
+					else if constexpr (requires { left_ > right_type::value; }) { return left_ > right_type::value; }
+					else if constexpr (requires { left_ > right_; }) { return left_ > right_; }
+
+					if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value > static_cast<left_type>(right_type::value); }) { return left_type::value > static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) > right_type::value; }) { return static_cast<right_type>(left_type::value) > right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value > static_cast<left_type>(right_); }) { return left_type::value > static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) > right_; }) { return static_cast<right_type>(left_type::value) > right_; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ > static_cast<left_type>(right_type::value); }) { return left_ > static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) > right_type::value; }) { return static_cast<right_type>(left_) > right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ > static_cast<left_type>(right_); }) { return left_ > static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) > right_; }) { return static_cast<right_type>(left_) > right_; }
+
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value > left_type{right_type::value}; }) { return left_type::value > left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} > right_type::value; }) { return right_type{left_type::value} > right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value > left_type{right_}; }) { return left_type::value > left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} > right_; }) { return right_type{left_type::value} > right_; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ > left_type{right_type::value}; }) { return left_ > left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} > right_type::value; }) { return right_type{left_} > right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ > left_type{right_}; }) { return left_ > left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} > right_; }) { return right_type{left_} > right_; }
+
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				}
+
+			public:
+				template<typename Left, typename Right>
+				constexpr explicit(false) OperandCompareGreaterThan(Left&& left, Right&& right) noexcept
+					: left_{std::forward<Left>(left)},
+					  right_{std::forward<Right>(right)},
+					  result_{do_check()} { }
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
+				{
+					if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} > {}", expression_to_string(left_type{}), expression_to_string(right_)); }
+					else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} > {}", expression_to_string(left_), expression_to_string(right_type{})); }
+					else
+					{
+						const auto left_string = [this]
+						{
+							if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
+							else { return expression_to_string(left_); }
+						}();
+						const auto right_string = [this]
+						{
+							if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
+							else { return expression_to_string(right_); }
+						}();
+
+						return std::format("{} > {}", left_string, right_string);
+					}
+				}
+			};
+
+			template<typename L, typename R>
+				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
+			class OperandCompareGreaterEqual : public Operand
+			{
+			public:
+				using left_type = L;
+				using right_type = R;
+
+			private:
+				left_type  left_;
+				right_type right_;
+				bool       result_;
+
+				[[nodiscard]] constexpr auto do_check() const noexcept -> bool
+				{
+					using std::operator>=;
+
+					if constexpr (requires { left_type::value >= right_type::value; }) { return left_type::value >= right_type::value; }
+					else if constexpr (requires { left_type::value >= right_; }) { return left_type::value >= right_; }
+					else if constexpr (requires { left_ >= right_type::value; }) { return left_ >= right_type::value; }
+					else if constexpr (requires { left_ >= right_; }) { return left_ >= right_; }
+
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value >= static_cast<left_type>(right_type::value); }) { return left_type::value >= static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) >= right_type::value; }) { return static_cast<right_type>(left_type::value) >= right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value >= static_cast<left_type>(right_); }) { return left_type::value >= static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) >= right_; }) { return static_cast<right_type>(left_type::value) >= right_; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ >= static_cast<left_type>(right_type::value); }) { return left_ >= static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) >= right_type::value; }) { return static_cast<right_type>(left_) >= right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ >= static_cast<left_type>(right_); }) { return left_ >= static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) >= right_; }) { return static_cast<right_type>(left_) >= right_; }
+
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value >= left_type{right_type::value}; }) { return left_type::value >= left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} >= right_type::value; }) { return right_type{left_type::value} >= right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value >= left_type{right_}; }) { return left_type::value >= left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} >= right_; }) { return right_type{left_type::value} >= right_; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ >= left_type{right_type::value}; }) { return left_ >= left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} >= right_type::value; }) { return right_type{left_} >= right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ >= left_type{right_}; }) { return left_ >= left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} >= right_; }) { return right_type{left_} >= right_; }
+
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				}
+
+			public:
+				template<typename Left, typename Right>
+				constexpr explicit(false) OperandCompareGreaterEqual(Left&& left, Right&& right) noexcept
+					: left_{std::forward<Left>(left)},
+					  right_{std::forward<Right>(right)},
+					  result_{do_check()} { }
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
+				{
+					if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} >= {}", expression_to_string(left_type{}), expression_to_string(right_)); }
+					else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} >= {}", expression_to_string(left_), expression_to_string(right_type{})); }
+					else
+					{
+						const auto left_string = [this]
+						{
+							if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
+							else { return expression_to_string(left_); }
+						}();
+						const auto right_string = [this]
+						{
+							if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
+							else { return expression_to_string(right_); }
+						}();
+
+						return std::format("{} >= {}", left_string, right_string);
+					}
+				}
+			};
+
+			template<typename L, typename R>
+				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
+			class OperandCompareLessThan : public Operand
+			{
+			public:
+				using left_type = L;
+				using right_type = R;
+
+			private:
+				left_type  left_;
+				right_type right_;
+				bool       result_;
+
+				[[nodiscard]] constexpr auto do_check() const noexcept -> bool
+				{
+					using std::operator<;
+
+					if constexpr (requires { left_type::value < right_type::value; }) { return left_type::value < right_type::value; }
+					else if constexpr (requires { left_type::value < right_; }) { return left_type::value < right_; }
+					else if constexpr (requires { left_ < right_type::value; }) { return left_ < right_type::value; }
+					else if constexpr (requires { left_ < right_; }) { return left_ < right_; }
+
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value < static_cast<left_type>(right_type::value); }) { return left_type::value < static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) < right_type::value; }) { return static_cast<right_type>(left_type::value) < right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value < static_cast<left_type>(right_); }) { return left_type::value < static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) < right_; }) { return static_cast<right_type>(left_type::value) < right_; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ < static_cast<left_type>(right_type::value); }) { return left_ < static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) < right_type::value; }) { return static_cast<right_type>(left_) < right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ < static_cast<left_type>(right_); }) { return left_ < static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) < right_; }) { return static_cast<right_type>(left_) < right_; }
+
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value < left_type{right_type::value}; }) { return left_type::value < left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} < right_type::value; }) { return right_type{left_type::value} < right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value < left_type{right_}; }) { return left_type::value < left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} < right_; }) { return right_type{left_type::value} < right_; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ < left_type{right_type::value}; }) { return left_ < left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} < right_type::value; }) { return right_type{left_} < right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ < left_type{right_}; }) { return left_ < left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} < right_; }) { return right_type{left_} < right_; }
+
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				}
+
+			public:
+				template<typename Left, typename Right>
+				constexpr explicit(false) OperandCompareLessThan(Left&& left, Right&& right) noexcept
+					: left_{std::forward<Left>(left)},
+					  right_{std::forward<Right>(right)},
+					  result_{do_check()} { }
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
+				{
+					if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} < {}", expression_to_string(left_type{}), expression_to_string(right_)); }
+					else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} < {}", expression_to_string(left_), expression_to_string(right_type{})); }
+					else
+					{
+						const auto left_string = [this]
+						{
+							if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
+							else { return expression_to_string(left_); }
+						}();
+						const auto right_string = [this]
+						{
+							if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
+							else { return expression_to_string(right_); }
+						}();
+
+						return std::format("{} < {}", left_string, right_string);
+					}
+				}
+			};
+
+			template<typename L, typename R>
+				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
+			class OperandCompareLessEqual : public Operand
+			{
+			public:
+				using left_type = L;
+				using right_type = R;
+
+			private:
+				left_type  left_;
+				right_type right_;
+				bool       result_;
+
+				[[nodiscard]] constexpr auto do_check() const noexcept -> bool
+				{
+					using std::operator<=;
+
+					if constexpr (requires { left_type::value <= right_type::value; }) { return left_type::value <= right_type::value; }
+					else if constexpr (requires { left_type::value <= right_; }) { return left_type::value <= right_; }
+					else if constexpr (requires { left_ <= right_type::value; }) { return left_ <= right_type::value; }
+					else if constexpr (requires { left_ <= right_; }) { return left_ <= right_; }
+
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value <= static_cast<left_type>(right_type::value); }) { return left_type::value <= static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) <= right_type::value; }) { return static_cast<right_type>(left_type::value) <= right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_type::value <= static_cast<left_type>(right_); }) { return left_type::value <= static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_type::value) <= right_; }) { return static_cast<right_type>(left_type::value) <= right_; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ <= static_cast<left_type>(right_type::value); }) { return left_ <= static_cast<left_type>(right_type::value); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) <= right_type::value; }) { return static_cast<right_type>(left_) <= right_type::value; }
+					else if constexpr (std::is_convertible_v<right_type, left_type> and requires { left_ <= static_cast<left_type>(right_); }) { return left_ <= static_cast<left_type>(right_); }
+					else if constexpr (std::is_convertible_v<left_type, right_type> and requires { static_cast<right_type>(left_) <= right_; }) { return static_cast<right_type>(left_) <= right_; }
+
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value <= left_type{right_type::value}; }) { return left_type::value <= left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} <= right_type::value; }) { return right_type{left_type::value} <= right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_type::value <= left_type{right_}; }) { return left_type::value <= left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_type::value} <= right_; }) { return right_type{left_type::value} <= right_; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ <= left_type{right_type::value}; }) { return left_ <= left_type{right_type::value}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} <= right_type::value; }) { return right_type{left_} <= right_type::value; }
+					else if constexpr (std::is_constructible_v<right_type, left_type> and requires { left_ <= left_type{right_}; }) { return left_ <= left_type{right_}; }
+					else if constexpr (std::is_constructible_v<left_type, right_type> and requires { right_type{left_} <= right_; }) { return right_type{left_} <= right_; }
+
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				}
+
+			public:
+				template<typename Left, typename Right>
+				constexpr explicit(false) OperandCompareLessEqual(Left&& left, Right&& right) noexcept
+					: left_{std::forward<Left>(left)},
+					  right_{std::forward<Right>(right)},
+					  result_{do_check()} { }
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
+				{
+					if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} <= {}", expression_to_string(left_type{}), expression_to_string(right_)); }
+					else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} <= {}", expression_to_string(left_), expression_to_string(right_type{})); }
+					else
+					{
+						const auto left_string = [this]
+						{
+							if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
+							else { return expression_to_string(left_); }
+						}();
+						const auto right_string = [this]
+						{
+							if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
+							else { return expression_to_string(right_); }
+						}();
+
+						return std::format("{} <= {}", left_string, right_string);
+					}
+				}
+			};
+
+			template<typename L, typename R>
+			class OperandLogicalAnd : public Operand
+			{
+			public:
+				using left_type = L;
+				using right_type = R;
+
+			private:
+				left_type  left_;
+				right_type right_;
+				bool       result_;
+
+			public:
+				constexpr explicit(false) OperandLogicalAnd(const left_type& left, const right_type& right) noexcept
+					: left_{left},
+					  right_{right},
+					  result_{static_cast<bool>(left_) and static_cast<bool>(right_)} {}
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{} and {}", expression_to_string(left_), expression_to_string(right_)); }
+			};
+
+			template<typename L, typename R>
+			class OperandLogicalOr : public Operand
+			{
+			public:
+				using left_type = L;
+				using right_type = R;
+
+			private:
+				left_type  left_;
+				right_type right_;
+				bool       result_;
+
+			public:
+				constexpr explicit(false) OperandLogicalOr(const left_type& left, const right_type& right) noexcept
+					: left_{left},
+					  right_{right},
+					  result_{static_cast<bool>(left_) or static_cast<bool>(right_)} {}
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{} or {}", expression_to_string(left_), expression_to_string(right_)); }
 			};
 
 			template<typename T>
-			using rebind = typename representation<T>::type;
-		};
-
-		template<typename>
-		constexpr auto is_operand_constant_auto_v = false;
-		template<char... Cs>
-		constexpr auto is_operand_constant_auto_v<OperandConstantAuto<Cs...>> = true;
-
-		template<typename T, typename>
-		struct lazy_auto_rebind
-		{
-			using type = T;
-		};
-
-		template<typename T, typename BindTo>
-			requires is_operand_constant_auto_v<T>
-		struct lazy_auto_rebind<T, BindTo>
-		{
-			using type = typename T::template rebind<BindTo>;
-		};
-
-		template<typename T, typename BindTo>
-		using lazy_auto_rebind_t = typename lazy_auto_rebind<T, BindTo>::type;
-
-		class OperandConstantBoolean : public Operand
-		{
-		public:
-			using value_type = std::string_view;
-
-			value_type message;
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string_view { return message; }
-		};
-
-		class OperandCompareIdentity : public Operand
-		{
-		public:
-			using value_type = OperandConstantBoolean;
-
-		private:
-			value_type value_;
-			bool       result_;
-
-		public:
-			constexpr OperandCompareIdentity(const value_type& value, const bool result) noexcept
-				: value_{.message = value.message},
-				result_{result} {}
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> decltype(auto) { return value_.to_string(); }
-		};
-
-		template<typename L, typename R>
-			requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-		class OperandCompareEqual : public Operand
-		{
-		public:
-			using left_type = L;
-			using right_type = R;
-
-		private:
-			left_type  left_;
-			right_type right_;
-			bool       result_;
-
-			using rebind_left_type = lazy_auto_rebind_t<left_type, right_type>;
-			using rebind_right_type = lazy_auto_rebind_t<right_type, left_type>;
-
-			[[nodiscard]] constexpr auto do_check() const noexcept -> bool
+			class OperandLogicalNot : public Operand
 			{
-				using std::operator==;
+			public:
+				using type = T;
 
-				if constexpr (is_operand_type_v<rebind_left_type> and is_operand_type_v<rebind_right_type>)
-				{
-					return std::is_same_v<
-						typename rebind_left_type::operand_type_no_alias,
-						typename rebind_right_type::operand_type_no_alias>;
-				}
+			private:
+				type value_;
+				bool result_;
 
-				else if constexpr (requires { rebind_left_type::value == rebind_right_type::value; }) { return rebind_left_type::value == rebind_right_type::value; }
-				else if constexpr (requires { rebind_left_type::value == right_; }) { return rebind_left_type::value == right_; }
-				else if constexpr (requires { left_ == rebind_right_type::value; }) { return left_ == rebind_right_type::value; }
-				else if constexpr (requires { left_ == right_; }) { return left_ == right_; }
+			public:
+				constexpr explicit(false) OperandLogicalNot(const type& value) noexcept
+					: value_{value},
+					  result_{not static_cast<bool>(value_)} {}
 
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value == static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value == static_cast<rebind_left_type>(rebind_right_type::value); }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) == rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) == rebind_right_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value == static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value == static_cast<rebind_left_type>(right_); }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) == right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) == right_; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ == static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ == static_cast<rebind_left_type>(rebind_right_type::value); }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) == rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) == rebind_right_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ == static_cast<rebind_left_type>(right_); }) { return left_ == static_cast<rebind_left_type>(right_); }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) == right_; }) { return static_cast<rebind_right_type>(left_) == right_; }
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
 
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value == rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value == rebind_left_type{rebind_right_type::value}; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} == rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} == rebind_right_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value == rebind_left_type{right_}; }) { return rebind_left_type::value == rebind_left_type{right_}; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} == right_; }) { return rebind_right_type{rebind_left_type::value} == right_; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ == rebind_left_type{rebind_right_type::value}; }) { return left_ == rebind_left_type{rebind_right_type::value}; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} == rebind_right_type::value; }) { return rebind_right_type{left_} == rebind_right_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ == rebind_left_type{right_}; }) { return left_ == rebind_left_type{right_}; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} == right_; }) { return rebind_right_type{left_} == right_; }
-
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
-			}
-
-		public:
-			constexpr explicit(false) OperandCompareEqual(const left_type& left, const right_type& right) noexcept
-				: left_{left},
-				right_{right},
-				result_{do_check()} { }
-
-			constexpr explicit(false) OperandCompareEqual(left_type&& left, right_type&& right) noexcept
-				: left_{std::move(left)},
-				right_{std::move(right)},
-				result_{do_check()} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} == {}", expression_to_string(rebind_left_type{}), expression_to_string(right_)); }
-				else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} == {}", expression_to_string(left_), expression_to_string(rebind_right_type{})); }
-				else { return std::format("{} == {}", expression_to_string(left_), expression_to_string(right_)); }
-			}
-		};
-
-		template<std::ranges::range Range>
-		// not string :)
-			requires(not std::is_constructible_v<std::string_view, Range>)
-		class OperandCompareEqual<Range, Range> : public Operand
-		{
-		public:
-			using range_type = Range;
-
-		private:
-			range_type left_;
-			range_type right_;
-			bool       result_;
-
-			[[nodiscard]] constexpr auto do_check() const noexcept -> bool
-			{
-				using std::operator==;
-
-				return left_ == right_;
-			}
-
-		public:
-			constexpr explicit(false) OperandCompareEqual(range_type&& left, range_type&& right) noexcept
-				: left_{std::move(left)},
-				right_{std::move(right)},
-				result_{do_check()} { }
-
-			constexpr explicit(false) OperandCompareEqual(const range_type& left, const range_type& right) noexcept
-				: left_{left},
-				right_{right},
-				result_{do_check()} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				const auto rts = [](const range_type& r) noexcept -> std::string
-				{
-					std::string result{};
-
-					result.append_range(infrastructure::compiler::type_name<range_type>());
-					result.push_back('{');
-					std::ranges::for_each(
-							r,
-							[&result, done = false](const auto& v) mutable -> void
-							{
-								if (done) { result.push_back(','); }
-								done = true;
-
-								std::format_to(
-										std::back_inserter(result),
-										"{}",
-										v);
-							});
-					result.push_back('}');
-
-					return result;
-				};
-
-				return std::format("{} == {}", rts(left_), rts(right_));
-			}
-		};
-
-		template<typename L, typename R, typename Epsilon>
-			requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-		class OperandCompareApprox : public Operand
-		{
-		public:
-			using left_type = L;
-			using right_type = R;
-			using epsilon_type = Epsilon;
-
-		private:
-			left_type    left_;
-			right_type   right_;
-			epsilon_type epsilon_;
-			bool         result_;
-
-			using rebind_left_type = lazy_auto_rebind_t<left_type, right_type>;
-			using rebind_right_type = lazy_auto_rebind_t<right_type, left_type>;
-			using rebind_epsilon_type = lazy_auto_rebind_t<epsilon_type, std::common_type_t<left_type, right_type>>;
-
-			[[nodiscard]] constexpr auto do_check() noexcept -> bool
-			{
-				using std::operator==;
-				using std::operator-;
-				using std::operator<;
-
-				if constexpr (requires { utility::math::abs(rebind_left_type::value - rebind_right_type::value) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - rebind_right_type::value) < rebind_epsilon_type::value; }
-				else if constexpr (requires { utility::math::abs(rebind_left_type::value - right_) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - right_) < rebind_epsilon_type::value; }
-				else if constexpr (requires { utility::math::abs(left_ - rebind_right_type::value) < rebind_epsilon_type::value; }) { return utility::math::abs(left_ - rebind_right_type::value) < rebind_epsilon_type::value; }
-				else if constexpr (requires { utility::math::abs(rebind_left_type::value - right_) < epsilon_; }) { return utility::math::abs(rebind_left_type::value - right_) < epsilon_; }
-				else if constexpr (requires { utility::math::abs(left_ - rebind_right_type::value) < epsilon_; }) { return utility::math::abs(left_ - rebind_right_type::value) < epsilon_; }
-				else if constexpr (requires { utility::math::abs(left_ - right_) < epsilon_; }) { return utility::math::abs(left_ - right_) < epsilon_; }
-
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(rebind_right_type::value)) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(rebind_right_type::value)) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - rebind_right_type::value) < rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - rebind_right_type::value) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) < rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) < rebind_epsilon_type::value; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) < rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) < epsilon_; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) < epsilon_; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) < epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) < epsilon_; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) < epsilon_; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) < epsilon_; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) < epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) < epsilon_; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(right_)) < epsilon_; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(right_)) < epsilon_; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - right_) < epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - right_) < epsilon_; }
-
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{rebind_right_type::value}) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{rebind_right_type::value}) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - rebind_right_type::value) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - rebind_right_type::value) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) < rebind_epsilon_type::value; }) { return utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) < rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) < rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) < epsilon_; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) < epsilon_; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) < epsilon_; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) < epsilon_; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) < epsilon_; }) { return utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) < epsilon_; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) < epsilon_; }) { return utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) < epsilon_; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{right_}) < epsilon_; }) { return utility::math::abs(left_ - rebind_left_type{right_}) < epsilon_; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - right_) < epsilon_; }) { return utility::math::abs(rebind_right_type{left_} - right_) < epsilon_; }
-
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
-			}
-
-		public:
-			constexpr explicit(false) OperandCompareApprox(
-					const left_type&    left,
-					const right_type&   right,
-					const epsilon_type& epsilon) noexcept
-				: left_{left},
-				right_{right},
-				epsilon_{epsilon},
-				result_{do_check()} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				if constexpr (is_operand_constant_auto_v<left_type>)
-				{
-					if constexpr (is_operand_constant_auto_v<epsilon_type>) { return std::format("{} ≈≈ {} (+/- {})", expression_to_string(rebind_left_type{}), expression_to_string(right_), expression_to_string(rebind_epsilon_type{})); }
-					else { return std::format("{} ≈≈ {} (+/- {})", expression_to_string(rebind_left_type{}), expression_to_string(right_), expression_to_string(epsilon_)); }
-				}
-				else if constexpr (is_operand_constant_auto_v<right_type>)
-				{
-					if constexpr (is_operand_constant_auto_v<epsilon_type>) { return std::format("{} ≈≈ {} (+/- {})", expression_to_string(left_), expression_to_string(rebind_right_type{}), expression_to_string(rebind_epsilon_type{})); }
-					else { return std::format("{} ≈≈ {} (+/- {})", expression_to_string(left_), expression_to_string(rebind_right_type{}), expression_to_string(epsilon_)); }
-				}
-				else { return std::format("{} ≈≈ {} (+/- {})", expression_to_string(left_), expression_to_string(right_), expression_to_string(epsilon_)); }
-			}
-		};
-
-		template<typename L, typename R>
-			requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-		class OperandCompareNotEqual : public Operand
-		{
-		public:
-			using left_type = L;
-			using right_type = R;
-
-		private:
-			left_type  left_;
-			right_type right_;
-			bool       result_;
-
-			using rebind_left_type = lazy_auto_rebind_t<left_type, right_type>;
-			using rebind_right_type = lazy_auto_rebind_t<right_type, left_type>;
-
-			[[nodiscard]] constexpr auto do_check() const noexcept -> bool
-			{
-				using std::operator==;
-				using std::operator!=;
-
-				if constexpr (is_operand_type_v<rebind_left_type> and is_operand_type_v<rebind_right_type>)
-				{
-					return not std::is_same_v<
-						typename rebind_left_type::operand_type_no_alias,
-						typename rebind_right_type::operand_type_no_alias>;
-				}
-
-				else if constexpr (requires { rebind_left_type::value != rebind_right_type::value; }) { return rebind_left_type::value != rebind_right_type::value; }
-				else if constexpr (requires { rebind_left_type::value != right_; }) { return rebind_left_type::value != right_; }
-				else if constexpr (requires { left_ != rebind_right_type::value; }) { return left_ != rebind_right_type::value; }
-				else if constexpr (requires { left_ != right_; }) { return left_ != right_; }
-
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value != static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value != static_cast<rebind_left_type>(rebind_right_type::value); }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) != rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) != rebind_right_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value != static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value != static_cast<rebind_left_type>(right_); }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) != right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) != right_; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ != static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ != static_cast<rebind_left_type>(rebind_right_type::value); }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) != rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) != rebind_right_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ != static_cast<rebind_left_type>(right_); }) { return left_ != static_cast<rebind_left_type>(right_); }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) != right_; }) { return static_cast<rebind_right_type>(left_) != right_; }
-
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value != rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value != rebind_left_type{rebind_right_type::value}; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} != rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} != rebind_right_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value != rebind_left_type{right_}; }) { return rebind_left_type::value != rebind_left_type{right_}; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} != right_; }) { return rebind_right_type{rebind_left_type::value} != right_; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ != rebind_left_type{rebind_right_type::value}; }) { return left_ != rebind_left_type{rebind_right_type::value}; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} != rebind_right_type::value; }) { return rebind_right_type{left_} != rebind_right_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ != rebind_left_type{right_}; }) { return left_ != rebind_left_type{right_}; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} != right_; }) { return rebind_right_type{left_} != right_; }
-
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
-			}
-
-		public:
-			constexpr explicit(false) OperandCompareNotEqual(left_type left, right_type right) noexcept
-				: left_{std::move(left)},
-				right_{std::move(right)},
-				result_{do_check()} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} != {}", expression_to_string(rebind_left_type{}), expression_to_string(right_)); }
-				else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} != {}", expression_to_string(left_), expression_to_string(rebind_right_type{})); }
-				else { return std::format("{} != {}", expression_to_string(left_), expression_to_string(right_)); }
-			}
-		};
-
-		template<std::ranges::range Range>
-		// not string :)
-			requires(not std::is_constructible_v<std::string_view, Range>)
-		class OperandCompareNotEqual<Range, Range> : public Operand
-		{
-		public:
-			using range_type = Range;
-
-		private:
-			range_type left_;
-			range_type right_;
-			bool       result_;
-
-			[[nodiscard]] constexpr auto do_check() const noexcept -> bool
-			{
-				using std::operator==;
-				using std::operator!=;
-
-				return left_ != right_;
-			}
-
-		public:
-			constexpr explicit(false) OperandCompareNotEqual(range_type&& left, range_type&& right) noexcept
-				: left_{std::move(left)},
-				right_{std::move(right)},
-				result_{do_check()} { }
-
-			constexpr explicit(false) OperandCompareNotEqual(const range_type& left, const range_type& right) noexcept
-				: left_{left},
-				right_{right},
-				result_{do_check()} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				const auto rts = [](const range_type& r) noexcept -> std::string
-				{
-					std::string result{};
-
-					result.append_range(infrastructure::compiler::type_name<range_type>());
-					result.push_back('{');
-					std::ranges::for_each(
-							r,
-							[&result, done = false](const auto& v) mutable -> void
-							{
-								if (done) { result.push_back(','); }
-								done = true;
-
-								result += expression_to_string(v);
-							});
-					result.push_back('}');
-
-					return result;
-				};
-
-				return std::format("{} != {}", rts(left_), rts(right_));
-			}
-		};
-
-		template<typename L, typename R, typename Epsilon>
-			requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-		class OperandCompareNotApprox : public Operand
-		{
-		public:
-			using left_type = L;
-			using right_type = R;
-			using epsilon_type = Epsilon;
-
-		private:
-			left_type    left_;
-			right_type   right_;
-			epsilon_type epsilon_;
-			bool         result_;
-
-			using rebind_left_type = lazy_auto_rebind_t<left_type, right_type>;
-			using rebind_right_type = lazy_auto_rebind_t<right_type, left_type>;
-			using rebind_epsilon_type = lazy_auto_rebind_t<epsilon_type, std::common_type_t<left_type, right_type>>;
-
-			[[nodiscard]] constexpr auto do_check() noexcept -> bool
-			{
-				using std::operator==;
-				using std::operator!=;
-				using std::operator-;
-				using std::operator>;
-
-				if constexpr (requires { utility::math::abs(rebind_left_type::value - rebind_right_type::value) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - rebind_right_type::value) > rebind_epsilon_type::value; }
-				else if constexpr (requires { utility::math::abs(rebind_left_type::value - right_) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - right_) > rebind_epsilon_type::value; }
-				else if constexpr (requires { utility::math::abs(left_ - rebind_right_type::value) > rebind_epsilon_type::value; }) { return utility::math::abs(left_ - rebind_right_type::value) > rebind_epsilon_type::value; }
-				else if constexpr (requires { utility::math::abs(rebind_left_type::value - right_) > epsilon_; }) { return utility::math::abs(rebind_left_type::value - right_) > epsilon_; }
-				else if constexpr (requires { utility::math::abs(left_ - rebind_right_type::value) > epsilon_; }) { return utility::math::abs(left_ - rebind_right_type::value) > epsilon_; }
-				else if constexpr (requires { utility::math::abs(left_ - right_) > epsilon_; }) { return utility::math::abs(left_ - right_) > epsilon_; }
-
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(rebind_right_type::value)) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(rebind_right_type::value)) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - rebind_right_type::value) > rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - rebind_right_type::value) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) > rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) > rebind_epsilon_type::value; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) > rebind_epsilon_type::value; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) > epsilon_; }) { return utility::math::abs(rebind_left_type::value - static_cast<rebind_left_type>(right_)) > epsilon_; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) > epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(rebind_left_type::value) - right_) > epsilon_; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) > epsilon_; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(rebind_right_type::value)) > epsilon_; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) > epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - rebind_right_type::value) > epsilon_; }
-				else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - static_cast<rebind_left_type>(right_)) > epsilon_; }) { return utility::math::abs(left_ - static_cast<rebind_left_type>(right_)) > epsilon_; }
-				else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(static_cast<rebind_right_type>(left_) - right_) > epsilon_; }) { return utility::math::abs(static_cast<rebind_right_type>(left_) - right_) > epsilon_; }
-
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{rebind_right_type::value}) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{rebind_right_type::value}) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - rebind_right_type::value) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - rebind_right_type::value) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) > rebind_epsilon_type::value; }) { return utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) > rebind_epsilon_type::value; }) { return utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) > rebind_epsilon_type::value; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) > epsilon_; }) { return utility::math::abs(rebind_left_type::value - rebind_left_type{right_}) > epsilon_; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) > epsilon_; }) { return utility::math::abs(rebind_right_type{rebind_left_type::value} - right_) > epsilon_; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) > epsilon_; }) { return utility::math::abs(left_ - rebind_left_type{rebind_right_type::value}) > epsilon_; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) > epsilon_; }) { return utility::math::abs(rebind_right_type{left_} - rebind_right_type::value) > epsilon_; }
-				else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { utility::math::abs(left_ - rebind_left_type{right_}) > epsilon_; }) { return utility::math::abs(left_ - rebind_left_type{right_}) > epsilon_; }
-				else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { utility::math::abs(rebind_right_type{left_} - right_) > epsilon_; }) { return utility::math::abs(rebind_right_type{left_} - right_) > epsilon_; }
-
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
-			}
-
-		public:
-			constexpr explicit(false) OperandCompareNotApprox(
-					const left_type&    left,
-					const right_type&   right,
-					const epsilon_type& epsilon
-					) noexcept
-				: left_{left},
-				right_{right},
-				epsilon_{epsilon},
-				result_{do_check()} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				if constexpr (is_operand_constant_auto_v<left_type>)
-				{
-					if constexpr (is_operand_constant_auto_v<epsilon_type>) { return std::format("{} !≈ {} (+/- {})", expression_to_string(rebind_left_type{}), expression_to_string(right_), expression_to_string(rebind_epsilon_type{})); }
-					else { return std::format("{} !≈ {} (+/- {})", expression_to_string(rebind_left_type{}), expression_to_string(right_), expression_to_string(epsilon_)); }
-				}
-				else if constexpr (is_operand_constant_auto_v<right_type>)
-				{
-					if constexpr (is_operand_constant_auto_v<epsilon_type>) { return std::format("{} !≈ {} (+/- {})", expression_to_string(left_), expression_to_string(rebind_right_type{}), expression_to_string(rebind_epsilon_type{})); }
-					else { return std::format("{} !≈ {} (+/- {})", expression_to_string(left_), expression_to_string(rebind_right_type{}), expression_to_string(epsilon_)); }
-				}
-				else { return std::format("{} !≈ {} (+/- {})", expression_to_string(left_), expression_to_string(right_), expression_to_string(epsilon_)); }
-			}
-		};
-
-		template<typename L, typename R>
-			requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-		class OperandCompareGreaterThan : public Operand
-		{
-		public:
-			using left_type = L;
-			using right_type = R;
-
-		private:
-			left_type  left_;
-			right_type right_;
-			bool       result_;
-
-			using rebind_left_type = lazy_auto_rebind_t<left_type, right_type>;
-			using rebind_right_type = lazy_auto_rebind_t<right_type, left_type>;
-
-		public:
-			constexpr explicit(false) OperandCompareGreaterThan(const left_type& left, const right_type& right) noexcept
-				: left_{left},
-				right_{right},
-				result_{
-						[this]
-						{
-							using std::operator>;
-
-							if constexpr (requires { rebind_left_type::value > rebind_right_type::value; }) { return rebind_left_type::value > rebind_right_type::value; }
-							else if constexpr (requires { rebind_left_type::value > right_; }) { return rebind_left_type::value > right_; }
-							else if constexpr (requires { left_ > rebind_right_type::value; }) { return left_ > rebind_right_type::value; }
-							else if constexpr (requires { left_ > right_; }) { return left_ > right_; }
-
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value > static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value > static_cast<rebind_left_type>(rebind_right_type::value); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) > rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) > rebind_right_type::value; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value > static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value > static_cast<rebind_left_type>(right_); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) > right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) > right_; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ > static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ > static_cast<rebind_left_type>(rebind_right_type::value); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) > rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) > rebind_right_type::value; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ > static_cast<rebind_left_type>(right_); }) { return left_ > static_cast<rebind_left_type>(right_); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) > right_; }) { return static_cast<rebind_right_type>(left_) > right_; }
-
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value > rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value > rebind_left_type{rebind_right_type::value}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} > rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} > rebind_right_type::value; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value > rebind_left_type{right_}; }) { return rebind_left_type::value > rebind_left_type{right_}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} > right_; }) { return rebind_right_type{rebind_left_type::value} > right_; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ > rebind_left_type{rebind_right_type::value}; }) { return left_ > rebind_left_type{rebind_right_type::value}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} > rebind_right_type::value; }) { return rebind_right_type{left_} > rebind_right_type::value; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ > rebind_left_type{right_}; }) { return left_ > rebind_left_type{right_}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} > right_; }) { return rebind_right_type{left_} > right_; }
-
-							else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
-						}()} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} > {}", expression_to_string(rebind_left_type{}), expression_to_string(right_)); }
-				else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} > {}", expression_to_string(left_), expression_to_string(rebind_right_type{})); }
-				else { return std::format("{} > {}", expression_to_string(left_), expression_to_string(right_)); }
-			}
-		};
-
-		template<typename L, typename R>
-			requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-		class OperandCompareGreaterEqual : public Operand
-		{
-		public:
-			using left_type = L;
-			using right_type = R;
-
-		private:
-			left_type  left_;
-			right_type right_;
-			bool       result_;
-
-			using rebind_left_type = lazy_auto_rebind_t<left_type, right_type>;
-			using rebind_right_type = lazy_auto_rebind_t<right_type, left_type>;
-
-		public:
-			constexpr explicit(false) OperandCompareGreaterEqual(
-					const left_type&  left,
-					const right_type& right
-					) noexcept
-				: left_{left},
-				right_{right},
-				result_{
-						[this]
-						{
-							using std::operator>=;
-
-							if constexpr (requires { rebind_left_type::value >= rebind_right_type::value; }) { return rebind_left_type::value >= rebind_right_type::value; }
-							else if constexpr (requires { rebind_left_type::value >= right_; }) { return rebind_left_type::value >= right_; }
-							else if constexpr (requires { left_ >= rebind_right_type::value; }) { return left_ >= rebind_right_type::value; }
-							else if constexpr (requires { left_ >= right_; }) { return left_ >= right_; }
-
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value >= static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value >= static_cast<rebind_left_type>(rebind_right_type::value); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) >= rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) >= rebind_right_type::value; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value >= static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value >= static_cast<rebind_left_type>(right_); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) >= right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) >= right_; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ >= static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ >= static_cast<rebind_left_type>(rebind_right_type::value); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) >= rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) >= rebind_right_type::value; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ >= static_cast<rebind_left_type>(right_); }) { return left_ >= static_cast<rebind_left_type>(right_); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) >= right_; }) { return static_cast<rebind_right_type>(left_) >= right_; }
-
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value >= rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value >= rebind_left_type{rebind_right_type::value}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} >= rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} >= rebind_right_type::value; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value >= rebind_left_type{right_}; }) { return rebind_left_type::value >= rebind_left_type{right_}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} >= right_; }) { return rebind_right_type{rebind_left_type::value} >= right_; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ >= rebind_left_type{rebind_right_type::value}; }) { return left_ >= rebind_left_type{rebind_right_type::value}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} >= rebind_right_type::value; }) { return rebind_right_type{left_} >= rebind_right_type::value; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ >= rebind_left_type{right_}; }) { return left_ >= rebind_left_type{right_}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} >= right_; }) { return rebind_right_type{left_} >= right_; }
-
-							else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
-						}()} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} >= {}", expression_to_string(rebind_left_type{}), expression_to_string(right_)); }
-				else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} >= {}", expression_to_string(left_), expression_to_string(rebind_right_type{})); }
-				else { return std::format("{} >= {}", expression_to_string(left_), expression_to_string(right_)); }
-			}
-		};
-
-		template<typename L, typename R>
-			requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-		class OperandCompareLessThan : public Operand
-		{
-		public:
-			using left_type = L;
-			using right_type = R;
-
-		private:
-			left_type  left_;
-			right_type right_;
-			bool       result_;
-
-			using rebind_left_type = lazy_auto_rebind_t<left_type, right_type>;
-			using rebind_right_type = lazy_auto_rebind_t<right_type, left_type>;
-
-		public:
-			constexpr explicit(false) OperandCompareLessThan(const left_type& left, const right_type& right) noexcept
-				: left_{left},
-				right_{right},
-				result_{
-						[this]
-						{
-							using std::operator<;
-
-							if constexpr (requires { rebind_left_type::value < rebind_right_type::value; }) { return rebind_left_type::value < rebind_right_type::value; }
-							else if constexpr (requires { rebind_left_type::value < right_; }) { return rebind_left_type::value < right_; }
-							else if constexpr (requires { left_ < rebind_right_type::value; }) { return left_ < rebind_right_type::value; }
-							else if constexpr (requires { left_ < right_; }) { return left_ < right_; }
-
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value < static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value < static_cast<rebind_left_type>(rebind_right_type::value); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) < rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) < rebind_right_type::value; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value < static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value < static_cast<rebind_left_type>(right_); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) < right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) < right_; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ < static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ < static_cast<rebind_left_type>(rebind_right_type::value); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) < rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) < rebind_right_type::value; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ < static_cast<rebind_left_type>(right_); }) { return left_ < static_cast<rebind_left_type>(right_); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) < right_; }) { return static_cast<rebind_right_type>(left_) < right_; }
-
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value < rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value < rebind_left_type{rebind_right_type::value}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} < rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} < rebind_right_type::value; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value < rebind_left_type{right_}; }) { return rebind_left_type::value < rebind_left_type{right_}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} < right_; }) { return rebind_right_type{rebind_left_type::value} < right_; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ < rebind_left_type{rebind_right_type::value}; }) { return left_ < rebind_left_type{rebind_right_type::value}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} < rebind_right_type::value; }) { return rebind_right_type{left_} < rebind_right_type::value; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ < rebind_left_type{right_}; }) { return left_ < rebind_left_type{right_}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} < right_; }) { return rebind_right_type{left_} < right_; }
-
-							else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
-						}()} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} < {}", expression_to_string(rebind_left_type{}), expression_to_string(right_)); }
-				else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} < {}", expression_to_string(left_), expression_to_string(rebind_right_type{})); }
-				else { return std::format("{} < {}", expression_to_string(left_), expression_to_string(right_)); }
-			}
-		};
-
-		template<typename L, typename R>
-			requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-		class OperandCompareLessEqual : public Operand
-		{
-		public:
-			using left_type = L;
-			using right_type = R;
-
-		private:
-			left_type  left_;
-			right_type right_;
-			bool       result_;
-
-			using rebind_left_type = lazy_auto_rebind_t<left_type, right_type>;
-			using rebind_right_type = lazy_auto_rebind_t<right_type, left_type>;
-
-		public:
-			constexpr explicit(false) OperandCompareLessEqual(const left_type& left, const right_type& right) noexcept
-				: left_{left},
-				right_{right},
-				result_{
-						[this]
-						{
-							using std::operator<=;
-
-							if constexpr (requires { rebind_left_type::value <= rebind_right_type::value; }) { return rebind_left_type::value <= rebind_right_type::value; }
-							else if constexpr (requires { rebind_left_type::value <= right_; }) { return rebind_left_type::value <= right_; }
-							else if constexpr (requires { left_ <= rebind_right_type::value; }) { return left_ <= rebind_right_type::value; }
-							else if constexpr (requires { left_ <= right_; }) { return left_ <= right_; }
-
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value <= static_cast<rebind_left_type>(rebind_right_type::value); }) { return rebind_left_type::value <= static_cast<rebind_left_type>(rebind_right_type::value); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) <= rebind_right_type::value; }) { return static_cast<rebind_right_type>(rebind_left_type::value) <= rebind_right_type::value; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value <= static_cast<rebind_left_type>(right_); }) { return rebind_left_type::value <= static_cast<rebind_left_type>(right_); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(rebind_left_type::value) <= right_; }) { return static_cast<rebind_right_type>(rebind_left_type::value) <= right_; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ <= static_cast<rebind_left_type>(rebind_right_type::value); }) { return left_ <= static_cast<rebind_left_type>(rebind_right_type::value); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) <= rebind_right_type::value; }) { return static_cast<rebind_right_type>(left_) <= rebind_right_type::value; }
-							else if constexpr (std::is_convertible_v<rebind_right_type, rebind_left_type> and requires { left_ <= static_cast<rebind_left_type>(right_); }) { return left_ <= static_cast<rebind_left_type>(right_); }
-							else if constexpr (std::is_convertible_v<rebind_left_type, rebind_right_type> and requires { static_cast<rebind_right_type>(left_) <= right_; }) { return static_cast<rebind_right_type>(left_) <= right_; }
-
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value <= rebind_left_type{rebind_right_type::value}; }) { return rebind_left_type::value <= rebind_left_type{rebind_right_type::value}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} <= rebind_right_type::value; }) { return rebind_right_type{rebind_left_type::value} <= rebind_right_type::value; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { rebind_left_type::value <= rebind_left_type{right_}; }) { return rebind_left_type::value <= rebind_left_type{right_}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{rebind_left_type::value} <= right_; }) { return rebind_right_type{rebind_left_type::value} <= right_; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ <= rebind_left_type{rebind_right_type::value}; }) { return left_ <= rebind_left_type{rebind_right_type::value}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} <= rebind_right_type::value; }) { return rebind_right_type{left_} <= rebind_right_type::value; }
-							else if constexpr (std::is_constructible_v<rebind_right_type, rebind_left_type> and requires { left_ <= rebind_left_type{right_}; }) { return left_ <= rebind_left_type{right_}; }
-							else if constexpr (std::is_constructible_v<rebind_left_type, rebind_right_type> and requires { rebind_right_type{left_} <= right_; }) { return rebind_right_type{left_} <= right_; }
-
-							else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
-						}()} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} <= {}", expression_to_string(rebind_left_type{}), expression_to_string(right_)); }
-				else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} <= {}", expression_to_string(left_), expression_to_string(rebind_right_type{})); }
-				else { return std::format("{} <= {}", expression_to_string(left_), expression_to_string(right_)); }
-			}
-		};
-
-		template<typename L, typename R>
-		class OperandLogicalAnd : public Operand
-		{
-		public:
-			using left_type = L;
-			using right_type = R;
-
-		private:
-			left_type  left_;
-			right_type right_;
-			bool       result_;
-
-		public:
-			constexpr explicit(false) OperandLogicalAnd(const left_type& left, const right_type& right) noexcept
-				: left_{left},
-				right_{right},
-				result_{static_cast<bool>(left_) and static_cast<bool>(right_)} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{} and {}", expression_to_string(left_), expression_to_string(right_)); }
-		};
-
-		template<typename L, typename R>
-		class OperandLogicalOr : public Operand
-		{
-		public:
-			using left_type = L;
-			using right_type = R;
-
-		private:
-			left_type  left_;
-			right_type right_;
-			bool       result_;
-
-		public:
-			constexpr explicit(false) OperandLogicalOr(const left_type& left, const right_type& right) noexcept
-				: left_{left},
-				right_{right},
-				result_{static_cast<bool>(left_) or static_cast<bool>(right_)} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{} or {}", expression_to_string(left_), expression_to_string(right_)); }
-		};
-
-		template<typename T>
-		class OperandLogicalNot : public Operand
-		{
-		public:
-			using type = T;
-
-		private:
-			type value_;
-			bool result_;
-
-		public:
-			constexpr explicit(false) OperandLogicalNot(const type& value) noexcept
-				: value_{value},
-				result_{not static_cast<bool>(value_)} { }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("not {}", expression_to_string(value_)); }
-		};
-
-		template<std::invocable InvocableType, typename Exception>
-		class OperandThrow : public Operand
-		{
-		public:
-			using exception_type = Exception;
-			using invocable_type = InvocableType;
-
-		private:
-			bool thrown_;
-			bool caught_;
-
-		public:
-			constexpr explicit(false) OperandThrow(const invocable_type& invocable) noexcept
-				: thrown_{false},
-				caught_{false}
-			{
-				if constexpr (not std::is_same_v<exception_type, void>)
-				{
-					try { std::invoke(invocable); }
-					catch (const exception_type&)
-					{
-						thrown_ = true;
-						caught_ = true;
-					}
-					catch (...)
-					{
-						thrown_ = true;
-						caught_ = false;
-					}
-				}
-				else
-				{
-					try { std::invoke(invocable); }
-					catch (...)
-					{
-						thrown_ = true;
-						caught_ = true;
-					}
-				}
-			}
-
-			[[nodiscard]] constexpr auto thrown() const noexcept -> bool { return thrown_; }
-			[[nodiscard]] constexpr auto caught() const noexcept -> bool { return caught_; }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return thrown(); }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				return std::format(
-						"throws<{}> - {:s} -- caught - {:s}",
-						infrastructure::compiler::type_name<exception_type>(),
-						thrown(),
-						caught());
-			}
-		};
-
-		template<std::invocable InvocableType>
-		class OperandThrow<InvocableType, void> : public Operand
-		{
-		public:
-			using invocable_type = InvocableType;
-
-		private:
-			bool thrown_;
-
-		public:
-			constexpr explicit(false) OperandThrow(const InvocableType& invocable) noexcept
-				: thrown_{false}
-			{
-				try { std::invoke(invocable); }
-				catch (...) { thrown_ = true; }
-			}
-
-			[[nodiscard]] constexpr auto thrown() const noexcept -> bool { return thrown_; }
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return thrown(); }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("throws - {:s}", thrown()); }
-		};
-
-		template<std::invocable InvocableType>
-		class OperandNoThrow : public Operand
-		{
-		public:
-			using invocable_type = InvocableType;
-
-		private:
-			bool thrown_;
-
-		public:
-			constexpr explicit(false) OperandNoThrow(const InvocableType& invocable) noexcept
-				: thrown_{false}
-			{
-				try { std::invoke(invocable); }
-				catch (...) { thrown_ = true; }
-			}
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return not thrown_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("nothrow - {:s}", not thrown_); }
-		};
-
-		#if __has_include(<unistd.h>) and __has_include(<sys/wait.h>)
-		template<std::invocable InvocableType>
-		class OperandAbort : public Operand
-		{
-		public:
-			using invocable_type = InvocableType;
-
-		private:
-			bool aborted_;
-
-		public:
-			constexpr explicit(false) OperandAbort(const InvocableType& invocable) noexcept
-				: aborted_{
-						  [&invocable]
-						  {
-							  if (const auto pid = fork();
-								  not pid)
-							  {
-								  std::invoke(invocable);
-								  std::exit(0);
-							  }
-
-							  int exit_status = 0;
-							  wait(&exit_status);
-							  return exit_status;
-						  }()}
-			{
-			}
-
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return aborted_; }
-
-			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
-			{
-				return std::format("aborts");
-			}
-		};
-		#endif
-	}// namespace operand
-
-	class Reporter
-	{
-		struct hasher
-		{
-			using is_transparent = int;
-
-			[[nodiscard]] auto operator()(const std::string& string) const noexcept -> std::size_t { return std::hash<std::string>{}(string); }
-
-			[[nodiscard]] auto operator()(const std::string_view& string) const noexcept -> std::size_t { return std::hash<std::string_view>{}(string); }
-		};
-
-		template<typename T>
-		class Stack
-		{
-			using container_type = std::vector<T>;
-
-		public:
-			using value_type = typename container_type::value_type;
-			using allocator_type = typename container_type::allocator_type;
-			using pointer = typename container_type::pointer;
-			using const_pointer = typename container_type::const_pointer;
-			using reference = typename container_type::reference;
-			using const_reference = typename container_type::const_reference;
-			using size_type = typename container_type::size_type;
-			using difference_type = typename container_type::difference_type;
-			using iterator = typename container_type::iterator;
-			using const_iterator = typename container_type::const_iterator;
-			using reverse_iterator = typename container_type::reverse_iterator;
-			using const_reverse_iterator = typename container_type::const_reverse_iterator;
-
-		private:
-			container_type data_;
-
-		public:
-			template<typename... Args>
-			constexpr auto emplace(Args&&... args) noexcept -> decltype(auto)//
-				requires requires { data_.emplace_back(std::forward<Args>(args)...); } { return data_.emplace_back(std::forward<Args>(args)...); }
-
-			[[nodiscard]] constexpr auto top() const noexcept -> decltype(auto) { return data_.back(); }
-
-			[[nodiscard]] constexpr auto pop() noexcept -> decltype(auto) { return data_.pop_back(); }
-
-			[[nodiscard]] constexpr auto size() const noexcept -> decltype(auto) { return data_.size(); }
-
-			[[nodiscard]] constexpr auto empty() const noexcept -> decltype(auto) { return data_.empty(); }
-
-			[[nodiscard]] constexpr auto begin() const noexcept -> decltype(auto) { return data_.begin(); }
-
-			[[nodiscard]] constexpr auto end() const noexcept -> decltype(auto) { return data_.end(); }
-		};
-
-	public:
-		template<typename V>
-		using map_type = std::unordered_map<std::string, V, hasher, std::equal_to<>>;
-
-		using clock_type = std::chrono::high_resolution_clock;
-		using time_point_type = clock_type::time_point;
-		using time_difference_type = std::chrono::milliseconds;
-
-		constexpr static std::string_view global_scope_name{"global"};
-
-		struct result_type
-		{
-			enum class Status
-			{
-				PENDING,
-
-				PASSED,
-				FAILED,
-				SKIPPED,
-				FATAL,
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("not {}", expression_to_string(value_)); }
 			};
 
-			result_type* parent = nullptr;
-			std::string  suite_name;
-			std::string  test_name;
-
-			Status                                 status                  = Status::PENDING;
-			time_point_type                        time_start              = clock_type::now();
-			time_point_type                        time_end                = clock_type::now();
-			std::size_t                            total_tests_failed      = 0;
-			std::size_t                            total_tests_passed      = 0;
-			std::size_t                            total_tests_skipped     = 0;
-			std::size_t                            total_assertions_passed = 0;
-			std::size_t                            total_assertions_failed = 0;
-			std::string                            report_string;
-			map_type<std::unique_ptr<result_type>> nested_result;
-
-			constexpr auto operator+=(const result_type& other) noexcept -> result_type&
+			template<typename T>
+				requires std::is_reference_v<T> or (not std::is_copy_constructible_v<T>)
+			class OperandLogicalNot<T> : public Operand
 			{
-				total_tests_failed += other.total_tests_failed + 1;
-				total_assertions_passed += other.total_assertions_passed;
-				total_tests_passed += other.total_tests_passed;
-				total_tests_skipped += other.total_tests_skipped;
-				total_assertions_failed += other.total_assertions_failed;
+			public:
+				using reference = std::conditional_t<std::is_reference_v<T>, T, std::add_lvalue_reference_t<T>>;
+				using const_reference = std::add_const_t<reference>;
 
-				return *this;
-			}
-		};
+			private:
+				const_reference value_;
+				bool            result_;
 
-	private:
-		map_type<result_type>   results_;
-		std::string_view        active_suite_;
-		result_type*            active_scope_;
-		Stack<std::string_view> active_test_;
+			public:
+				constexpr explicit(false) OperandLogicalNot(const_reference value) noexcept
+					: value_{value},
+					  result_{not static_cast<bool>(value_)} {}
 
-		// fixme
-		// mutable std::ostream    out_;
-		// mutable std::streambuf* out_saved_;
-		std::ostream& out_;
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
 
-		// todo: custom color
-		color_type color_;
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("not {}", expression_to_string(value_)); }
+			};
 
-		// Whether the current scope does not output message
-		bool silence_scope_;
-		// Whether the current assertion does not output message
-		bool silence_assertion_;
-
-		[[nodiscard]] constexpr auto get_test_full_name() const noexcept -> std::string
-		{
-			std::string result;
-			std::ranges::for_each(
-					active_test_,
-					[&result, first = true](const auto& sv) mutable noexcept -> void
-					{
-						result.append(first ? "" : ".");
-						first = false;
-
-						result.append_range(sv);
-					});
-			return result;
-		}
-
-		[[nodiscard]] auto get_duration_milliseconds() const noexcept -> clock_type::rep
-		{
-			active_scope_->time_end = clock_type::now();
-			return std::chrono::duration_cast<time_difference_type>(
-							active_scope_->time_end - active_scope_->time_start)
-					.count();
-		}
-
-		auto scope_push(const std::string_view test_name) -> void
-		{
-			std::string test_name_s{test_name};
-
-			const auto [it, inserted] = active_scope_->nested_result.try_emplace(
-					test_name_s,
-					std::make_unique<result_type>(
-							// parent
-							active_scope_,
-							// suite_name
-							std::string{active_suite_},
-							// test_name
-							test_name_s));
-
-			active_test_.emplace(it->first);
-			active_scope_ = it->second.get();
-
-			if (not inserted)
-			[[unlikely]]
+			template<std::invocable InvocableType, typename Exception>
+			class OperandThrow : public Operand
 			{
-				std::cerr << std::format(
-						"{}WARNING{}: test `{}` for test suite `{}` already present.\n",
-						color_.fail,
-						color_.none,
-						test_name_s,
-						active_suite_);
-			}
-		}
+			public:
+				using exception_type = Exception;
+				using invocable_type = InvocableType;
 
-		auto scope_pop(const std::string_view test_name) -> void
-		{
-			if (active_scope_->total_tests_skipped)
-			[[unlikely]]
-			{
-				active_scope_->status = result_type::Status::SKIPPED;
-			}
-			else
-			{
-				active_scope_->status =
-						active_scope_->total_assertions_failed > 0
-							? result_type::Status::FAILED
-							: result_type::Status::PASSED;
-			}
+			private:
+				bool thrown_;
+				bool caught_;
 
-			if (active_test_.top() == test_name)
-			[[likely]]
-			{
-				active_test_.pop();
-				const auto* old_scope = active_scope_;
-				if (active_scope_->parent) { active_scope_ = active_scope_->parent; }
-				else
+			public:
+				constexpr explicit(false) OperandThrow(const invocable_type& invocable) noexcept
+					: thrown_{false},
+					  caught_{false}
 				{
-					const auto scope_it = results_.find(global_scope_name);
-					GAL_PROMETHEUS_DEBUG_ASSUME(scope_it != results_.end());
-					active_scope_ = std::addressof(scope_it->second);
+					if constexpr (not std::is_same_v<exception_type, void>)
+					{
+						try { std::invoke(invocable); }
+						catch (const exception_type&)
+						{
+							thrown_ = true;
+							caught_ = true;
+						}
+						catch (...)
+						{
+							thrown_ = true;
+							caught_ = false;
+						}
+					}
+					else
+					{
+						try { std::invoke(invocable); }
+						catch (...)
+						{
+							thrown_ = true;
+							caught_ = true;
+						}
+					}
 				}
 
-				*active_scope_ += *old_scope;
-				return;
+				[[nodiscard]] constexpr auto thrown() const noexcept -> bool { return thrown_; }
+				[[nodiscard]] constexpr auto caught() const noexcept -> bool { return caught_; }
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return thrown(); }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
+				{
+					return std::format(
+							"throws<{}> - {:s} -- caught - {:s}",
+							infrastructure::compiler::type_name<exception_type>(),
+							thrown(),
+							caught());
+				}
+			};
+
+			template<std::invocable InvocableType>
+			class OperandThrow<InvocableType, void> : public Operand
+			{
+			public:
+				using invocable_type = InvocableType;
+
+			private:
+				bool thrown_;
+
+			public:
+				constexpr explicit(false) OperandThrow(const InvocableType& invocable) noexcept
+					: thrown_{false}
+				{
+					try { std::invoke(invocable); }
+					catch (...) { thrown_ = true; }
+				}
+
+				[[nodiscard]] constexpr auto thrown() const noexcept -> bool { return thrown_; }
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return thrown(); }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("throws - {:s}", thrown()); }
+			};
+
+			template<std::invocable InvocableType>
+			class OperandNoThrow : public Operand
+			{
+			public:
+				using invocable_type = InvocableType;
+
+			private:
+				bool thrown_;
+
+			public:
+				constexpr explicit(false) OperandNoThrow(const InvocableType& invocable) noexcept
+					: thrown_{false}
+				{
+					try { std::invoke(invocable); }
+					catch (...) { thrown_ = true; }
+				}
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return not thrown_; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("nothrow - {:s}", not thrown_); }
+			};
+
+			#if __has_include(<unistd.h>) and __has_include(<sys/wait.h>)
+			template<std::invocable InvocableType>
+			class OperandAbort : public Operand
+			{
+			public:
+				using invocable_type = InvocableType;
+
+			private:
+				bool aborted_;
+
+			public:
+				constexpr explicit(false) OperandAbort(const InvocableType& invocable) noexcept
+					: aborted_{
+							  [&invocable]
+							  {
+								  if (const auto pid = fork();
+									  not pid)
+								  {
+									  std::invoke(invocable);
+									  std::exit(0);
+								  }
+
+								  int exit_status = 0;
+								  wait(&exit_status);
+								  return exit_status;
+							  }()}
+				{
+				}
+
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return aborted_; }
+
+				[[nodiscard]] constexpr static auto to_string() noexcept -> std::string_view { return "aborts"; }
+			};
+			#endif
+		}// namespace operand
+
+		class Reporter
+		{
+			struct hasher
+			{
+				using is_transparent = int;
+
+				[[nodiscard]] auto operator()(const std::string& string) const noexcept -> std::size_t { return std::hash<std::string>{}(string); }
+
+				[[nodiscard]] auto operator()(const std::string_view& string) const noexcept -> std::size_t { return std::hash<std::string_view>{}(string); }
+			};
+
+			template<typename T>
+			class Stack
+			{
+				using container_type = std::vector<T>;
+
+			public:
+				using value_type = typename container_type::value_type;
+				using allocator_type = typename container_type::allocator_type;
+				using pointer = typename container_type::pointer;
+				using const_pointer = typename container_type::const_pointer;
+				using reference = typename container_type::reference;
+				using const_reference = typename container_type::const_reference;
+				using size_type = typename container_type::size_type;
+				using difference_type = typename container_type::difference_type;
+				using iterator = typename container_type::iterator;
+				using const_iterator = typename container_type::const_iterator;
+				using reverse_iterator = typename container_type::reverse_iterator;
+				using const_reverse_iterator = typename container_type::const_reverse_iterator;
+
+			private:
+				container_type data_;
+
+			public:
+				template<typename... Args>
+				constexpr auto emplace(Args&&... args) noexcept -> decltype(auto)//
+					requires requires { data_.emplace_back(std::forward<Args>(args)...); } { return data_.emplace_back(std::forward<Args>(args)...); }
+
+				[[nodiscard]] constexpr auto top() const noexcept -> decltype(auto) { return data_.back(); }
+
+				[[nodiscard]] constexpr auto pop() noexcept -> decltype(auto) { return data_.pop_back(); }
+
+				[[nodiscard]] constexpr auto size() const noexcept -> decltype(auto) { return data_.size(); }
+
+				[[nodiscard]] constexpr auto empty() const noexcept -> decltype(auto) { return data_.empty(); }
+
+				[[nodiscard]] constexpr auto begin() const noexcept -> decltype(auto) { return data_.begin(); }
+
+				[[nodiscard]] constexpr auto end() const noexcept -> decltype(auto) { return data_.end(); }
+			};
+
+		public:
+			template<typename V>
+			using map_type = std::unordered_map<std::string, V, hasher, std::equal_to<>>;
+
+			using clock_type = std::chrono::high_resolution_clock;
+			using time_point_type = clock_type::time_point;
+			using time_difference_type = std::chrono::milliseconds;
+
+			using color_type = prometheus::test::color_type;
+
+			constexpr static std::string_view anonymous_suite_name{"anonymous_suite"};
+			constexpr static std::string_view anonymous_test_name{"anonymous_test"};
+
+			struct result_type
+			{
+				enum class Status
+				{
+					PENDING,
+
+					PASSED,
+					FAILED,
+					SKIPPED,
+					FATAL,
+				};
+
+				result_type* parent = nullptr;
+				std::string  suite_name;
+				std::string  test_name;
+
+				Status                                 status                  = Status::PENDING;
+				time_point_type                        time_start              = clock_type::now();
+				time_point_type                        time_end                = clock_type::now();
+				std::size_t                            total_tests_failed      = 0;
+				std::size_t                            total_tests_passed      = 0;
+				std::size_t                            total_tests_skipped     = 0;
+				std::size_t                            total_assertions_passed = 0;
+				std::size_t                            total_assertions_failed = 0;
+				std::string                            report_string;
+				map_type<std::unique_ptr<result_type>> nested_result;
+
+				constexpr auto operator+=(const result_type& other) noexcept -> result_type&
+				{
+					total_tests_failed += other.total_tests_failed + 1;
+					total_assertions_passed += other.total_assertions_passed;
+					total_tests_passed += other.total_tests_passed;
+					total_tests_skipped += other.total_tests_skipped;
+					total_assertions_failed += other.total_assertions_failed;
+
+					return *this;
+				}
+			};
+
+		private:
+			map_type<result_type>   results_;
+			std::string_view        active_suite_;
+			result_type*            active_scope_;
+			Stack<std::string_view> active_test_;
+
+			// fixme
+			// mutable std::ostream    out_;
+			// mutable std::streambuf* out_saved_;
+			std::ostream& out_;
+
+			color_type color_;
+
+			enum class ReportType
+			{
+				ALWAYS,
+				NONE,
+
+				FAILED_ONLY,
+			};
+
+			ReportType report_type_scope_;
+			ReportType report_type_assertion_;
+
+			// Allow users to use `expect` outside of `"xxx"_test`
+			bool in_anonymous_test_;
+
+			[[nodiscard]] auto get_test_full_name() const noexcept -> std::string
+			{
+				std::string result;
+
+				std::format_to(std::back_inserter(result), "[{}] ", active_suite_);
+
+				std::ranges::for_each(
+						active_test_,
+						[&result, first = true](const auto& sv) mutable noexcept -> void
+						{
+							result.append(first ? "" : ".");
+							first = false;
+
+							result.append_range(sv);
+						});
+				return result;
 			}
 
-			throw std::logic_error{
-					std::format(
-							"{} returned from test w/o signaling: not popping because `{}` differs from `{}`",
-							// infrastructure::compiler::type_name<Executor>(),
-							"Executor",
-							active_test_.top(),
-							test_name)};
-		}
+			[[nodiscard]] auto get_duration_milliseconds() const noexcept -> clock_type::rep
+			{
+				active_scope_->time_end = clock_type::now();
+				return std::chrono::duration_cast<time_difference_type>(
+								active_scope_->time_end - active_scope_->time_start)
+						.count();
+			}
 
-		auto scope_clear() -> void
-		{
-			while (not active_test_.empty())
+			auto scope_push(const std::string_view test_name) -> void
+			{
+				std::string test_name_s{test_name};
+
+				const auto [it, inserted] = active_scope_->nested_result.try_emplace(
+						test_name_s,
+						std::make_unique<result_type>(
+								// parent
+								active_scope_,
+								// suite_name
+								std::string{active_suite_},
+								// test_name
+								test_name_s));
+
+				active_test_.emplace(it->first);
+				active_scope_ = it->second.get();
+
+				if (not inserted)
+				[[unlikely]]
+				{
+					std::cerr << std::format(
+							"{}WARNING{}: test `{}` for test suite `{}` already present.\n",
+							color_.fail,
+							color_.none,
+							test_name_s,
+							active_suite_);
+				}
+			}
+
+			auto scope_pop(const std::string_view test_name) -> void
 			{
 				if (active_scope_->total_tests_skipped)
 				[[unlikely]]
@@ -1758,660 +1730,787 @@ namespace gal::prometheus::test
 								: result_type::Status::PASSED;
 				}
 
-				active_test_.pop();
-				const auto* old_scope = active_scope_;
-				if (active_scope_->parent) { active_scope_ = active_scope_->parent; }
-				else
+				if (active_test_.top() == test_name)
+				[[likely]]
 				{
-					const auto scope_it = results_.find(global_scope_name);
-					GAL_PROMETHEUS_DEBUG_ASSUME(scope_it != results_.end());
-					active_scope_ = std::addressof(scope_it->second);
+					active_test_.pop();
+					const auto* old_scope = active_scope_;
+					if (active_scope_->parent) { active_scope_ = active_scope_->parent; }
+					else
+					{
+						const auto scope_it = results_.find(anonymous_suite_name);
+						GAL_PROMETHEUS_DEBUG_ASSUME(scope_it != results_.end());
+						active_scope_ = std::addressof(scope_it->second);
+					}
+
+					*active_scope_ += *old_scope;
+					return;
 				}
 
-				*active_scope_ += *old_scope;
+				throw std::logic_error{
+						std::format(
+								"{} returned from test w/o signaling: not popping because `{}` differs from `{}`",
+								infrastructure::compiler::type_name<Executor<Reporter>>(),
+								active_test_.top(),
+								test_name)};
 			}
-		}
 
-		auto bump_report_message(const bool force = false) const -> void
-		{
-			// Output all information at once only at the end of the outermost (at the top-level of suite) test.
-			if (active_test_.size() == 1 or force)
+			auto scope_clear() -> void
 			{
-				const auto           do_bump = infrastructure::functor::y_combinator{
-						[this](auto& self, const result_type& result) -> void
-						{
-							out_ << result.report_string;
+				while (not active_test_.empty())
+				{
+					if (active_scope_->total_tests_skipped)
+					[[unlikely]]
+					{
+						active_scope_->status = result_type::Status::SKIPPED;
+					}
+					else
+					{
+						active_scope_->status =
+								active_scope_->total_assertions_failed > 0
+									? result_type::Status::FAILED
+									: result_type::Status::PASSED;
+					}
 
-							if (not silence_scope_)
-							[[unlikely]]
+					active_test_.pop();
+					const auto* old_scope = active_scope_;
+					if (active_scope_->parent) { active_scope_ = active_scope_->parent; }
+					else
+					{
+						const auto scope_it = results_.find(anonymous_suite_name);
+						GAL_PROMETHEUS_DEBUG_ASSUME(scope_it != results_.end());
+						active_scope_ = std::addressof(scope_it->second);
+					}
+
+					*active_scope_ += *old_scope;
+				}
+			}
+
+			auto bump_report_message(const bool force = false) const -> void
+			{
+				// Output all information at once only at the end of the outermost (at the top-level of suite) test.
+				if (active_test_.size() == 1 or force)
+				{
+					const auto           do_bump = infrastructure::functor::y_combinator{
+							[this](auto& self, const result_type& result) -> void
 							{
-								std::ranges::for_each(
-										result.nested_result,
-										[this, &self](const auto& pair) -> void
-										{
-											const auto& [name, nested_result] = pair;
+								out_ << result.report_string;
 
-											self(*nested_result);
-										});
-							}
-						}};
+								// todo
+								// if (
+								// 	// 1. if a fatal error is encountered, the message is still output even if it is run silently
+								// 	active_scope_->status == result_type::Status::FATAL
+								// 	or
+								// 	// 2. if just ignore the pass assertion, then output then message whenever it fails
+								// 	(report_type_scope_ == ReportType::FAILED_ONLY and active_scope_->status == result_type::Status::FAILED)
+								// )
+								{
+									std::ranges::for_each(
+											result.nested_result,
+											[this, &self](const auto& pair) -> void
+											{
+												const auto& [name, nested_result] = pair;
 
-				do_bump(*active_scope_);
+												self(*nested_result);
+											});
+								}
+							}};
 
-				std::string result_message;
-				if (active_scope_->status == result_type::Status::FAILED)
+					do_bump(*active_scope_);
+
+					std::string result_message;
+					if (active_scope_->status == result_type::Status::FAILED)
+					[[unlikely]]
+					{
+						active_scope_->total_tests_passed += 1;
+
+						result_message = std::format(
+								"{:{}}{}FAILED{} after {} milliseconds.\n",
+								"",
+								(active_test_.size() - 1) * 2,
+								color_.fail,
+								color_.none,
+								get_duration_milliseconds());
+					}
+					else if (active_scope_->status == result_type::Status::SKIPPED)
+					{
+						active_scope_->total_tests_skipped += 1;
+
+						std::format_to(
+								std::back_inserter(active_scope_->report_string),
+								"{:{}}{}SKIPPED{}\n",
+								"",
+								(active_test_.size() - 1) * 2,
+								color_.skip,
+								color_.none);
+					}
+					else
+					{
+						active_scope_->total_tests_passed += 1;
+
+						result_message = std::format(
+								"{:{}}{}PASSED{} after {} milliseconds.\n",
+								"",
+								(active_test_.size() - 1) * 2,
+								color_.pass,
+								color_.none,
+								get_duration_milliseconds());
+					}
+
+					active_scope_->report_string += result_message;
+					out_ << result_message;
+				}
+			}
+
+		public:
+			// Reporter(const Reporter& other)                        = delete;
+			// Reporter(Reporter&& other) noexcept                    = delete;
+			// auto operator=(const Reporter& other) -> Reporter&     = delete;
+			// auto operator=(Reporter&& other) noexcept -> Reporter& = delete;
+
+			explicit Reporter(const color_type& color = {})
+				: active_suite_{anonymous_suite_name},
+				  active_scope_{
+						  std::addressof(results_.emplace(std::string{anonymous_suite_name}, result_type{}).first->second)},
+				  // out_{std::cout.rdbuf()},
+				  // out_saved_{std::cout.rdbuf()}
+				  out_{std::cout},
+				  color_{color},
+				  report_type_scope_{ReportType::ALWAYS},
+				  report_type_assertion_{ReportType::ALWAYS},
+				  in_anonymous_test_{false}
+			{
+				// todo: parse command line option
+			}
+
+			// ~Reporter() noexcept(noexcept(out_.rdbuf(out_saved_))) { out_.rdbuf(out_saved_); }
+
+			// The name of the currently executing suite
+			[[nodiscard]] constexpr auto suite_name() const noexcept -> std::string_view { return active_suite_; }
+
+			// Whether the current suite is 'global' or not.
+			[[nodiscard]] constexpr auto suite_is_global() const noexcept -> bool { return suite_name() == anonymous_suite_name; }
+
+			// Can the currently executing test continue? (i.e. no fatal test case is executed)
+			[[nodiscard]] constexpr auto test_corrupted() const noexcept -> bool { return active_scope_->status == result_type::Status::FATAL; }
+
+			[[nodiscard]] auto result(const std::string_view name) const -> const result_type&
+			{
+				const auto it = results_.find(name);
+				if (it == results_.end())
 				[[unlikely]]
 				{
-					active_scope_->total_tests_passed += 1;
-
-					result_message = std::format(
-							"{:{}}{}FAILED{} after {} milliseconds.\n",
-							"",
-							(active_test_.size() - 1) * 2,
-							color_.fail,
-							color_.none,
-							get_duration_milliseconds());
+					throw std::out_of_range{
+							std::format(
+									"Top level test {}{}{} not exists",
+									color_.test,
+									name,
+									color_.none)};
 				}
-				else if (active_scope_->status == result_type::Status::SKIPPED)
+				return it->second;
+			}
+
+			[[nodiscard]] auto results() const & noexcept -> const map_type<result_type>& { return results_; }
+
+			[[nodiscard]] auto results() && noexcept -> map_type<result_type>&& { return std::move(results_); }
+
+			auto on(const events::EventSuiteBegin& suite_begin) -> void
+			{
+				if (in_anonymous_test_)
+				[[unlikely]]
 				{
-					active_scope_->total_tests_skipped += 1;
+					on(events::EventTestEnd{.name = anonymous_test_name});
+					in_anonymous_test_ = false;
+				}
+
+				scope_clear();
+
+				auto& [name, scope] = *results_.emplace(std::string{suite_begin.name}, result_type{}).first;
+
+				active_suite_ = name;
+				active_scope_ = std::addressof(scope);
+
+				out_ << std::format(
+						"Executing suite {}{}{} vvv\n",
+						color_.suite,
+						active_suite_,
+						color_.none);
+			}
+
+			auto on([[maybe_unused]] const events::EventSuiteEnd& suite_end) -> void
+			{
+				out_ << std::format(
+						"^^^ End of suite {}{}{} execution\n\n",
+						color_.suite,
+						active_suite_,
+						color_.none);
+
+				scope_clear();
+
+				auto it = results_.find(anonymous_suite_name);
+				GAL_PROMETHEUS_DEBUG_ASSUME(it != results_.end());
+				auto& [name, scope] = *it;
+
+				active_suite_ = name;
+				active_scope_ = std::addressof(scope);
+			}
+
+			auto on(const events::EventTestBegin& test_begin) -> void
+			{
+				if (in_anonymous_test_)
+				[[unlikely]]
+				{
+					on(events::EventTestEnd{.name = anonymous_test_name});
+					in_anonymous_test_ = false;
+				}
+
+				scope_push(test_begin.name);
+
+				std::format_to(
+						std::back_inserter(active_scope_->report_string),
+						"{:{}}Running{} test {}{}{}...\n",
+						"",
+						(active_test_.size() - 1) * 2,
+						active_test_.size() == 1 ? "" : " nested",
+						color_.test,
+						get_test_full_name(),
+						color_.none);
+			}
+
+			auto on(const events::EventTestSkip& test_skip) -> void
+			{
+				if (not active_scope_->nested_result.contains(test_skip.name))
+				[[likely]]
+				{
+					on(events::EventTestBegin{.name = test_skip.name});
+
+					active_scope_->status = result_type::Status::SKIPPED;
+
+					on(events::EventTestEnd{.name = test_skip.name});
+				}
+			}
+
+			auto on(const events::EventTestEnd& test_end) -> void
+			{
+				bump_report_message();
+				scope_pop(test_end.name);
+			}
+
+			template<bool Scope>
+			auto on(const events::EventSilenceBegin&) -> void
+			{
+				if constexpr (Scope) { report_type_scope_ = ReportType::NONE; }
+				else { report_type_assertion_ = ReportType::NONE; }
+			}
+
+			template<bool Scope>
+			auto on(const events::EventSilenceEnd&) -> void
+			{
+				if constexpr (Scope) { report_type_scope_ = ReportType::ALWAYS; }
+				else { report_type_assertion_ = ReportType::ALWAYS; }
+			}
+
+			template<bool Scope>
+			auto on(const events::EventIgnorePassBegin&) -> void
+			{
+				if constexpr (Scope) { report_type_scope_ = ReportType::FAILED_ONLY; }
+				else { report_type_assertion_ = ReportType::FAILED_ONLY; }
+			}
+
+			template<bool Scope>
+			auto on(const events::EventIgnorePassEnd&) -> void
+			{
+				if constexpr (Scope) { report_type_scope_ = ReportType::ALWAYS; }
+				else { report_type_assertion_ = ReportType::ALWAYS; }
+			}
+
+			template<operand::expression_t Expression>
+			auto on(const events::EventAssertionPass<Expression>& assertion_pass) -> void
+			{
+				if (report_type_assertion_ == ReportType::ALWAYS)
+				{
+					if (active_test_.empty())
+					{
+						// Add a dummy test in advance to allow users to use `expect` outside of `"xxx"_test`.
+						// Since we use `(active_test_.size() - 1) * 2` to indent, we need a dummy test here to take up space.
+						on(events::EventTestBegin{.name = anonymous_test_name});
+						in_anonymous_test_ = true;
+					}
 
 					std::format_to(
 							std::back_inserter(active_scope_->report_string),
-							"{:{}}{}SKIPPED{}\n",
+							"{:{}}[{}:{}] {}[{}]{} - {}PASSED{} \n",
 							"",
 							(active_test_.size() - 1) * 2,
-							color_.skip,
+							assertion_pass.location.file_name(),
+							assertion_pass.location.line(),
+							color_.expression,
+							operand::expression_to_string(assertion_pass.expression),
+							color_.none,
+							color_.pass,
 							color_.none);
+				}
+
+				active_scope_->total_assertions_passed += 1;
+			}
+
+			template<operand::expression_t Expression>
+			auto on(const events::EventAssertionFail<Expression>& assertion_fail) -> void
+			{
+				if (report_type_assertion_ != ReportType::NONE)
+				{
+					std::format_to(
+							std::back_inserter(active_scope_->report_string),
+							"{:{}}[{}:{}] {}[{}]{} - {}FAILED{} \n",
+							"",
+							(active_test_.size() - 1) * 2,
+							assertion_fail.location.file_name(),
+							assertion_fail.location.line(),
+							color_.expression,
+							operand::expression_to_string(assertion_fail.expression),
+							color_.none,
+							color_.fail,
+							color_.none);
+				}
+
+				active_scope_->total_assertions_failed += 1;
+
+				if (prometheus::test::config::fast_fail or active_scope_->total_assertions_failed > prometheus::test::config::abort_after_n_failures)
+				[[unlikely]]
+				{
+					bump_report_message(true);
+					std::cerr << std::format(
+							"{}fast fail for test {} after {} failures total.{}\n",
+							color_.fail,
+							get_test_full_name(),
+							active_scope_->total_assertions_failed,
+							color_.none);
+					std::exit(-1);
+				}
+			}
+
+			auto on(const events::EventAssertionFatal& assertion_fatal) const -> void
+			{
+				if (report_type_assertion_ != ReportType::NONE)
+				{
+					std::format_to(
+							std::back_inserter(active_scope_->report_string),
+							"{:{}}^^^ {}FATAL ERROR{}\n",
+							"",
+							(active_test_.size() - 1) * 2 + (
+								// '['
+								1 +
+								// file_name
+								std::string_view::traits_type::length(assertion_fatal.location.file_name())) +
+							// ':'
+							1 +
+							// line
+							[]<typename T>(T line)
+							{
+								T result = 0;
+								while (line)
+								{
+									result += 1;
+									line /= 10;
+								}
+								return result;
+							}(assertion_fatal.location.line()) +
+							// "] ["
+							3,
+							color_.fatal,
+							color_.none);
+				}
+
+				active_scope_->total_assertions_failed += 1;
+				active_scope_->status = result_type::Status::FATAL;
+			}
+
+			template<operand::expression_t Expression>
+			auto on(const events::EventAssertionFatalSkip<Expression>& assertion_fatal_skip) -> void
+			{
+				// fixme: Output only when ReportType::ALWAYS or as long as it is not ReportType::NONE?
+				// If the expression is only output when ReportType::ALWAYS, the expression modified by ignore_pass will not be output.
+				if (report_type_assertion_ != ReportType::NONE)
+				{
+					std::format_to(
+							std::back_inserter(active_scope_->report_string),
+							"{:{}}[{}:{}] {}[{}]{} - {}SKIPPED{} \n",
+							"",
+							(active_test_.size() - 1) * 2,
+							assertion_fatal_skip.location.file_name(),
+							assertion_fatal_skip.location.line(),
+							color_.expression,
+							operand::expression_to_string(assertion_fatal_skip.expression),
+							color_.none,
+							color_.fatal,
+							color_.none);
+				}
+
+				active_scope_->total_assertions_failed += 1;
+			}
+
+			template<typename MessageType>
+			auto on(const events::EventLog<MessageType>& log) -> void
+			{
+				if (log.message == std::string_view{"\n"})
+				[[unlikely]]
+				{
+					active_scope_->report_string.push_back('\n');
+					return;
+				}
+
+				// pop '\n'
+				active_scope_->report_string.pop_back();
+
+				if (log.message == std::string_view{" "})
+				[[unlikely]]
+				{
+					active_scope_->report_string.push_back(' ');
 				}
 				else
 				{
-					active_scope_->total_tests_passed += 1;
-
-					result_message = std::format(
-							"{:{}}{}PASSED{} after {} milliseconds.\n",
-							"",
-							(active_test_.size() - 1) * 2,
-							color_.pass,
-							color_.none,
-							get_duration_milliseconds());
+					active_scope_->report_string.append(color_.expression);
+					active_scope_->report_string.append_range(log.message);
+					active_scope_->report_string.append(color_.none);
 				}
 
-				active_scope_->report_string += result_message;
-				out_ << result_message;
+				// push '\n'
+				active_scope_->report_string.push_back('\n');
 			}
-		}
 
-	public:
-		// Reporter(const Reporter& other)                        = delete;
-		// Reporter(Reporter&& other) noexcept                    = delete;
-		// auto operator=(const Reporter& other) -> Reporter&     = delete;
-		// auto operator=(Reporter&& other) noexcept -> Reporter& = delete;
-
-		explicit Reporter()
-			: active_suite_{global_scope_name},
-			active_scope_{
-					std::addressof(results_.emplace(std::string{global_scope_name}, result_type{}).first->second)},
-			// out_{std::cout.rdbuf()},
-			// out_saved_{std::cout.rdbuf()}
-			out_{std::cout},
-			silence_scope_{false},
-			silence_assertion_{false}
-		{
-			// todo: parse command line option
-		}
-
-		// ~Reporter() noexcept(noexcept(out_.rdbuf(out_saved_))) { out_.rdbuf(out_saved_); }
-
-		// The name of the currently executing suite
-		[[nodiscard]] constexpr auto suite_name() const noexcept -> std::string_view { return active_suite_; }
-
-		// Whether the current suite is 'global' or not.
-		[[nodiscard]] constexpr auto suite_is_global() const noexcept -> bool { return suite_name() == global_scope_name; }
-
-		// Can the currently executing test continue? (i.e. no fatal test case is executed)
-		[[nodiscard]] constexpr auto test_corrupted() const noexcept -> bool { return active_scope_->status == result_type::Status::FATAL; }
-
-		[[nodiscard]] auto result(const std::string_view name) const -> const result_type&
-		{
-			const auto it = results_.find(name);
-			if (it == results_.end())
-			[[unlikely]]
+			[[noreturn]] auto on(const events::EventException& exception) -> void
 			{
-				throw std::out_of_range{
-						std::format(
-								"Top level test {}{}{} not exists",
-								color_.test,
-								name,
-								color_.none)};
-			}
-			return it->second;
-		}
+				on(events::EventTestEnd{.name = active_scope_->test_name});
 
-		[[nodiscard]] auto results() const & noexcept -> const map_type<result_type>& { return results_; }
-
-		[[nodiscard]] auto results() && noexcept -> map_type<result_type>&& { return std::move(results_); }
-
-		auto on(const events::EventSuiteBegin& suite_begin) -> void
-		{
-			scope_clear();
-
-			auto& [name, scope] = *results_.emplace(std::string{suite_begin.name}, result_type{}).first;
-
-			active_suite_ = name;
-			active_scope_ = std::addressof(scope);
-
-			out_ << std::format(
-					"Executing suite {}{}{} vvv\n",
-					color_.suite,
-					active_suite_,
-					color_.none);
-		}
-
-		auto on([[maybe_unused]] const events::EventSuiteEnd& suite_end) -> void
-		{
-			out_ << std::format(
-					"^^^ End of suite {}{}{} execution\n\n",
-					color_.suite,
-					active_suite_,
-					color_.none);
-
-			scope_clear();
-
-			auto it = results_.find(global_scope_name);
-			GAL_PROMETHEUS_DEBUG_ASSUME(it != results_.end());
-			auto& [name, scope] = *it;
-
-			active_suite_ = name;
-			active_scope_ = std::addressof(scope);
-		}
-
-		auto on(const events::EventTestBegin& test_begin) -> void
-		{
-			scope_push(test_begin.name);
-
-			std::format_to(
-					std::back_inserter(active_scope_->report_string),
-					"{:{}}Running{} test {}{}{}...\n",
-					"",
-					(active_test_.size() - 1) * 2,
-					active_test_.size() == 1 ? "" : " nested",
-					color_.test,
-					get_test_full_name(),
-					color_.none);
-		}
-
-		auto on(const events::EventTestSkip& test_skip) -> void
-		{
-			if (not active_scope_->nested_result.contains(test_skip.name))
-			[[likely]]
-			{
-				on(events::EventTestBegin{.name = test_skip.name});
-
-				active_scope_->status = result_type::Status::SKIPPED;
-
-				on(events::EventTestEnd{.name = test_skip.name});
-			}
-		}
-
-		auto on(const events::EventTestEnd& test_end) -> void
-		{
-			bump_report_message();
-			scope_pop(test_end.name);
-		}
-
-		template<bool Scope>
-		auto on(const events::EventSilenceBegin&) -> void
-		{
-			if constexpr (Scope) { silence_scope_ = true; }
-			else { silence_assertion_ = true; }
-		}
-
-		template<bool Scope>
-		auto on(const events::EventSilenceEnd&) -> void
-		{
-			if constexpr (Scope) { silence_scope_ = false; }
-			else { silence_assertion_ = false; }
-		}
-
-		template<operand::expression_t Expression>
-		auto on(const events::EventAssertionPass<Expression>& assertion_pass) -> void
-		{
-			if (not silence_assertion_)
-			[[unlikely]]
-			{
 				std::format_to(
 						std::back_inserter(active_scope_->report_string),
-						"{:{}}[{}:{}] {}[{}]{} - {}PASSED{} \n",
-						"",
-						(active_test_.size() - 1) * 2,
-						assertion_pass.location.file_name(),
-						assertion_pass.location.line(),
-						color_.expression,
-						operand::expression_to_string(assertion_pass.expression),
-						color_.none,
-						color_.pass,
-						color_.none);
-			}
-
-			active_scope_->total_assertions_passed += 1;
-		}
-
-		template<operand::expression_t Expression>
-		auto on(const events::EventAssertionFail<Expression>& assertion_fail) -> void
-		{
-			if (not silence_assertion_)
-			[[unlikely]]
-			{
-				std::format_to(
-						std::back_inserter(active_scope_->report_string),
-						"{:{}}[{}:{}] {}[{}]{} - {}FAILED{} \n",
-						"",
-						(active_test_.size() - 1) * 2,
-						assertion_fail.location.file_name(),
-						assertion_fail.location.line(),
-						color_.expression,
-						operand::expression_to_string(assertion_fail.expression),
-						color_.none,
+						"{}Abort test because unexpected exception with message: {}{}\n",
 						color_.fail,
+						exception.what(),
 						color_.none);
-			}
 
-			active_scope_->total_assertions_failed += 1;
+				out_ << active_scope_->report_string;
 
-			if (config::fast_fail or active_scope_->total_assertions_failed > config::abort_after_n_failures)
-			[[unlikely]]
-			{
-				bump_report_message(true);
+				// fast fail
 				std::cerr << std::format(
-						"{}fast fail for test {} after {} failures total.{}\n",
-						color_.fail,
-						get_test_full_name(),
-						active_scope_->total_assertions_failed,
-						color_.none);
+						"early abort for test {}{}{} after {} failures total.\n",
+						color_.test,
+						active_test_.top(),
+						color_.none,
+						active_scope_->total_assertions_failed);
 				std::exit(-1);
 			}
-		}
 
-		auto on(const events::EventAssertionFatal& assertion_fatal) const -> void
-		{
-			if (not silence_assertion_)
-			[[unlikely]]
+			auto on([[maybe_unused]] const events::EventSummary& summary) -> void
 			{
-				std::format_to(
-						std::back_inserter(active_scope_->report_string),
-						"{:{}}^^^ {}FATAL ERROR{}\n",
-						"",
-						(active_test_.size() - 1) * 2 + (
-							// '['
-							1 +
-							// file_name
-							std::string_view::traits_type::length(assertion_fatal.location.file_name())) +
-						// ':'
-						1 +
-						// line
-						[]<typename T>(T line)
+				std::ranges::for_each(
+						results_,
+						[color = color_, &out = out_](
+						const auto& name_result_pair) -> void
 						{
-							T result = 0;
-							while (line)
+							if (const auto& [name, result] = name_result_pair;
+								result.total_assertions_failed)
 							{
-								result += 1;
-								line /= 10;
+								out << std::format(
+												"\n==========================================\n"
+												"Suite {}{}{}\n"
+												"tests {} | {} {}failed({:.6g}%){}\n"
+												"assertions {} | {} {}passed({:.6g}%){} | {} {}failed({:.6g}%){}"
+												"\n==========================================\n",
+												color.suite,
+												name,
+												color.none,
+												//
+												result.total_tests_passed + result.total_tests_failed,
+												result.total_tests_passed,
+												color.fail,
+												static_cast<double>(result.total_tests_passed) / static_cast<double>(result.total_tests_passed + result.total_tests_failed) * 100.0,
+												color.none,
+												//
+												result.total_assertions_passed + result.total_assertions_failed,
+												result.total_assertions_passed,
+												color.pass,
+												static_cast<double>(result.total_assertions_passed) /
+												static_cast<
+													double>(result.total_assertions_passed + result.total_assertions_failed) *
+												100.0,
+												color.none,
+												//
+												result.total_assertions_failed,
+												color.fail,
+												static_cast<double>(result.total_assertions_failed) / static_cast<double>(result.total_assertions_passed + result.total_assertions_failed) * 100.0,
+												color.none)
+										<< std::endl;
 							}
-							return result;
-						}(assertion_fatal.location.line()) +
-						// "] ["
-						3,
-						color_.fatal,
-						color_.none);
+							else
+							{
+								out << std::format(
+												"\n==========================================\n"
+												"Suite {}{}{} -> all tests passed({} asserts in {} tests), {} tests skipped."
+												"\n==========================================\n",
+												color.suite,
+												name,
+												color.none,
+												result.total_assertions_passed,
+												result.total_tests_passed,
+												result.total_tests_skipped)
+										<< std::endl;
+							}
+						});
 			}
+		};
 
-			active_scope_->total_assertions_failed += 1;
-			active_scope_->status = result_type::Status::FATAL;
-		}
-
-		template<operand::expression_t Expression>
-		auto on([[maybe_unused]] const events::EventAssertionFatalSkip<Expression>& assertion_fatal_skip) -> void
+		template<typename ReporterType>
+		class Executor
 		{
-			if (not silence_assertion_)
-			[[unlikely]]
+		public:
+			using reporter_type = ReporterType;
+
+			using suite_type = events::EventSuite;
+
+			using suite_list_type = std::vector<suite_type>;
+			using suite_list_size_type = suite_list_type::size_type;
+
+			using nested_test_path_type = std::array<std::string_view, 16>;
+			using nested_test_path_size_type = nested_test_path_type::size_type;
+
+		private:
+			reporter_type reporter_;
+
+			suite_list_type suites_;
+
+			// todo: Allows users to set which tests need to be executed.
+			categories_type categories_should_run_;
+
+			std::size_t fails_;
+			bool        finished_;
+			bool        dry_run_;
+
+			constexpr auto run(const bool report_summary_required = false) noexcept -> bool try
 			{
-				std::format_to(
-						std::back_inserter(active_scope_->report_string),
-						"{:{}}[{}:{}] {}[{}]{} - {}SKIPPED{} \n",
-						"",
-						(active_test_.size() - 1) * 2,
-						assertion_fatal_skip.location.file_name(),
-						assertion_fatal_skip.location.line(),
-						color_.expression,
-						operand::expression_to_string(assertion_fatal_skip.expression),
-						color_.none,
-						color_.fatal,
-						color_.none);
-			}
-
-			active_scope_->total_assertions_failed += 1;
-		}
-
-		template<typename MessageType>
-		auto on(const events::EventLog<MessageType>& log) -> void
-		{
-			if (log.message == std::string_view{"\n"})
-			[[unlikely]]
-			{
-				active_scope_->report_string.push_back('\n');
-				return;
-			}
-
-			// pop '\n'
-			active_scope_->report_string.pop_back();
-
-			if (log.message == std::string_view{" "})
-			[[unlikely]]
-			{
-				active_scope_->report_string.push_back(' ');
-			}
-			else
-			{
-				active_scope_->report_string.append(color_.expression);
-				active_scope_->report_string.append_range(log.message);
-				active_scope_->report_string.append(color_.none);
-			}
-
-			// push '\n'
-			active_scope_->report_string.push_back('\n');
-		}
-
-		[[noreturn]] auto on(const events::EventException& exception) -> void
-		{
-			on(events::EventTestEnd{.name = active_scope_->test_name});
-
-			std::format_to(
-					std::back_inserter(active_scope_->report_string),
-					"{}Abort test because unexpected exception with message: {}{}\n",
-					color_.fail,
-					exception.what(),
-					color_.none);
-
-			out_ << active_scope_->report_string;
-
-			// fast fail
-			std::cerr << std::format(
-					"early abort for test {}{}{} after {} failures total.\n",
-					color_.test,
-					active_test_.top(),
-					color_.none,
-					active_scope_->total_assertions_failed);
-			std::exit(-1);
-		}
-
-		auto on([[maybe_unused]] const events::EventSummary& summary) -> void
-		{
-			std::ranges::for_each(
-					results_,
-					[color = color_, &out = out_](
-					const auto& name_result_pair) -> void
-					{
-						if (const auto& [name, result] = name_result_pair;
-							result.total_assertions_failed)
+				// todo: Allow users to filter which suites need to be executed (via suite_name)
+				std::ranges::for_each(
+						suites_,
+						[this](const suite_type& suite) -> void
 						{
-							out << std::format(
-											"\n==========================================\n"
-											"Suite {}{}{}\n"
-											"tests {} | {} {}failed({:.6g}%){}\n"
-											"assertions {} | {} {}passed({:.6g}%){} | {} {}failed({:.6g}%){}"
-											"\n==========================================\n",
-											color.suite,
-											name,
-											color.none,
-											//
-											result.total_tests_passed + result.total_tests_failed,
-											result.total_tests_passed,
-											color.fail,
-											static_cast<double>(result.total_tests_passed) / static_cast<double>(result.total_tests_passed + result.total_tests_failed) * 100.0,
-											color.none,
-											//
-											result.total_assertions_passed + result.total_assertions_failed,
-											result.total_assertions_passed,
-											color.pass,
-											static_cast<double>(result.total_assertions_passed) /
-											static_cast<
-												double>(result.total_assertions_passed + result.total_assertions_failed) *
-											100.0,
-											color.none,
-											//
-											result.total_assertions_failed,
-											color.fail,
-											static_cast<double>(result.total_assertions_failed) / static_cast<double>(result.total_assertions_passed + result.total_assertions_failed) * 100.0,
-											color.none)
-									<< std::endl;
-						}
-						else
-						{
-							out << std::format(
-											"\n==========================================\n"
-											"Suite {}{}{} -> all tests passed({} asserts in {} tests), {} tests skipped."
-											"\n==========================================\n",
-											color.suite,
-											name,
-											color.none,
-											result.total_assertions_passed,
-											result.total_tests_passed,
-											result.total_tests_skipped)
-									<< std::endl;
-						}
-					});
-		}
-	};
+							reporter_.on(suite.operator events::EventSuiteBegin());
 
-	template<typename ReporterType>
-	class Executor
-	{
-	public:
-		using reporter_type = ReporterType;
+							std::invoke(suite);
 
-		using suite_type = events::EventSuite;
+							reporter_.on(suite.operator events::EventSuiteEnd());
+						});
 
-		using suite_list_type = std::vector<suite_type>;
-		using suite_list_size_type = suite_list_type::size_type;
+				suites_.clear();
 
-		using nested_test_path_type = std::array<std::string_view, 16>;
-		using nested_test_path_size_type = nested_test_path_type::size_type;
+				if (report_summary_required) { report_summary(); }
 
-	private:
-		reporter_type reporter_;
-
-		suite_list_type suites_;
-
-		// todo: Allows users to set which tests need to be executed.
-		categories_type categories_should_run_;
-
-		std::size_t fails_;
-		bool        finished_;
-		bool        dry_run_;
-
-		constexpr auto run(const bool report_summary_required = false) noexcept -> bool try
-		{
-			// todo: Allow users to filter which suites need to be executed (via suite_name)
-			std::ranges::for_each(
-					suites_,
-					[this](const suite_type& suite) -> void
-					{
-						reporter_.on(suite.operator events::EventSuiteBegin());
-
-						std::invoke(suite);
-
-						reporter_.on(suite.operator events::EventSuiteEnd());
-					});
-
-			suites_.clear();
-
-			if (report_summary_required) { report_summary(); }
-
-			finished_ = true;
-			return fails_ != 0;
-		}
-		catch (...)
-		{
-			std::cerr << "Unhandled exception.";
-			std::exit(-1);
-		}
-
-		constexpr auto report_summary() -> void { reporter_.on(events::EventSummary{}); }
-
-	public:
-		Executor(const Executor& other)                        = delete;
-		Executor(Executor&& other) noexcept                    = delete;
-		auto operator=(const Executor& other) -> Executor&     = delete;
-		auto operator=(Executor&& other) noexcept -> Executor& = delete;
-
-		constexpr explicit Executor() noexcept
-			requires std::is_default_constructible_v<reporter_type>
-			: fails_{0},
-			finished_{false},
-			dry_run_{false} { }
-
-		constexpr ~Executor() noexcept
-		{
-			if (not finished_ and not run(not dry_run_))
-			{
-				// todo
-			}
-		}
-
-		constexpr auto on(const events::EventSuite& suite) -> void { suites_.emplace_back(suite); }
-
-		template<typename InvocableType, typename Arg>
-		constexpr auto on(const events::EventTest<InvocableType, Arg>& test) -> void
-		{
-			if (const bool execute =
-						std::ranges::empty(test.categories) or
-						std::ranges::any_of(
-								test.categories,
-								[this](const auto& category) -> bool
-								{
-									if (category == tag_skip::value) { return false; }
-
-									return std::ranges::any_of(
-											categories_should_run_,
-											[category](const auto& sv) -> bool { return infrastructure::make_wildcard_matcher(sv)(category); });
-								});
-				not execute)
-			[[unlikely]]
-			{
-				reporter_.on(test.operator events::EventTestSkip());
-				return;
-			}
-
-			reporter_.on(test.operator events::EventTestBegin());
-
-			const bool silence = std::ranges::contains(test.categories, tag_silence::value);
-			if (silence)
-			{
-				// for scope
-				// note: after test begin
-				reporter_.template on<true>(events::EventSilenceBegin{});
-			}
-
-			try { std::invoke(test); }
-			// see on(const events::EventAssertionFatal& fatal)
-			// catch (const events::EventAssertionFatal&)
-			// {
-			// }
-			catch (const std::exception& exception)
-			{
-				fails_ += 1;
-				reporter_.on(events::EventException{
-						.message = exception.what()});
+				finished_ = true;
+				return fails_ != 0;
 			}
 			catch (...)
 			{
-				fails_ += 1;
-				reporter_.on(events::EventException{
-						.message = "unhandled exception, not derived from std::exception"});
+				std::cerr << "Unhandled exception.";
+				std::exit(-1);
 			}
 
-			reporter_.on(test.operator events::EventTestEnd());
+			constexpr auto report_summary() -> void { reporter_.on(events::EventSummary{}); }
 
-			if (silence)
+		public:
+			Executor(const Executor& other)                        = delete;
+			Executor(Executor&& other) noexcept                    = delete;
+			auto operator=(const Executor& other) -> Executor&     = delete;
+			auto operator=(Executor&& other) noexcept -> Executor& = delete;
+
+			constexpr explicit Executor() noexcept
+				requires std::is_default_constructible_v<reporter_type>
+				: fails_{0},
+				  finished_{false},
+				  dry_run_{false}
 			{
+				categories_should_run_.emplace_back(tag_silence::value);
+				categories_should_run_.emplace_back(tag_ignore_pass::value);
+			}
+
+			constexpr ~Executor() noexcept
+			{
+				if (not finished_ and not run(not dry_run_))
+				{
+					// todo
+				}
+			}
+
+			constexpr auto on(const events::EventSuite& suite) -> void { suites_.emplace_back(suite); }
+
+			template<typename InvocableType, typename Arg>
+			constexpr auto on(const events::EventTest<InvocableType, Arg>& test) -> void
+			{
+				if (const bool execute =
+							std::ranges::empty(test.categories) or
+							std::ranges::any_of(
+									test.categories,
+									[this](const auto& category) -> bool
+									{
+										if (category == tag_skip::value) { return false; }
+
+										return std::ranges::any_of(
+												categories_should_run_,
+												[category](const auto& sv) -> bool { return infrastructure::make_wildcard_matcher(sv)(category); });
+									});
+					not execute)
+				[[unlikely]]
+				{
+					reporter_.on(test.operator events::EventTestSkip());
+					return;
+				}
+
+				reporter_.on(test.operator events::EventTestBegin());
+
+				const bool silence     = std::ranges::contains(test.categories, tag_silence::value);
+				const auto ignore_pass = std::ranges::contains(test.categories, tag_ignore_pass::value);
+
+				// for scope
+				// note: after test begin
+				if (silence) { reporter_.template on<true>(events::EventSilenceBegin{}); }
+				if (ignore_pass) { reporter_.template on<true>(events::EventIgnorePassBegin{}); }
+
+				try { std::invoke(test); }
+				// see on(const events::EventAssertionFatal& fatal)
+				// catch (const events::EventAssertionFatal&)
+				// {
+				// }
+				catch (const std::exception& exception)
+				{
+					fails_ += 1;
+					reporter_.on(events::EventException{
+							.message = exception.what()});
+				}
+				catch (...)
+				{
+					fails_ += 1;
+					reporter_.on(events::EventException{
+							.message = "unhandled exception, not derived from std::exception"});
+				}
+
+				reporter_.on(test.operator events::EventTestEnd());
+
 				// for scope
 				// note: after test end
-				reporter_.template on<true>(events::EventSilenceEnd{});
+				if (silence) { reporter_.template on<true>(events::EventSilenceEnd{}); }
+				if (ignore_pass) { reporter_.template on<true>(events::EventIgnorePassEnd{}); }
 			}
-		}
 
-		template<typename MessageType>
-		constexpr auto on(const events::EventLog<MessageType>& log) -> void { reporter_.on(log); }
+			template<typename MessageType>
+			constexpr auto on(const events::EventLog<MessageType>& log) -> void { reporter_.on(log); }
 
-		// for assertion
-		constexpr auto on(const events::EventSilenceBegin& silence_begin) -> void { reporter_.template on<false>(silence_begin); }
+			// for assertion
+			constexpr auto on(const events::EventSilenceBegin& silence_begin) -> void { reporter_.template on<false>(silence_begin); }
 
-		// for assertion
-		constexpr auto on(const events::EventSilenceEnd& silence_end) -> void { reporter_.template on<false>(silence_end); }
+			// for assertion
+			constexpr auto on(const events::EventSilenceEnd& silence_end) -> void { reporter_.template on<false>(silence_end); }
 
-		template<operand::expression_t Expression>
-		constexpr auto on(const events::EventAssertion<Expression>& assertion) -> bool
-		{
-			if (dry_run_) { return true; }
+			// for assertion
+			constexpr auto on(const events::EventIgnorePassBegin& ignore_pass_begin) -> void { reporter_.template on<false>(ignore_pass_begin); }
 
-			if (reporter_.test_corrupted())
-			[[unlikely]]
+			// for assertion
+			constexpr auto on(const events::EventIgnorePassEnd& ignore_pass_end) -> void { reporter_.template on<false>(ignore_pass_end); }
+
+			template<operand::expression_t Expression>
+			constexpr auto on(const events::EventAssertion<Expression>& assertion) -> bool
 			{
-				reporter_.on(assertion.operator events::EventAssertionFatalSkip<Expression>());
-				// Consider the test case execution successful and avoid undesired log output.
-				return true;
+				if (dry_run_) { return true; }
+
+				if (reporter_.test_corrupted())
+				[[unlikely]]
+				{
+					reporter_.on(assertion.operator events::EventAssertionFatalSkip<Expression>());
+					// Consider the test case execution successful and avoid undesired log output.
+					return true;
+				}
+
+				if (static_cast<bool>(assertion.expression))
+				[[likely]]
+				{
+					reporter_.on(assertion.operator events::EventAssertionPass<Expression>());
+					return true;
+				}
+
+				fails_ += 1;
+				reporter_.on(assertion.operator events::EventAssertionFail<Expression>());
+				return false;
 			}
 
-			if (static_cast<bool>(assertion.expression))
-			[[likely]]
+			constexpr auto on(const events::EventAssertionFatal& fatal) -> void
 			{
-				reporter_.on(assertion.operator events::EventAssertionPass<Expression>());
-				return true;
+				reporter_.on(fatal);
+
+				if (reporter_.suite_is_global()) { report_summary(); }
+
+				// see reporter::test_corrupted
+				// see on(const events::EventAssertion<Expression>& assertion)
+				// throw fatal;
 			}
+		};
+	}
 
-			fails_ += 1;
-			reporter_.on(assertion.operator events::EventAssertionFail<Expression>());
-			return false;
-		}
+	export namespace test
+	{
+		template<typename T>
+		using as = no_adl::test::operand::OperandValue<T>;
+		using as_c = as<char>;
+		using as_i = as<int>;
+		using as_u = as<unsigned>;
+		using as_l = as<long>;
+		using as_ul = as<unsigned long>;
+		using as_ll = as<long long>;
+		using as_ull = as<unsigned long long>;
+		using as_i8 = as<std::int8_t>;
+		using as_u8 = as<std::uint8_t>;
+		using as_i16 = as<std::int16_t>;
+		using as_u16 = as<std::uint16_t>;
+		using as_i32 = as<std::int32_t>;
+		using as_u32 = as<std::uint32_t>;
+		using as_i64 = as<std::int64_t>;
+		using as_u64 = as<std::uint64_t>;
+		using as_f = as<float>;
+		using as_d = as<double>;
+		using as_ld = as<long double>;
+		using as_b = as<bool>;
+		using as_s = as<std::string>;
+		using as_sv = as<std::string_view>;
 
-		constexpr auto on(const events::EventAssertionFatal& fatal) -> void
+		constexpr auto category = [](const std::string_view name) -> no_adl::test::categories_type { return {name}; };
+		constexpr auto cat      = category;
+
+		constexpr no_adl::test::tag_fatal fatal{};
+		constexpr no_adl::test::tag_skip  skip{};
+
+		// see dispatcher::DispatcherSilence&dispatcher::DispatcherIgnorePass below.
+		// constexpr no_adl::test::tag_silence silence{};
+		// constexpr no_adl::test::tag_ignore_pass ignore_pass{};
+
+		template<typename T, typename...>
+		struct identity
 		{
-			reporter_.on(fatal);
+			using type = T;
+		};
 
-			if (reporter_.suite_is_global()) { report_summary(); }
-
-			// see reporter::test_corrupted
-			// see on(const events::EventAssertion<Expression>& assertion)
-			// throw fatal;
-		}
-	};
-
-	template<typename T, typename...>
-	struct identity
-	{
-		using type = T;
-	};
-
-	export
-	{
 		struct override { };
 
 		// todo: custom reporter
 		template<typename = override, typename...>
 		// fixme: An executor object is constructed/deconstructed multiple times.
-		// [[maybe_unused]] inline auto executor = Executor<>{};
-		[[nodiscard]] constexpr auto executor() -> Executor<>&
+		// [[maybe_unused]] inline auto executor = no_adl::test::Executor<>{};
+		[[nodiscard]] constexpr auto executor() -> no_adl::test::Executor<>&
 		{
-			static Executor<> e{};
+			static no_adl::test::Executor<> e{};
 			return e;
 		}
 	}
 
-	namespace dispatcher
+	namespace no_adl::test::dispatcher
 	{
 		template<typename... Ts, events::event_t EventType>
-		constexpr auto register_event(EventType&& event) noexcept -> decltype(auto) { return executor<typename identity<override, Ts...>::type>().on(std::forward<EventType>(event)); }
+		constexpr auto register_event(EventType&& event) noexcept -> decltype(auto) { return prometheus::test::executor<typename prometheus::test::identity<prometheus::test::override, Ts...>::type>().on(std::forward<EventType>(event)); }
 
 		template<infrastructure::basic_fixed_string StringLiteral>
 		class DispatcherTestLiteral
@@ -2432,18 +2531,17 @@ namespace gal::prometheus::test
 			constexpr explicit(false) DispatcherTestLiteral(
 					InvocableType               invocable,
 					const std::source_location& location = std::source_location::current()) noexcept
-			{
-				function_ = [invocable, location]() noexcept
-				{
-					register_event(events::EventTest<InvocableType>{
-							.name = StringLiteral.operator std::string_view(),
-							.location = location,
-							// always move
-							.categories = std::move(categories_),
-							.invocable = invocable,
-							.arg = events::none{}});
-				};
-			}
+				: function_{
+						[invocable, location]() noexcept
+						{
+							register_event(events::EventTest<InvocableType>{
+									.name = StringLiteral.operator std::string_view(),
+									.location = location,
+									// always move
+									.categories = std::move(categories_),
+									.invocable = invocable,
+									.arg = events::none{}});
+						}} { }
 
 			constexpr      DispatcherTestLiteral(const DispatcherTestLiteral& other)               = delete;
 			constexpr auto operator=(const DispatcherTestLiteral& other) -> DispatcherTestLiteral& = delete;
@@ -2473,12 +2571,10 @@ namespace gal::prometheus::test
 					const std::string_view      name,
 					const std::source_location& location = std::source_location::current()) noexcept
 				: name_{name},
-				location_{location} { }
+				  location_{location} {}
 
 			template<std::invocable InvocableType>
-			constexpr auto operator=(
-					InvocableType invocable) const & noexcept -> InvocableType
-				// NOLINT(misc-unconventional-assign-operator)
+			constexpr auto operator=(InvocableType invocable) const & noexcept -> InvocableType// NOLINT(misc-unconventional-assign-operator)
 			{
 				register_event(events::EventTest<InvocableType>{
 						.name = name_,
@@ -2491,8 +2587,7 @@ namespace gal::prometheus::test
 			}
 
 			template<std::invocable InvocableType>
-			constexpr auto operator=(
-					InvocableType invocable) && noexcept -> InvocableType// NOLINT(misc-unconventional-assign-operator)
+			constexpr auto operator=(InvocableType invocable) && noexcept -> InvocableType// NOLINT(misc-unconventional-assign-operator)
 			{
 				register_event(events::EventTest<InvocableType>{
 						.name = name_,
@@ -2507,7 +2602,7 @@ namespace gal::prometheus::test
 			constexpr auto add_categories(const categories_type& categories) -> void { categories_.append_range(categories); }
 		};
 
-		struct DispatcherLogger
+		class DispatcherLogger
 		{
 			struct next
 			{
@@ -2523,6 +2618,7 @@ namespace gal::prometheus::test
 
 			constexpr static next n{};
 
+		public:
 			template<typename MessageType>
 			constexpr auto operator<<(MessageType&& message) const noexcept -> const next&
 			{
@@ -2533,121 +2629,634 @@ namespace gal::prometheus::test
 			}
 		};
 
-		class DispatcherThat
+		template<typename Lhs, typename Dispatcher>
+		struct pre_dispatch_expression;
+
+		template<operand::expression_t Expression, typename Dispatcher>
+		struct dispatched_expression
 		{
-			template<operand::expression_t Expression>
-			struct expression
-			{
-				using dispatched_type_no_alias = Expression;
+			using expression_type = Expression;
+			using dispatcher_type = Dispatcher;
 
-				dispatched_type_no_alias e;
+			expression_type expression;
 
-				// note: satisfy requirement operand::is_expression_v --> call expect
-				[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return e; }
+			[[nodiscard]] constexpr explicit operator bool() const noexcept { return static_cast<bool>(expression); }
 
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator==(
-						const Rhs& rhs
-						) const noexcept -> operand::OperandCompareEqual<Expression, Rhs> { return {e, rhs}; }
-
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator!=(
-						const Rhs& rhs
-						) const noexcept -> operand::OperandCompareNotEqual<Expression, Rhs> { return {e, rhs}; }
-
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator>(
-						const Rhs& rhs
-						) const noexcept -> operand::OperandCompareGreaterThan<Expression, Rhs> { return {e, rhs}; }
-
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator>=(
-						const Rhs& rhs
-						) const noexcept -> operand::OperandCompareGreaterEqual<Expression, Rhs> { return {e, rhs}; }
-
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator<(
-						const Rhs& rhs
-						) const noexcept -> operand::OperandCompareLessThan<Expression, Rhs> { return {e, rhs}; }
-
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator<=(
-						const Rhs& rhs
-						) const noexcept -> operand::OperandCompareLessEqual<Expression, Rhs> { return {e, rhs}; }
-
-				[[nodiscard]] constexpr auto operator not() const noexcept -> operand::OperandLogicalNot<Expression> { return {e}; }
-			};
-
-		public:
-			template<operand::expression_t Expression>
-			[[nodiscard]] constexpr auto operator%(const Expression& e) const noexcept -> expression<Expression> { return {.e = e}; }
+			// fixme: `reporter.on(events::EventAssertionFatalSkip)` needs this, maybe a better way to handle it.
+			[[nodiscard]] constexpr auto to_string() const noexcept -> decltype(auto) { return operand::expression_to_string(expression); }
 		};
 
-		class DispatcherSilence
+		template<typename Lhs, typename Dispatcher>
+		struct pre_dispatch_expression
 		{
-		public:
-			template<operand::expression_t Expression>
-			struct silence_expression
+			using lhs_type = Lhs;
+			using dispatcher_type = Dispatcher;
+
+			lhs_type lhs;
+
+			// ============================================
+			// operator==
+			// ============================================
+
+			// OperandValue
+
+			// as_b{...} == bool
+			[[nodiscard]] constexpr auto operator==(const bool rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>
+				//
+				requires operand::operand_value_boolean_t<lhs_type> { return {.expression = {lhs, rhs}}; }
+
+			// bool == as_b{...}
+			[[nodiscard]] constexpr auto operator==(const operand::operand_value_boolean_t auto& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>
+				//
+				requires std::is_same_v<lhs_type, bool> { return {.expression = {rhs, lhs}}; }
+
+			// as_x{...} == floating_point
+			template<std::floating_point Rhs>
+				requires operand::operand_value_floating_point_t<lhs_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareApprox<typename lhs_type::value_type, Rhs, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs, lhs.epsilon()}}; }
+
+			//  floating_point == as_x{...}
+			template<operand::operand_value_floating_point_t Rhs>
+				requires std::floating_point<lhs_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareApprox<lhs_type, typename Rhs::value_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value(), rhs.epsilon()}}; }
+
+			// as_x{...} == not(boolean/floating_point)
+			template<typename Rhs>
+				requires operand::operand_value_t<lhs_type> and (not std::floating_point<Rhs>)
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
+
+			// not(boolean/floating_point) == as_x{...}
+			template<operand::operand_value_t Rhs>
+				requires (not std::floating_point<lhs_type>)
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
+
+			// OperandConstantXxx
+
+			// "xxx"_b == bool => as_b{"xxx"} == bool
+			// bool == "xxx"_b => bool == as_b{"xxx"}
+
+			// "xxx"_x == integral
+			template<std::integral Rhs>
+				requires operand::operand_constant_integral_t<lhs_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
+
+			// integral == "xxx"_x
+			template<operand::operand_constant_integral_t Rhs>
+				requires std::integral<lhs_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
+
+			// "xxx"_x == floating_point
+			template<std::floating_point Rhs>
+				requires operand::operand_constant_floating_point_t<lhs_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareApprox<typename lhs_type::value_type, Rhs, typename lhs_type::value_type>, dispatcher_type>{.expression = {lhs_type::value, rhs, lhs_type::epsilon}}; }
+
+			// floating_point == "xxx"_x
+			template<operand::operand_constant_floating_point_t Rhs>
+				requires std::floating_point<lhs_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareApprox<lhs_type, typename Rhs::value_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value, Rhs::epsilon}}; }
+
+			// "xxx"_auto == any
+			template<typename Rhs>
+				requires operand::operand_constant_auto_t<lhs_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto
 			{
-				using dispatched_type_no_alias = Expression;
+				// forward
+				return typename lhs_type::template rebind<Rhs>{} == rhs;
+			}
 
-				dispatched_type_no_alias e;
+			// any == "xxx"_auto
+			template<operand::operand_constant_auto_t Rhs>
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto
+			{
+				// forward
+				return lhs == typename Rhs::template rebind<lhs_type>{};
+			}
 
-				// note: satisfy requirement operand::is_expression_v --> call expect
-				[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return e; }
+			// ANY == ANY
 
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator==(
-						const Rhs& rhs
-						) const noexcept -> silence_expression<operand::OperandCompareEqual<Expression, Rhs>> { return {.e = {e, rhs}}; }
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator==(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
 
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator!=(
-						const Rhs& rhs
-						) const noexcept -> silence_expression<operand::OperandCompareNotEqual<Expression, Rhs>> { return {.e = {e, rhs}}; }
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator==(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
 
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator>(
-						const Rhs& rhs
-						) const noexcept -> silence_expression<operand::OperandCompareGreaterThan<Expression, Rhs>> { return {.e = {e, rhs}}; }
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator==(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareEqual<lhs_type, Rhs>, dispatcher_type>
+				//
+				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareEqual<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
 
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator>=(
-						const Rhs& rhs
-						) const noexcept -> silence_expression<operand::OperandCompareGreaterEqual<Expression, Rhs>> { return {.e = {e, rhs}}; }
+			// ============================================
+			// operator!=
+			// ============================================
 
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator<(
-						const Rhs& rhs
-						) const noexcept -> silence_expression<operand::OperandCompareLessThan<Expression, Rhs>> { return {.e = {e, rhs}}; }
+			// OperandValue
 
-				template<typename Rhs>
-				[[nodiscard]] constexpr auto operator<=(
-						const Rhs& rhs
-						) const noexcept -> silence_expression<operand::OperandCompareLessEqual<Expression, Rhs>> { return {.e = {e, rhs}}; }
+			// as_b{...} != bool
+			[[nodiscard]] constexpr auto operator!=(const bool rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>
+				//
+				requires operand::operand_value_boolean_t<lhs_type> { return {.expression = {lhs, not rhs}}; }
 
-				[[nodiscard]] constexpr auto operator not() const noexcept -> silence_expression<operand::OperandLogicalNot<Expression>> { return {.e = {e}}; }
-			};
+			// bool == as_b{...}
+			[[nodiscard]] constexpr auto operator!=(const operand::operand_value_boolean_t auto& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>
+				//
+				requires std::is_same_v<lhs_type, bool> { return {.expression = {rhs, not lhs}}; }
 
-			template<operand::expression_t Expression>
-			[[nodiscard]] constexpr auto operator%(const Expression& e) const noexcept -> silence_expression<Expression> { return {.e = e}; }
+			// as_x{...} != floating_point
+			template<std::floating_point Rhs>
+				requires operand::operand_value_floating_point_t<lhs_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotApprox<typename lhs_type::value_type, Rhs, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs, lhs.epsilon()}}; }
+
+			//  floating_point != as_x{...}
+			template<operand::operand_value_floating_point_t Rhs>
+				requires std::floating_point<lhs_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotApprox<lhs_type, typename Rhs::value_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value(), rhs.epsilon()}}; }
+
+			// as_x{...} != not(boolean/floating_point)
+			template<typename Rhs>
+				requires operand::operand_value_t<lhs_type> and (not std::floating_point<Rhs>)
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
+
+			// not(boolean/floating_point) != as_x{...}
+			template<operand::operand_value_t Rhs>
+				requires(not std::floating_point<lhs_type>)
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
+
+			// OperandConstantXxx
+
+			// "xxx"_b != bool => as_b{"xxx"} != bool
+			// bool != "xxx"_b => bool != as_b{"xxx"}
+
+			// "xxx"_x != integral
+			template<std::integral Rhs>
+				requires operand::operand_constant_integral_t<lhs_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
+
+			// integral != "xxx"_x
+			template<operand::operand_constant_integral_t Rhs>
+				requires std::integral<lhs_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
+
+			// "xxx"_x != floating_point
+			template<std::floating_point Rhs>
+				requires operand::operand_constant_floating_point_t<lhs_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotApprox<lhs_type, Rhs, typename lhs_type::value_type>, dispatcher_type>{.expression = {lhs_type::value, rhs, lhs_type::epsilon}}; }
+
+			// floating_point != "xxx"_x
+			template<operand::operand_constant_floating_point_t Rhs>
+				requires std::floating_point<lhs_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotApprox<lhs_type, Rhs, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value, Rhs::epsilon}}; }
+
+			// "xxx"_auto != any
+			template<typename Rhs>
+				requires operand::operand_constant_auto_t<lhs_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto
+			{
+				// forward
+				return typename lhs_type::template rebind<Rhs>{} != rhs;
+			}
+
+			// any != "xxx"_auto
+			template<operand::operand_constant_auto_t Rhs>
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto
+			{
+				// forward
+				return lhs != typename Rhs::template rebind<lhs_type>{};
+			}
+
+			// ANY == ANY
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator!=(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareNotEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator!=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareNotEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
+
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator!=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareNotEqual<lhs_type, Rhs>, dispatcher_type>
+				//
+				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareNotEqual<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
+
+			// ============================================
+			// operator>
+			// ============================================
+
+			// OperandValue
+
+			// as_x{...} > ...
+			template<typename Rhs>
+				requires operand::operand_value_t<lhs_type>
+			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareGreaterThan<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
+
+			// ... > as_x{...}
+			template<operand::operand_value_t Rhs>
+			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareGreaterThan<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
+
+			// OperandConstantXxx
+
+			// "xxx"_x > ...
+			template<typename Rhs>
+				requires operand::operand_constant_t<lhs_type>
+			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<lhs_type>)
+				{
+					// forward
+					return typename lhs_type::template rebind<Rhs>{} > rhs;
+				}
+				else { return dispatched_expression<operand::OperandCompareGreaterThan<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
+			}
+
+			// ... > "xxx"_x
+			template<operand::operand_constant_t Rhs>
+			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<Rhs>)
+				{
+					// forward
+					return lhs > typename Rhs::template rebind<lhs_type>{};
+				}
+				else { return dispatched_expression<operand::OperandCompareGreaterThan<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
+			}
+
+			// ANY == ANY
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator>(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareGreaterThan<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator>(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterThan<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
+
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator>(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterThan<lhs_type, Rhs>, dispatcher_type>
+				//
+				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareGreaterThan<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
+
+			// ============================================
+			// operator>=
+			// ============================================
+
+			// OperandValue
+
+			// as_x{...} >= ...
+			template<typename Rhs>
+				requires operand::operand_value_t<lhs_type>
+			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareGreaterEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
+
+			// ... >= as_x{...}
+			template<operand::operand_value_t Rhs>
+			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareGreaterEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
+
+			// OperandConstantXxx
+
+			// "xxx"_x >= ...
+			template<typename Rhs>
+				requires operand::operand_constant_t<lhs_type>
+			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<lhs_type>)
+				{
+					// forward
+					return typename lhs_type::template rebind<Rhs>{} >= rhs;
+				}
+				else { return dispatched_expression<operand::OperandCompareGreaterEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
+			}
+
+			// ... >= "xxx"_x
+			template<operand::operand_constant_t Rhs>
+			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<Rhs>)
+				{
+					// forward
+					return lhs >= typename Rhs::template rebind<lhs_type>{};
+				}
+				else { return dispatched_expression<operand::OperandCompareGreaterEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
+			}
+
+			// ANY == ANY
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator>=(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareGreaterEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator>=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
+
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator>=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterEqual<lhs_type, Rhs>, dispatcher_type>
+				//
+				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareGreaterEqual<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
+
+			// ============================================
+			// operator<
+			// ============================================
+
+			// OperandValue
+
+			// as_x{...} < ...
+			template<typename Rhs>
+				requires operand::operand_value_t<lhs_type>
+			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareLessThan<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
+
+			// ... < as_x{...}
+			template<operand::operand_value_t Rhs>
+			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareLessThan<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
+
+			// OperandConstantXxx
+
+			// "xxx"_x < ...
+			template<typename Rhs>
+				requires operand::operand_constant_t<lhs_type>
+			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<lhs_type>)
+				{
+					// forward
+					return typename lhs_type::template rebind<Rhs>{} < rhs;
+				}
+				else { return dispatched_expression<operand::OperandCompareLessThan<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
+			}
+
+			// ... < "xxx"_x
+			template<operand::operand_constant_t Rhs>
+			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<Rhs>)
+				{
+					// forward
+					return lhs < typename Rhs::template rebind<lhs_type>{};
+				}
+				else { return dispatched_expression<operand::OperandCompareLessThan<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
+			}
+
+			// ANY == ANY
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator<(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareLessThan<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator<(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessThan<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
+
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator<(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessThan<lhs_type, Rhs>, dispatcher_type>
+				//
+				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareLessThan<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
+
+			// ============================================
+			// operator<=
+			// ============================================
+
+			// OperandValue
+
+			// as_x{...} <= ...
+			template<typename Rhs>
+				requires operand::operand_value_t<lhs_type>
+			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareLessEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
+
+			// ... <= as_x{...}
+			template<operand::operand_value_t Rhs>
+			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareLessEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
+
+			// OperandConstantXxx
+
+			// "xxx"_x <= ...
+			template<typename Rhs>
+				requires operand::operand_constant_t<lhs_type>
+			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<lhs_type>)
+				{
+					// forward
+					return typename lhs_type::template rebind<Rhs>{} <= rhs;
+				}
+				else { return dispatched_expression<operand::OperandCompareLessEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
+			}
+
+			// ... <= "xxx"_x
+			template<operand::operand_constant_t Rhs>
+			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<Rhs>)
+				{
+					// forward
+					return lhs <= typename Rhs::template rebind<lhs_type>{};
+				}
+				else { return dispatched_expression<operand::OperandCompareLessEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
+			}
+
+			// ANY == ANY
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator<=(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareLessEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<lhs_type>
+			[[nodiscard]] constexpr auto operator<=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
+
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator<=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessEqual<lhs_type, Rhs>, dispatcher_type>
+				//
+				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareLessEqual<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
+
+			// ============================================
+			// operator and
+			// ============================================
+
+			// OperandValue
+
+			// as_b{...} and ...
+			template<std::convertible_to<bool> Rhs>
+				requires operand::operand_value_boolean_t<lhs_type>
+			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandLogicalAnd<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {static_cast<typename lhs_type::value_type>(lhs), rhs}}; }
+
+			// ... and as_b{...}
+			template<operand::operand_value_boolean_t Rhs>
+				requires std::convertible_to<lhs_type, bool>
+			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandLogicalAnd<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, static_cast<typename Rhs::value_type>(rhs)}}; }
+
+			// OperandConstantXxx
+
+			// "xxx"_b and bool => as_b{"xxx"} and bool
+			// bool and "xxx"_b => bool and as_b{"xxx"}
+
+			// "xxx"_auto and any
+			template<std::convertible_to<bool> Rhs>
+				requires operand::operand_constant_auto_t<lhs_type>
+			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto
+			{
+				// forward
+				return typename lhs_type::template rebind<Rhs>{} and rhs;
+			}
+
+			// any and "xxx"_auto
+			template<operand::operand_constant_auto_t Rhs>
+				requires std::convertible_to<lhs_type, bool>
+			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto
+			{
+				// forward
+				return lhs and typename Rhs::template rebind<lhs_type>{};
+			}
+
+			// ============================================
+			// operator or
+			// ============================================
+
+			// OperandValue
+
+			// as_b{...} or ...
+			template<std::convertible_to<bool> Rhs>
+				requires operand::operand_value_boolean_t<lhs_type>
+			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandLogicalOr<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {static_cast<typename lhs_type::value_type>(lhs), rhs}}; }
+
+			// ... or as_b{...}
+			template<operand::operand_value_boolean_t Rhs>
+				requires std::convertible_to<lhs_type, bool>
+			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandLogicalOr<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, static_cast<typename Rhs::value_type>(rhs)}}; }
+
+			// OperandConstantXxx
+
+			// "xxx"_b or bool => as_b{"xxx"} or bool
+			// bool or "xxx"_b => bool or as_b{"xxx"}
+
+			// "xxx"_auto or any
+			template<std::convertible_to<bool> Rhs>
+				requires operand::operand_constant_auto_t<lhs_type>
+			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto
+			{
+				// forward
+				return typename lhs_type::template rebind<Rhs>{} or rhs;
+			}
+
+			// any or "xxx"_auto
+			template<operand::operand_constant_auto_t Rhs>
+				requires std::convertible_to<lhs_type, bool>
+			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto
+			{
+				// forward
+				return lhs or typename Rhs::template rebind<lhs_type>{};
+			}
+
+			[[nodiscard]] constexpr auto operator not() const && noexcept -> dispatched_expression<operand::OperandLogicalNot<lhs_type>, dispatcher_type>
+				//
+				requires requires { static_cast<bool>(dispatched_expression<operand::OperandLogicalNot<lhs_type>, dispatcher_type>{.expression = {lhs}}); } { return {.expression = {lhs}}; }
 		};
 
 		template<typename>
-		constexpr auto is_silence_expression_v = false;
-		template<operand::expression_t Expression>
-		constexpr auto is_silence_expression_v<DispatcherSilence::silence_expression<Expression>> = true;
+		constexpr auto is_pre_dispatched_expression_v = false;
+		template<typename Lhs, typename Dispatcher>
+		constexpr auto is_pre_dispatched_expression_v<pre_dispatch_expression<Lhs, Dispatcher>> = true;
 
-		// avoid ambiguous
+		template<typename Dispatcher>
+		class ExpressionDispatcher
+		{
+		public:
+			template<typename Lhs>
+			[[nodiscard]] constexpr auto operator%(const Lhs& lhs) const noexcept -> pre_dispatch_expression<Lhs, Dispatcher> { return {lhs}; }
+		};
+
+		class DispatcherThat : public ExpressionDispatcher<DispatcherThat>
+		{
+		public:
+			using ExpressionDispatcher::operator%;
+		};
+
 		template<typename>
 		constexpr auto is_dispatched_expression_v = false;
-		template<typename E>
-			requires requires { typename E::dispatched_type_no_alias; }
-		constexpr auto is_dispatched_expression_v<E> = true;
+		template<operand::expression_t Expression, typename Dispatcher>
+		constexpr auto is_dispatched_expression_v<dispatched_expression<Expression, Dispatcher>> = true;
+
+		template<typename>
+		constexpr auto is_expression_that_v = false;
+		template<typename Expression>
+			requires is_dispatched_expression_v<Expression>
+		constexpr auto is_expression_that_v<Expression> = std::is_same_v<typename Expression::dispatcher_type, DispatcherThat>;
+
+		class DispatcherSilence : public ExpressionDispatcher<DispatcherSilence>
+		{
+		public:
+			using ExpressionDispatcher::operator%;
+		};
+
+		template<typename>
+		constexpr auto is_expression_silence_v = false;
+		template<typename Expression>
+			requires is_dispatched_expression_v<Expression>
+		constexpr auto is_expression_silence_v<Expression> = std::is_same_v<typename Expression::dispatcher_type, DispatcherSilence>;
+
+		class DispatcherIgnorePass : public ExpressionDispatcher<DispatcherIgnorePass>
+		{
+		public:
+			using ExpressionDispatcher::operator%;
+		};
+
+		template<typename>
+		constexpr auto is_expression_ignore_pass_v = false;
+		template<typename Expression>
+			requires is_dispatched_expression_v<Expression>
+		constexpr auto is_expression_ignore_pass_v<Expression> = std::is_same_v<typename Expression::dispatcher_type, DispatcherIgnorePass>;
 
 		template<operand::expression_t Expression>
-		class DispatcherExpect
+		struct expect_result
 		{
+		private:
 			template<typename T>
 			struct fatal_location
 			{
@@ -2655,19 +3264,18 @@ namespace gal::prometheus::test
 
 				constexpr explicit(false) fatal_location(
 						const T&,
-						const std::source_location& l = std::source_location::current()
-						) noexcept
-					: location{l} { }
+						const std::source_location& l = std::source_location::current()) noexcept
+					: location{l} {}
 			};
 
 		public:
 			bool value;
 
-			constexpr explicit DispatcherExpect(const bool v) noexcept
-				: value{v} { }
+			constexpr explicit expect_result(const bool v) noexcept
+				: value{v} {}
 
 			template<typename MessageType>
-			constexpr auto operator<<(MessageType&& message) -> DispatcherExpect&//
+			constexpr auto operator<<(MessageType&& message) -> expect_result&//
 				requires requires { events::EventLog{.message = std::forward<MessageType>(message)}; }
 			{
 				if (not value) { register_event<Expression>(events::EventLog{.message = std::forward<MessageType>(message)}); }
@@ -2675,477 +3283,392 @@ namespace gal::prometheus::test
 				return *this;
 			}
 
-			constexpr auto operator<<(const fatal_location<tag_fatal>& location) -> DispatcherExpect&
+			constexpr auto operator<<(const fatal_location<tag_fatal>& location) -> expect_result&
 			{
 				if (not value) { register_event<Expression>(events::EventAssertionFatal{.location = location.location}); }
 
 				return *this;
 			}
+		};
 
-			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return value; }
+		class DispatcherExpect
+		{
+		public:
+			template<operand::expression_t Expression>
+			constexpr auto operator()(
+					const Expression&           expression,
+					const std::source_location& location = std::source_location::current()) const noexcept -> auto
+			{
+				// workaround: dispatched expression vvv
+				if constexpr (is_dispatched_expression_v<Expression>)
+				{
+					if constexpr (is_expression_silence_v<Expression>) { register_event<typename Expression::expression_type>(events::EventSilenceBegin{}); }
+					else if constexpr (is_expression_ignore_pass_v<Expression>) { register_event<typename Expression::expression_type>(events::EventIgnorePassBegin{}); }
+
+					const auto result = register_event<typename Expression::expression_type>(events::EventAssertion<typename Expression::expression_type>{.location = location, .expression = expression.expression});
+
+					if constexpr (is_expression_silence_v<Expression>) { register_event<typename Expression::expression_type>(events::EventSilenceEnd{}); }
+					else if constexpr (is_expression_ignore_pass_v<Expression>) { register_event<typename Expression::expression_type>(events::EventIgnorePassEnd{}); }
+
+					return expect_result<typename Expression::expression_type>{result};
+				}
+				// ^^^ workaround: dispatched expression
+				else
+				{
+					return expect_result<Expression>{
+							register_event<Expression>(
+									events::EventAssertion<Expression>{
+											.location = location,
+											.expression = expression})};
+				}
+			}
 		};
 	}// namespace dispatcher
 
-	namespace literals
+	export namespace test
 	{
-		template<infrastructure::basic_fixed_string StringLiteral>
-		constexpr auto operator""_test() noexcept -> dispatcher::DispatcherTestLiteral<StringLiteral> { return dispatcher::DispatcherTestLiteral<StringLiteral>::make(); }
-
-		template<char... Cs>
-		[[nodiscard]] constexpr auto operator""_auto() noexcept ->
-			operand::OperandConstantAuto<Cs...> { return {}; }
-
-		template<infrastructure::basic_fixed_string StringLiteral>
-		[[nodiscard]] constexpr auto operator""_c() noexcept -> operand::OperandConstantCharacter<*StringLiteral.begin()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<int, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_i() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<int, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<unsigned, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_u() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<unsigned, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<long, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_l() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<long, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<unsigned long, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_ul() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<unsigned long, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<long long, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_ll() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<long long, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<unsigned long long, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_ull() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<unsigned long long, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<std::int8_t, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_i8() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<std::int8_t, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<std::uint8_t, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_u8() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<std::uint8_t, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<std::int16_t, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_i16() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<std::int16_t, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<std::uint16_t, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_u16() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<std::uint16_t, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<std::int32_t, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_i32() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<std::int32_t, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<std::uint32_t, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_u32() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<std::uint32_t, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<std::int64_t, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_i64() noexcept ->
-			operand::OperandConstantIntegral<
-				utility::literals::to_integral<std::int64_t, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_integral<std::uint64_t, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_u64() noexcept ->
-			operand::OperandConstantIntegral<utility::literals::to_integral<std::uint64_t, Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_floating_point<float, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_f() noexcept ->
-			operand::OperandConstantFloatingPoint<
-				utility::literals::to_floating_point<float, Cs...>(),
-				utility::literals::to_denominator_size<Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_floating_point<double, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_d() noexcept ->
-			operand::OperandConstantFloatingPoint<
-				utility::literals::to_floating_point<double, Cs...>(),
-				utility::literals::to_denominator_size<Cs...>()> { return {}; }
-
-		template<char... Cs>
-			requires requires { utility::literals::to_floating_point<long double, Cs...>(); }
-		[[nodiscard]] constexpr auto operator""_ld() noexcept ->
-			operand::OperandConstantFloatingPoint<
-				utility::literals::to_floating_point<long double, Cs...>(),
-				utility::literals::to_denominator_size<Cs...>()> { return {}; }
-
-		[[nodiscard]] constexpr auto operator""_b(const char* name, std::size_t size) noexcept -> operand::OperandConstantBoolean { return {.message = {name, size}}; }
-
-		[[nodiscard]] constexpr auto operator""_s(const char* name, std::size_t size) noexcept -> auto
-		{
-			class _ : public std::string_view, public operand::Operand
-			{
-			public:
-				[[nodiscard]] constexpr auto operator==(const _& other) const noexcept -> bool { return to_string() == other.to_string(); }
-
-				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string_view { return *this; }
-			};
-
-			return _{{name, size}};
-		}
-	}// namespace literals
-
-	namespace operators
-	{
-		[[nodiscard]] constexpr auto operator==(
-				const std::string_view lhs,
-				const std::string_view rhs
-				) noexcept -> operand::OperandCompareEqual<std::string_view, std::string_view> { return {lhs, rhs}; }
-
-		[[nodiscard]] constexpr auto operator!=(
-				const std::string_view lhs,
-				const std::string_view rhs
-				) noexcept -> operand::OperandCompareNotEqual<std::string_view, std::string_view> { return {lhs, rhs}; }
-
-		[[nodiscard]] constexpr auto operator==(
-				const operand::OperandConstantBoolean& lhs,
-				const bool                             rhs
-				) noexcept -> operand::OperandCompareIdentity { return {lhs, rhs}; }
-
-		[[nodiscard]] constexpr auto operator==(
-				const bool                             lhs,
-				const operand::OperandConstantBoolean& rhs
-				) noexcept -> operand::OperandCompareIdentity { return {rhs, lhs}; }
-
-		[[nodiscard]] constexpr auto operator!=(
-				const operand::OperandConstantBoolean& lhs,
-				const bool                             rhs
-				) noexcept -> operand::OperandCompareIdentity { return {lhs, not rhs}; }
-
-		[[nodiscard]] constexpr auto operator!=(
-				const bool                             lhs,
-				const operand::OperandConstantBoolean& rhs
-				) noexcept -> operand::OperandCompareIdentity { return {rhs, not lhs}; }
-
-		template<std::ranges::range Range>
-		[[nodiscard]] constexpr auto operator==(
-				Range&& lhs,
-				Range&& rhs
-				) noexcept -> operand::OperandCompareEqual<std::decay_t<Range>, std::decay_t<Range>> { return {static_cast<Range&&>(lhs), static_cast<Range&&>(rhs)}; }
-
-		template<std::ranges::range Range>
-		[[nodiscard]] constexpr auto operator!=(
-				Range&& lhs,
-				Range&& rhs
-				) noexcept -> operand::OperandCompareNotEqual<std::decay_t<Range>, std::decay_t<Range>> { return {static_cast<Range&&>(lhs), static_cast<Range&&>(rhs)}; }
-
-		template<operand::operand_t Lhs, typename Rhs>
-		// workaround: dispatched expression, avoid ambiguous
-			requires (not dispatcher::is_dispatched_expression_v<Rhs>)
-		[[nodiscard]] constexpr auto operator==(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareEqual<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<operand::operand_t Lhs, std::floating_point Rhs>
-		[[nodiscard]] constexpr auto operator==(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareApprox<Lhs, Rhs, Rhs> { return {lhs, rhs, std::numeric_limits<Rhs>::epsilon()}; }
-
-		template<std::floating_point auto Value, std::size_t DenominatorSize, std::floating_point Rhs>
-		[[nodiscard]] constexpr auto operator==(
-				const operand::OperandConstantFloatingPoint<Value, DenominatorSize>& lhs,
-				const Rhs&                                                           rhs
-				) noexcept -> operand::OperandCompareApprox<operand::OperandConstantFloatingPoint<Value, DenominatorSize>, Rhs, typename operand::OperandConstantFloatingPoint<Value, DenominatorSize>::value_type> { return {lhs, rhs, operand::OperandConstantFloatingPoint<Value, DenominatorSize>::epsilon}; }
-
-		template<typename Lhs, operand::operand_t Rhs>
-		// avoid ambiguous
-			requires(not operand::is_operand_v<Lhs> and not std::is_floating_point_v<Lhs>)
-					// workaround: dispatched expression, avoid ambiguous
-					and (not dispatcher::is_dispatched_expression_v<Lhs>)
-		[[nodiscard]] constexpr auto operator==(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareEqual<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<std::floating_point Lhs, operand::operand_t Rhs>
-		[[nodiscard]] constexpr auto operator==(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareApprox<Lhs, Rhs, Lhs> { return {lhs, rhs, std::numeric_limits<Lhs>::epsilon()}; }
-
-		template<std::floating_point Lhs, std::floating_point auto Value, std::size_t DenominatorSize>
-		[[nodiscard]] constexpr auto operator==(
-				const Lhs&                                                           lhs,
-				const operand::OperandConstantFloatingPoint<Value, DenominatorSize>& rhs
-				) noexcept -> operand::OperandCompareApprox<Lhs, operand::OperandConstantFloatingPoint<Value, DenominatorSize>, typename operand::OperandConstantFloatingPoint<Value, DenominatorSize>::value_type> { return {lhs, rhs, operand::OperandConstantFloatingPoint<Value, DenominatorSize>::epsilon}; }
-
-		template<operand::operand_t Lhs, typename Rhs>
-		// workaround: dispatched expression, avoid ambiguous
-			requires(not dispatcher::is_dispatched_expression_v<Rhs>)
-		[[nodiscard]] constexpr auto operator!=(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareNotEqual<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<operand::operand_t Lhs, std::floating_point Rhs>
-		[[nodiscard]] constexpr auto operator!=(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareNotApprox<Lhs, Rhs, Rhs> { return {lhs, rhs, std::numeric_limits<Rhs>::epsilon()}; }
-
-		template<std::floating_point auto Value, std::size_t DenominatorSize, std::floating_point Rhs>
-		[[nodiscard]] constexpr auto operator!=(
-				const operand::OperandConstantFloatingPoint<Value, DenominatorSize>& lhs,
-				const Rhs&                                                           rhs
-				) noexcept -> operand::OperandCompareNotApprox<operand::OperandConstantFloatingPoint<Value, DenominatorSize>, Rhs, typename operand::OperandConstantFloatingPoint<Value, DenominatorSize>::value_type> { return {lhs, rhs, operand::OperandConstantFloatingPoint<Value, DenominatorSize>::epsilon}; }
-
-		template<typename Lhs, operand::operand_t Rhs>
-		// avoid ambiguous
-			requires(not operand::is_operand_v<Lhs> and not std::is_floating_point_v<Lhs>)
-					// workaround: dispatched expression, avoid ambiguous
-					and (not dispatcher::is_dispatched_expression_v<Lhs>)
-		[[nodiscard]] constexpr auto operator!=(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareNotEqual<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<std::floating_point Lhs, operand::operand_t Rhs>
-		[[nodiscard]] constexpr auto operator!=(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareNotApprox<Lhs, Rhs, Lhs> { return {lhs, rhs, std::numeric_limits<Lhs>::epsilon()}; }
-
-		template<std::floating_point Lhs, std::floating_point auto Value, std::size_t DenominatorSize>
-		[[nodiscard]] constexpr auto operator!=(
-				const Lhs&                                                           lhs,
-				const operand::OperandConstantFloatingPoint<Value, DenominatorSize>& rhs
-				) noexcept -> operand::OperandCompareNotApprox<Lhs, operand::OperandConstantFloatingPoint<Value, DenominatorSize>, typename operand::OperandConstantFloatingPoint<Value, DenominatorSize>::value_type> { return {lhs, rhs, operand::OperandConstantFloatingPoint<Value, DenominatorSize>::epsilon}; }
-
-		template<typename Lhs, typename Rhs>
-			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
-					// workaround: dispatched expression, avoid ambiguous
-					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
-		[[nodiscard]] constexpr auto operator>(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareGreaterThan<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<typename Lhs, typename Rhs>
-			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
-					// workaround: dispatched expression, avoid ambiguous
-					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
-		[[nodiscard]] constexpr auto operator>=(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareGreaterEqual<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<typename Lhs, typename Rhs>
-			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
-					// workaround: dispatched expression, avoid ambiguous
-					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
-		[[nodiscard]] constexpr auto operator<(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareLessThan<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<typename Lhs, typename Rhs>
-			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
-					// workaround: dispatched expression, avoid ambiguous
-					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
-		[[nodiscard]] constexpr auto operator<=(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareLessEqual<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<typename Lhs, typename Rhs>
-			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
-					// workaround: dispatched expression, avoid ambiguous
-					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
-		[[nodiscard]] constexpr auto operator and(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandLogicalAnd<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<typename Lhs, typename Rhs>
-			requires operand::is_operand_v<Lhs> or operand::is_operand_v<Rhs>
-					// workaround: dispatched expression, avoid ambiguous
-					and (not dispatcher::is_dispatched_expression_v<Lhs> and not dispatcher::is_dispatched_expression_v<Rhs>)
-		[[nodiscard]] constexpr auto operator or(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandLogicalOr<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<operand::operand_t T>
-		// workaround: dispatched expression, avoid ambiguous
-			requires (not dispatcher::is_dispatched_expression_v<T>)
-		[[nodiscard]] constexpr auto operator not(const T t) noexcept -> operand::OperandLogicalNot<T> { return {t}; }
-
-		template<typename Test>
-		[[nodiscard]] constexpr auto operator/(const categories_type& categories, Test test) noexcept -> Test//
-			requires requires { test.add_categories(categories); }
-		{
-			test.add_categories(categories);
-			return test;
-		}
-
-		template<typename Test>
-		[[nodiscard]] constexpr auto operator/(Test test, const categories_type& categories) noexcept -> Test//
-			requires requires { test.add_categories(categories); }
-		{
-			test.add_categories(categories);
-			return test;
-		}
-
-		template<typename Test>
-		[[nodiscard]] constexpr auto operator/(const tag_skip, Test test) noexcept -> Test//
-			requires requires { test.add_categories(categories_type{tag_skip::value}); }
-		{
-			test.add_categories(categories_type{tag_skip::value});
-			return test;
-		}
-
-		template<typename Test>
-		[[nodiscard]] constexpr auto operator/(Test test, const tag_skip) noexcept -> Test//
-			requires requires { test.add_categories(categories_type{tag_skip::value}); }
-		{
-			test.add_categories(categories_type{tag_skip::value});
-			return test;
-		}
-
-		template<typename Test>
-		// [[nodiscard]] constexpr auto operator/(const tag_silence, Test test) noexcept -> Test//
-		[[nodiscard]] constexpr auto operator/(const dispatcher::DispatcherSilence&, Test test) noexcept -> Test//
-			requires requires { test.add_categories(categories_type{tag_silence::value}); }
-		{
-			test.add_categories(categories_type{tag_silence::value});
-			return test;
-		}
-
-		template<typename Test>
-		// [[nodiscard]] constexpr auto operator/(Test test, const tag_silence) noexcept -> Test//
-		[[nodiscard]] constexpr auto operator/(Test test, const dispatcher::DispatcherSilence&) noexcept -> Test//
-			requires requires { test.add_categories(categories_type{tag_silence::value}); }
-		{
-			test.add_categories(categories_type{tag_silence::value});
-			return test;
-		}
-
-		constexpr auto operator/(const categories_type& lhs, const categories_type& rhs) noexcept -> categories_type
-		{
-			categories_type result{lhs};
-			result.append_range(rhs);
-
-			return result;
-		}
-
-		constexpr auto operator/(const tag_skip, const categories_type& rhs) noexcept -> categories_type
-		{
-			categories_type result{tag_skip::value};
-			result.append_range(rhs);
-
-			return result;
-		}
-
-		constexpr auto operator/(const categories_type& lhs, const tag_skip) noexcept -> categories_type
-		{
-			categories_type result{lhs};
-
-			result.emplace_back(tag_skip::value);
-
-			return result;
-		}
-
-		// constexpr auto operator/(const tag_silence, const categories_type& rhs) noexcept -> categories_type
-		constexpr auto operator/(const dispatcher::DispatcherSilence&, const categories_type& rhs) noexcept -> categories_type
-		{
-			categories_type result{tag_silence::value};
-			result.append_range(rhs);
-
-			return result;
-		}
-
-		// constexpr auto operator/(const categories_type& lhs, const tag_silence) noexcept -> categories_type
-		constexpr auto operator/(const categories_type& lhs, const dispatcher::DispatcherSilence&) noexcept -> categories_type
-		{
-			categories_type result{lhs};
-
-			result.emplace_back(tag_silence::value);
-
-			return result;
-		}
-
-		template<typename Function, std::ranges::range Container>
-			requires std::is_invocable_v<Function, std::ranges::range_value_t<Container>>
-		[[nodiscard]] constexpr auto operator|(const Function& function, const Container& container) noexcept -> auto
-		{
-			return
-					[function, container](const std::string_view name) -> void
-			{
-				std::ranges::for_each(
-						container,
-						[&function, name](const auto& arg) -> void
-						{
-							dispatcher::register_event<Function>(
-									events::EventTest<Function, std::ranges::range_value_t<Container>>{
-											.name = name,
-											.location = {},
-											.categories = {},
-											.invocable = function,
-											.arg = arg});
-						});
-			};
-		}
-	}// namespace operators
-
-	export
-	{
-		template<typename T>
-		using as = operand::OperandValue<T>;
-		using as_c = as<char>;
-		using as_i = as<int>;
-		using as_u = as<unsigned>;
-		using as_l = as<long>;
-		using as_ul = as<unsigned long>;
-		using as_ll = as<long long>;
-		using as_ull = as<unsigned long long>;
-		using as_i8 = as<std::int8_t>;
-		using as_u8 = as<std::uint8_t>;
-		using as_i16 = as<std::int16_t>;
-		using as_u16 = as<std::uint16_t>;
-		using as_i32 = as<std::int32_t>;
-		using as_u32 = as<std::uint32_t>;
-		using as_i64 = as<std::int64_t>;
-		using as_u64 = as<std::uint64_t>;
-		using as_f = as<float>;
-		using as_d = as<double>;
-		using as_ld = as<long double>;
-		using as_b = as<bool>;
-		using as_s = as<std::string>;
-		using as_sv = as<std::string_view>;
-
-		constexpr tag_fatal fatal{};
-		constexpr tag_skip  skip{};
-		// constexpr tag_silence				   silence{};
-		constexpr dispatcher::DispatcherLogger  logger{};
-		constexpr dispatcher::DispatcherThat    that{};
-		constexpr dispatcher::DispatcherSilence silence{};
-		using test = dispatcher::DispatcherTest;
+		constexpr no_adl::test::dispatcher::DispatcherLogger     logger{};
+		constexpr no_adl::test::dispatcher::DispatcherThat       that{};
+		constexpr no_adl::test::dispatcher::DispatcherSilence    silence{};
+		constexpr no_adl::test::dispatcher::DispatcherIgnorePass ignore_pass{};
+		constexpr no_adl::test::dispatcher::DispatcherExpect     expect{};
+
+		using test = no_adl::test::dispatcher::DispatcherTest;
 		using should = test;
-		constexpr auto category = [](const std::string_view name) -> categories_type { return {name}; };
-		constexpr auto cat      = category;
+
+		inline namespace literals
+		{
+			template<infrastructure::basic_fixed_string StringLiteral>
+			constexpr auto operator""_test() noexcept -> no_adl::test::dispatcher::DispatcherTestLiteral<StringLiteral> { return no_adl::test::dispatcher::DispatcherTestLiteral<StringLiteral>::make(); }
+
+			template<char... Cs>
+			[[nodiscard]] constexpr auto operator""_auto() noexcept -> no_adl::test::operand::OperandConstantAuto<Cs...> { return {}; }
+
+			template<infrastructure::basic_fixed_string StringLiteral>
+			[[nodiscard]] constexpr auto operator""_c() noexcept -> no_adl::test::operand::OperandConstantCharacter<*StringLiteral.begin()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<int, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_i() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<int, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<unsigned, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_u() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<unsigned, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<long, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_l() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<long, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<unsigned long, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_ul() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<unsigned long, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<long long, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_ll() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<long long, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<unsigned long long, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_ull() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<unsigned long long, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::int8_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_i8() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::int8_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::uint8_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_u8() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint8_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::int16_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_i16() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::int16_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::uint16_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_u16() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint16_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::int32_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_i32() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::int32_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::uint32_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_u32() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint32_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::int64_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_i64() noexcept -> no_adl::test::operand::OperandConstantIntegral<
+				no_adl::test::utility::literals::to_integral<std::int64_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::uint64_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_u64() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint64_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_floating_point<float, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_f() noexcept -> no_adl::test::operand::OperandConstantFloatingPoint<
+				no_adl::test::utility::literals::to_floating_point<float, Cs...>(),
+				no_adl::test::utility::literals::to_denominator_size<Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_floating_point<double, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_d() noexcept -> no_adl::test::operand::OperandConstantFloatingPoint<
+				no_adl::test::utility::literals::to_floating_point<double, Cs...>(),
+				no_adl::test::utility::literals::to_denominator_size<Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_floating_point<long double, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_ld() noexcept -> no_adl::test::operand::OperandConstantFloatingPoint<
+				no_adl::test::utility::literals::to_floating_point<long double, Cs...>(),
+				no_adl::test::utility::literals::to_denominator_size<Cs...>()> { return {}; }
+
+			[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> no_adl::test::operand::OperandValue<bool> { return no_adl::test::operand::OperandValue<bool>{no_adl::test::operand::OperandValue<bool>::value_type{name, size}}; }
+
+			namespace detail
+			{
+				struct string_view final : std::string_view, no_adl::test::operand::Operand
+				{
+					[[nodiscard]] constexpr auto to_string() const noexcept -> std::string_view { return *this; }
+
+					// template<typename Rhs>
+					// [[nodiscard]] constexpr auto operator==(const Rhs& other) const noexcept -> bool//
+					// 	requires requires { this->s == other; } { return this->s == other; }
+					//
+					// template<typename Rhs>
+					// [[nodiscard]] constexpr auto operator==(const Rhs& other) const noexcept -> bool//
+					// 	requires requires { this->s == static_cast<const std::string_view&>(other); } { return this->s == static_cast<const std::string_view&>(other); }
+					//
+					// template<typename Rhs>
+					// [[nodiscard]] constexpr auto operator==(const Rhs& other) const noexcept -> bool//
+					// 	requires requires { this->s == other.to_string(); } { return this->s == other.to_string(); }
+
+					// template<typename Rhs>
+					// [[nodiscard]] constexpr auto operator==(const Rhs& other) const noexcept -> bool//
+					// {
+					// 	if constexpr (requires { this->s == other; }) { return this->s == other; }
+					// 	else if constexpr (requires { this->s == static_cast<const std::string_view&>(other); }) { return this->s == static_cast<const std::string_view&>(other); }
+					// 	else if constexpr (requires { this->s == other.to_string(); }) { return this->s == other.to_string(); }
+					// 	else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+					// }
+				};
+			}
+
+			[[nodiscard]] constexpr auto operator""_s(const char* name, std::size_t size) noexcept -> detail::string_view { return {{name, size}}; }
+		}// namespace literals
+
+		// Overload the following operators to implement auto-dispatch.
+		inline namespace operators
+		{
+			// a == b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator==(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
+				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs); }
+
+			// a != b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator!=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
+				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs); }
+
+			// a > b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator>(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
+				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs); }
+
+			// a >= b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator>=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
+				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs); }
+
+			// a < b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator<(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
+				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs); }
+
+			// a <= b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator<=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
+				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs); }
+
+			// a and b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator and(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
+				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs); }
+
+			// a or b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator or(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
+				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs); }
+
+			// not a
+			template<typename Lhs>
+			[[nodiscard]] constexpr auto operator not(Lhs&& lhs) noexcept -> decltype(auto)//
+				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { not(that % std::forward<Lhs>(lhs)); } { return not(that % std::forward<Lhs>(lhs)); }
+
+			template<typename Test>
+			[[nodiscard]] constexpr auto operator/(const categories_type& categories, Test test) noexcept -> Test//
+				requires requires { test.add_categories(categories); }
+			{
+				test.add_categories(categories);
+				return test;
+			}
+
+			template<typename Test>
+			[[nodiscard]] constexpr auto operator/(Test test, const categories_type& categories) noexcept -> Test//
+				requires requires { test.add_categories(categories); }
+			{
+				test.add_categories(categories);
+				return test;
+			}
+
+			constexpr auto operator/(const categories_type& lhs, const categories_type& rhs) noexcept -> categories_type
+			{
+				categories_type result{lhs};
+				result.append_range(rhs);
+
+				return result;
+			}
+
+			template<typename Function, std::ranges::range Container>
+				requires std::is_invocable_v<Function, std::ranges::range_value_t<Container>>
+			[[nodiscard]] constexpr auto operator|(const Function& function, const Container& container) noexcept -> auto
+			{
+				return
+						[function, container](const std::string_view name) -> void
+				{
+					std::ranges::for_each(
+							container,
+							[&function, name](const auto& arg) -> void
+							{
+								no_adl::test::dispatcher::register_event<Function>(
+										no_adl::test::events::EventTest<Function, std::ranges::range_value_t<Container>>{
+												.name = name,
+												.location = {},
+												.categories = {},
+												.invocable = function,
+												.arg = arg});
+							});
+				};
+			}
+
+			// ==========================================
+			// SKIP
+			// ==========================================
+
+			template<typename Test>
+			[[nodiscard]] constexpr auto operator/(const no_adl::test::tag_skip, Test test) noexcept -> Test//
+				requires requires { test.add_categories(categories_type{no_adl::test::tag_skip::value}); }
+			{
+				test.add_categories(categories_type{no_adl::test::tag_skip::value});
+				return test;
+			}
+
+			template<typename Test>
+			[[nodiscard]] constexpr auto operator/(Test test, const no_adl::test::tag_skip) noexcept -> Test//
+				requires requires { test.add_categories(categories_type{no_adl::test::tag_skip::value}); }
+			{
+				test.add_categories(categories_type{no_adl::test::tag_skip::value});
+				return test;
+			}
+
+			constexpr auto operator/(const no_adl::test::tag_skip, const categories_type& rhs) noexcept -> categories_type
+			{
+				categories_type result{no_adl::test::tag_skip::value};
+				result.append_range(rhs);
+
+				return result;
+			}
+
+			constexpr auto operator/(const categories_type& lhs, const no_adl::test::tag_skip) noexcept -> categories_type
+			{
+				categories_type result{lhs};
+
+				result.emplace_back(no_adl::test::tag_skip::value);
+
+				return result;
+			}
+
+			// ==========================================
+			// SILENCE
+			// ==========================================
+
+			template<typename Test>
+			// [[nodiscard]] constexpr auto operator/(const no_adl::test::tag_silence, Test test) noexcept -> Test//
+			[[nodiscard]] constexpr auto operator/(const no_adl::test::dispatcher::DispatcherSilence&, Test test) noexcept -> Test//
+				requires requires { test.add_categories(categories_type{no_adl::test::tag_silence::value}); }
+			{
+				test.add_categories(categories_type{no_adl::test::tag_silence::value});
+				return test;
+			}
+
+			template<typename Test>
+			// [[nodiscard]] constexpr auto operator/(Test test, const no_adl::test::tag_silence) noexcept -> Test//
+			[[nodiscard]] constexpr auto operator/(Test test, const no_adl::test::dispatcher::DispatcherSilence&) noexcept -> Test//
+				requires requires { test.add_categories(categories_type{no_adl::test::tag_silence::value}); }
+			{
+				test.add_categories(categories_type{no_adl::test::tag_silence::value});
+				return test;
+			}
+
+			// constexpr auto operator/(const no_adl::test::tag_silence, const categories_type& rhs) noexcept -> categories_type
+			constexpr auto operator/(const no_adl::test::dispatcher::DispatcherSilence&, const categories_type& rhs) noexcept -> categories_type
+			{
+				categories_type result{no_adl::test::tag_silence::value};
+				result.append_range(rhs);
+
+				return result;
+			}
+
+			// constexpr auto operator/(const categories_type& lhs, const no_adl::test::tag_silence) noexcept -> categories_type
+			constexpr auto operator/(const categories_type& lhs, const no_adl::test::dispatcher::DispatcherSilence&) noexcept -> categories_type
+			{
+				categories_type result{lhs};
+
+				result.emplace_back(no_adl::test::tag_silence::value);
+
+				return result;
+			}
+
+			// ==========================================
+			// IGNORE PASS
+			// ==========================================
+
+			template<typename Test>
+			// [[nodiscard]] constexpr auto operator/(const no_adl::test::tag_ignore_pass, Test test) noexcept -> Test//
+			[[nodiscard]] constexpr auto operator/(const no_adl::test::dispatcher::DispatcherIgnorePass&, Test test) noexcept -> Test//
+				requires requires { test.add_categories(categories_type{no_adl::test::tag_ignore_pass::value}); }
+			{
+				test.add_categories(categories_type{no_adl::test::tag_ignore_pass::value});
+				return test;
+			}
+
+			template<typename Test>
+			// [[nodiscard]] constexpr auto operator/(Test test, const no_adl::test::tag_ignore_pass) noexcept -> Test//
+			[[nodiscard]] constexpr auto operator/(Test test, const no_adl::test::dispatcher::DispatcherIgnorePass&) noexcept -> Test//
+				requires requires { test.add_categories(categories_type{no_adl::test::tag_ignore_pass::value}); }
+			{
+				test.add_categories(categories_type{no_adl::test::tag_ignore_pass::value});
+				return test;
+			}
+
+			// constexpr auto operator/(const no_adl::test::tag_ignore_pass, const categories_type& rhs) noexcept -> categories_type
+			constexpr auto operator/(const no_adl::test::dispatcher::DispatcherIgnorePass&, const categories_type& rhs) noexcept -> categories_type
+			{
+				categories_type result{no_adl::test::tag_ignore_pass::value};
+				result.append_range(rhs);
+
+				return result;
+			}
+
+			// constexpr auto operator/(const categories_type& lhs, const no_adl::test::tag_ignore_pass) noexcept -> categories_type
+			constexpr auto operator/(const categories_type& lhs, const no_adl::test::dispatcher::DispatcherIgnorePass&) noexcept -> categories_type
+			{
+				categories_type result{lhs};
+
+				result.emplace_back(no_adl::test::tag_ignore_pass::value);
+
+				return result;
+			}
+		}// namespace operators
 
 		// fixme: @see executor
 		// If we don't use global singleton (instead, one object per compilation unit), an object will be destructed multiple times.
@@ -3154,151 +3677,59 @@ namespace gal::prometheus::test
 		struct suite
 		{
 			template<std::invocable InvocableType>
-			constexpr explicit (false) suite(
+			constexpr explicit(false) suite(
 					InvocableType               invocable,
 					const std::source_location& location = std::source_location::current()
 					) noexcept
 			//
 				requires requires { +invocable; }
 			{
-				dispatcher::register_event<decltype(+invocable)>(events::EventSuite{
+				no_adl::test::dispatcher::register_event<decltype(+invocable)>(no_adl::test::events::EventSuite{
 						.name = SuiteName.operator std::string_view(),
 						.location = location,
-						.function = +invocable
-				});
+						.function = +invocable});
 			}
 		};
 
 		#if defined(__cpp_nontype_template_parameter_class)
-		template <auto Constant>
+		template<auto Constant>
 		#else
 		template<bool Constant>
 		#endif
 		constexpr auto constant = Constant;
 		template<typename T>
-		constexpr auto type = operand::OperandType<T>{};
-
-		template<operand::expression_t Expression>
-		constexpr auto expect(
-				const Expression&           expression,
-				const std::source_location& location = std::source_location::current()
-				) -> auto
-		{
-			// workaround, silence expression vvv
-			if constexpr (dispatcher::is_silence_expression_v<Expression>)
-			{
-				dispatcher::register_event<typename Expression::dispatched_type_no_alias>(events::EventSilenceBegin{});
-				const auto result = dispatcher::register_event<typename Expression::dispatched_type_no_alias>(events::EventAssertion<typename Expression::dispatched_type_no_alias>{.location = location, .expression = expression.e});
-				dispatcher::register_event<typename Expression::dispatched_type_no_alias>(events::EventSilenceEnd{});
-				return dispatcher::DispatcherExpect<typename Expression::dispatched_type_no_alias>{result};
-			}
-			// ^^^ workaround, silence expression end
-			else
-			{
-				return dispatcher::DispatcherExpect<Expression>{
-						dispatcher::register_event<Expression>(
-								events::EventAssertion<Expression>{
-										.location = location,
-										.expression = expression}
-								)
-				};
-			}
-		}
+		constexpr auto type = no_adl::test::operand::OperandType<T>{};
 
 		template<typename ExceptionType = void, std::invocable InvocableType>
-		[[nodiscard]] constexpr auto throws(
-				const InvocableType& invocable
-				) noexcept -> operand::OperandThrow<InvocableType, ExceptionType> { return {invocable}; }
+		[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> no_adl::test::operand::OperandThrow<InvocableType, ExceptionType> { return {invocable}; }
 
 		template<std::invocable InvocableType>
-		[[nodiscard]] constexpr auto nothrow(
-				const InvocableType& invocable
-				) noexcept -> operand::OperandNoThrow<InvocableType> { return {invocable}; }
+		[[nodiscard]] constexpr auto nothrow(const InvocableType& invocable) noexcept -> no_adl::test::operand::OperandNoThrow<InvocableType> { return {invocable}; }
 
 		#if __has_include(<unistd.h>) and __has_include(<sys/wait.h>)
-		template <std::invocable InvocableType>
-		[[nodiscard]] constexpr auto aborts(const InvocableType& invocable) noexcept -> operand::OperandAbort<InvocableType>
-		{
-			return {invocable};
-		}
+		template<std::invocable InvocableType>
+		[[nodiscard]] constexpr auto aborts(const InvocableType& invocable) noexcept -> no_adl::test::operand::OperandAbort<InvocableType> { return { invocable}; }
 		#endif
 
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto eq(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareEqual<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<typename Lhs, typename Rhs, typename Epsilon>
-		[[nodiscard]] constexpr auto approx(
-				const Lhs&     lhs,
-				const Rhs&     rhs,
-				const Epsilon& epsilon
-				) noexcept -> operand::OperandCompareApprox<Lhs, Rhs, Epsilon> { return {lhs, rhs, epsilon}; }
-
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto neq(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareNotEqual<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto gt(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareGreaterThan<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto ge(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareGreaterEqual<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto lt(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareLessThan<Lhs, Rhs> { return {lhs, rhs}; }
-
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto le(
-				const Lhs& lhs,
-				const Rhs& rhs
-				) noexcept -> operand::OperandCompareLessEqual<Lhs, Rhs> { return {lhs, rhs}; }
-
-		using literals::operator""_test;
-		using literals::operator""_auto;
-		using literals::operator""_c;
-		using literals::operator""_i;
-		using literals::operator""_u;
-		using literals::operator""_l;
-		using literals::operator""_ul;
-		using literals::operator""_ll;
-		using literals::operator""_ull;
-		using literals::operator""_i8;
-		using literals::operator""_u8;
-		using literals::operator""_i16;
-		using literals::operator""_u16;
-		using literals::operator""_i32;
-		using literals::operator""_u32;
-		using literals::operator""_i64;
-		using literals::operator""_u64;
-		using literals::operator""_f;
-		using literals::operator""_d;
-		using literals::operator""_ld;
-		using literals::operator""_b;
-		using literals::operator""_s;
-
-		using operators::operator==;
-		using operators::operator!=;
-		using operators::operator>;
-		using operators::operator>=;
-		using operators::operator<;
-		using operators::operator<=;
-		using operators::operator and;
-		using operators::operator or;
-		using operators::operator not;
-		using operators::operator /;
-		using operators::operator |;
+		// template<typename Lhs, typename Rhs>
+		// [[nodiscard]] constexpr auto eq(const Lhs& lhs, const Rhs& rhs) noexcept -> no_adl::test::operand::OperandCompareEqual<Lhs, Rhs> { return {lhs, rhs}; }
+		//
+		// template<typename Lhs, typename Rhs, typename Epsilon>
+		// [[nodiscard]] constexpr auto approx(const Lhs& lhs, const Rhs& rhs, const Epsilon& epsilon) noexcept -> no_adl::test::operand::OperandCompareApprox<Lhs, Rhs, Epsilon> { return {lhs, rhs, epsilon}; }
+		//
+		// template<typename Lhs, typename Rhs>
+		// [[nodiscard]] constexpr auto neq(const Lhs& lhs, const Rhs& rhs) noexcept -> no_adl::test::operand::OperandCompareNotEqual<Lhs, Rhs> { return {lhs, rhs}; }
+		//
+		// template<typename Lhs, typename Rhs>
+		// [[nodiscard]] constexpr auto gt(const Lhs& lhs, const Rhs& rhs) noexcept -> no_adl::test::operand::OperandCompareGreaterThan<Lhs, Rhs> { return {lhs, rhs}; }
+		//
+		// template<typename Lhs, typename Rhs>
+		// [[nodiscard]] constexpr auto ge(const Lhs& lhs, const Rhs& rhs) noexcept -> no_adl::test::operand::OperandCompareGreaterEqual<Lhs, Rhs> { return {lhs, rhs}; }
+		//
+		// template<typename Lhs, typename Rhs>
+		// [[nodiscard]] constexpr auto lt(const Lhs& lhs, const Rhs& rhs) noexcept -> no_adl::test::operand::OperandCompareLessThan<Lhs, Rhs> { return {lhs, rhs}; }
+		//
+		// template<typename Lhs, typename Rhs>
+		// [[nodiscard]] constexpr auto le(const Lhs& lhs, const Rhs& rhs) noexcept -> no_adl::test::operand::OperandCompareLessEqual<Lhs, Rhs> { return {lhs, rhs}; }
 	}
-}// namespace gal::prometheus::test
+}
