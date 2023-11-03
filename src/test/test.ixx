@@ -16,6 +16,23 @@ import gal.prometheus.infrastructure;
 
 namespace gal::prometheus
 {
+	/**
+	 * @note DO NOT `using namespace test` in `global scope`!
+	 *
+	 * @code 
+	 * using namespace gal::prometheus;
+	 *
+	 * test::suite<"my_suite"> _ = []
+	 * {
+	 *	using namespace test; // <---
+	 *
+	 *	"my_test"_test = []
+	 *	{
+	 *		expect(1_i == 1_i);
+	 *	};
+	 * };
+	 * @endcode
+	 */
 	export namespace test
 	{
 		// The color used to print the results of test case execution.
@@ -81,19 +98,17 @@ namespace gal::prometheus
 
 		namespace operand
 		{
-			class Operand { };
+			template<typename>
+			constexpr auto is_expression_v = false;
 
-			template<typename O>
-			constexpr auto is_operand_v = std::is_base_of_v<Operand, O>;
-			template<typename O>
-			concept operand_t = is_operand_v<O>;
 			template<typename Expression>
-			constexpr auto is_expression_v =
-					// 1 < i
-					std::is_convertible_v<Expression, bool> or
-					std::is_constructible_v<bool, Expression> or
-					// OperandCompareLess{OperandConstantIntegral<1>{}, i}
-					operand::is_operand_v<Expression>;
+			// implicit
+				requires std::is_convertible_v<Expression, bool>
+			constexpr auto is_expression_v<Expression> = true;
+			template<typename Expression>
+			// explicit
+				requires std::is_constructible_v<bool, Expression>
+			constexpr auto is_expression_v<Expression> = true;
 			template<typename Expression>
 			concept expression_t = is_expression_v<Expression>;
 		}// namespace operand
@@ -396,38 +411,45 @@ namespace gal::prometheus
 
 		namespace operand
 		{
-			constexpr auto range_to_string = []<std::ranges::range Range>(const Range& r) noexcept -> std::string
+			constexpr auto range_to_string = []<std::ranges::range Range>(const Range& r) noexcept -> std::string//
 			{
-				std::string result{};
+				if constexpr (requires(std::ranges::range_const_reference_t<Range> v) { std::format("{}", v); })
+				{
+					std::string result{};
 
-				result.append_range(infrastructure::compiler::type_name<Range>());
-				result.push_back('{');
-				std::ranges::for_each(
-						r,
-						[&result, done = false](const auto& v) mutable -> void
-						{
-							if (done) { result.push_back(','); }
-							done = true;
+					result.append_range(infrastructure::compiler::type_name<Range>());
+					result.push_back('{');
+					std::ranges::for_each(
+							r,
+							[&result, done = false](const auto& v) mutable -> void
+							{
+								if (done) { result.push_back(','); }
+								done = true;
 
-							std::format_to(
-									std::back_inserter(result),
-									"{}",
-									v);
-						});
-				result.push_back('}');
+								std::format_to(
+										std::back_inserter(result),
+										"{}",
+										v);
+							});
+					result.push_back('}');
 
-				return result;
+					return result;
+				}
+				else { return std::format("`unformatable-container({})`", infrastructure::compiler::type_name<Range>()); }
 			};
 
 			constexpr auto expression_to_string = []<typename T>(const T& expression) noexcept -> decltype(auto)
 			{
 				if constexpr (std::is_constructible_v<std::string_view, T> or std::is_convertible_v<T, std::string_view>) { return std::string_view{expression}; }
 				else if constexpr (requires { expression.to_string(); }) { return expression.to_string(); }
-				else { return std::format("{}", expression); }
+				// workaround vvv: dispatched_expression
+				else if constexpr (requires { expression.expression.to_string(); }) { return expression.expression.to_string(); }
+				else if constexpr (requires { std::format("{}", expression); }) { return std::format("{}", expression); }
+				else { return std::format("`unformatable({})`", infrastructure::compiler::type_name<T>()); }
 			};
 
 			template<typename T>
-			class OperandType : public Operand
+			class OperandType
 			{
 			public:
 				using operand_type_no_alias = T;
@@ -447,7 +469,7 @@ namespace gal::prometheus
 			concept operand_type_t = is_operand_type_v<T>;
 
 			template<typename T>
-			class OperandValue : public Operand
+			class OperandValue
 			{
 			public:
 				using value_type = T;
@@ -475,7 +497,7 @@ namespace gal::prometheus
 			};
 
 			template<>
-			class OperandValue<bool> : public Operand
+			class OperandValue<bool>
 			{
 			public:
 				using value_type = std::string_view;
@@ -490,7 +512,7 @@ namespace gal::prometheus
 			};
 
 			template<std::floating_point T>
-			class OperandValue<T> : public Operand
+			class OperandValue<T>
 			{
 			public:
 				using value_type = T;
@@ -531,7 +553,7 @@ namespace gal::prometheus
 			concept operand_value_floating_point_t = is_operand_value_floating_point_v<T>;
 
 			template<char Value>
-			class OperandConstantCharacter : public Operand
+			class OperandConstantCharacter
 			{
 			public:
 				using value_type = char;
@@ -542,7 +564,7 @@ namespace gal::prometheus
 			};
 
 			template<std::integral auto Value>
-			class OperandConstantIntegral : public Operand
+			class OperandConstantIntegral
 			{
 			public:
 				using value_type = std::remove_cvref_t<decltype(Value)>;
@@ -555,7 +577,7 @@ namespace gal::prometheus
 			};
 
 			template<std::floating_point auto Value, std::size_t DenominatorSize>
-			class OperandConstantFloatingPoint : public Operand
+			class OperandConstantFloatingPoint
 			{
 			public:
 				using value_type = std::remove_cvref_t<decltype(Value)>;
@@ -575,7 +597,7 @@ namespace gal::prometheus
 			};
 
 			template<char... Cs>
-			class OperandConstantAuto : public Operand
+			class OperandConstantAuto
 			{
 			public:
 				template<typename T>
@@ -653,7 +675,7 @@ namespace gal::prometheus
 			template<typename T>
 			concept operand_constant_auto_t = is_operand_constant_auto_v<T>;
 
-			class OperandCompareIdentity : public Operand
+			class OperandCompareIdentity
 			{
 			public:
 				using value_type = OperandValue<bool>;
@@ -672,9 +694,41 @@ namespace gal::prometheus
 				[[nodiscard]] constexpr auto to_string() const noexcept -> decltype(auto) { return value_.to_string(); }
 			};
 
+			template<typename Expression>
+				requires operand::expression_t<Expression> or requires(Expression e) { static_cast<bool>(e.expression); }
+			class OperandConstantExpression
+			{
+				constexpr static auto etv(Expression e) noexcept -> bool
+				{
+					if constexpr (requires { static_cast<bool>(e); }) { return static_cast<bool>(e); }
+					else if constexpr (requires { static_cast<bool>(e.expression); }) { return static_cast<bool>(e.expression); }
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				}
+
+			public:
+				bool value;
+
+				// fixme: We shouldn't care what the result of the expression is, we just need to generate a compile error if we can't evaluate the expression during compilation.
+				constexpr explicit(false) OperandConstantExpression(Expression expression) noexcept
+					: value{etv(expression)} {}
+
+				constexpr explicit operator bool() const noexcept { return value; }
+
+				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string_view
+				{
+					// fixme: Is there any way to preserve the expression?
+					return value ? "constant<true>" : "constant<false>";
+				}
+			};
+
+			template<typename>
+			constexpr auto is_operand_constant_expression_v = false;
+			template<typename Expression>
+			constexpr auto is_operand_constant_expression_v<OperandConstantExpression<Expression>> = true;
+
 			template<typename L, typename R>
 				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-			class OperandCompareEqual : public Operand
+			class OperandCompareEqual
 			{
 			public:
 				using left_type = L;
@@ -756,7 +810,7 @@ namespace gal::prometheus
 
 			template<typename L, typename R, typename Epsilon>
 				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-			class OperandCompareApprox : public Operand
+			class OperandCompareApprox
 			{
 			public:
 				using left_type = L;
@@ -841,7 +895,7 @@ namespace gal::prometheus
 
 			template<typename L, typename R>
 				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-			class OperandCompareNotEqual : public Operand
+			class OperandCompareNotEqual
 			{
 			public:
 				using left_type = L;
@@ -924,7 +978,7 @@ namespace gal::prometheus
 
 			template<typename L, typename R, typename Epsilon>
 				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-			class OperandCompareNotApprox : public Operand
+			class OperandCompareNotApprox
 			{
 			public:
 				using left_type = L;
@@ -1010,7 +1064,7 @@ namespace gal::prometheus
 
 			template<typename L, typename R>
 				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-			class OperandCompareGreaterThan : public Operand
+			class OperandCompareGreaterThan
 			{
 			public:
 				using left_type = L;
@@ -1084,7 +1138,7 @@ namespace gal::prometheus
 
 			template<typename L, typename R>
 				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-			class OperandCompareGreaterEqual : public Operand
+			class OperandCompareGreaterEqual
 			{
 			public:
 				using left_type = L;
@@ -1158,7 +1212,7 @@ namespace gal::prometheus
 
 			template<typename L, typename R>
 				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-			class OperandCompareLessThan : public Operand
+			class OperandCompareLessThan
 			{
 			public:
 				using left_type = L;
@@ -1232,7 +1286,7 @@ namespace gal::prometheus
 
 			template<typename L, typename R>
 				requires(not(is_operand_constant_auto_v<L> and is_operand_constant_auto_v<R>))
-			class OperandCompareLessEqual : public Operand
+			class OperandCompareLessEqual
 			{
 			public:
 				using left_type = L;
@@ -1305,7 +1359,7 @@ namespace gal::prometheus
 			};
 
 			template<typename L, typename R>
-			class OperandLogicalAnd : public Operand
+			class OperandLogicalAnd
 			{
 			public:
 				using left_type = L;
@@ -1328,7 +1382,7 @@ namespace gal::prometheus
 			};
 
 			template<typename L, typename R>
-			class OperandLogicalOr : public Operand
+			class OperandLogicalOr
 			{
 			public:
 				using left_type = L;
@@ -1350,50 +1404,8 @@ namespace gal::prometheus
 				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{} or {}", expression_to_string(left_), expression_to_string(right_)); }
 			};
 
-			template<typename T>
-			class OperandLogicalNot : public Operand
-			{
-			public:
-				using type = T;
-
-			private:
-				type value_;
-				bool result_;
-
-			public:
-				constexpr explicit(false) OperandLogicalNot(const type& value) noexcept
-					: value_{value},
-					  result_{not static_cast<bool>(value_)} {}
-
-				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
-
-				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("not {}", expression_to_string(value_)); }
-			};
-
-			template<typename T>
-				requires std::is_reference_v<T> or (not std::is_copy_constructible_v<T>)
-			class OperandLogicalNot<T> : public Operand
-			{
-			public:
-				using reference = std::conditional_t<std::is_reference_v<T>, T, std::add_lvalue_reference_t<T>>;
-				using const_reference = std::add_const_t<reference>;
-
-			private:
-				const_reference value_;
-				bool            result_;
-
-			public:
-				constexpr explicit(false) OperandLogicalNot(const_reference value) noexcept
-					: value_{value},
-					  result_{not static_cast<bool>(value_)} {}
-
-				[[nodiscard]] constexpr explicit operator bool() const noexcept { return result_; }
-
-				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("not {}", expression_to_string(value_)); }
-			};
-
 			template<std::invocable InvocableType, typename Exception>
-			class OperandThrow : public Operand
+			class OperandThrow
 			{
 			public:
 				using exception_type = Exception;
@@ -1449,7 +1461,7 @@ namespace gal::prometheus
 			};
 
 			template<std::invocable InvocableType>
-			class OperandThrow<InvocableType, void> : public Operand
+			class OperandThrow<InvocableType, void>
 			{
 			public:
 				using invocable_type = InvocableType;
@@ -1473,7 +1485,7 @@ namespace gal::prometheus
 			};
 
 			template<std::invocable InvocableType>
-			class OperandNoThrow : public Operand
+			class OperandNoThrow
 			{
 			public:
 				using invocable_type = InvocableType;
@@ -1496,7 +1508,7 @@ namespace gal::prometheus
 
 			#if __has_include(<unistd.h>) and __has_include(<sys/wait.h>)
 			template<std::invocable InvocableType>
-			class OperandAbort : public Operand
+			class OperandAbort 
 			{
 			public:
 				using invocable_type = InvocableType;
@@ -2630,586 +2642,19 @@ namespace gal::prometheus
 		};
 
 		template<typename Lhs, typename Dispatcher>
-		struct pre_dispatch_expression;
-
-		template<operand::expression_t Expression, typename Dispatcher>
-		struct dispatched_expression
-		{
-			using expression_type = Expression;
-			using dispatcher_type = Dispatcher;
-
-			expression_type expression;
-
-			[[nodiscard]] constexpr explicit operator bool() const noexcept { return static_cast<bool>(expression); }
-
-			// fixme: `reporter.on(events::EventAssertionFatalSkip)` needs this, maybe a better way to handle it.
-			[[nodiscard]] constexpr auto to_string() const noexcept -> decltype(auto) { return operand::expression_to_string(expression); }
-		};
-
-		template<typename Lhs, typename Dispatcher>
-		struct pre_dispatch_expression
-		{
-			using lhs_type = Lhs;
-			using dispatcher_type = Dispatcher;
-
-			lhs_type lhs;
-
-			// ============================================
-			// operator==
-			// ============================================
-
-			// OperandValue
-
-			// as_b{...} == bool
-			[[nodiscard]] constexpr auto operator==(const bool rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>
-				//
-				requires operand::operand_value_boolean_t<lhs_type> { return {.expression = {lhs, rhs}}; }
-
-			// bool == as_b{...}
-			[[nodiscard]] constexpr auto operator==(const operand::operand_value_boolean_t auto& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>
-				//
-				requires std::is_same_v<lhs_type, bool> { return {.expression = {rhs, lhs}}; }
-
-			// as_x{...} == floating_point
-			template<std::floating_point Rhs>
-				requires operand::operand_value_floating_point_t<lhs_type>
-			[[nodiscard]] constexpr auto operator==(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareApprox<typename lhs_type::value_type, Rhs, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs, lhs.epsilon()}}; }
-
-			//  floating_point == as_x{...}
-			template<operand::operand_value_floating_point_t Rhs>
-				requires std::floating_point<lhs_type>
-			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareApprox<lhs_type, typename Rhs::value_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value(), rhs.epsilon()}}; }
-
-			// as_x{...} == not(boolean/floating_point)
-			template<typename Rhs>
-				requires operand::operand_value_t<lhs_type> and (not std::floating_point<Rhs>)
-			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
-
-			// not(boolean/floating_point) == as_x{...}
-			template<operand::operand_value_t Rhs>
-				requires (not std::floating_point<lhs_type>)
-			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
-
-			// OperandConstantXxx
-
-			// "xxx"_b == bool => as_b{"xxx"} == bool
-			// bool == "xxx"_b => bool == as_b{"xxx"}
-
-			// "xxx"_x == integral
-			template<std::integral Rhs>
-				requires operand::operand_constant_integral_t<lhs_type>
-			[[nodiscard]] constexpr auto operator==(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
-
-			// integral == "xxx"_x
-			template<operand::operand_constant_integral_t Rhs>
-				requires std::integral<lhs_type>
-			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
-
-			// "xxx"_x == floating_point
-			template<std::floating_point Rhs>
-				requires operand::operand_constant_floating_point_t<lhs_type>
-			[[nodiscard]] constexpr auto operator==(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareApprox<typename lhs_type::value_type, Rhs, typename lhs_type::value_type>, dispatcher_type>{.expression = {lhs_type::value, rhs, lhs_type::epsilon}}; }
-
-			// floating_point == "xxx"_x
-			template<operand::operand_constant_floating_point_t Rhs>
-				requires std::floating_point<lhs_type>
-			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareApprox<lhs_type, typename Rhs::value_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value, Rhs::epsilon}}; }
-
-			// "xxx"_auto == any
-			template<typename Rhs>
-				requires operand::operand_constant_auto_t<lhs_type>
-			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto
-			{
-				// forward
-				return typename lhs_type::template rebind<Rhs>{} == rhs;
-			}
-
-			// any == "xxx"_auto
-			template<operand::operand_constant_auto_t Rhs>
-			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto
-			{
-				// forward
-				return lhs == typename Rhs::template rebind<lhs_type>{};
-			}
-
-			// ANY == ANY
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator==(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator==(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// any
-			template<typename Rhs>
-				requires(
-					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
-					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
-					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
-				)
-			[[nodiscard]] constexpr auto operator==(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareEqual<lhs_type, Rhs>, dispatcher_type>
-				//
-				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareEqual<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// ============================================
-			// operator!=
-			// ============================================
-
-			// OperandValue
-
-			// as_b{...} != bool
-			[[nodiscard]] constexpr auto operator!=(const bool rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>
-				//
-				requires operand::operand_value_boolean_t<lhs_type> { return {.expression = {lhs, not rhs}}; }
-
-			// bool == as_b{...}
-			[[nodiscard]] constexpr auto operator!=(const operand::operand_value_boolean_t auto& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>
-				//
-				requires std::is_same_v<lhs_type, bool> { return {.expression = {rhs, not lhs}}; }
-
-			// as_x{...} != floating_point
-			template<std::floating_point Rhs>
-				requires operand::operand_value_floating_point_t<lhs_type>
-			[[nodiscard]] constexpr auto operator!=(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotApprox<typename lhs_type::value_type, Rhs, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs, lhs.epsilon()}}; }
-
-			//  floating_point != as_x{...}
-			template<operand::operand_value_floating_point_t Rhs>
-				requires std::floating_point<lhs_type>
-			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotApprox<lhs_type, typename Rhs::value_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value(), rhs.epsilon()}}; }
-
-			// as_x{...} != not(boolean/floating_point)
-			template<typename Rhs>
-				requires operand::operand_value_t<lhs_type> and (not std::floating_point<Rhs>)
-			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
-
-			// not(boolean/floating_point) != as_x{...}
-			template<operand::operand_value_t Rhs>
-				requires(not std::floating_point<lhs_type>)
-			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
-
-			// OperandConstantXxx
-
-			// "xxx"_b != bool => as_b{"xxx"} != bool
-			// bool != "xxx"_b => bool != as_b{"xxx"}
-
-			// "xxx"_x != integral
-			template<std::integral Rhs>
-				requires operand::operand_constant_integral_t<lhs_type>
-			[[nodiscard]] constexpr auto operator!=(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
-
-			// integral != "xxx"_x
-			template<operand::operand_constant_integral_t Rhs>
-				requires std::integral<lhs_type>
-			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
-
-			// "xxx"_x != floating_point
-			template<std::floating_point Rhs>
-				requires operand::operand_constant_floating_point_t<lhs_type>
-			[[nodiscard]] constexpr auto operator!=(const Rhs rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotApprox<lhs_type, Rhs, typename lhs_type::value_type>, dispatcher_type>{.expression = {lhs_type::value, rhs, lhs_type::epsilon}}; }
-
-			// floating_point != "xxx"_x
-			template<operand::operand_constant_floating_point_t Rhs>
-				requires std::floating_point<lhs_type>
-			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareNotApprox<lhs_type, Rhs, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value, Rhs::epsilon}}; }
-
-			// "xxx"_auto != any
-			template<typename Rhs>
-				requires operand::operand_constant_auto_t<lhs_type>
-			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto
-			{
-				// forward
-				return typename lhs_type::template rebind<Rhs>{} != rhs;
-			}
-
-			// any != "xxx"_auto
-			template<operand::operand_constant_auto_t Rhs>
-			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto
-			{
-				// forward
-				return lhs != typename Rhs::template rebind<lhs_type>{};
-			}
-
-			// ANY == ANY
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator!=(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareNotEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator!=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareNotEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// any
-			template<typename Rhs>
-				requires(
-					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
-					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
-					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
-				)
-			[[nodiscard]] constexpr auto operator!=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareNotEqual<lhs_type, Rhs>, dispatcher_type>
-				//
-				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareNotEqual<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// ============================================
-			// operator>
-			// ============================================
-
-			// OperandValue
-
-			// as_x{...} > ...
-			template<typename Rhs>
-				requires operand::operand_value_t<lhs_type>
-			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareGreaterThan<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
-
-			// ... > as_x{...}
-			template<operand::operand_value_t Rhs>
-			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareGreaterThan<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
-
-			// OperandConstantXxx
-
-			// "xxx"_x > ...
-			template<typename Rhs>
-				requires operand::operand_constant_t<lhs_type>
-			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto
-			{
-				if constexpr (operand::operand_constant_auto_t<lhs_type>)
-				{
-					// forward
-					return typename lhs_type::template rebind<Rhs>{} > rhs;
-				}
-				else { return dispatched_expression<operand::OperandCompareGreaterThan<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
-			}
-
-			// ... > "xxx"_x
-			template<operand::operand_constant_t Rhs>
-			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto
-			{
-				if constexpr (operand::operand_constant_auto_t<Rhs>)
-				{
-					// forward
-					return lhs > typename Rhs::template rebind<lhs_type>{};
-				}
-				else { return dispatched_expression<operand::OperandCompareGreaterThan<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
-			}
-
-			// ANY == ANY
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator>(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareGreaterThan<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator>(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterThan<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// any
-			template<typename Rhs>
-				requires(
-					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
-					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
-					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
-				)
-			[[nodiscard]] constexpr auto operator>(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterThan<lhs_type, Rhs>, dispatcher_type>
-				//
-				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareGreaterThan<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// ============================================
-			// operator>=
-			// ============================================
-
-			// OperandValue
-
-			// as_x{...} >= ...
-			template<typename Rhs>
-				requires operand::operand_value_t<lhs_type>
-			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareGreaterEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
-
-			// ... >= as_x{...}
-			template<operand::operand_value_t Rhs>
-			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareGreaterEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
-
-			// OperandConstantXxx
-
-			// "xxx"_x >= ...
-			template<typename Rhs>
-				requires operand::operand_constant_t<lhs_type>
-			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto
-			{
-				if constexpr (operand::operand_constant_auto_t<lhs_type>)
-				{
-					// forward
-					return typename lhs_type::template rebind<Rhs>{} >= rhs;
-				}
-				else { return dispatched_expression<operand::OperandCompareGreaterEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
-			}
-
-			// ... >= "xxx"_x
-			template<operand::operand_constant_t Rhs>
-			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto
-			{
-				if constexpr (operand::operand_constant_auto_t<Rhs>)
-				{
-					// forward
-					return lhs >= typename Rhs::template rebind<lhs_type>{};
-				}
-				else { return dispatched_expression<operand::OperandCompareGreaterEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
-			}
-
-			// ANY == ANY
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator>=(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareGreaterEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator>=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// any
-			template<typename Rhs>
-				requires(
-					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
-					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
-					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
-				)
-			[[nodiscard]] constexpr auto operator>=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterEqual<lhs_type, Rhs>, dispatcher_type>
-				//
-				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareGreaterEqual<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// ============================================
-			// operator<
-			// ============================================
-
-			// OperandValue
-
-			// as_x{...} < ...
-			template<typename Rhs>
-				requires operand::operand_value_t<lhs_type>
-			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareLessThan<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
-
-			// ... < as_x{...}
-			template<operand::operand_value_t Rhs>
-			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareLessThan<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
-
-			// OperandConstantXxx
-
-			// "xxx"_x < ...
-			template<typename Rhs>
-				requires operand::operand_constant_t<lhs_type>
-			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto
-			{
-				if constexpr (operand::operand_constant_auto_t<lhs_type>)
-				{
-					// forward
-					return typename lhs_type::template rebind<Rhs>{} < rhs;
-				}
-				else { return dispatched_expression<operand::OperandCompareLessThan<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
-			}
-
-			// ... < "xxx"_x
-			template<operand::operand_constant_t Rhs>
-			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto
-			{
-				if constexpr (operand::operand_constant_auto_t<Rhs>)
-				{
-					// forward
-					return lhs < typename Rhs::template rebind<lhs_type>{};
-				}
-				else { return dispatched_expression<operand::OperandCompareLessThan<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
-			}
-
-			// ANY == ANY
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator<(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareLessThan<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator<(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessThan<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// any
-			template<typename Rhs>
-				requires(
-					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
-					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
-					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
-				)
-			[[nodiscard]] constexpr auto operator<(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessThan<lhs_type, Rhs>, dispatcher_type>
-				//
-				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareLessThan<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// ============================================
-			// operator<=
-			// ============================================
-
-			// OperandValue
-
-			// as_x{...} <= ...
-			template<typename Rhs>
-				requires operand::operand_value_t<lhs_type>
-			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareLessEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs.value(), rhs}}; }
-
-			// ... <= as_x{...}
-			template<operand::operand_value_t Rhs>
-			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandCompareLessEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, rhs.value()}}; }
-
-			// OperandConstantXxx
-
-			// "xxx"_x <= ...
-			template<typename Rhs>
-				requires operand::operand_constant_t<lhs_type>
-			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto
-			{
-				if constexpr (operand::operand_constant_auto_t<lhs_type>)
-				{
-					// forward
-					return typename lhs_type::template rebind<Rhs>{} <= rhs;
-				}
-				else { return dispatched_expression<operand::OperandCompareLessEqual<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {lhs_type::value, rhs}}; }
-			}
-
-			// ... <= "xxx"_x
-			template<operand::operand_constant_t Rhs>
-			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto
-			{
-				if constexpr (operand::operand_constant_auto_t<Rhs>)
-				{
-					// forward
-					return lhs <= typename Rhs::template rebind<lhs_type>{};
-				}
-				else { return dispatched_expression<operand::OperandCompareLessEqual<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, Rhs::value}}; }
-			}
-
-			// ANY == ANY
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator<=(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareLessEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {lhs, std::forward<Rhs>(rhs)}}; }
-
-			// range
-			template<std::ranges::range Rhs>
-				requires std::ranges::range<lhs_type>
-			[[nodiscard]] constexpr auto operator<=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessEqual<std::decay_t<lhs_type>, std::decay_t<Rhs>>, dispatcher_type> { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// any
-			template<typename Rhs>
-				requires(
-					not(operand::operand_value_t<lhs_type> or operand::operand_value_t<Rhs>) and      //
-					not(operand::operand_constant_t<lhs_type> or operand::operand_constant_t<Rhs>) and//
-					not(std::ranges::range<lhs_type> or std::ranges::range<Rhs>)                      //
-				)
-			[[nodiscard]] constexpr auto operator<=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessEqual<lhs_type, Rhs>, dispatcher_type>
-				//
-				requires requires { static_cast<bool>(dispatched_expression<operand::OperandCompareLessEqual<lhs_type, Rhs>, dispatcher_type>{.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}); } { return {.expression = {std::move(lhs), std::forward<Rhs>(rhs)}}; }
-
-			// ============================================
-			// operator and
-			// ============================================
-
-			// OperandValue
-
-			// as_b{...} and ...
-			template<std::convertible_to<bool> Rhs>
-				requires operand::operand_value_boolean_t<lhs_type>
-			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandLogicalAnd<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {static_cast<typename lhs_type::value_type>(lhs), rhs}}; }
-
-			// ... and as_b{...}
-			template<operand::operand_value_boolean_t Rhs>
-				requires std::convertible_to<lhs_type, bool>
-			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandLogicalAnd<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, static_cast<typename Rhs::value_type>(rhs)}}; }
-
-			// OperandConstantXxx
-
-			// "xxx"_b and bool => as_b{"xxx"} and bool
-			// bool and "xxx"_b => bool and as_b{"xxx"}
-
-			// "xxx"_auto and any
-			template<std::convertible_to<bool> Rhs>
-				requires operand::operand_constant_auto_t<lhs_type>
-			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto
-			{
-				// forward
-				return typename lhs_type::template rebind<Rhs>{} and rhs;
-			}
-
-			// any and "xxx"_auto
-			template<operand::operand_constant_auto_t Rhs>
-				requires std::convertible_to<lhs_type, bool>
-			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto
-			{
-				// forward
-				return lhs and typename Rhs::template rebind<lhs_type>{};
-			}
-
-			// ============================================
-			// operator or
-			// ============================================
-
-			// OperandValue
-
-			// as_b{...} or ...
-			template<std::convertible_to<bool> Rhs>
-				requires operand::operand_value_boolean_t<lhs_type>
-			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandLogicalOr<typename lhs_type::value_type, Rhs>, dispatcher_type>{.expression = {static_cast<typename lhs_type::value_type>(lhs), rhs}}; }
-
-			// ... or as_b{...}
-			template<operand::operand_value_boolean_t Rhs>
-				requires std::convertible_to<lhs_type, bool>
-			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto { return dispatched_expression<operand::OperandLogicalOr<lhs_type, typename Rhs::value_type>, dispatcher_type>{.expression = {lhs, static_cast<typename Rhs::value_type>(rhs)}}; }
-
-			// OperandConstantXxx
-
-			// "xxx"_b or bool => as_b{"xxx"} or bool
-			// bool or "xxx"_b => bool or as_b{"xxx"}
-
-			// "xxx"_auto or any
-			template<std::convertible_to<bool> Rhs>
-				requires operand::operand_constant_auto_t<lhs_type>
-			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto
-			{
-				// forward
-				return typename lhs_type::template rebind<Rhs>{} or rhs;
-			}
-
-			// any or "xxx"_auto
-			template<operand::operand_constant_auto_t Rhs>
-				requires std::convertible_to<lhs_type, bool>
-			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto
-			{
-				// forward
-				return lhs or typename Rhs::template rebind<lhs_type>{};
-			}
-
-			[[nodiscard]] constexpr auto operator not() const && noexcept -> dispatched_expression<operand::OperandLogicalNot<lhs_type>, dispatcher_type>
-				//
-				requires requires { static_cast<bool>(dispatched_expression<operand::OperandLogicalNot<lhs_type>, dispatcher_type>{.expression = {lhs}}); } { return {.expression = {lhs}}; }
-		};
+		struct dispatched_expression;
 
 		template<typename>
-		constexpr auto is_pre_dispatched_expression_v = false;
+		constexpr auto is_dispatched_expression_v = false;
 		template<typename Lhs, typename Dispatcher>
-		constexpr auto is_pre_dispatched_expression_v<pre_dispatch_expression<Lhs, Dispatcher>> = true;
+		constexpr auto is_dispatched_expression_v<dispatched_expression<Lhs, Dispatcher>> = true;
 
 		template<typename Dispatcher>
 		class ExpressionDispatcher
 		{
 		public:
 			template<typename Lhs>
-			[[nodiscard]] constexpr auto operator%(const Lhs& lhs) const noexcept -> pre_dispatch_expression<Lhs, Dispatcher> { return {lhs}; }
+			[[nodiscard]] constexpr auto operator%(const Lhs& lhs) const noexcept -> dispatched_expression<Lhs, Dispatcher> { return {lhs}; }
 		};
 
 		class DispatcherThat : public ExpressionDispatcher<DispatcherThat>
@@ -3219,15 +2664,10 @@ namespace gal::prometheus
 		};
 
 		template<typename>
-		constexpr auto is_dispatched_expression_v = false;
-		template<operand::expression_t Expression, typename Dispatcher>
-		constexpr auto is_dispatched_expression_v<dispatched_expression<Expression, Dispatcher>> = true;
-
-		template<typename>
-		constexpr auto is_expression_that_v = false;
+		constexpr auto is_dispatched_expression_that_v = false;
 		template<typename Expression>
 			requires is_dispatched_expression_v<Expression>
-		constexpr auto is_expression_that_v<Expression> = std::is_same_v<typename Expression::dispatcher_type, DispatcherThat>;
+		constexpr auto is_dispatched_expression_that_v<Expression> = std::is_same_v<typename Expression::dispatcher_type, DispatcherThat>;
 
 		class DispatcherSilence : public ExpressionDispatcher<DispatcherSilence>
 		{
@@ -3236,10 +2676,10 @@ namespace gal::prometheus
 		};
 
 		template<typename>
-		constexpr auto is_expression_silence_v = false;
+		constexpr auto is_dispatched_expression_silence_v = false;
 		template<typename Expression>
 			requires is_dispatched_expression_v<Expression>
-		constexpr auto is_expression_silence_v<Expression> = std::is_same_v<typename Expression::dispatcher_type, DispatcherSilence>;
+		constexpr auto is_dispatched_expression_silence_v<Expression> = std::is_same_v<typename Expression::dispatcher_type, DispatcherSilence>;
 
 		class DispatcherIgnorePass : public ExpressionDispatcher<DispatcherIgnorePass>
 		{
@@ -3248,10 +2688,10 @@ namespace gal::prometheus
 		};
 
 		template<typename>
-		constexpr auto is_expression_ignore_pass_v = false;
+		constexpr auto is_dispatched_expression_ignore_pass_v = false;
 		template<typename Expression>
 			requires is_dispatched_expression_v<Expression>
-		constexpr auto is_expression_ignore_pass_v<Expression> = std::is_same_v<typename Expression::dispatcher_type, DispatcherIgnorePass>;
+		constexpr auto is_dispatched_expression_ignore_pass_v<Expression> = std::is_same_v<typename Expression::dispatcher_type, DispatcherIgnorePass>;
 
 		template<operand::expression_t Expression>
 		struct expect_result
@@ -3294,21 +2734,22 @@ namespace gal::prometheus
 		class DispatcherExpect
 		{
 		public:
-			template<operand::expression_t Expression>
+			template<typename Expression>
+				requires operand::expression_t<Expression> or (is_dispatched_expression_v<Expression>)
 			constexpr auto operator()(
-					const Expression&           expression,
+					Expression&&                expression,
 					const std::source_location& location = std::source_location::current()) const noexcept -> auto
 			{
 				// workaround: dispatched expression vvv
 				if constexpr (is_dispatched_expression_v<Expression>)
 				{
-					if constexpr (is_expression_silence_v<Expression>) { register_event<typename Expression::expression_type>(events::EventSilenceBegin{}); }
-					else if constexpr (is_expression_ignore_pass_v<Expression>) { register_event<typename Expression::expression_type>(events::EventIgnorePassBegin{}); }
+					if constexpr (is_dispatched_expression_silence_v<Expression>) { register_event<typename Expression::expression_type>(events::EventSilenceBegin{}); }
+					else if constexpr (is_dispatched_expression_ignore_pass_v<Expression>) { register_event<typename Expression::expression_type>(events::EventIgnorePassBegin{}); }
 
-					const auto result = register_event<typename Expression::expression_type>(events::EventAssertion<typename Expression::expression_type>{.location = location, .expression = expression.expression});
+					const auto result = register_event<typename Expression::expression_type>(events::EventAssertion<typename Expression::expression_type>{.location = location, .expression = std::forward<Expression>(expression).expression});
 
-					if constexpr (is_expression_silence_v<Expression>) { register_event<typename Expression::expression_type>(events::EventSilenceEnd{}); }
-					else if constexpr (is_expression_ignore_pass_v<Expression>) { register_event<typename Expression::expression_type>(events::EventIgnorePassEnd{}); }
+					if constexpr (is_dispatched_expression_silence_v<Expression>) { register_event<typename Expression::expression_type>(events::EventSilenceEnd{}); }
+					else if constexpr (is_dispatched_expression_ignore_pass_v<Expression>) { register_event<typename Expression::expression_type>(events::EventIgnorePassEnd{}); }
 
 					return expect_result<typename Expression::expression_type>{result};
 				}
@@ -3319,11 +2760,11 @@ namespace gal::prometheus
 							register_event<Expression>(
 									events::EventAssertion<Expression>{
 											.location = location,
-											.expression = expression})};
+											.expression = std::forward<Expression>(expression)})};
 				}
 			}
 		};
-	}// namespace dispatcher
+	}
 
 	export namespace test
 	{
@@ -3336,173 +2777,55 @@ namespace gal::prometheus
 		using test = no_adl::test::dispatcher::DispatcherTest;
 		using should = test;
 
-		inline namespace literals
-		{
-			template<infrastructure::basic_fixed_string StringLiteral>
-			constexpr auto operator""_test() noexcept -> no_adl::test::dispatcher::DispatcherTestLiteral<StringLiteral> { return no_adl::test::dispatcher::DispatcherTestLiteral<StringLiteral>::make(); }
-
-			template<char... Cs>
-			[[nodiscard]] constexpr auto operator""_auto() noexcept -> no_adl::test::operand::OperandConstantAuto<Cs...> { return {}; }
-
-			template<infrastructure::basic_fixed_string StringLiteral>
-			[[nodiscard]] constexpr auto operator""_c() noexcept -> no_adl::test::operand::OperandConstantCharacter<*StringLiteral.begin()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<int, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_i() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<int, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<unsigned, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_u() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<unsigned, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<long, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_l() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<long, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<unsigned long, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_ul() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<unsigned long, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<long long, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_ll() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<long long, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<unsigned long long, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_ull() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<unsigned long long, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<std::int8_t, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_i8() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::int8_t, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<std::uint8_t, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_u8() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint8_t, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<std::int16_t, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_i16() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::int16_t, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<std::uint16_t, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_u16() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint16_t, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<std::int32_t, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_i32() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::int32_t, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<std::uint32_t, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_u32() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint32_t, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<std::int64_t, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_i64() noexcept -> no_adl::test::operand::OperandConstantIntegral<
-				no_adl::test::utility::literals::to_integral<std::int64_t, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_integral<std::uint64_t, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_u64() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint64_t, Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_floating_point<float, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_f() noexcept -> no_adl::test::operand::OperandConstantFloatingPoint<
-				no_adl::test::utility::literals::to_floating_point<float, Cs...>(),
-				no_adl::test::utility::literals::to_denominator_size<Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_floating_point<double, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_d() noexcept -> no_adl::test::operand::OperandConstantFloatingPoint<
-				no_adl::test::utility::literals::to_floating_point<double, Cs...>(),
-				no_adl::test::utility::literals::to_denominator_size<Cs...>()> { return {}; }
-
-			template<char... Cs>
-				requires requires { no_adl::test::utility::literals::to_floating_point<long double, Cs...>(); }
-			[[nodiscard]] constexpr auto operator""_ld() noexcept -> no_adl::test::operand::OperandConstantFloatingPoint<
-				no_adl::test::utility::literals::to_floating_point<long double, Cs...>(),
-				no_adl::test::utility::literals::to_denominator_size<Cs...>()> { return {}; }
-
-			[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> no_adl::test::operand::OperandValue<bool> { return no_adl::test::operand::OperandValue<bool>{no_adl::test::operand::OperandValue<bool>::value_type{name, size}}; }
-
-			namespace detail
-			{
-				struct string_view final : std::string_view, no_adl::test::operand::Operand
-				{
-					[[nodiscard]] constexpr auto to_string() const noexcept -> std::string_view { return *this; }
-
-					// template<typename Rhs>
-					// [[nodiscard]] constexpr auto operator==(const Rhs& other) const noexcept -> bool//
-					// 	requires requires { this->s == other; } { return this->s == other; }
-					//
-					// template<typename Rhs>
-					// [[nodiscard]] constexpr auto operator==(const Rhs& other) const noexcept -> bool//
-					// 	requires requires { this->s == static_cast<const std::string_view&>(other); } { return this->s == static_cast<const std::string_view&>(other); }
-					//
-					// template<typename Rhs>
-					// [[nodiscard]] constexpr auto operator==(const Rhs& other) const noexcept -> bool//
-					// 	requires requires { this->s == other.to_string(); } { return this->s == other.to_string(); }
-
-					// template<typename Rhs>
-					// [[nodiscard]] constexpr auto operator==(const Rhs& other) const noexcept -> bool//
-					// {
-					// 	if constexpr (requires { this->s == other; }) { return this->s == other; }
-					// 	else if constexpr (requires { this->s == static_cast<const std::string_view&>(other); }) { return this->s == static_cast<const std::string_view&>(other); }
-					// 	else if constexpr (requires { this->s == other.to_string(); }) { return this->s == other.to_string(); }
-					// 	else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
-					// }
-				};
-			}
-
-			[[nodiscard]] constexpr auto operator""_s(const char* name, std::size_t size) noexcept -> detail::string_view { return {{name, size}}; }
-		}// namespace literals
-
 		// Overload the following operators to implement auto-dispatch.
 		inline namespace operators
 		{
+			namespace detail
+			{
+				template<typename DispatchedExpression>
+				// ReSharper disable once CppFunctionIsNotImplemented
+				constexpr auto is_valid_dispatched_expression(DispatchedExpression&& expression) noexcept -> void requires requires { static_cast<bool>(expression.expression); };
+			}
+
 			// a == b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator==(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
-				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs); }
+				requires(not no_adl::test::dispatcher::is_dispatched_expression_v<Lhs>) and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs)); } { return that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs); }
 
 			// a != b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator!=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
-				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs); }
+				requires(not no_adl::test::dispatcher::is_dispatched_expression_v<Lhs>) and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs)); } { return that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs); }
 
 			// a > b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator>(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
-				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs); }
+				requires(not no_adl::test::dispatcher::is_dispatched_expression_v<Lhs>) and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs)); } { return that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs); }
 
 			// a >= b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator>=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
-				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs); }
+				requires(not no_adl::test::dispatcher::is_dispatched_expression_v<Lhs>) and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs)); } { return that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs); }
 
 			// a < b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator<(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
-				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs); }
+				requires(not no_adl::test::dispatcher::is_dispatched_expression_v<Lhs>) and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs)); } { return that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs); }
 
 			// a <= b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator<=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
-				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs); }
+				requires(not no_adl::test::dispatcher::is_dispatched_expression_v<Lhs>) and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs)); } { return that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs); }
 
 			// a and b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator and(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
-				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs); }
+				requires(not no_adl::test::dispatcher::is_dispatched_expression_v<Lhs>) and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs)); } { return that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs); }
 
 			// a or b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator or(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
-				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs); } { return that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs); }
-
-			// not a
-			template<typename Lhs>
-			[[nodiscard]] constexpr auto operator not(Lhs&& lhs) noexcept -> decltype(auto)//
-				requires(not no_adl::test::dispatcher::is_pre_dispatched_expression_v<Lhs>) and requires { not(that % std::forward<Lhs>(lhs)); } { return not(that % std::forward<Lhs>(lhs)); }
+				requires(not no_adl::test::dispatcher::is_dispatched_expression_v<Lhs>) and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs)); } { return that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs); }
 
 			template<typename Test>
 			[[nodiscard]] constexpr auto operator/(const categories_type& categories, Test test) noexcept -> Test//
@@ -3669,6 +2992,792 @@ namespace gal::prometheus
 				return result;
 			}
 		}// namespace operators
+	}
+
+	namespace no_adl::test::dispatcher
+	{
+		template<typename Lhs, typename Dispatcher>
+		struct dispatched_expression
+		{
+			using expression_type = Lhs;
+			using dispatcher_type = Dispatcher;
+
+			expression_type expression;
+
+			// // fixme: dispatched_expression is not allowed to be converted to bool, otherwise `a and b` or `a or b` would be ambiguous, instead of calling `operator and` or `operator or` as defined below.
+			// fixme: dispatched_expression must be able to be converted to bool, otherwise many expressions will fail to compile due to overloaded operators in test::operators.
+			// note: Once dispatched_expression is allowed to be converted to bool, operand::expression_t alone will no longer be sufficient for overloading, and it must be specifically required that the expression is not dispatched_expression (when the expression satisfies operand::expression_t).
+			[[nodiscard]] constexpr explicit operator bool() const noexcept//
+			{
+				return static_cast<bool>(expression);
+			}
+
+			// ============================================
+			// operator==
+			// ============================================
+
+			// OperandValue
+
+			// as_b{...} == bool
+			[[nodiscard]] constexpr auto operator==(const bool rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>//
+				requires operand::operand_value_boolean_t<expression_type> { return {.expression = {expression, rhs}}; }
+
+			// bool == as_b{...}
+			// [[nodiscard]] constexpr auto operator==(const operand::operand_value_boolean_t auto& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>
+			[[nodiscard]] constexpr auto operator==(const operand::OperandValue<bool>& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>//
+				requires std::is_same_v<expression_type, bool> { return {.expression = {rhs, expression}}; }
+
+			// as_x{...} == floating_point
+			template<std::floating_point Rhs>
+				requires operand::operand_value_floating_point_t<expression_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareApprox<typename expression_type::value_type, Rhs, Rhs>, dispatcher_type>{.expression = {expression.value(), rhs, expression.epsilon()}};
+			}
+
+			//  floating_point == as_x{...}
+			template<operand::operand_value_floating_point_t Rhs>
+				requires std::floating_point<expression_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareApprox<expression_type, typename Rhs::value_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, rhs.value(), rhs.epsilon()}};
+			}
+
+			// as_x{...} == not(boolean/floating_point)
+			template<typename Rhs>
+				requires operand::operand_value_t<expression_type> and (not std::same_as<Rhs, bool> and not std::floating_point<Rhs>)
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareEqual<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression.value(), rhs}};
+			}
+
+			// not(boolean/floating_point) == as_x{...}
+			template<operand::operand_value_t Rhs>
+				requires (not std::same_as<expression_type, bool> and not std::floating_point<expression_type>)
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareEqual<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, rhs.value()}};
+			}
+
+			// OperandConstantXxx
+
+			// "xxx"_b == bool => as_b{"xxx"} == bool
+			// bool == "xxx"_b => bool == as_b{"xxx"}
+
+			// "xxx"_c == character
+			template<std::integral Rhs>
+				requires operand::operand_constant_character_t<expression_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareEqual<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression_type::value, rhs}};
+			}
+
+			// character == "xxx"_c
+			template<operand::operand_constant_character_t Rhs>
+				requires std::integral<expression_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareEqual<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, Rhs::value}};
+			}
+
+			// "xxx"_x == integral
+			template<std::integral Rhs>
+				requires operand::operand_constant_integral_t<expression_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareEqual<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression_type::value, rhs}};
+			}
+
+			// integral == "xxx"_x
+			template<operand::operand_constant_integral_t Rhs>
+				requires std::integral<expression_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareEqual<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, Rhs::value}};
+			}
+
+			// "xxx"_x == floating_point
+			template<std::floating_point Rhs>
+				requires operand::operand_constant_floating_point_t<expression_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareApprox<typename expression_type::value_type, Rhs, typename expression_type::value_type>, dispatcher_type>{.expression = {expression_type::value, rhs, expression_type::epsilon}};
+			}
+
+			// floating_point == "xxx"_x
+			template<operand::operand_constant_floating_point_t Rhs>
+				requires std::floating_point<expression_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto//
+				requires requires { static_cast<bool>(operand::OperandCompareApprox<expression_type, typename Rhs::value_type, typename Rhs::value_type>{expression, Rhs::value, Rhs::epsilon}); } { return dispatched_expression<operand::OperandCompareApprox<expression_type, typename Rhs::value_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, Rhs::value, Rhs::epsilon}}; }
+
+			// "xxx"_auto == any
+			template<typename Rhs>
+				requires operand::operand_constant_auto_t<expression_type>
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto
+			{
+				using prometheus::test::operators::operator==;
+
+				// forward
+				return typename expression_type::template rebind<Rhs>{} == rhs;
+			}
+
+			// any == "xxx"_auto
+			template<operand::operand_constant_auto_t Rhs>
+			[[nodiscard]] constexpr auto operator==(const Rhs& rhs) const && noexcept -> auto
+			{
+				using prometheus::test::operators::operator==;
+
+				// forward
+				return expression == typename Rhs::template rebind<expression_type>{};
+			}
+
+			// ANY == ANY
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator==(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareEqual<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {expression, std::forward<Rhs>(rhs)}};
+			}
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator==(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareEqual<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}};
+			}
+
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<expression_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<expression_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<expression_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator==(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareEqual<expression_type, Rhs>, dispatcher_type>//
+				requires requires { static_cast<bool>(operand::OperandCompareEqual<expression_type, Rhs>{std::move(expression), std::forward<Rhs>(rhs)}); } { return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}}; }
+
+			// ============================================
+			// operator!=
+			// ============================================
+
+			// OperandValue
+
+			// as_b{...} != bool
+			[[nodiscard]] constexpr auto operator!=(const bool rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>//
+				requires operand::operand_value_boolean_t<expression_type> { return {.expression = {expression, not rhs}}; }
+
+			// bool == as_b{...}
+			// [[nodiscard]] constexpr auto operator!=(const operand::operand_value_boolean_t auto& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>
+			[[nodiscard]] constexpr auto operator!=(const operand::OperandValue<bool>& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareIdentity, dispatcher_type>//
+				requires std::is_same_v<expression_type, bool> { return {.expression = {rhs, not expression}}; }
+
+			// as_x{...} != floating_point
+			template<std::floating_point Rhs>
+				requires operand::operand_value_floating_point_t<expression_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareNotApprox<typename expression_type::value_type, Rhs, Rhs>, dispatcher_type>{.expression = {expression.value(), rhs, expression.epsilon()}};
+			}
+
+			//  floating_point != as_x{...}
+			template<operand::operand_value_floating_point_t Rhs>
+				requires std::floating_point<expression_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareNotApprox<expression_type, typename Rhs::value_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, rhs.value(), rhs.epsilon()}};
+			}
+
+			// as_x{...} != not(boolean/floating_point)
+			template<typename Rhs>
+				requires operand::operand_value_t<expression_type> and (not std::same_as<Rhs, bool> and not std::floating_point<Rhs>)
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareNotEqual<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression.value(), rhs}};
+			}
+
+			// not(boolean/floating_point) != as_x{...}
+			template<operand::operand_value_t Rhs>
+				requires(not std::same_as<expression_type, bool> and not std::floating_point<expression_type>)
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareNotEqual<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, rhs.value()}};
+			}
+
+			// OperandConstantXxx
+
+			// "xxx"_b != bool => as_b{"xxx"} != bool
+			// bool != "xxx"_b => bool != as_b{"xxx"}
+
+			// "xxx"_x != integral
+			template<std::integral Rhs>
+				requires operand::operand_constant_integral_t<expression_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareNotEqual<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression_type::value, rhs}};
+			}
+
+			// integral != "xxx"_x
+			template<operand::operand_constant_integral_t Rhs>
+				requires std::integral<expression_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareNotEqual<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, Rhs::value}};
+			}
+
+			// "xxx"_x != floating_point
+			template<std::floating_point Rhs>
+				requires operand::operand_constant_floating_point_t<expression_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareNotApprox<expression_type, Rhs, typename expression_type::value_type>, dispatcher_type>{.expression = {expression_type::value, rhs, expression_type::epsilon}};
+			}
+
+			// floating_point != "xxx"_x
+			template<operand::operand_constant_floating_point_t Rhs>
+				requires std::floating_point<expression_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareNotApprox<expression_type, Rhs, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, Rhs::value, Rhs::epsilon}};
+			}
+
+			// "xxx"_auto != any
+			template<typename Rhs>
+				requires operand::operand_constant_auto_t<expression_type>
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto
+			{
+				using prometheus::test::operators::operator!=;
+
+				// forward
+				return typename expression_type::template rebind<Rhs>{} != rhs;
+			}
+
+			// any != "xxx"_auto
+			template<operand::operand_constant_auto_t Rhs>
+			[[nodiscard]] constexpr auto operator!=(const Rhs& rhs) const && noexcept -> auto
+			{
+				using prometheus::test::operators::operator!=;
+
+				// forward
+				return expression != typename Rhs::template rebind<expression_type>{};
+			}
+
+			// ANY == ANY
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator!=(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareNotEqual<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {expression, std::forward<Rhs>(rhs)}};
+			}
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator!=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareNotEqual<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}};
+			}
+
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<expression_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<expression_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<expression_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator!=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareNotEqual<expression_type, Rhs>, dispatcher_type>//
+				requires requires { static_cast<bool>(operand::OperandCompareNotEqual<expression_type, Rhs>{std::move(expression), std::forward<Rhs>(rhs)}); } { return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}}; }
+
+			// ============================================
+			// operator>
+			// ============================================
+
+			// OperandValue
+
+			// as_x{...} > ...
+			template<typename Rhs>
+				requires operand::operand_value_t<expression_type>
+			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareGreaterThan<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression.value(), rhs}};
+			}
+
+			// ... > as_x{...}
+			template<operand::operand_value_t Rhs>
+			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareGreaterThan<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, rhs.value()}};
+			}
+
+			// OperandConstantXxx
+
+			// "xxx"_x > ...
+			template<typename Rhs>
+				requires operand::operand_constant_t<expression_type>
+			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<expression_type>)
+				{
+					using prometheus::test::operators::operator>;
+
+					// forward
+					return typename expression_type::template rebind<Rhs>{} > rhs;
+				}
+				else { return dispatched_expression<operand::OperandCompareGreaterThan<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression_type::value, rhs}}; }
+			}
+
+			// ... > "xxx"_x
+			template<operand::operand_constant_t Rhs>
+			[[nodiscard]] constexpr auto operator>(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<Rhs>)
+				{
+					using prometheus::test::operators::operator>;
+
+					// forward
+					return expression > typename Rhs::template rebind<expression_type>{};
+				}
+				else { return dispatched_expression<operand::OperandCompareGreaterThan<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, Rhs::value}}; }
+			}
+
+			// ANY == ANY
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator>(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareGreaterThan<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {expression, std::forward<Rhs>(rhs)}};
+			}
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator>(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterThan<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}};
+			}
+
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<expression_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<expression_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<expression_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator>(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterThan<expression_type, Rhs>, dispatcher_type>//
+				requires requires { static_cast<bool>(operand::OperandCompareGreaterThan<expression_type, Rhs>{std::move(expression), std::forward<Rhs>(rhs)}); } { return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}}; }
+
+			// ============================================
+			// operator>=
+			// ============================================
+
+			// OperandValue
+
+			// as_x{...} >= ...
+			template<typename Rhs>
+				requires operand::operand_value_t<expression_type>
+			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareGreaterEqual<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression.value(), rhs}};
+			}
+
+			// ... >= as_x{...}
+			template<operand::operand_value_t Rhs>
+			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareGreaterEqual<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, rhs.value()}};
+			}
+
+			// OperandConstantXxx
+
+			// "xxx"_x >= ...
+			template<typename Rhs>
+				requires operand::operand_constant_t<expression_type>
+			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<expression_type>)
+				{
+					using prometheus::test::operators::operator>=;
+
+					// forward
+					return typename expression_type::template rebind<Rhs>{} >= rhs;
+				}
+				else { return dispatched_expression<operand::OperandCompareGreaterEqual<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression_type::value, rhs}}; }
+			}
+
+			// ... >= "xxx"_x
+			template<operand::operand_constant_t Rhs>
+			[[nodiscard]] constexpr auto operator>=(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<Rhs>)
+				{
+					using prometheus::test::operators::operator>=;
+
+					// forward
+					return expression >= typename Rhs::template rebind<expression_type>{};
+				}
+				else { return dispatched_expression<operand::OperandCompareGreaterEqual<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, Rhs::value}}; }
+			}
+
+			// ANY == ANY
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator>=(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareGreaterEqual<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {expression, std::forward<Rhs>(rhs)}};
+			}
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator>=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterEqual<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}};
+			}
+
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<expression_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<expression_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<expression_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator>=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareGreaterEqual<expression_type, Rhs>, dispatcher_type>//
+				requires requires { static_cast<bool>(operand::OperandCompareGreaterEqual<expression_type, Rhs>{std::move(expression), std::forward<Rhs>(rhs)}); } { return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}}; }
+
+			// ============================================
+			// operator<
+			// ============================================
+
+			// OperandValue
+
+			// as_x{...} < ...
+			template<typename Rhs>
+				requires operand::operand_value_t<expression_type>
+			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareLessThan<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression.value(), rhs}};
+			}
+
+			// ... < as_x{...}
+			template<operand::operand_value_t Rhs>
+			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareLessThan<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, rhs.value()}};
+			}
+
+			// OperandConstantXxx
+
+			// "xxx"_x < ...
+			template<typename Rhs>
+				requires operand::operand_constant_t<expression_type>
+			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<expression_type>)
+				{
+					using prometheus::test::operators::operator<;
+
+					// forward
+					return typename expression_type::template rebind<Rhs>{} < rhs;
+				}
+				else { return dispatched_expression<operand::OperandCompareLessThan<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression_type::value, rhs}}; }
+			}
+
+			// ... < "xxx"_x
+			template<operand::operand_constant_t Rhs>
+			[[nodiscard]] constexpr auto operator<(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<Rhs>)
+				{
+					using prometheus::test::operators::operator<;
+
+					// forward
+					return expression < typename Rhs::template rebind<expression_type>{};
+				}
+				else { return dispatched_expression<operand::OperandCompareLessThan<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, Rhs::value}}; }
+			}
+
+			// ANY == ANY
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator<(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareLessThan<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {expression, std::forward<Rhs>(rhs)}};
+			}
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator<(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessThan<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}};
+			}
+
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<expression_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<expression_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<expression_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator<(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessThan<expression_type, Rhs>, dispatcher_type>//
+				requires requires { static_cast<bool>(operand::OperandCompareLessThan<expression_type, Rhs>{std::move(expression), std::forward<Rhs>(rhs)}); } { return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}}; }
+
+			// ============================================
+			// operator<=
+			// ============================================
+
+			// OperandValue
+
+			// as_x{...} <= ...
+			template<typename Rhs>
+				requires operand::operand_value_t<expression_type>
+			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareLessEqual<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression.value(), rhs}};
+			}
+
+			// ... <= as_x{...}
+			template<operand::operand_value_t Rhs>
+			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandCompareLessEqual<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, rhs.value()}};
+			}
+
+			// OperandConstantXxx
+
+			// "xxx"_x <= ...
+			template<typename Rhs>
+				requires operand::operand_constant_t<expression_type>
+			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<expression_type>)
+				{
+					using prometheus::test::operators::operator<=;
+
+					// forward
+					return typename expression_type::template rebind<Rhs>{} <= rhs;
+				}
+				else { return dispatched_expression<operand::OperandCompareLessEqual<typename expression_type::value_type, Rhs>, dispatcher_type>{.expression = {expression_type::value, rhs}}; }
+			}
+
+			// ... <= "xxx"_x
+			template<operand::operand_constant_t Rhs>
+			[[nodiscard]] constexpr auto operator<=(const Rhs& rhs) const && noexcept -> auto
+			{
+				if constexpr (operand::operand_constant_auto_t<Rhs>)
+				{
+					using prometheus::test::operators::operator<=;
+
+					// forward
+					return expression <= typename Rhs::template rebind<expression_type>{};
+				}
+				else { return dispatched_expression<operand::OperandCompareLessEqual<expression_type, typename Rhs::value_type>, dispatcher_type>{.expression = {expression, Rhs::value}}; }
+			}
+
+			// ANY == ANY
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator<=(Rhs&& rhs) const & noexcept -> dispatched_expression<operand::OperandCompareLessEqual<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {expression, std::forward<Rhs>(rhs)}};
+			}
+
+			// range
+			template<std::ranges::range Rhs>
+				requires std::ranges::range<expression_type>
+			[[nodiscard]] constexpr auto operator<=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessEqual<std::decay_t<expression_type>, std::decay_t<Rhs>>, dispatcher_type>//
+			{
+				return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}};
+			}
+
+			// any
+			template<typename Rhs>
+				requires(
+					not(operand::operand_value_t<expression_type> or operand::operand_value_t<Rhs>) and      //
+					not(operand::operand_constant_t<expression_type> or operand::operand_constant_t<Rhs>) and//
+					not(std::ranges::range<expression_type> or std::ranges::range<Rhs>)                      //
+				)
+			[[nodiscard]] constexpr auto operator<=(Rhs&& rhs) const && noexcept -> dispatched_expression<operand::OperandCompareLessEqual<expression_type, Rhs>, dispatcher_type>//
+				requires requires { static_cast<bool>(operand::OperandCompareLessEqual<expression_type, Rhs>{std::move(expression), std::forward<Rhs>(rhs)}); } { return {.expression = {std::move(expression), std::forward<Rhs>(rhs)}}; }
+
+			// ============================================
+			// operator and
+			// ============================================
+
+			// operand::expression_t and dispatched_expression
+			template<typename Rhs>
+				requires (operand::expression_t<expression_type> and not is_dispatched_expression_v<expression_type>) and is_dispatched_expression_v<Rhs>
+			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandLogicalAnd<expression_type, typename Rhs::expression_type>, dispatcher_type>{.expression = {expression, rhs.expression}};
+			}
+
+			// dispatched_expression and operand::expression_t
+			template<operand::expression_t Rhs>
+				requires is_dispatched_expression_v<expression_type> and (not is_dispatched_expression_v<Rhs>)
+			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandLogicalAnd<typename expression_type::expression_type, Rhs>, dispatcher_type>{.expression = {expression.expression, rhs}};
+			}
+
+			// operand::expression_t and operand::expression_t
+			template<operand::expression_t Rhs>
+				requires(operand::expression_t<expression_type> and not is_dispatched_expression_v<expression_type>) and (not is_dispatched_expression_v<Rhs>)
+			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandLogicalAnd<expression_type, Rhs>, dispatcher_type>{.expression = {expression, rhs}};
+			}
+
+			// dispatched_expression and dispatched_expression
+			template<typename Rhs>
+				requires is_dispatched_expression_v<expression_type> and is_dispatched_expression_v<Rhs>
+			[[nodiscard]] constexpr auto operator and(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandLogicalAnd<typename expression_type::expression_type, typename Rhs::expression_type>, dispatcher_type>{.expression = {expression.expression, rhs.expression}};
+			}
+
+			// ============================================
+			// operator or
+			// ============================================
+
+			// operand::expression_t or dispatched_expression
+			template<typename Rhs>
+				requires(operand::expression_t<expression_type> and not is_dispatched_expression_v<expression_type>) and is_dispatched_expression_v<Rhs>
+			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandLogicalOr<expression_type, typename Rhs::expression_type>, dispatcher_type>{.expression = {expression, rhs.expression}};
+			}
+
+			// dispatched_expression or operand::expression_t
+			template<operand::expression_t Rhs>
+				requires is_dispatched_expression_v<expression_type> and (not is_dispatched_expression_v<Rhs>)
+			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandLogicalOr<typename expression_type::expression_type, Rhs>, dispatcher_type>{.expression = {expression.expression, rhs}};
+			}
+
+			// operand::expression_t or operand::expression_t
+			template<operand::expression_t Rhs>
+				requires(operand::expression_t<expression_type> and not is_dispatched_expression_v<expression_type>) and (not is_dispatched_expression_v<Rhs>)
+			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandLogicalOr<expression_type, Rhs>, dispatcher_type>{.expression = {expression, rhs}};
+			}
+
+			// dispatched_expression or dispatched_expression
+			template<typename Rhs>
+				requires is_dispatched_expression_v<expression_type> and is_dispatched_expression_v<Rhs>
+			[[nodiscard]] constexpr auto operator or(const Rhs& rhs) const && noexcept -> auto//
+			{
+				return dispatched_expression<operand::OperandLogicalOr<typename expression_type::expression_type, typename Rhs::expression_type>, dispatcher_type>{.expression = {expression.expression, rhs.expression}};
+			}
+		};
+	}// namespace dispatcher
+
+	export namespace test
+	{
+		inline namespace literals
+		{
+			template<infrastructure::basic_fixed_string StringLiteral>
+			constexpr auto operator""_test() noexcept -> no_adl::test::dispatcher::DispatcherTestLiteral<StringLiteral> { return no_adl::test::dispatcher::DispatcherTestLiteral<StringLiteral>::make(); }
+
+			template<char... Cs>
+			[[nodiscard]] constexpr auto operator""_auto() noexcept -> no_adl::test::operand::OperandConstantAuto<Cs...> { return {}; }
+
+			template<infrastructure::basic_fixed_string StringLiteral>
+			[[nodiscard]] constexpr auto operator""_c() noexcept -> no_adl::test::operand::OperandConstantCharacter<*StringLiteral.begin()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<int, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_i() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<int, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<unsigned, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_u() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<unsigned, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<long, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_l() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<long, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<unsigned long, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_ul() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<unsigned long, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<long long, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_ll() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<long long, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<unsigned long long, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_ull() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<unsigned long long, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::int8_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_i8() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::int8_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::uint8_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_u8() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint8_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::int16_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_i16() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::int16_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::uint16_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_u16() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint16_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::int32_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_i32() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::int32_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::uint32_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_u32() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint32_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::int64_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_i64() noexcept -> no_adl::test::operand::OperandConstantIntegral<
+				no_adl::test::utility::literals::to_integral<std::int64_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_integral<std::uint64_t, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_u64() noexcept -> no_adl::test::operand::OperandConstantIntegral<no_adl::test::utility::literals::to_integral<std::uint64_t, Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_floating_point<float, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_f() noexcept -> no_adl::test::operand::OperandConstantFloatingPoint<
+				no_adl::test::utility::literals::to_floating_point<float, Cs...>(),
+				no_adl::test::utility::literals::to_denominator_size<Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_floating_point<double, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_d() noexcept -> no_adl::test::operand::OperandConstantFloatingPoint<
+				no_adl::test::utility::literals::to_floating_point<double, Cs...>(),
+				no_adl::test::utility::literals::to_denominator_size<Cs...>()> { return {}; }
+
+			template<char... Cs>
+				requires requires { no_adl::test::utility::literals::to_floating_point<long double, Cs...>(); }
+			[[nodiscard]] constexpr auto operator""_ld() noexcept -> no_adl::test::operand::OperandConstantFloatingPoint<
+				no_adl::test::utility::literals::to_floating_point<long double, Cs...>(),
+				no_adl::test::utility::literals::to_denominator_size<Cs...>()> { return {}; }
+
+			[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> no_adl::test::operand::OperandValue<bool> { return no_adl::test::operand::OperandValue<bool>{no_adl::test::operand::OperandValue<bool>::value_type{name, size}}; }
+
+			[[nodiscard]] constexpr auto operator""_s(const char* name, std::size_t size) noexcept -> std::string_view { return {name, size}; }
+		}// namespace literals
 
 		// fixme: @see executor
 		// If we don't use global singleton (instead, one object per compilation unit), an object will be destructed multiple times.
@@ -3691,14 +3800,10 @@ namespace gal::prometheus
 			}
 		};
 
-		#if defined(__cpp_nontype_template_parameter_class)
-		template<auto Constant>
-		#else
-		template<bool Constant>
-		#endif
-		constexpr auto constant = Constant;
 		template<typename T>
 		constexpr auto type = no_adl::test::operand::OperandType<T>{};
+		template<no_adl::test::operand::OperandConstantExpression Constant>
+		constexpr auto constant = Constant;
 
 		template<typename ExceptionType = void, std::invocable InvocableType>
 		[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> no_adl::test::operand::OperandThrow<InvocableType, ExceptionType> { return {invocable}; }
