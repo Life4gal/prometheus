@@ -8,16 +8,18 @@ import gal.prometheus.chars;
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace test;
 	using namespace chars;
 
-	GAL_PROMETHEUS_NO_DESTROY suite test_chars_cp_1252 = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"chars.cp_1252"> _ = []
 	{
-		"copy_check"_test = []
+		using namespace test;
+
+		ignore_pass / "copy_check"_test = []
 		{
 			std::string identity{};
 			identity.reserve(256);
-			for (int i = 0; i < 256; ++i) { identity.push_back(infrastructure::char_cast<char>(i)); }
+			for (int i = 1; i < 256; ++i) { identity.push_back(infrastructure::char_cast<char>(i)); }
+			identity.push_back('\0');
 
 			for (std::string::size_type i = 0; i < identity.size(); ++i)
 			{
@@ -26,16 +28,17 @@ namespace
 					const auto origin = identity.substr(i, j - i);
 					const auto result = CharConverter<char_map_category_cp_1252, char_map_category_cp_1252>{}(origin);
 
-					expect((origin == result) >> fatal);
+					expect(that % origin == result) << fatal;
 				}
 			}
 		};
 
-		"move_check"_test = []
+		ignore_pass / "move_check"_test = []
 		{
 			std::string identity{};
 			identity.reserve(256);
-			for (int i = 0; i < 256; ++i) { identity.push_back(infrastructure::char_cast<char>(i)); }
+			for (int i = 1; i < 256; ++i) { identity.push_back(infrastructure::char_cast<char>(i)); }
+			identity.push_back('\0');
 
 			for (std::string::size_type i = 0; i < identity.size(); ++i)
 			{
@@ -46,8 +49,8 @@ namespace
 					auto	   copy	  = origin;
 					const auto result = CharConverter<char_map_category_cp_1252, char_map_category_cp_1252>{}(std::move(copy));
 
-					expect((copy.empty() == "moved"_b) >> fatal);
-					expect((origin == result) >> fatal);
+					expect(copy.empty() == "moved"_b) << fatal;
+					expect(that % origin == result) << fatal;
 				}
 			}
 		};

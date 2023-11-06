@@ -11,7 +11,6 @@ GAL_PROMETHEUS_DISABLE_WARNING_MSVC(4819)
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace test;
 	using namespace chars;
 
 	auto generate_code_point() noexcept -> char32_t
@@ -62,9 +61,11 @@ namespace
 		return true;
 	}
 
-	GAL_PROMETHEUS_NO_DESTROY suite test_chars_utf_16 = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"chars.utf16"> _ = []
 	{
-		"copy_check"_test = []
+		using namespace test;
+
+		ignore_pass / "copy_check"_test = []
 		{
 			std::u16string identity{};
 			identity.reserve(100);
@@ -80,12 +81,12 @@ namespace
 
 					const auto result = CharConverter<char_map_category_utf_16, char_map_category_utf_16>{}.operator()<std::u16string>(origin);
 
-					expect((origin == result) >> fatal);
+					expect(that % origin == result) << fatal;
 				}
 			}
 		};
 
-		"move_check"_test = []
+		ignore_pass / "move_check"_test = []
 		{
 			std::u16string identity{};
 			identity.reserve(100);
@@ -102,13 +103,13 @@ namespace
 					auto       copy   = origin;
 					const auto result = CharConverter<char_map_category_utf_16, char_map_category_utf_16>{}.operator()<std::u16string>(std::move(copy));
 
-					expect((copy.empty() == "moved"_b) >> fatal);
-					expect((origin == result) >> fatal);
+					expect(copy.empty() == "moved"_b) << fatal;
+					expect(that % origin == result) << fatal;
 				}
 			}
 		};
 
-		"invalid_char_conversion"_test = []
+		ignore_pass / "invalid_char_conversion"_test = []
 		{
 			constexpr std::u16string_view text_with_invalid_chars{
 					u"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
@@ -139,7 +140,7 @@ namespace
 
 					const auto result = CharConverter<char_map_category_utf_16, char_map_category_utf_16>{}.operator()<std::u16string>(origin);
 
-					expect((expected == result) >> fatal);
+					expect(that % expected == result) << fatal;
 				}
 			}
 		};

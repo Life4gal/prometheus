@@ -8,12 +8,13 @@ import gal.prometheus.chars;
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace test;
 	using namespace chars;
 
-	GAL_PROMETHEUS_NO_DESTROY suite test_chars_ascii = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"chars.ascii"> _ = []
 	{
-		"copy_check"_test = []
+		using namespace test;
+
+		ignore_pass / "copy_check"_test = []
 		{
 			std::string identity{};
 			identity.reserve(128);
@@ -26,12 +27,12 @@ namespace
 					const auto origin = identity.substr(i, j - i);
 					const auto result = CharConverter<char_map_category_ascii, char_map_category_ascii>{}(origin);
 
-					expect((origin == result) >> fatal);
+					expect(that % origin == result) << fatal;
 				}
 			}
 		};
 
-		"move_check"_test = []
+		ignore_pass / "move_check"_test = []
 		{
 			std::string identity{};
 			identity.reserve(128);
@@ -46,13 +47,13 @@ namespace
 					auto       copy   = origin;
 					const auto result = CharConverter<char_map_category_ascii, char_map_category_ascii>{}(std::move(copy));
 
-					expect((copy.empty() == "moved"_b) >> fatal);
-					expect((origin == result) >> fatal);
+					expect(copy.empty() == "moved"_b) << fatal;
+					expect(that % origin == result) << fatal;
 				}
 			}
 		};
 
-		"invalid_char_conversion"_test = []
+		ignore_pass / "invalid_char_conversion"_test = []
 		{
 			constexpr std::string_view text_with_invalid_ascii{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\x80\x81\x82...\xff"};
 			constexpr std::string_view text_after_conversion{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789???...?"};
@@ -67,7 +68,7 @@ namespace
 
 					const auto result	= CharConverter<char_map_category_ascii, char_map_category_ascii>{}(origin);
 
-					expect((expected == result) >> fatal);
+					expect(that % expected == result) << fatal;
 				}
 			}
 		};
