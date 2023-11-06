@@ -411,6 +411,16 @@ namespace gal::prometheus
 
 		namespace operand
 		{
+			constexpr auto pointer_to_string = []<typename Pointer>(const Pointer pointer) noexcept -> auto//
+			{
+				if constexpr (std::is_same_v<Pointer, std::nullptr_t>) { return std::string_view{"nullptr"}; }
+				else
+				{
+					if (pointer) { return std::format("{}(0x{:x})", infrastructure::compiler::type_name<Pointer>(), reinterpret_cast<std::uintptr_t>(pointer)); }
+					return std::format("{}(0x00000000)", infrastructure::compiler::type_name<Pointer>());
+				}
+			};
+
 			constexpr auto range_to_string = []<std::ranges::range Range>(const Range& r) noexcept -> std::string//
 			{
 				if constexpr (requires(std::ranges::range_const_reference_t<Range> v) { std::format("{}", v); })
@@ -435,7 +445,7 @@ namespace gal::prometheus
 
 					return result;
 				}
-				else { return std::format("`unformatable-container({})`", infrastructure::compiler::type_name<Range>()); }
+				else { return std::format("`unformattable-container({})`", infrastructure::compiler::type_name<Range>()); }
 			};
 
 			constexpr auto expression_to_string = []<typename T>(const T& expression) noexcept -> decltype(auto)
@@ -445,7 +455,7 @@ namespace gal::prometheus
 				// workaround vvv: dispatched_expression
 				else if constexpr (requires { expression.expression.to_string(); }) { return expression.expression.to_string(); }
 				else if constexpr (requires { std::format("{}", expression); }) { return std::format("{}", expression); }
-				else { return std::format("`unformatable({})`", infrastructure::compiler::type_name<T>()); }
+				else { return std::format("`unformattable({})`", infrastructure::compiler::type_name<T>()); }
 			};
 
 			template<typename T>
@@ -478,16 +488,35 @@ namespace gal::prometheus
 				value_type value_;
 
 			public:
+				constexpr explicit(false) OperandValue(const value_type value) noexcept(std::is_nothrow_copy_constructible_v<value_type>)//
+					requires std::is_trivially_copy_constructible_v<value_type>
+					: value_{value} { }
+
 				constexpr explicit(false) OperandValue(const value_type& value) noexcept(std::is_nothrow_copy_constructible_v<value_type>)//
-					requires std::is_copy_constructible_v<value_type>
+					requires (not std::is_trivially_copy_constructible_v<value_type>) and std::is_copy_constructible_v<value_type>
 					: value_{value} { }
 
 				constexpr explicit(false) OperandValue(value_type&& value) noexcept(std::is_nothrow_move_constructible_v<value_type>)//
-					requires std::is_move_constructible_v<value_type>
+					requires(not std::is_trivially_copy_constructible_v<value_type>) and std::is_move_constructible_v<value_type>
+					: value_{std::move(value)} { }
+
+				template<typename U>
+					requires std::is_trivially_constructible_v<value_type, U>
+				constexpr explicit(false) OperandValue(const value_type value) noexcept(std::is_nothrow_constructible_v<value_type, U>)//
+					: value_{value} { }
+
+				template<typename U>
+					requires(not std::is_trivially_constructible_v<value_type, const U&>) and std::is_constructible_v<value_type, const U&>
+				constexpr explicit(false) OperandValue(const U& value) noexcept(std::is_nothrow_constructible_v<value_type, const U&>)//
+					: value_{value} { }
+
+				template<typename U>
+					requires(not std::is_trivially_constructible_v<value_type, U&&>) and std::is_constructible_v<value_type, U&&>
+				constexpr explicit(false) OperandValue(U&& value) noexcept(std::is_nothrow_constructible_v<value_type, U&&>)//
 					: value_{std::move(value)} { }
 
 				template<typename... Args>
-					requires std::is_constructible_v<value_type, Args...>
+					requires (sizeof...(Args) != 1) and std::is_constructible_v<value_type, Args...>
 				constexpr explicit OperandValue(Args&&... args) noexcept(std::is_nothrow_constructible_v<value_type, Args...>)
 					: value_{std::forward<Args>(args)...} { }
 
@@ -495,6 +524,9 @@ namespace gal::prometheus
 
 				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return std::format("{}", value_); }
 			};
+
+			template<typename T>
+			OperandValue(T) -> OperandValue<T>;
 
 			template<>
 			class OperandValue<bool>
@@ -790,6 +822,16 @@ namespace gal::prometheus
 				{
 					if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} == {}", expression_to_string(left_type{}), expression_to_string(right_)); }
 					else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} == {}", expression_to_string(left_), expression_to_string(right_type{})); }
+					else if constexpr (std::is_pointer_v<left_type> or std::is_same_v<left_type, std::nullptr_t>)
+					{
+						static_assert(std::is_pointer_v<right_type> or std::is_same_v<right_type, std::nullptr_t>);
+
+						// note: check the right side first, because it is more likely to be null
+						if (right_ == nullptr) { return std::format("{} == nullptr", pointer_to_string(left_)); }
+						if (left_ == nullptr) { return std::format("{} == nullptr", pointer_to_string(right_)); }
+
+						return std::format("{} == {}", pointer_to_string(left_), pointer_to_string(right_));
+					}
 					else
 					{
 						const auto left_string = [this]
@@ -958,6 +1000,16 @@ namespace gal::prometheus
 				{
 					if constexpr (is_operand_constant_auto_v<left_type>) { return std::format("{} != {}", expression_to_string(left_type{}), expression_to_string(right_)); }
 					else if constexpr (is_operand_constant_auto_v<right_type>) { return std::format("{} != {}", expression_to_string(left_), expression_to_string(right_type{})); }
+					else if constexpr (std::is_pointer_v<left_type> or std::is_same_v<left_type, std::nullptr_t>)
+					{
+						static_assert(std::is_pointer_v<right_type> or std::is_same_v<right_type, std::nullptr_t>);
+
+						// note: check the right side first, because it is more likely to be null
+						if (right_ == nullptr) { return std::format("{} != nullptr", pointer_to_string(left_)); }
+						if (left_ == nullptr) { return std::format("{} != nullptr", pointer_to_string(right_)); }
+
+						return std::format("{} != {}", pointer_to_string(left_), pointer_to_string(right_));
+					}
 					else
 					{
 						const auto left_string = [this]
@@ -1122,12 +1174,14 @@ namespace gal::prometheus
 					{
 						const auto left_string = [this]
 						{
-							if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
+							if constexpr (std::is_same_v<left_type, std::nullptr_t> or std::is_pointer_v<left_type>) { return pointer_to_string(left_); }
+							else if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
 							else { return expression_to_string(left_); }
 						}();
 						const auto right_string = [this]
 						{
-							if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
+							if constexpr (std::is_same_v<right_type, std::nullptr_t> or std::is_pointer_v<right_type>) { return pointer_to_string(right_); }
+							else if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
 							else { return expression_to_string(right_); }
 						}();
 
@@ -1196,12 +1250,14 @@ namespace gal::prometheus
 					{
 						const auto left_string = [this]
 						{
-							if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
+							if constexpr (std::is_same_v<left_type, std::nullptr_t> or std::is_pointer_v<left_type>) { return pointer_to_string(left_); }
+							else if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
 							else { return expression_to_string(left_); }
 						}();
 						const auto right_string = [this]
 						{
-							if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
+							if constexpr (std::is_same_v<right_type, std::nullptr_t> or std::is_pointer_v<right_type>) { return pointer_to_string(right_); }
+							else if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
 							else { return expression_to_string(right_); }
 						}();
 
@@ -1270,12 +1326,14 @@ namespace gal::prometheus
 					{
 						const auto left_string = [this]
 						{
-							if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
+							if constexpr (std::is_same_v<left_type, std::nullptr_t> or std::is_pointer_v<left_type>) { return pointer_to_string(left_); }
+							else if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
 							else { return expression_to_string(left_); }
 						}();
 						const auto right_string = [this]
 						{
-							if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
+							if constexpr (std::is_same_v<right_type, std::nullptr_t> or std::is_pointer_v<right_type>) { return pointer_to_string(right_); }
+							else if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
 							else { return expression_to_string(right_); }
 						}();
 
@@ -1344,12 +1402,14 @@ namespace gal::prometheus
 					{
 						const auto left_string = [this]
 						{
-							if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
+							if constexpr (std::is_same_v<left_type, std::nullptr_t> or std::is_pointer_v<left_type>) { return pointer_to_string(left_); }
+							else if constexpr (std::ranges::range<left_type> and not std::is_constructible_v<std::string_view, left_type>) { return range_to_string(left_); }
 							else { return expression_to_string(left_); }
 						}();
 						const auto right_string = [this]
 						{
-							if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
+							if constexpr (std::is_same_v<right_type, std::nullptr_t> or std::is_pointer_v<right_type>) { return pointer_to_string(right_); }
+							else if constexpr (std::ranges::range<right_type> and not std::is_constructible_v<std::string_view, right_type>) { return range_to_string(right_); }
 							else { return expression_to_string(right_); }
 						}();
 
@@ -1448,15 +1508,20 @@ namespace gal::prometheus
 				[[nodiscard]] constexpr auto thrown() const noexcept -> bool { return thrown_; }
 				[[nodiscard]] constexpr auto caught() const noexcept -> bool { return caught_; }
 
-				[[nodiscard]] constexpr explicit operator bool() const noexcept { return thrown(); }
+				[[nodiscard]] constexpr explicit operator bool() const noexcept { return caught(); }
 
 				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
 				{
 					return std::format(
-							"throws<{}> - {:s} -- caught - {:s}",
+							"throws<{}> -- [{}]",
 							infrastructure::compiler::type_name<exception_type>(),
-							thrown(),
-							caught());
+							(not thrown())
+								? "not thrown"
+								://
+								(not caught())
+								? "thrown but not caught"
+								://
+								"caught");
 				}
 			};
 
