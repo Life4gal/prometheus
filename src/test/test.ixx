@@ -423,7 +423,7 @@ namespace gal::prometheus
 
 			constexpr auto range_to_string = []<std::ranges::range Range>(const Range& r) noexcept -> std::string//
 			{
-				if constexpr (requires(std::ranges::range_const_reference_t<Range> v) { std::format("{}", v); })
+				if constexpr (std::is_default_constructible_v<std::formatter<std::ranges::range_value_t<Range>>>)
 				{
 					std::string result{};
 
@@ -445,7 +445,11 @@ namespace gal::prometheus
 
 					return result;
 				}
-				else { return std::format("`unformattable-container({})`", infrastructure::compiler::type_name<Range>()); }
+				else
+				{
+					if constexpr (requires { std::ranges::data(r); std::ranges::size(r); }) { return std::format("`unformatable-container({}(data: 0x{:x}, size: {}))`", infrastructure::compiler::type_name<Range>(), reinterpret_cast<std::uintptr_t>(std::ranges::data(r)), std::ranges::size(r)); }
+					else { return std::format("`unformatable-container({})`", infrastructure::compiler::type_name<Range>()); }
+				}
 			};
 
 			constexpr auto expression_to_string = []<typename T>(const T& expression) noexcept -> decltype(auto)
@@ -455,7 +459,7 @@ namespace gal::prometheus
 				// workaround vvv: dispatched_expression
 				else if constexpr (requires { expression.expression.to_string(); }) { return expression.expression.to_string(); }
 				else if constexpr (requires { std::format("{}", expression); }) { return std::format("{}", expression); }
-				else { return std::format("`unformattable({})`", infrastructure::compiler::type_name<T>()); }
+				else { return std::format("`unformatable({})`", infrastructure::compiler::type_name<T>()); }
 			};
 
 			template<typename T>
@@ -2264,11 +2268,13 @@ namespace gal::prometheus
 
 			[[noreturn]] auto on(const events::EventException& exception) -> void
 			{
-				on(events::EventTestEnd{.name = active_scope_->test_name});
+				const auto test_name = get_test_full_name();
+
+				on(events::EventTestEnd{.name = active_test_.top()});
 
 				std::format_to(
 						std::back_inserter(active_scope_->report_string),
-						"{}Abort test because unexpected exception with message: {}{}\n",
+						"{}Abort test because unexpected exception with message: {}.{}\n",
 						color_.fail,
 						exception.what(),
 						color_.none);
@@ -2277,9 +2283,9 @@ namespace gal::prometheus
 
 				// fast fail
 				std::cerr << std::format(
-						"early abort for test {}{}{} after {} failures total.\n",
+						"--- early abort for test {}{}{} after {} failures total.\n",
 						color_.test,
-						active_test_.top(),
+						test_name,
 						color_.none,
 						active_scope_->total_assertions_failed);
 				std::exit(-1);
