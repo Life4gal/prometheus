@@ -1658,16 +1658,24 @@ namespace gal::prometheus
 
 			color_type color_;
 
-			enum class ReportType
+			enum ReportType : std::uint16_t
 			{
-				ALWAYS,
-				NONE,
+				// All assertions in the entire (test) scope are output (default).
+				// note: Can be overridden by ReportType(FAILED_ONY/NONE) for individual assertions.
+				SCOPE_ALWAYS = 0x00000000,
 
-				FAILED_ONLY,
+				// All assertions in the entire (test) scope are output only on failure.
+				// note: Can be overridden by ReportType(NONE) for individual assertions.
+				SCOPE_FAILED_ONLY = 0x00000001,
+				// All assertions in the entire (test) scope are not output.
+				SCOPE_NONE = 0x00000010,
+				// The current assertion is only output on failure.
+				FAILED_ONLY = 0x00000100,
+				// The current assertions will not output.
+				NONE = 0x00001000,
 			};
 
-			ReportType report_type_scope_;
-			ReportType report_type_assertion_;
+			std::underlying_type_t<ReportType> report_type_;
 
 			// Allow users to use `expect` outside of `"xxx"_test`
 			bool in_anonymous_test_;
@@ -1888,8 +1896,7 @@ namespace gal::prometheus
 				  // out_saved_{std::cout.rdbuf()}
 				  out_{std::cout},
 				  color_{color},
-				  report_type_scope_{ReportType::ALWAYS},
-				  report_type_assertion_{ReportType::ALWAYS},
+				  report_type_{ReportType::SCOPE_ALWAYS},
 				  in_anonymous_test_{false}
 			{
 				// todo: parse command line option
@@ -2011,35 +2018,35 @@ namespace gal::prometheus
 			template<bool Scope>
 			auto on(const events::EventSilenceBegin&) -> void
 			{
-				if constexpr (Scope) { report_type_scope_ = ReportType::NONE; }
-				else { report_type_assertion_ = ReportType::NONE; }
+				if constexpr (Scope) { report_type_ |= ReportType::SCOPE_NONE; }
+				else { report_type_ |= ReportType::NONE; }
 			}
 
 			template<bool Scope>
 			auto on(const events::EventSilenceEnd&) -> void
 			{
-				if constexpr (Scope) { report_type_scope_ = ReportType::ALWAYS; }
-				else { report_type_assertion_ = ReportType::ALWAYS; }
+				if constexpr (Scope) { report_type_ &= ~ReportType::SCOPE_NONE; }
+				else { report_type_ &= ~ReportType::NONE; }
 			}
 
 			template<bool Scope>
 			auto on(const events::EventIgnorePassBegin&) -> void
 			{
-				if constexpr (Scope) { report_type_scope_ = ReportType::FAILED_ONLY; }
-				else { report_type_assertion_ = ReportType::FAILED_ONLY; }
+				if constexpr (Scope) { report_type_ |= ReportType::SCOPE_FAILED_ONLY; }
+				else { report_type_ |= ReportType::FAILED_ONLY; }
 			}
 
 			template<bool Scope>
 			auto on(const events::EventIgnorePassEnd&) -> void
 			{
-				if constexpr (Scope) { report_type_scope_ = ReportType::ALWAYS; }
-				else { report_type_assertion_ = ReportType::ALWAYS; }
+				if constexpr (Scope) { report_type_ &= ~ReportType::SCOPE_FAILED_ONLY; }
+				else { report_type_ &= ~ReportType::FAILED_ONLY; }
 			}
 
 			template<operand::expression_t Expression>
 			auto on(const events::EventAssertionPass<Expression>& assertion_pass) -> void
 			{
-				if (report_type_assertion_ == ReportType::ALWAYS)
+				if (report_type_ == ReportType::SCOPE_ALWAYS)
 				{
 					if (active_test_.empty())
 					{
@@ -2069,7 +2076,7 @@ namespace gal::prometheus
 			template<operand::expression_t Expression>
 			auto on(const events::EventAssertionFail<Expression>& assertion_fail) -> void
 			{
-				if (report_type_assertion_ != ReportType::NONE)
+				if (not((report_type_ & ReportType::SCOPE_NONE) or (report_type_ & ReportType::NONE)))
 				{
 					std::format_to(
 							std::back_inserter(active_scope_->report_string),
@@ -2103,7 +2110,7 @@ namespace gal::prometheus
 
 			auto on(const events::EventAssertionFatal& assertion_fatal) const -> void
 			{
-				if (report_type_assertion_ != ReportType::NONE)
+				if (not((report_type_ & ReportType::SCOPE_NONE) or (report_type_ & ReportType::NONE)))
 				{
 					std::format_to(
 							std::back_inserter(active_scope_->report_string),
@@ -2142,7 +2149,7 @@ namespace gal::prometheus
 			{
 				// fixme: Output only when ReportType::ALWAYS or as long as it is not ReportType::NONE?
 				// If the expression is only output when ReportType::ALWAYS, the expression modified by ignore_pass will not be output.
-				if (report_type_assertion_ != ReportType::NONE)
+				if (not((report_type_ & ReportType::SCOPE_NONE) or (report_type_ & ReportType::NONE)))
 				{
 					std::format_to(
 							std::back_inserter(active_scope_->report_string),
