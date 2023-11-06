@@ -8,12 +8,13 @@ import gal.prometheus.infrastructure;
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace test;
 	using namespace i18n;
 
-	GAL_PROMETHEUS_NO_DESTROY suite<"i18n.iso_15924"> _ = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"i18n.iso_15924"> _ = []
 	{
-		"parse"_test = []
+		using namespace test;
+
+		ignore_pass / "parse"_test = []
 		{
 			// adlm / 166
 			expect(constant<ISO15924::parse("adlm").has_value()> and ISO15924::parse("adlm").has_value() == "ISO15924::parse(\"adlm\").has_value()"_b);
@@ -52,7 +53,7 @@ namespace
 			expect(constant<not ISO15924::parse("????").has_value()> and ISO15924::parse("????").has_value() != "not ISO15924::parse(\"????\").has_value()"_b);
 		};
 
-		"hash"_test = []
+		ignore_pass / "hash"_test = []
 		{
 			expect(that % std::hash<ISO15924>{}(*ISO15924::parse("adlm")) == std::hash<ISO15924>{}(*ISO15924::parse("166"))) << fatal;
 			//

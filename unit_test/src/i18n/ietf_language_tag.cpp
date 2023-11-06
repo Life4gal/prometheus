@@ -7,12 +7,13 @@ import gal.prometheus.i18n;
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace test;
 	using namespace i18n;
 
-	GAL_PROMETHEUS_NO_DESTROY suite<"i18n.ietf_language_tag"> _ = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"i18n.ietf_language_tag"> _ = []
 	{
-		"parse"_test = []
+		using namespace test;
+
+		ignore_pass / "parse"_test = []
 		{
 			"aa-Latn-ET"_test = []
 			{
@@ -329,7 +330,7 @@ namespace
 			};
 		};
 
-		"shrink"_test = []
+		ignore_pass / "shrink"_test = []
 		{
 			"aa-Latn-ET"_test = []
 			{
@@ -404,7 +405,7 @@ namespace
 			};
 		};
 
-		"expand"_test = []
+		ignore_pass / "expand"_test = []
 		{
 			"aa-Latn-ET"_test = []
 			{
@@ -443,7 +444,7 @@ namespace
 			};
 		};
 
-		"variants"_test = []
+		ignore_pass / "variants"_test = []
 		{
 			"aa-Latn-ET"_test = []
 			{
@@ -489,7 +490,7 @@ namespace
 			};
 		};
 
-		"canonical_variants"_test = []
+		ignore_pass / "canonical_variants"_test = []
 		{
 			"aa-Latn-ET"_test = []
 			{
@@ -591,7 +592,7 @@ namespace
 			};
 		};
 
-		"all_variants"_test = []
+		ignore_pass / "all_variants"_test = []
 		{
 			"aa-Latn-ET"_test = []
 			{
@@ -712,7 +713,7 @@ namespace
 			};
 		};
 
-		"static variants"_test = []
+		ignore_pass / "static variants"_test = []
 		{
 			// Language order often used in the US:
 			// - English with the US' local

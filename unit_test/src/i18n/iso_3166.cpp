@@ -7,12 +7,13 @@ import gal.prometheus.i18n;
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace test;
 	using namespace i18n;
 
-	GAL_PROMETHEUS_NO_DESTROY suite<"i18n.iso_3166"> _ = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"i18n.iso_3166"> _ = []
 	{
-		"parse"_test = []
+		using namespace test;
+
+		ignore_pass / "parse"_test = []
 		{
 			// AF / AFG / 4
 			expect(constant<ISO3166::parse("AF").has_value()> and ISO3166::parse("AF").has_value() == "ISO3166::parse(\"AF\").has_value()"_b);
@@ -45,7 +46,7 @@ namespace
 			expect(constant<not ISO3166::parse("????").has_value()> and ISO3166::parse("????").has_value() != "not ISO3166::parse(\"????\").has_value()"_b);
 		};
 
-		"hash"_test = []
+		ignore_pass / "hash"_test = []
 		{
 			expect(that % std::hash<ISO3166>{}(*ISO3166::parse("AF")) == std::hash<ISO3166>{}(*ISO3166::parse("AFG"))) << fatal;
 			expect(that % std::hash<ISO3166>{}(*ISO3166::parse("AF")) == std::hash<ISO3166>{}(*ISO3166::parse("4"))) << fatal;

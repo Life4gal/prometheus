@@ -7,12 +7,13 @@ import gal.prometheus.i18n;
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace test;
 	using namespace i18n;
 
-	GAL_PROMETHEUS_NO_DESTROY suite<"i18n.iso_639"> _ = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"i18n.iso_639"> _ = []
 	{
-		"parse"_test = []
+		using namespace test;
+
+		ignore_pass / "parse"_test = []
 		{
 			expect(constant<ISO639::parse("ab").has_value()> and ISO639::parse("ab").has_value() == "ISO639::parse(\"ab\").has_value()"_b);
 			expect(constant<ISO639::parse("ab")->size() == 2_auto> and ISO639::parse("ab")->size() == 2_auto);
@@ -32,7 +33,7 @@ namespace
 			expect(constant<not ISO639::parse("abcd").has_value()> and ISO639::parse("abcd").has_value() != "not ISO639::parse(\"abcd\").has_value()"_b);
 		};
 
-		"hash"_test = []
+		ignore_pass / "hash"_test = []
 		{
 			expect(std::hash<ISO639>{}(*ISO639::parse("bc")) != 0_auto) << fatal;
 			expect(std::hash<ISO639>{}(*ISO639::parse("abc")) != 0_auto) << fatal;
