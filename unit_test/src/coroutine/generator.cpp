@@ -7,24 +7,25 @@ import gal.prometheus.coroutine;
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace test;
 	using namespace coroutine;
 
-	GAL_PROMETHEUS_NO_DESTROY suite<"coroutine.generator"> _ = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"coroutine.generator"> _ = []
 	{
-		"0~10"_test = []
+		using namespace test;
+
+		ignore_pass / "0~10"_test = []
 		{
 			auto generator = []() -> Generator<int> { for (int i = 0; i <= 10; ++i) { co_yield i; } }();
 
-			for (int       i = 0;
-				const auto each: generator)
+			for (int        i = 0;
+			     const auto each: generator)
 			{
 				expect(each == as_i{i}) << fatal;
 				++i;
 			}
 		};
 
-		"0~10 with exception"_test = []
+		"0~10 with exception"_test / ignore_pass = []
 		{
 			auto generator = []() -> Generator<int>
 			{
@@ -38,8 +39,8 @@ namespace
 
 			try
 			{
-				for (int       i = 0;
-					const auto each: generator)
+				for (int        i = 0;
+				     const auto each: generator)
 				{
 					expect(each == as_i{i}) << fatal;
 					++i;
@@ -54,10 +55,10 @@ namespace
 			{
 				auto generator = []() -> Generator<std::unique_ptr<int>> { for (int i = 0; i <= 10; ++i) { co_yield std::make_unique<int>(i); } }();
 
-				for (int        i = 0;
-					const auto& each: generator)
+				for (int         i = 0;
+				     const auto& each: generator)
 				{
-					expect(*each == as_i{i}) << fatal;
+					expect(ignore_pass % *each == as_i{i}) << fatal;
 					++i;
 				}
 			}
@@ -66,10 +67,10 @@ namespace
 			{
 				auto generator = []() -> Generator<std::unique_ptr<int>> { for (int i = 0; i <= 10; ++i) { co_yield std::make_unique<int>(i); } }();
 
-				for (int   i = 0;
-					auto&& each: generator)
+				for (int    i = 0;
+				     auto&& each: generator)
 				{
-					expect(*each == as_i{i}) << fatal;
+					expect(ignore_pass % *each == as_i{i}) << fatal;
 					++i;
 				}
 			}
@@ -87,8 +88,8 @@ namespace
 				}
 			}();
 
-			for (int       current = 0;
-				const auto each: generator)
+			for (int        current = 0;
+			     const auto each: generator)
 			{
 				// silence -> avoid spam
 				expect(silence % each == as_i{current}) << fatal;

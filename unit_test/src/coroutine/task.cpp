@@ -7,15 +7,16 @@ import gal.prometheus.coroutine;
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace test;
 	using namespace coroutine;
 
 	// It's a good idea to read what's in the link before reading the code below.
 	// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-capture
 
-	GAL_PROMETHEUS_NO_DESTROY suite<"coroutine.task"> _ = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"coroutine.task"> _ = []
 	{
-		"void"_test = []
+		using namespace test;
+
+		ignore_pass / "void"_test = []
 		{
 			auto return_void = []() -> Task<void> { co_return; }();
 
@@ -26,7 +27,7 @@ namespace
 			expect(return_void.done() == "return_void.done()"_b) << fatal;
 		};
 
-		"hello_world"_test = []
+		ignore_pass / "hello_world"_test = []
 		{
 			using task_type = Task<std::string>;
 
@@ -52,7 +53,7 @@ namespace
 			expect(say_world.promise().result().empty() == "say_world.promise().result().empty()"_b) << fatal;// NOLINT // use-after-move
 		};
 
-		"exception"_test = []
+		ignore_pass / "exception"_test = []
 		{
 			using task_type = Task<std::string>;
 
@@ -71,19 +72,19 @@ namespace
 			expect(throw_exception.promise().has_exception() == "throw_exception.promise().has_exception()"_b) << fatal;
 
 			expect(
-						[&throw_exception]
+					[&throw_exception]
+					{
+						try { [[maybe_unused]] const auto& _ = throw_exception.promise().result(); }
+						catch (const std::runtime_error& e)
 						{
-							try { [[maybe_unused]] const auto& _ = throw_exception.promise().result(); }
-							catch (const std::runtime_error& e)
-							{
-								expect(e.what() == "exception raise!"_s) << fatal;
-								return true;
-							}
-							return false;
-						}() == "throw it!"_b) << fatal;
+							expect(e.what() == "exception raise!"_s) << fatal;
+							return true;
+						}
+						return false;
+					}() == "throw it!"_b) << fatal;
 		};
 
-		"nested_task"_test = []
+		ignore_pass / "nested_task"_test = []
 		{
 			constexpr static std::string_view m1{"inner task here~\n"};
 			constexpr static std::string_view m2{"outer task waiting...\n"};
@@ -102,7 +103,7 @@ namespace
 
 				outer_message.append(m2);
 				const auto result = co_await inner(outer_message);
-				expect(result == 42_auto) <<fatal;
+				expect(result == 42_auto) << fatal;
 				outer_message.append(m3);
 			}(message);
 
@@ -111,7 +112,7 @@ namespace
 			expect(message == as_s{std::string{m2}.append(m1).append(m3)}) << fatal;
 		};
 
-		"suspend_task"_test = []
+		ignore_pass / "suspend_task"_test = []
 		{
 			auto suspend_task = []() -> Task<int>
 			{
@@ -139,7 +140,7 @@ namespace
 			expect(suspend_task.promise().result() == 42_auto) << fatal;
 		};
 
-		"coroutine_handle"_test = []
+		ignore_pass / "coroutine_handle"_test = []
 		{
 			auto task_1 = []() -> Task<int> { co_return 42; }();
 
