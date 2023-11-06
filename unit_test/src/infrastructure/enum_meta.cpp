@@ -6,7 +6,6 @@ import gal.prometheus.infrastructure;
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace test;
 	using namespace infrastructure;
 
 	enum PlainEnum
@@ -61,8 +60,10 @@ namespace
 			ScopedContiguousEnum::_3, "SC3" //
 	};
 
-	GAL_PROMETHEUS_NO_DESTROY suite test_infrastructure_enum_meta = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"infrastructure.enum_meta"> _ = []
 	{
+		using namespace test;
+
 		"min_max_contiguous"_test = []
 		{
 			static_assert(decltype(plain_enum)::size == 3);
@@ -129,15 +130,15 @@ namespace
 			static_assert(plain_enum["PLAIN_1"] == PLAIN_1);
 			static_assert(plain_enum["PLAIN_2"] == PLAIN_2);
 			static_assert(plain_enum["PLAIN_3"] == PLAIN_3);
-			
+
 			static_assert(plain_contiguous_enum["PC1"] == PLAIN_CONTIGUOUS_1);
 			static_assert(plain_contiguous_enum["PC2"] == PLAIN_CONTIGUOUS_2);
 			static_assert(plain_contiguous_enum["PC3"] == PLAIN_CONTIGUOUS_3);
-			
+
 			static_assert(scoped_enum["S1"] == ScopedEnum::_1);
 			static_assert(scoped_enum["S2"] == ScopedEnum::_2);
 			static_assert(scoped_enum["S3"] == ScopedEnum::_3);
-			
+
 			static_assert(scoped_contiguous_enum["SC1"] == ScopedContiguousEnum::_1);
 			static_assert(scoped_contiguous_enum["SC2"] == ScopedContiguousEnum::_2);
 			static_assert(scoped_contiguous_enum["SC3"] == ScopedContiguousEnum::_3);
@@ -148,7 +149,7 @@ namespace
 			static_assert(plain_enum.at(PLAIN_1) == "PLAIN_1");
 			static_assert(plain_enum.at(PLAIN_2) == "PLAIN_2");
 			static_assert(plain_enum.at(PLAIN_3) == "PLAIN_3");
-			expect((throws<OutOfRangeError>([] { (void)plain_enum.at(static_cast<PlainEnum>(42)); })) >> fatal);
+			expect(ignore_pass % throws<OutOfRangeError>([] { (void)plain_enum.at(static_cast<PlainEnum>(42)); })) << fatal;
 			static_assert(plain_enum.at(PLAIN_1, "42!") == "PLAIN_1");
 			static_assert(plain_enum.at(PLAIN_2, "42!") == "PLAIN_2");
 			static_assert(plain_enum.at(PLAIN_3, "42!") == "PLAIN_3");
@@ -157,7 +158,7 @@ namespace
 			static_assert(plain_contiguous_enum.at(PLAIN_CONTIGUOUS_1) == "PC1");
 			static_assert(plain_contiguous_enum.at(PLAIN_CONTIGUOUS_2) == "PC2");
 			static_assert(plain_contiguous_enum.at(PLAIN_CONTIGUOUS_3) == "PC3");
-			expect((throws<OutOfRangeError>([] { (void)plain_contiguous_enum.at(static_cast<PlainContiguousEnum>(42)); })) >> fatal);
+			expect(ignore_pass % throws<OutOfRangeError>([] { (void)plain_contiguous_enum.at(static_cast<PlainContiguousEnum>(42)); })) << fatal;
 			static_assert(plain_contiguous_enum.at(PLAIN_CONTIGUOUS_1, "42!") == "PC1");
 			static_assert(plain_contiguous_enum.at(PLAIN_CONTIGUOUS_2, "42!") == "PC2");
 			static_assert(plain_contiguous_enum.at(PLAIN_CONTIGUOUS_3, "42!") == "PC3");
@@ -166,7 +167,7 @@ namespace
 			static_assert(scoped_enum.at(ScopedEnum::_1) == "S1");
 			static_assert(scoped_enum.at(ScopedEnum::_2) == "S2");
 			static_assert(scoped_enum.at(ScopedEnum::_3) == "S3");
-			expect((throws<OutOfRangeError>([] { (void)scoped_enum.at(static_cast<ScopedEnum>(42)); })) >> fatal);
+			expect(ignore_pass % throws<OutOfRangeError>([] { (void)scoped_enum.at(static_cast<ScopedEnum>(42)); })) << fatal;
 			static_assert(scoped_enum.at(ScopedEnum::_1, "42!") == "S1");
 			static_assert(scoped_enum.at(ScopedEnum::_2, "42!") == "S2");
 			static_assert(scoped_enum.at(ScopedEnum::_3, "42!") == "S3");
@@ -175,7 +176,7 @@ namespace
 			static_assert(scoped_contiguous_enum.at(ScopedContiguousEnum::_1) == "SC1");
 			static_assert(scoped_contiguous_enum.at(ScopedContiguousEnum::_2) == "SC2");
 			static_assert(scoped_contiguous_enum.at(ScopedContiguousEnum::_3) == "SC3");
-			expect((throws<OutOfRangeError>([] { (void)scoped_contiguous_enum.at(static_cast<ScopedContiguousEnum>(42)); })) >> fatal);
+			expect(ignore_pass % throws<OutOfRangeError>([] { (void)scoped_contiguous_enum.at(static_cast<ScopedContiguousEnum>(42)); })) << fatal;
 			static_assert(scoped_contiguous_enum.at(ScopedContiguousEnum::_1, "42!") == "SC1");
 			static_assert(scoped_contiguous_enum.at(ScopedContiguousEnum::_2, "42!") == "SC2");
 			static_assert(scoped_contiguous_enum.at(ScopedContiguousEnum::_3, "42!") == "SC3");
@@ -187,7 +188,7 @@ namespace
 			static_assert(plain_enum.at("PLAIN_1") == PLAIN_1);
 			static_assert(plain_enum.at("PLAIN_2") == PLAIN_2);
 			static_assert(plain_enum.at("PLAIN_3") == PLAIN_3);
-			expect((throws<OutOfRangeError>([] { (void)plain_enum.at("42!"); })) >> fatal);
+			expect(ignore_pass % throws<OutOfRangeError>([] { (void)plain_enum.at("42!"); })) << fatal;
 			static_assert(plain_enum.at("PLAIN_1", PLAIN_1) == PLAIN_1);
 			static_assert(plain_enum.at("PLAIN_2", PLAIN_1) == PLAIN_2);
 			static_assert(plain_enum.at("PLAIN_3", PLAIN_1) == PLAIN_3);
@@ -196,7 +197,7 @@ namespace
 			static_assert(plain_contiguous_enum.at("PC1") == PLAIN_CONTIGUOUS_1);
 			static_assert(plain_contiguous_enum.at("PC2") == PLAIN_CONTIGUOUS_2);
 			static_assert(plain_contiguous_enum.at("PC3") == PLAIN_CONTIGUOUS_3);
-			expect((throws<OutOfRangeError>([] { (void)plain_contiguous_enum.at("42!"); })) >> fatal);
+			expect(ignore_pass % throws<OutOfRangeError>([] { (void)plain_contiguous_enum.at("42!"); })) << fatal;
 			static_assert(plain_contiguous_enum.at("PC1", PLAIN_CONTIGUOUS_1) == PLAIN_CONTIGUOUS_1);
 			static_assert(plain_contiguous_enum.at("PC2", PLAIN_CONTIGUOUS_1) == PLAIN_CONTIGUOUS_2);
 			static_assert(plain_contiguous_enum.at("PC3", PLAIN_CONTIGUOUS_1) == PLAIN_CONTIGUOUS_3);
@@ -205,7 +206,7 @@ namespace
 			static_assert(scoped_enum.at("S1") == ScopedEnum::_1);
 			static_assert(scoped_enum.at("S2") == ScopedEnum::_2);
 			static_assert(scoped_enum.at("S3") == ScopedEnum::_3);
-			expect((throws<OutOfRangeError>([] { (void)scoped_enum.at("42!"); })) >> fatal);
+			expect(ignore_pass % throws<OutOfRangeError>([] { (void)scoped_enum.at("42!"); })) << fatal;
 			static_assert(scoped_enum.at("S1", ScopedEnum::_1) == ScopedEnum::_1);
 			static_assert(scoped_enum.at("S2", ScopedEnum::_1) == ScopedEnum::_2);
 			static_assert(scoped_enum.at("S3", ScopedEnum::_1) == ScopedEnum::_3);
@@ -214,7 +215,7 @@ namespace
 			static_assert(scoped_contiguous_enum.at("SC1") == ScopedContiguousEnum::_1);
 			static_assert(scoped_contiguous_enum.at("SC2") == ScopedContiguousEnum::_2);
 			static_assert(scoped_contiguous_enum.at("SC3") == ScopedContiguousEnum::_3);
-			expect((throws<OutOfRangeError>([] { (void)scoped_contiguous_enum.at("42!"); })) >> fatal);
+			expect(ignore_pass % throws<OutOfRangeError>([] { (void)scoped_contiguous_enum.at("42!"); })) << fatal;
 			static_assert(scoped_contiguous_enum.at("SC1", ScopedContiguousEnum::_1) == ScopedContiguousEnum::_1);
 			static_assert(scoped_contiguous_enum.at("SC2", ScopedContiguousEnum::_1) == ScopedContiguousEnum::_2);
 			static_assert(scoped_contiguous_enum.at("SC3", ScopedContiguousEnum::_1) == ScopedContiguousEnum::_3);

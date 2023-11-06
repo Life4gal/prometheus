@@ -7,7 +7,6 @@ import gal.prometheus.infrastructure;
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace test;
 	using namespace infrastructure;
 	using namespace infrastructure::literals;
 
@@ -52,8 +51,10 @@ struct infrastructure::wildcard_type<point>
 
 namespace
 {
-	GAL_PROMETHEUS_NO_DESTROY suite test_infrastructure_wildcard_match = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"infrastructure.wildcard_match"> _ = []
 	{
+		using namespace test;
+
 		"basic_test"_test = []
 		{
 			{
