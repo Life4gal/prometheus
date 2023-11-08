@@ -3,11 +3,11 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-export module gal.prometheus.infrastructure:error.exception;
+export module gal.prometheus.error:exception;
 
 import std;
 
-export namespace gal::prometheus::infrastructure
+export namespace gal::prometheus::error
 {
 	class Exception : public std::exception
 	{
@@ -80,4 +80,4 @@ export namespace gal::prometheus::infrastructure
 	public:
 		using Exception::Exception;
 	};
-}// namespace gal::prometheus::infrastructure
+}// namespace gal::prometheus::error

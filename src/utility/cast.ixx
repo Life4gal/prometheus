@@ -7,23 +7,23 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:cast;
+export module gal.prometheus.utility:cast;
 
 import std;
-import :type_traits;
-import :error.debug;
-import :error.exception;
+import gal.prometheus.error;
 
-namespace gal::prometheus::infrastructure
+import :concepts;
+
+namespace gal::prometheus::utility
 {
 	template<typename Left, typename Right>
 	struct three_way_comparison;
 
 	template<typename Left, typename Right>
 		requires std::is_same_v<Left, Right> and
-				(traits::unsigned_integral<Left> or
-				traits::signed_integral<Left> or
-				std::floating_point<Left>)
+		         (std::unsigned_integral<Left> or
+		          std::signed_integral<Left> or
+		          std::floating_point<Left>)
 	struct three_way_comparison<Left, Right>
 	{
 		[[nodiscard]] constexpr auto operator()(const Left left, const Right right) const noexcept -> std::strong_ordering { return left <=> right; }
@@ -31,7 +31,7 @@ namespace gal::prometheus::infrastructure
 
 	template<typename Left, typename Right>
 		requires(std::signed_integral<Left> and std::unsigned_integral<Right>) or
-				(std::unsigned_integral<Left> and std::signed_integral<Right>)
+		        (std::unsigned_integral<Left> and std::signed_integral<Right>)
 	struct three_way_comparison<Left, Right>
 	{
 		[[nodiscard]] constexpr auto operator()(const Left left, const Right right) const noexcept -> std::strong_ordering
@@ -51,7 +51,7 @@ namespace gal::prometheus::infrastructure
 
 	template<typename L, typename R>
 		requires(std::floating_point<L> and std::integral<R>) or
-				(std::integral<L> and std::floating_point<R>)
+		        (std::integral<L> and std::floating_point<R>)
 	struct three_way_comparison<L, R>
 	{
 		[[nodiscard]] constexpr auto operator()(const L l, const R r) const noexcept -> std::partial_ordering
@@ -86,8 +86,8 @@ namespace gal::prometheus::infrastructure
 		 * @param input The input value.
 		 * @return The output value.
 		 */
-		template<traits::arithmetic Out, traits::arithmetic In>
-			requires traits::type_in_range<Out, In>
+		template<concepts::arithmetic Out, concepts::arithmetic In>
+			requires concepts::type_in_range<Out, In>
 		[[nodiscard]] constexpr auto wide_cast(const In input) noexcept -> Out { return static_cast<Out>(input); }
 
 		/**
@@ -97,7 +97,7 @@ namespace gal::prometheus::infrastructure
 		 * @param input The input value.
 		 * @return The converted value, which is saturated if @b input is overflowing or under-flowing.
 		 */
-		template<traits::integral Out, traits::arithmetic In>
+		template<std::integral Out, concepts::arithmetic In>
 		[[nodiscard]] constexpr auto saturate_cast(const In input) noexcept -> Out
 		{
 			if constexpr (std::is_floating_point_v<In>) { if (std::isnan(input)) { return Out{0}; } }
@@ -118,7 +118,7 @@ namespace gal::prometheus::infrastructure
 		 *
 		 * @note It is undefined behavior to cast a value which will cause a loss of precision.
 		 */
-		template<traits::arithmetic Out, traits::arithmetic In>
+		template<concepts::arithmetic Out, concepts::arithmetic In>
 		[[nodiscard]] constexpr auto narrow_cast(const In input) noexcept -> Out
 		{
 			constexpr auto narrow_validate = [](const Out o, const In i) noexcept -> bool
@@ -133,7 +133,7 @@ namespace gal::prometheus::infrastructure
 				return result;
 			};
 
-			if constexpr (traits::type_in_range<Out, In>) { return static_cast<Out>(input); }
+			if constexpr (concepts::type_in_range<Out, In>) { return static_cast<Out>(input); }
 			else
 			{
 				const auto out = static_cast<Out>(input);
@@ -142,21 +142,21 @@ namespace gal::prometheus::infrastructure
 			}
 		}
 
-		template<traits::arithmetic Out, traits::arithmetic In>
+		template<concepts::arithmetic Out, concepts::arithmetic In>
 		[[nodiscard]] constexpr auto round_cast(const In input) noexcept -> Out
 		{
 			if constexpr (std::is_floating_point_v<In>) { return narrow_cast<Out>(std::round(input)); }
 			else { return narrow_cast<Out>(input); }
 		}
 
-		template<traits::arithmetic Out, traits::arithmetic In>
+		template<concepts::arithmetic Out, concepts::arithmetic In>
 		[[nodiscard]] constexpr auto floor_cast(const In input) noexcept -> Out
 		{
 			if constexpr (std::is_floating_point_v<In>) { return narrow_cast<Out>(std::floor(input)); }
 			else { return narrow_cast<Out>(input); }
 		}
 
-		template<traits::arithmetic Out, traits::arithmetic In>
+		template<concepts::arithmetic Out, concepts::arithmetic In>
 		[[nodiscard]] constexpr auto ceil_cast(const In input) noexcept -> Out
 		{
 			if constexpr (std::is_floating_point_v<In>) { return narrow_cast<Out>(std::ceil(input)); }
@@ -175,7 +175,7 @@ namespace gal::prometheus::infrastructure
 		 * 	but you have to treat those as unsigned values.
 		 * @note @b input value after casting, must fit in the output type.
 		 */
-		template<traits::integral Out, traits::integral In>
+		template<std::integral Out, std::integral In>
 		[[nodiscard]] constexpr auto char_cast(const In input) noexcept -> Out
 		{
 			using unsigned_in_type = std::make_unsigned_t<In>;
@@ -187,7 +187,7 @@ namespace gal::prometheus::infrastructure
 			return static_cast<Out>(unsigned_out);
 		}
 
-		template<traits::integral Out>
+		template<std::integral Out>
 		[[nodiscard]] constexpr auto char_cast(const std::byte input) noexcept -> Out
 		{
 			static_assert(sizeof(std::byte) == sizeof(std::uint8_t));
@@ -197,21 +197,21 @@ namespace gal::prometheus::infrastructure
 		/**
 		 * @brief Return the low half of the input value.
 		 */
-		template<traits::unsigned_integral Out, traits::unsigned_integral In>
+		template<concepts::unsigned_integral Out, concepts::unsigned_integral In>
 			requires(sizeof(Out) * 2 == sizeof(In))// Return value of low_bit_cast must be half the size of the input
 		[[nodiscard]] constexpr auto low_bit_cast(const In input) noexcept -> Out { return static_cast<Out>(input); }
 
 		/**
 		 * @brief Return the high half of the input value.
 		 */
-		template<traits::unsigned_integral Out, traits::unsigned_integral In>
+		template<concepts::unsigned_integral Out, concepts::unsigned_integral In>
 			requires(sizeof(Out) * 2 == sizeof(In))// Return value of high_bit_cast must be half the size of the input
 		[[nodiscard]] constexpr auto high_bit_cast(const In input) noexcept -> Out { return static_cast<Out>(input >> sizeof(Out) * std::numeric_limits<unsigned char>::digits); }
 
 		/**
 		 * @brief Return the upper half of the input value.
 		 */
-		template<traits::unsigned_integral Out, traits::unsigned_integral In>
+		template<concepts::unsigned_integral Out, concepts::unsigned_integral In>
 			requires(sizeof(Out) * 2 == sizeof(In))// Return value of merge_bit_cast must be half the size of the input
 		[[nodiscard]] constexpr auto merge_bit_cast(const In high, const In low) noexcept -> Out
 		{
@@ -224,7 +224,7 @@ namespace gal::prometheus::infrastructure
 		/**
 		 * @brief Return the low half of the input value.
 		 */
-		template<traits::signed_integral Out, traits::signed_integral In>
+		template<concepts::signed_integral Out, concepts::signed_integral In>
 			requires(sizeof(Out) * 2 == sizeof(In))// Return value of low_bit_cast must be half the size of the input
 		[[nodiscard]] constexpr auto low_bit_cast(const In input) noexcept -> Out
 		{
@@ -237,7 +237,7 @@ namespace gal::prometheus::infrastructure
 		/**
 		 * @brief Return the high half of the input value.
 		 */
-		template<traits::signed_integral Out, traits::signed_integral In>
+		template<concepts::signed_integral Out, concepts::signed_integral In>
 			requires(sizeof(Out) * 2 == sizeof(In))// Return value of high_bit_cast must be half the size of the input
 		[[nodiscard]] constexpr auto high_bit_cast(const In input) noexcept -> Out
 		{
@@ -250,7 +250,7 @@ namespace gal::prometheus::infrastructure
 		/**
 		 * @brief Return the upper half of the input value.
 		 */
-		template<traits::signed_integral Out, traits::signed_integral In>
+		template<concepts::signed_integral Out, concepts::signed_integral In>
 			requires(sizeof(Out) * 2 == sizeof(In))// Return value of merge_bit_cast must be half the size of the input
 		[[nodiscard]] constexpr auto merge_bit_cast(const In high, const In low) noexcept -> Out
 		{
@@ -263,7 +263,7 @@ namespace gal::prometheus::infrastructure
 		/**
 		 * @brief Return the low half of the input value.
 		 */
-		template<traits::unsigned_integral Out, traits::signed_integral In>
+		template<concepts::unsigned_integral Out, concepts::signed_integral In>
 			requires(sizeof(Out) * 2 == sizeof(In))// Return value of low_bit_cast must be half the size of the input
 		[[nodiscard]] constexpr auto low_bit_cast(const In input) noexcept -> Out
 		{
@@ -275,7 +275,7 @@ namespace gal::prometheus::infrastructure
 		/**
 		 * @brief Return the high half of the input value.
 		 */
-		template<traits::unsigned_integral Out, traits::signed_integral In>
+		template<concepts::unsigned_integral Out, concepts::signed_integral In>
 			requires(sizeof(Out) * 2 == sizeof(In))// Return value of high_bit_cast must be half the size of the input
 		[[nodiscard]] constexpr auto high_bit_cast(const In input) noexcept -> Out
 		{
@@ -287,7 +287,7 @@ namespace gal::prometheus::infrastructure
 		/**
 		 * @brief Return the upper half of the input value.
 		 */
-		template<traits::signed_integral Out, traits::unsigned_integral In>
+		template<concepts::signed_integral Out, concepts::unsigned_integral In>
 			requires(sizeof(Out) * 2 == sizeof(In))// Return value of merge_bit_cast must be half the size of the input
 		[[nodiscard]] constexpr auto merge_bit_cast(const In high, const In low) noexcept -> Out
 		{
@@ -299,19 +299,19 @@ namespace gal::prometheus::infrastructure
 		/**
 		 * @brief Cast an integral to an unsigned integral of the same size.
 		 */
-		template<traits::integral In>
+		template<std::integral In>
 		[[nodiscard]] constexpr auto to_unsigned(const In input) noexcept -> std::make_unsigned_t<In> { return static_cast<std::make_unsigned_t<In>>(input); }
 
 		/**
 		 * @briefc Cast an integral to an signed integral of the same size.
 		 */
-		template<traits::integral In>
+		template<std::integral In>
 		[[nodiscard]] constexpr auto to_signed(const In input) noexcept -> std::make_signed_t<In> { return static_cast<std::make_signed_t<In>>(input); }
 
 		/**
 		 * @brief Cast between integral types truncating or zero-extending the result.
 		 */
-		template<traits::integral Out, traits::integral In>
+		template<std::integral Out, std::integral In>
 		[[nodiscard]] constexpr auto truncate(const In input) noexcept -> Out { return static_cast<Out>(to_unsigned(input)); }
 
 		/**
@@ -323,8 +323,8 @@ namespace gal::prometheus::infrastructure
 		 */
 		template<typename TargetPointer, std::derived_from<std::remove_pointer_t<TargetPointer>> Type>
 			requires std::is_pointer_v<TargetPointer> and
-					(std::is_const_v<std::remove_pointer_t<TargetPointer>> == std::is_const_v<Type> or
-					std::is_const_v<std::remove_pointer_t<TargetPointer>>)
+			         (std::is_const_v<std::remove_pointer_t<TargetPointer>> == std::is_const_v<Type> or
+			          std::is_const_v<std::remove_pointer_t<TargetPointer>>)
 		[[nodiscard]] constexpr auto up_cast(Type* input) noexcept -> TargetPointer
 		{
 			if constexpr (std::is_same_v<std::remove_const_t<Type>, std::remove_cv_t<std::remove_pointer_t<TargetPointer>>>) { return input; }
@@ -343,9 +343,9 @@ namespace gal::prometheus::infrastructure
 		 */
 		template<typename TargetPointer, typename Type>
 			requires std::is_pointer_v<TargetPointer> and
-					(std::is_const_v<std::remove_pointer_t<TargetPointer>> == std::is_const_v<Type> or
-					std::is_const_v<std::remove_pointer_t<TargetPointer>>) and
-					std::derived_from<std::remove_pointer_t<TargetPointer>, Type>
+			         (std::is_const_v<std::remove_pointer_t<TargetPointer>> == std::is_const_v<Type> or
+			          std::is_const_v<std::remove_pointer_t<TargetPointer>>) and
+			         std::derived_from<std::remove_pointer_t<TargetPointer>, Type>
 		[[nodiscard]] constexpr auto down_cast(Type* input) noexcept -> TargetPointer
 		{
 			if constexpr (std::is_same_v<std::remove_const_t<Type>, std::remove_cv_t<std::remove_pointer_t<TargetPointer>>>) { return input; }
@@ -373,8 +373,8 @@ namespace gal::prometheus::infrastructure
 		 */
 		template<typename TargetReference, std::derived_from<std::remove_reference_t<TargetReference>> Type>
 			requires std::is_reference_v<TargetReference> and
-					(std::is_const_v<std::remove_reference_t<TargetReference>> == std::is_const_v<TargetReference> or
-					std::is_const_v<std::remove_reference_t<TargetReference>>)
+			         (std::is_const_v<std::remove_reference_t<TargetReference>> == std::is_const_v<TargetReference> or
+			          std::is_const_v<std::remove_reference_t<TargetReference>>)
 		[[nodiscard]] constexpr auto up_cast(Type& input) noexcept -> TargetReference
 		{
 			if constexpr (std::is_same_v<std::remove_const_t<Type>, std::remove_cvref_t<TargetReference>>) { return input; }
@@ -390,9 +390,9 @@ namespace gal::prometheus::infrastructure
 		 */
 		template<typename TargetReference, typename Type>
 			requires std::is_reference_v<TargetReference> and
-					(std::is_const_v<std::remove_reference_t<TargetReference>> == std::is_const_v<TargetReference> or
-					std::is_const_v<std::remove_reference_t<TargetReference>>) and
-					std::derived_from<std::remove_reference_t<TargetReference>, Type>
+			         (std::is_const_v<std::remove_reference_t<TargetReference>> == std::is_const_v<TargetReference> or
+			          std::is_const_v<std::remove_reference_t<TargetReference>>) and
+			         std::derived_from<std::remove_reference_t<TargetReference>, Type>
 		[[nodiscard]] constexpr auto down_cast(Type& input) noexcept -> TargetReference
 		{
 			if constexpr (std::is_same_v<std::remove_const_t<Type>, std::remove_cvref_t<TargetReference>>) { return input; }
@@ -414,73 +414,109 @@ namespace gal::prometheus::infrastructure
 		template<typename OutInteger = std::intptr_t>
 			requires(std::is_same_v<OutInteger, std::intptr_t> or std::is_same_v<OutInteger, std::uintptr_t>)
 		[[nodiscard]] constexpr auto to_address(const void* const pointer) noexcept -> OutInteger { return reinterpret_cast<OutInteger>(pointer); }
+	}
 
-		template<typename Out, traits::byte_like In>
-			requires std::is_trivially_default_constructible_v<traits::keep_cv_t<Out, In>> and
-					std::is_trivially_destructible_v<traits::keep_cv_t<Out, In>>
-		[[nodiscard]] constexpr auto implicit_cast(const std::span<In> bytes) noexcept(false) -> std::add_lvalue_reference<traits::keep_cv_t<Out, In>>
+	namespace cast_detail
+	{
+		template<typename, typename>
+		struct keep_cv;
+
+		template<typename To, typename From>
+			requires(not std::is_const_v<From> and not std::is_volatile_v<From>)
+		struct keep_cv<To, From>
 		{
-			using value_type = traits::keep_cv_t<Out, In>;
+			using type = std::remove_cv_t<To>;
+		};
 
-			if (sizeof(value_type) > bytes.size()) { throw BadCastError{"Data incomplete!"}; }
+		template<typename To, typename From>
+			requires(not std::is_const_v<From> and std::is_volatile_v<From>)
+		struct keep_cv<To, From>
+		{
+			using type = std::add_volatile_t<std::remove_cv_t<To>>;
+		};
+
+		template<typename To, typename From>
+			requires(std::is_const_v<From> and not std::is_volatile_v<From>)
+		struct keep_cv<To, From>
+		{
+			using type = std::add_const_t<std::remove_cv_t<To>>;
+		};
+
+		template<typename To, typename From>
+			requires(std::is_const_v<From> and std::is_volatile_v<From>)
+		struct keep_cv<To, From>
+		{
+			using type = std::add_const_t<std::add_volatile_t<std::remove_cv_t<To>>>;
+		};
+
+		template<typename To, typename From>
+		using keep_cv_t = typename keep_cv<To, From>::type;
+	}
+
+	export
+	{
+		template<typename Out, concepts::byte_like In>
+			requires std::is_trivially_default_constructible_v<cast_detail::keep_cv_t<Out, In>> and std::is_trivially_destructible_v<cast_detail::keep_cv_t<Out, In>>//
+		[[nodiscard]] constexpr auto implicit_cast(const std::span<In> bytes) noexcept(false) -> std::add_lvalue_reference<cast_detail::keep_cv_t<Out, In>>
+		{
+			using value_type = cast_detail::keep_cv_t<Out, In>;
+
+			if (sizeof(value_type) > bytes.size()) { throw error::BadCastError{"Data incomplete!"}; }
 
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(bytes.data(), "Cannot implicit_cast null data!");
 
-			if constexpr (alignof(value_type) != 1) { if (std::bit_cast<std::uintptr_t>(bytes.data()) % alignof(value_type) != 0) { throw BadCastError{"Alignment mismatch!"}; } }
+			if constexpr (alignof(value_type) != 1) { if (std::bit_cast<std::uintptr_t>(bytes.data()) % alignof(value_type) != 0) { throw error::BadCastError{"Alignment mismatch!"}; } }
 
 			return *reinterpret_cast<value_type*>(bytes.data());
 		}
 
-		template<typename Out, traits::byte_like In>
-			requires std::is_trivially_default_constructible_v<traits::keep_cv_t<Out, In>> and
-					std::is_trivially_destructible_v<traits::keep_cv_t<Out, In>>
-		[[nodiscard]] constexpr auto implicit_cast(const std::span<In> bytes, std::size_t& offset) noexcept(false) -> std::add_lvalue_reference<traits::keep_cv_t<Out, In>>
+		template<typename Out, concepts::byte_like In>
+			requires std::is_trivially_default_constructible_v<cast_detail::keep_cv_t<Out, In>> and std::is_trivially_destructible_v<cast_detail::keep_cv_t<Out, In>>//
+		[[nodiscard]] constexpr auto implicit_cast(const std::span<In> bytes, std::size_t& offset) noexcept(false) -> std::add_lvalue_reference<cast_detail::keep_cv_t<Out, In>>
 		{
-			using value_type = traits::keep_cv_t<Out, In>;
+			using value_type = cast_detail::keep_cv_t<Out, In>;
 
-			if (sizeof(value_type) + offset > bytes.size()) { throw BadCastError{"Data incomplete!"}; }
+			if (sizeof(value_type) + offset > bytes.size()) { throw error::BadCastError{"Data incomplete!"}; }
 
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(bytes.data(), "Cannot implicit_cast null data!");
 
 			const auto data = bytes.data() + offset;
-			if constexpr (alignof(value_type) != 1) { if (std::bit_cast<std::uintptr_t>(data) % alignof(value_type) != 0) { throw BadCastError{"Alignment mismatch!"}; } }
+			if constexpr (alignof(value_type) != 1) { if (std::bit_cast<std::uintptr_t>(data) % alignof(value_type) != 0) { throw error::BadCastError{"Alignment mismatch!"}; } }
 
 			offset += sizeof(value_type);
 			return *reinterpret_cast<value_type*>(data);
 		}
 
-		template<typename Out, traits::byte_like In>
-			requires std::is_trivially_default_constructible_v<traits::keep_cv_t<Out, In>> and
-					std::is_trivially_destructible_v<traits::keep_cv_t<Out, In>>
-		[[nodiscard]] constexpr auto implicit_cast(const std::span<In> bytes, const std::size_t n) noexcept(false) -> std::span<traits::keep_cv_t<Out, In>>
+		template<typename Out, concepts::byte_like In>
+			requires std::is_trivially_default_constructible_v<cast_detail::keep_cv_t<Out, In>> and std::is_trivially_destructible_v<cast_detail::keep_cv_t<Out, In>>//
+		[[nodiscard]] constexpr auto implicit_cast(const std::span<In> bytes, const std::size_t n) noexcept(false) -> std::span<cast_detail::keep_cv_t<Out, In>>
 		{
-			using value_type = traits::keep_cv_t<Out, In>;
+			using value_type = cast_detail::keep_cv_t<Out, In>;
 
-			if (sizeof(value_type) * n > bytes.size()) { throw BadCastError{"Data incomplete!"}; }
+			if (sizeof(value_type) * n > bytes.size()) { throw error::BadCastError{"Data incomplete!"}; }
 
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(bytes.data(), "Cannot implicit_cast null data!");
 
-			if constexpr (alignof(value_type) != 1) { if (std::bit_cast<std::uintptr_t>(bytes.data()) % alignof(value_type) != 0) { throw BadCastError{"Alignment mismatch!"}; } }
+			if constexpr (alignof(value_type) != 1) { if (std::bit_cast<std::uintptr_t>(bytes.data()) % alignof(value_type) != 0) { throw error::BadCastError{"Alignment mismatch!"}; } }
 
-			return std::span<traits::keep_cv_t<Out, In>>{reinterpret_cast<value_type*>(bytes.data()), n};
+			return std::span<cast_detail::keep_cv_t<Out, In>>{reinterpret_cast<value_type*>(bytes.data()), n};
 		}
 
-		template<typename Out, traits::byte_like In>
-			requires std::is_trivially_default_constructible_v<traits::keep_cv_t<Out, In>> and
-					std::is_trivially_destructible_v<traits::keep_cv_t<Out, In>>
-		[[nodiscard]] constexpr auto implicit_cast(const std::span<In> bytes, const std::size_t n, std::size_t& offset) noexcept(false) -> std::span<traits::keep_cv_t<Out, In>>
+		template<typename Out, concepts::byte_like In>
+			requires std::is_trivially_default_constructible_v<cast_detail::keep_cv_t<Out, In>> and std::is_trivially_destructible_v<cast_detail::keep_cv_t<Out, In>>//
+		[[nodiscard]] constexpr auto implicit_cast(const std::span<In> bytes, const std::size_t n, std::size_t& offset) noexcept(false) -> std::span<cast_detail::keep_cv_t<Out, In>>
 		{
-			using value_type = traits::keep_cv_t<Out, In>;
+			using value_type = cast_detail::keep_cv_t<Out, In>;
 
-			if (sizeof(value_type) * n + offset > bytes.size()) { throw BadCastError{"Data incomplete!"}; }
+			if (sizeof(value_type) * n + offset > bytes.size()) { throw error::BadCastError{"Data incomplete!"}; }
 
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(bytes.data(), "Cannot implicit_cast null data!");
 
 			const auto data = bytes.data() + offset;
-			if constexpr (alignof(value_type) != 1) { if (std::bit_cast<std::uintptr_t>(data) % alignof(value_type) != 0) { throw BadCastError{"Alignment mismatch!"}; } }
+			if constexpr (alignof(value_type) != 1) { if (std::bit_cast<std::uintptr_t>(data) % alignof(value_type) != 0) { throw error::BadCastError{"Alignment mismatch!"}; } }
 
 			offset += sizeof(value_type) * n;
-			return std::span<traits::keep_cv_t<Out, In>>{reinterpret_cast<value_type*>(bytes.data()), n};
+			return std::span<cast_detail::keep_cv_t<Out, In>>{reinterpret_cast<value_type*>(bytes.data()), n};
 		}
 	}
 }// namespace gal::prometheus::infrastructure

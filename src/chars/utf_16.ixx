@@ -11,7 +11,7 @@ module;
 export module gal.prometheus.chars:utf_16;
 
 import std;
-import gal.prometheus.infrastructure;
+import gal.prometheus.utility;
 
 import :converter;
 import :category;
@@ -38,8 +38,8 @@ export namespace gal::prometheus::chars
 			{
 				// Check for BOM.
 				{
-					const auto first  = infrastructure::char_cast<std::uint8_t>(*iterator);
-					const auto second = infrastructure::char_cast<std::uint8_t>(*std::ranges::next(iterator, 1));
+					const auto first  = utility::char_cast<std::uint8_t>(*iterator);
+					const auto second = utility::char_cast<std::uint8_t>(*std::ranges::next(iterator, 1));
 
 					if (first == 0xfe and second == 0xff) { return std::endian::big; }
 					if (first == 0xff and second == 0xfe) { return std::endian::little; }
@@ -63,8 +63,8 @@ export namespace gal::prometheus::chars
 				// Check for BOM.
 				{
 					const auto value  = *iterator;
-					const auto first  = infrastructure::char_cast<std::uint8_t>(value >> 8);
-					const auto second = infrastructure::char_cast<std::uint8_t>(value << 8 >> 8);
+					const auto first  = utility::char_cast<std::uint8_t>(value >> 8);
+					const auto second = utility::char_cast<std::uint8_t>(value << 8 >> 8);
 
 					if (first == 0xfe and second == 0xff) { return std::endian::big; }
 					if (first == 0xff and second == 0xfe) { return std::endian::little; }
@@ -76,8 +76,8 @@ export namespace gal::prometheus::chars
 					for (std::size_t i = 0; i < size; ++i)
 					{
 						const auto value  = std::ranges::next(iterator, i);
-						const auto first  = infrastructure::char_cast<std::uint8_t>(value >> 8);
-						const auto second = infrastructure::char_cast<std::uint8_t>(value << 8 >> 8);
+						const auto first  = utility::char_cast<std::uint8_t>(value >> 8);
+						const auto second = utility::char_cast<std::uint8_t>(value << 8 >> 8);
 
 						// 0
 						{
@@ -109,7 +109,7 @@ export namespace gal::prometheus::chars
 			const auto first_code_uint = *begin;
 			std::ranges::advance(begin, 1);
 
-			if (first_code_uint < 0xd800) { return {infrastructure::char_cast<code_point_type>(first_code_uint), true}; }
+			if (first_code_uint < 0xd800) { return {utility::char_cast<code_point_type>(first_code_uint), true}; }
 
 			if (first_code_uint < 0xdc00)
 			{
@@ -119,7 +119,7 @@ export namespace gal::prometheus::chars
 					return {0xfffd, false};
 				}
 
-				auto       code_point = infrastructure::char_cast<code_point_type>(first_code_uint & 0x3ff);
+				auto	   code_point = utility::char_cast<code_point_type>(first_code_uint & 0x3ff);
 				const auto code_uint  = *begin;
 				if (code_uint >= 0xdc00 and code_uint < 0xe000)
 				{
@@ -149,16 +149,16 @@ export namespace gal::prometheus::chars
 			GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x10'ffff);
 			GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd800 and code_point < 0xe000));
 
-			if (const auto value = infrastructure::truncate<std::int32_t>(code_point) - 0x1'0000;
+			if (const auto value = utility::truncate<std::int32_t>(code_point) - 0x1'0000;
 				value >= 0)
 			{
-				*std::ranges::next(dest, 0) = infrastructure::char_cast<value_type>((value >> 10) + 0xd800);
-				*std::ranges::next(dest, 1) = infrastructure::char_cast<value_type>((value & 0x3ff) + 0xdc00);
+				*std::ranges::next(dest, 0) = utility::char_cast<value_type>((value >> 10) + 0xd800);
+				*std::ranges::next(dest, 1) = utility::char_cast<value_type>((value & 0x3ff) + 0xdc00);
 				std::ranges::advance(dest, 2);
 			}
 			else
 			{
-				*dest = infrastructure::char_cast<value_type>(code_point);
+				*dest = utility::char_cast<value_type>(code_point);
 				std::ranges::advance(dest, 1);
 			}
 		}
@@ -170,7 +170,7 @@ export namespace gal::prometheus::chars
 			GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x11'0000);
 			GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd800 and code_point < 0xe000));
 
-			return {infrastructure::truncate<std::uint8_t>((code_point >= 0x01'0000) + 1), true};
+			return {utility::truncate<std::uint8_t>((code_point >= 0x01'0000) + 1), true};
 		}
 
 		template<std::contiguous_iterator Iterator>

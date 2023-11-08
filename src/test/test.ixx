@@ -12,7 +12,9 @@ module;
 export module gal.prometheus.test;
 
 import std;
-import gal.prometheus.infrastructure;
+import gal.prometheus.utility;
+import gal.prometheus.error;
+import gal.prometheus.string;
 
 namespace gal::prometheus
 {
@@ -416,8 +418,8 @@ namespace gal::prometheus
 				if constexpr (std::is_same_v<Pointer, std::nullptr_t>) { return std::string_view{"nullptr"}; }
 				else
 				{
-					if (pointer) { return std::format("{}(0x{:x})", infrastructure::compiler::type_name<Pointer>(), reinterpret_cast<std::uintptr_t>(pointer)); }
-					return std::format("{}(0x00000000)", infrastructure::compiler::type_name<Pointer>());
+					if (pointer) { return std::format("{}(0x{:x})", prometheus::utility::compiler::type_name<Pointer>(), reinterpret_cast<std::uintptr_t>(pointer)); }
+					return std::format("{}(0x00000000)", prometheus::utility::compiler::type_name<Pointer>());
 				}
 			};
 
@@ -427,7 +429,7 @@ namespace gal::prometheus
 				{
 					std::string result{};
 
-					result.append_range(infrastructure::compiler::type_name<Range>());
+					result.append_range(prometheus::utility::compiler::type_name<Range>());
 					result.push_back('{');
 					std::ranges::for_each(
 							r,
@@ -447,8 +449,8 @@ namespace gal::prometheus
 				}
 				else
 				{
-					if constexpr (requires { std::ranges::data(r); std::ranges::size(r); }) { return std::format("`unformatable-container({}(data: 0x{:x}, size: {}))`", infrastructure::compiler::type_name<Range>(), reinterpret_cast<std::uintptr_t>(std::ranges::data(r)), std::ranges::size(r)); }
-					else { return std::format("`unformatable-container({})`", infrastructure::compiler::type_name<Range>()); }
+					if constexpr (requires { std::ranges::data(r); std::ranges::size(r); }) { return std::format("`unformatable-container({}(data: 0x{:x}, size: {}))`", prometheus::utility::compiler::type_name<Range>(), reinterpret_cast<std::uintptr_t>(std::ranges::data(r)), std::ranges::size(r)); }
+					else { return std::format("`unformatable-container({})`", prometheus::utility::compiler::type_name<Range>()); }
 				}
 			};
 
@@ -459,7 +461,7 @@ namespace gal::prometheus
 				// workaround vvv: dispatched_expression
 				else if constexpr (requires { expression.expression.to_string(); }) { return expression.expression.to_string(); }
 				else if constexpr (requires { std::format("{}", expression); }) { return std::format("{}", expression); }
-				else { return std::format("`unformatable({})`", infrastructure::compiler::type_name<T>()); }
+				else { return std::format("`unformatable({})`", prometheus::utility::compiler::type_name<T>()); }
 			};
 
 			template<typename T>
@@ -471,7 +473,7 @@ namespace gal::prometheus
 				[[nodiscard]] constexpr auto to_string() const noexcept -> std::string_view
 				{
 					(void)this;
-					return infrastructure::compiler::type_name<T>();
+					return prometheus::utility::compiler::type_name<T>();
 				}
 			};
 
@@ -1518,7 +1520,7 @@ namespace gal::prometheus
 				{
 					return std::format(
 							"throws<{}> -- [{}]",
-							infrastructure::compiler::type_name<exception_type>(),
+							prometheus::utility::compiler::type_name<exception_type>(),
 							(not thrown())
 								? "not thrown"
 								://
@@ -1839,7 +1841,7 @@ namespace gal::prometheus
 				throw std::logic_error{
 						std::format(
 								"{} returned from test w/o signaling: not popping because `{}` differs from `{}`",
-								infrastructure::compiler::type_name<Executor<Reporter>>(),
+								prometheus::utility::compiler::type_name<Executor<Reporter>>(),
 								active_test_.top(),
 								test_name)};
 			}
@@ -1880,7 +1882,7 @@ namespace gal::prometheus
 				// Output all information at once only at the end of the outermost (at the top-level of suite) test.
 				if (active_test_.size() == 1 or force)
 				{
-					const auto           do_bump = infrastructure::functor::y_combinator{
+					const auto           do_bump = prometheus::utility::functor::y_combinator{
 							[this](auto& self, const result_type& result) -> void
 							{
 								out_ << result.report_string;
@@ -2444,7 +2446,7 @@ namespace gal::prometheus
 
 										return std::ranges::any_of(
 												categories_should_run_,
-												[category](const auto& sv) -> bool { return infrastructure::make_wildcard_matcher(sv)(category); });
+												[category](const auto& sv) -> bool { return string::make_wildcard_matcher(sv)(category); });
 									});
 					not execute)
 				[[unlikely]]
@@ -2602,7 +2604,7 @@ namespace gal::prometheus
 		template<typename... Ts, events::event_t EventType>
 		constexpr auto register_event(EventType&& event) noexcept -> decltype(auto) { return prometheus::test::executor<typename prometheus::test::identity<prometheus::test::override, Ts...>::type>().on(std::forward<EventType>(event)); }
 
-		template<infrastructure::basic_fixed_string StringLiteral>
+		template<string::basic_fixed_string StringLiteral>
 		class DispatcherTestLiteral
 		{
 			// fixme:
@@ -3768,13 +3770,13 @@ namespace gal::prometheus
 	{
 		inline namespace literals
 		{
-			template<infrastructure::basic_fixed_string StringLiteral>
+			template<string::basic_fixed_string StringLiteral>
 			constexpr auto operator""_test() noexcept -> no_adl::test::dispatcher::DispatcherTestLiteral<StringLiteral> { return no_adl::test::dispatcher::DispatcherTestLiteral<StringLiteral>::make(); }
 
 			template<char... Cs>
 			[[nodiscard]] constexpr auto operator""_auto() noexcept -> no_adl::test::operand::OperandConstantAuto<Cs...> { return {}; }
 
-			template<infrastructure::basic_fixed_string StringLiteral>
+			template<string::basic_fixed_string StringLiteral>
 			[[nodiscard]] constexpr auto operator""_c() noexcept -> no_adl::test::operand::OperandConstantCharacter<*StringLiteral.begin()> { return {}; }
 
 			template<char... Cs>
@@ -3860,7 +3862,7 @@ namespace gal::prometheus
 		// fixme: @see executor
 		// If we don't use global singleton (instead, one object per compilation unit), an object will be destructed multiple times.
 		// So it is not possible to set a default suite name (to avoid conflicts).
-		template<infrastructure::basic_fixed_string SuiteName>
+		template<string::basic_fixed_string SuiteName>
 		struct suite
 		{
 			template<std::invocable InvocableType>

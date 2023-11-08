@@ -5,12 +5,12 @@
 
 export module gal.prometheus.chars:category;
 
-import gal.prometheus.infrastructure;
+import gal.prometheus.string;
 
 export namespace gal::prometheus::chars
 {
-	constexpr infrastructure::basic_fixed_string char_map_category_ascii{"ascii"};
-	constexpr infrastructure::basic_fixed_string char_map_category_cp_1252{"cp-1252"};
-	constexpr infrastructure::basic_fixed_string char_map_category_utf_8{"utf-8"};
-	constexpr infrastructure::basic_fixed_string char_map_category_utf_16{"utf-16"};
+	constexpr string::basic_fixed_string char_map_category_ascii{"ascii"};
+	constexpr string::basic_fixed_string char_map_category_cp_1252{"cp-1252"};
+	constexpr string::basic_fixed_string char_map_category_utf_8{"utf-8"};
+	constexpr string::basic_fixed_string char_map_category_utf_16{"utf-16"};
 }

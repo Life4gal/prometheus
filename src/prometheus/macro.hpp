@@ -241,7 +241,7 @@
 #define GAL_PROMETHEUS_DEBUG 1
 #endif
 
-#define GAL_PROMETHEUS_DEBUG_CALL_DEBUGGER_OR_TERMINATE(message) ::gal::prometheus::infrastructure::try_debug_or_terminate("[" __FILE__ ":" GAL_PROMETHEUS_TO_STRING(__LINE__) "] -> " message)
+#define GAL_PROMETHEUS_DEBUG_CALL_DEBUGGER_OR_TERMINATE(message) ::gal::prometheus::error::debug_break("[" __FILE__ ":" GAL_PROMETHEUS_TO_STRING(__LINE__) "] -> " message)
 
 #define GAL_PROMETHEUS_PRIVATE_DEBUG_DO_CHECK(debug_type, expression, ...) \
 	do {                                                                                                                                                \
@@ -282,20 +282,20 @@
 #endif
 
 // =========================
-// MODULE: gal.prometheus.infrastructure:string
+// MODULE: gal.prometheus.string:meta_string
 // =========================
 
-#define GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(string_type, string, string_length, begin_index) \
+#define GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(string_type, this_string, string_length, begin_index) \
 	decltype([]<std::size_t... Index>(std::index_sequence<Index...>) constexpr noexcept                       \
-			 { return ::gal::prometheus::infrastructure::string_type<                                                       \
+			 { return ::gal::prometheus::string::string_type<                                                       \
 					   [](std::size_t index) constexpr noexcept                                               \
 					   {                                                                                      \
-						   return (string)[(begin_index) + index];                                            \
+						   return (this_string)[(begin_index) + index];                                            \
 					   }(Index)...>{}; }(std::make_index_sequence<string_length>{}))
 
 #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(string_type, string) GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(string_type, string, sizeof(string) / sizeof((string)[0]), 0)
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(string_type, inner_string_type, left_string, right_string) ::gal::prometheus::infrastructure::string_type<GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, left_string), GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, right_string)>
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(string_type, inner_string_type, string) ::gal::prometheus::infrastructure::string_type<GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(inner_string_type, string, sizeof(string) / sizeof((string)[0]) / 2, 0), GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(inner_string_type, string, sizeof(string) / sizeof((string)[0]) / 2, sizeof(string) / sizeof((string)[0]) / 2)>
+#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(string_type, inner_string_type, left_string, right_string) ::gal::prometheus::string::string_type<GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, left_string), GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, right_string)>
+#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(string_type, inner_string_type, this_string) ::gal::prometheus::string::string_type<GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(inner_string_type, this_string, sizeof(this_string) / sizeof((this_string)[0]) / 2, 0), GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(inner_string_type, this_string, sizeof(this_string) / sizeof((this_string)[0]) / 2, sizeof(this_string) / sizeof((this_string)[0]) / 2)>
 
 #define GAL_PROMETHEUS_STRING_CHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(char_array, string)
 #define GAL_PROMETHEUS_STRING_WCHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(wchar_array, string)
@@ -325,29 +325,29 @@
 #define GAL_PROMETHEUS_STRING_U32CHAR_SYMMETRY_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(u32char_bilateral_array, u32char_array, string)
 
 #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_1(string_type, inner_string_type, string1) \
-	::gal::prometheus::infrastructure::string_type< \
+	::gal::prometheus::string::string_type< \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1) \
 	>
 #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_2(string_type, inner_string_type, string1, string2) \
-	::gal::prometheus::infrastructure::string_type< \
+	::gal::prometheus::string::string_type< \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2) \
 	>
 #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_3(string_type, inner_string_type, string1, string2, string3) \
-	::gal::prometheus::infrastructure::string_type< \
+	::gal::prometheus::string::string_type< \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3) \
 	>
 #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_4(string_type, inner_string_type, string1, string2, string3, string4) \
-	::gal::prometheus::infrastructure::string_type< \
+	::gal::prometheus::string::string_type< \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4) \
 	>
 #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_5(string_type, inner_string_type, string1, string2, string3, string4, string5) \
-	::gal::prometheus::infrastructure::string_type< \
+	::gal::prometheus::string::string_type< \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
@@ -355,7 +355,7 @@
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string5) \
 	>
 #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_6(string_type, inner_string_type, string1, string2, string3, string4, string5, string6) \
-	::gal::prometheus::infrastructure::string_type< \
+	::gal::prometheus::string::string_type< \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
@@ -364,7 +364,7 @@
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string6) \
 	>
 #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_7(string_type, inner_string_type, string1, string2, string3, string4, string5, string6, string7) \
-	::gal::prometheus::infrastructure::string_type< \
+	::gal::prometheus::string::string_type< \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
@@ -374,7 +374,7 @@
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string7) \
 	>
 #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_8(string_type, inner_string_type, string1, string2, string3, string4, string5, string6, string7, string8) \
-	::gal::prometheus::infrastructure::string_type< \
+	::gal::prometheus::string::string_type< \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
@@ -385,7 +385,7 @@
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string8) \
 	>
 #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_9(string_type, inner_string_type, string1, string2, string3, string4, string5, string6, string7, string8, string9) \
-	::gal::prometheus::infrastructure::string_type< \
+	::gal::prometheus::string::string_type< \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
@@ -423,5 +423,5 @@
 		else { throw error_type{message}; }                                                                          \
 	} while (false)
 
-#define GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW_STRING_PARSE_ERROR(expression, message, ...) GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW(::gal::prometheus::infrastructure::StringParseError, expression, message __VA_OPT__(, ) __VA_ARGS__)
-#define GAL_PROMETHEUS_RUNTIME_THROW_STRING_PARSE_ERROR(message, ...) GAL_PROMETHEUS_RUNTIME_THROW(::gal::prometheus::infrastructure::StringParseError, message __VA_OPT__(, ) __VA_ARGS__)
+#define GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW_STRING_PARSE_ERROR(expression, message, ...) GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW(::gal::prometheus::error::StringParseError, expression, message __VA_OPT__(, ) __VA_ARGS__)
+#define GAL_PROMETHEUS_RUNTIME_THROW_STRING_PARSE_ERROR(message, ...) GAL_PROMETHEUS_RUNTIME_THROW(::gal::prometheus::error::StringParseError, message __VA_OPT__(, ) __VA_ARGS__)

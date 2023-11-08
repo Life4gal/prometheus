@@ -3,11 +3,11 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-export module gal.prometheus.infrastructure:string;
+export module gal.prometheus.string:meta_string;
 
 import std;
 
-namespace gal::prometheus::infrastructure
+namespace gal::prometheus::string
 {
 	template<typename Derived, typename ValueType, typename SizeType>
 	struct string_base
@@ -17,19 +17,11 @@ namespace gal::prometheus::infrastructure
 		using value_type = ValueType;
 		using size_type = SizeType;
 
-		// clang-format off
 		template<typename Container, typename Getter>
-		struct is_getter : std::conditional_t<std::is_invocable_v<Getter, const Container&, size_type>, std::true_type, std::false_type> {};
-
-		template<typename Container, typename Getter>
-		constexpr static auto is_getter_v = is_getter<Container, Getter>::value;
+		constexpr static auto is_getter_v = std::is_invocable_v<Getter, const Container&, size_type>;
 
 		template<typename Container, typename Getter, typename Comparator>
-		struct is_comparator : std::conditional_t<std::is_invocable_v<Comparator, std::invoke_result_t<Getter, const Container&, size_type>, value_type>, std::true_type, std::false_type> {};
-
-		template<typename Container, typename Getter, typename Comparator>
-		constexpr static auto is_comparator_v = is_comparator<Container, Getter, Comparator>::value;
-		// clang-format on
+		constexpr static auto is_comparator_v = std::is_invocable_v<Comparator, std::invoke_result_t<Getter, const Container&, size_type>, value_type>;
 
 		template<typename Container>
 			requires requires(const Container& c)
@@ -69,72 +61,66 @@ namespace gal::prometheus::infrastructure
 		}
 		{
 			return std::char_traits<value_type>::length(string) == derived_type::size and
-					std::char_traits<value_type>::compare(derived_type::value, string, derived_type::size) == 0;
+			       std::char_traits<value_type>::compare(derived_type::value, string, derived_type::size) == 0;
 		}
 
 		template<typename Char = value_type>
-		[[nodiscard]] constexpr auto match(const Char* string) const noexcept -> bool
-			//
+		[[nodiscard]] constexpr auto match(const Char* string) const noexcept -> bool//
 			requires std::is_member_function_pointer_v<decltype(&derived_type::size)> and
-					requires
-					{
-						{
-							std::char_traits<value_type>::length(string)
-						} -> std::same_as<size_type>;
-						std::char_traits<value_type>::compare(std::declval<const value_type*>(), string, derived_type::size);
-					}
+			         requires
+			         {
+				         {
+					         std::char_traits<value_type>::length(string)
+				         } -> std::same_as<size_type>;
+				         std::char_traits<value_type>::compare(std::declval<const value_type*>(), string, derived_type::size);
+			         }
 		{
 			return std::char_traits<value_type>::length(string) == static_cast<const derived_type&>(*this).size() and
-					std::char_traits<value_type>::compare(static_cast<const derived_type&>(*this).value, string, static_cast<const derived_type&>(*this).size()) == 0;
+			       std::char_traits<value_type>::compare(static_cast<const derived_type&>(*this).value, string, static_cast<const derived_type&>(*this).size()) == 0;
 		}
 
 		template<typename Container, typename Getter, typename Comparator>
 			requires is_getter_v<Container, Getter> and is_comparator_v<Container, Getter, Comparator> and
-					requires(const Container& container)
-					{
-						{
-							container.size()
-						} -> std::same_as<size_type>;
-					}
+			         requires(const Container& container)
+			         {
+				         {
+					         container.size()
+				         } -> std::same_as<size_type>;
+			         }
 		[[nodiscard]] constexpr static auto match(
 				const Container& container,
 				Getter           getter,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(
 				noexcept(container.size()) and
 				std::is_nothrow_invocable_v<Getter, const Container&, size_type> and
-				std::is_nothrow_invocable_v<Comparator, std::invoke_result_t<Getter, const Container&, size_type>, value_type>
-			) -> bool
+				std::is_nothrow_invocable_v<Comparator, std::invoke_result_t<Getter, const Container&, size_type>, value_type>) -> bool
 		{
-			return
-					container.size() == derived_type::size and
-					[&]<std::size_t... Index>(std::index_sequence<Index...>)
-					{
-						//
-						return ((comparator(getter(container, Index), derived_type::value[Index])) and ...);
-					}(std::make_index_sequence<derived_type::size>{});
+			return container.size() == derived_type::size and
+			       [&]<std::size_t... Index>(std::index_sequence<Index...>)
+			       {
+				       //
+				       return ((comparator(getter(container, Index), derived_type::value[Index])) and ...);
+			       }(std::make_index_sequence<derived_type::size>{});
 		}
 
 		template<typename Container, typename Getter, typename Comparator>
 			requires is_getter_v<Container, Getter> and is_comparator_v<Container, Getter, Comparator> and
-					std::is_member_function_pointer_v<decltype(&derived_type::size)> and
-					requires(const Container& container)
-					{
-						{
-							container.size()
-						} -> std::same_as<size_type>;
-					}
+			         std::is_member_function_pointer_v<decltype(&derived_type::size)> and
+			         requires(const Container& container)
+			         {
+				         {
+					         container.size()
+				         } -> std::same_as<size_type>;
+			         }
 		[[nodiscard]] constexpr auto match(
 				const Container& container,
 				Getter           getter,
-				Comparator       comparator) const
-		//
+				Comparator       comparator) const//
 			noexcept(
 				noexcept(container.size()) and
 				std::is_nothrow_invocable_v<Getter, const Container&, size_type> and
-				std::is_nothrow_invocable_v<Comparator, std::invoke_result_t<Getter, const Container&, size_type>, value_type>
-			) -> bool
+				std::is_nothrow_invocable_v<Comparator, std::invoke_result_t<Getter, const Container&, size_type>, value_type>) -> bool
 		{
 			if (container.size() != static_cast<const derived_type&>(*this).size()) { return false; }
 
@@ -151,8 +137,7 @@ namespace gal::prometheus::infrastructure
 				Comparator>
 		[[nodiscard]] constexpr static auto match(
 				const Container& container,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(std::is_nothrow_invocable_v<
 				decltype(&string_base::match<Container, default_getter<Container>, Comparator>),
 				const Container&,
@@ -174,15 +159,13 @@ namespace gal::prometheus::infrastructure
 				Comparator>
 		[[nodiscard]] constexpr auto match(
 				const Container& container,
-				Comparator       comparator) const
-		//
+				Comparator       comparator) const//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&string_base::match<Container, default_getter<Container>, Comparator>),
-					const string_base&,
-					const Container&,
-					default_getter<Container>,
-					Comparator>
-			) -> bool
+				decltype(&string_base::match<Container, default_getter<Container>, Comparator>),
+				const string_base&,
+				const Container&,
+				default_getter<Container>,
+				Comparator>) -> bool
 		{
 			return this->match(
 					container,
@@ -196,14 +179,12 @@ namespace gal::prometheus::infrastructure
 				const Container&,
 				default_getter<Container>,
 				default_comparator<Container>>
-		[[nodiscard]] constexpr static auto match(const Container& container)
-		//
+		[[nodiscard]] constexpr static auto match(const Container& container)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&string_base::match<Container, default_getter<Container>, default_comparator<Container>>),
-					const Container&,
-					default_getter<Container>,
-					default_comparator<Container>>
-			) -> bool
+				decltype(&string_base::match<Container, default_getter<Container>, default_comparator<Container>>),
+				const Container&,
+				default_getter<Container>,
+				default_comparator<Container>>) -> bool
 		{
 			return string_base::match(
 					container,
@@ -217,15 +198,13 @@ namespace gal::prometheus::infrastructure
 				const Container&,
 				default_getter<Container>,
 				default_comparator<Container>>
-		[[nodiscard]] constexpr auto match(const Container& container) const
-		//
+		[[nodiscard]] constexpr auto match(const Container& container) const//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&string_base::match<Container, default_getter<Container>, default_comparator<Container>>),
-					const string_base&,
-					const Container&,
-					default_getter<Container>,
-					default_comparator<Container>>
-			) -> bool
+				decltype(&string_base::match<Container, default_getter<Container>, default_comparator<Container>>),
+				const string_base&,
+				const Container&,
+				default_getter<Container>,
+				default_comparator<Container>>) -> bool
 		{
 			return this->match(
 					container,
@@ -254,23 +233,19 @@ namespace gal::prometheus::infrastructure
 			requires std::is_invocable_v<
 				decltype(&left_type::template match<Char>),
 				const Char*>
-		[[nodiscard]] constexpr static auto match_left(const Char* string)
-		//
+		[[nodiscard]] constexpr static auto match_left(const Char* string)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&left_type::template match<Char>),
-					const Char*>
-			) -> bool { return left_type::template match<Char>(string); }
+				decltype(&left_type::template match<Char>),
+				const Char*>) -> bool { return left_type::template match<Char>(string); }
 
 		template<typename Char = value_type>
 			requires std::is_invocable_v<
 				decltype(&right_type::template match<Char>),
 				const Char*>
-		[[nodiscard]] constexpr static auto match_right(const Char* string)
-		//
+		[[nodiscard]] constexpr static auto match_right(const Char* string)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&right_type::template match<Char>),
-					const Char*>
-			) -> bool { return right_type::template match<Char>(string); }
+				decltype(&right_type::template match<Char>),
+				const Char*>) -> bool { return right_type::template match<Char>(string); }
 
 		template<typename Char = value_type>
 			requires std::is_invocable_v<
@@ -279,10 +254,9 @@ namespace gal::prometheus::infrastructure
 				const Char*>
 		[[nodiscard]] constexpr auto match_left(const Char* string) const
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&left_type::template match<Char>),
-					const left_type&,
-					const Char*>
-			) -> bool { return static_cast<const derived_type&>(*this).left_value.template match<Char>(string); }
+				decltype(&left_type::template match<Char>),
+				const left_type&,
+				const Char*>) -> bool { return static_cast<const derived_type&>(*this).left_value.template match<Char>(string); }
 
 		template<typename Char = value_type>
 			requires std::is_invocable_v<
@@ -291,10 +265,9 @@ namespace gal::prometheus::infrastructure
 				const Char*>
 		[[nodiscard]] constexpr auto match_right(const Char* string) const
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&right_type::template match<Char>),
-					const right_type&,
-					const Char*>
-			) -> bool { return static_cast<const derived_type&>(*this).right_value.template match<Char>(string); }
+				decltype(&right_type::template match<Char>),
+				const right_type&,
+				const Char*>) -> bool { return static_cast<const derived_type&>(*this).right_value.template match<Char>(string); }
 
 		template<typename Container, typename Getter, typename Comparator>
 			requires std::is_invocable_v<
@@ -305,14 +278,12 @@ namespace gal::prometheus::infrastructure
 		[[nodiscard]] constexpr static auto match_left(
 				const Container& container,
 				Getter           getter,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&left_type::template match<Container, Getter, Comparator>),
-					const Container&,
-					Getter,
-					Comparator>
-			) -> bool { return left_type::template match<Container, Getter, Comparator>(container, getter, comparator); }
+				decltype(&left_type::template match<Container, Getter, Comparator>),
+				const Container&,
+				Getter,
+				Comparator>) -> bool { return left_type::template match<Container, Getter, Comparator>(container, getter, comparator); }
 
 		template<typename Container, typename Getter, typename Comparator>
 			requires std::is_invocable_v<
@@ -323,14 +294,12 @@ namespace gal::prometheus::infrastructure
 		[[nodiscard]] constexpr static auto match_right(
 				const Container& container,
 				Getter           getter,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&right_type::template match<Container, Getter, Comparator>),
-					const Container&,
-					Getter,
-					Comparator>
-			) -> bool { return right_type::template match<Container, Getter, Comparator>(container, getter, comparator); }
+				decltype(&right_type::template match<Container, Getter, Comparator>),
+				const Container&,
+				Getter,
+				Comparator>) -> bool { return right_type::template match<Container, Getter, Comparator>(container, getter, comparator); }
 
 		template<typename Container, typename Getter, typename Comparator>
 			requires std::is_invocable_v<
@@ -342,15 +311,13 @@ namespace gal::prometheus::infrastructure
 		[[nodiscard]] constexpr auto match_left(
 				const Container& container,
 				Getter           getter,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&left_type::template match<Container, Getter, Comparator>),
-					const left_type&,
-					const Container&,
-					Getter,
-					Comparator>
-			) -> bool { return static_cast<const derived_type&>(*this).left_value.template match<Container, Getter, Comparator>(container, getter, comparator); }
+				decltype(&left_type::template match<Container, Getter, Comparator>),
+				const left_type&,
+				const Container&,
+				Getter,
+				Comparator>) -> bool { return static_cast<const derived_type&>(*this).left_value.template match<Container, Getter, Comparator>(container, getter, comparator); }
 
 		template<typename Container, typename Getter, typename Comparator>
 			requires std::is_invocable_v<
@@ -362,15 +329,13 @@ namespace gal::prometheus::infrastructure
 		[[nodiscard]] constexpr auto match_right(
 				const Container& container,
 				Getter           getter,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&right_type::template match<Container, Getter, Comparator>),
-					const right_type&,
-					const Container&,
-					Getter,
-					Comparator>
-			) -> bool { return static_cast<const derived_type&>(*this).right_value.template match<Container, Getter, Comparator>(container, getter, comparator); }
+				decltype(&right_type::template match<Container, Getter, Comparator>),
+				const right_type&,
+				const Container&,
+				Getter,
+				Comparator>) -> bool { return static_cast<const derived_type&>(*this).right_value.template match<Container, Getter, Comparator>(container, getter, comparator); }
 
 		template<typename Container, typename Comparator>
 			requires std::is_invocable_v<
@@ -379,13 +344,11 @@ namespace gal::prometheus::infrastructure
 				Comparator>
 		[[nodiscard]] constexpr static auto match_left(
 				const Container& container,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&left_type::template match<Container, Comparator>),
-					const Container&,
-					Comparator>
-			) -> bool { return left_type::template match<Container, Comparator>(container, comparator); }
+				decltype(&left_type::template match<Container, Comparator>),
+				const Container&,
+				Comparator>) -> bool { return left_type::template match<Container, Comparator>(container, comparator); }
 
 		template<typename Container, typename Comparator>
 			requires std::is_invocable_v<
@@ -394,13 +357,11 @@ namespace gal::prometheus::infrastructure
 				Comparator>
 		[[nodiscard]] constexpr static auto match_right(
 				const Container& container,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&right_type::template match<Container, Comparator>),
-					const Container&,
-					Comparator>
-			) -> bool { return right_type::template match<Container, Comparator>(container, comparator); }
+				decltype(&right_type::template match<Container, Comparator>),
+				const Container&,
+				Comparator>) -> bool { return right_type::template match<Container, Comparator>(container, comparator); }
 
 		template<typename Container, typename Comparator>
 			requires std::is_invocable_v<
@@ -410,14 +371,12 @@ namespace gal::prometheus::infrastructure
 				Comparator>
 		[[nodiscard]] constexpr auto match_left(
 				const Container& container,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&left_type::template match<Container, Comparator>),
-					const left_type&,
-					const Container&,
-					Comparator>
-			) -> bool { return static_cast<const derived_type&>(*this).left_value.template match<Container, Comparator>(container, comparator); }
+				decltype(&left_type::template match<Container, Comparator>),
+				const left_type&,
+				const Container&,
+				Comparator>) -> bool { return static_cast<const derived_type&>(*this).left_value.template match<Container, Comparator>(container, comparator); }
 
 		template<typename Container, typename Comparator>
 			requires std::is_invocable_v<
@@ -427,62 +386,52 @@ namespace gal::prometheus::infrastructure
 				Comparator>
 		[[nodiscard]] constexpr auto match_right(
 				const Container& container,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&right_type::template match<Container, Comparator>),
-					const right_type&,
-					const Container&,
-					Comparator>
-			) -> bool { return static_cast<const derived_type&>(*this).right_value.template match<Container, Comparator>(container, comparator); }
+				decltype(&right_type::template match<Container, Comparator>),
+				const right_type&,
+				const Container&,
+				Comparator>) -> bool { return static_cast<const derived_type&>(*this).right_value.template match<Container, Comparator>(container, comparator); }
 
 		template<typename Container>
 			requires std::is_invocable_v<
 				decltype(&left_type::template match<Container>),
 				const Container&>
-		[[nodiscard]] constexpr static auto match_left(const Container& container)
-		//
+		[[nodiscard]] constexpr static auto match_left(const Container& container)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&left_type::template match<Container>),
-					const Container&>
-			) -> bool { return left_type::template match<Container>(container); }
+				decltype(&left_type::template match<Container>),
+				const Container&>) -> bool { return left_type::template match<Container>(container); }
 
 		template<typename Container>
 			requires std::is_invocable_v<
 				decltype(&right_type::template match<Container>),
 				const Container&>
-		[[nodiscard]] constexpr static auto match_right(const Container& container)
-		//
+		[[nodiscard]] constexpr static auto match_right(const Container& container)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&right_type::template match<Container>),
-					const Container&>
-			) -> bool { return right_type::template match<Container>(container); }
+				decltype(&right_type::template match<Container>),
+				const Container&>) -> bool { return right_type::template match<Container>(container); }
 
 		template<typename Container>
 			requires std::is_invocable_v<
 				decltype(&left_type::template match<Container>),
 				const left_type&,
 				const Container&>
-		[[nodiscard]] constexpr auto match_left(const Container& container)
-		//
+		[[nodiscard]] constexpr auto match_left(const Container& container)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&left_type::template match<Container>),
-					const left_type&,
-					const Container&>
-			) -> bool { return static_cast<const derived_type&>(*this).left_value.template match<Container>(container); }
+				decltype(&left_type::template match<Container>),
+				const left_type&,
+				const Container&>) -> bool { return static_cast<const derived_type&>(*this).left_value.template match<Container>(container); }
 
 		template<typename Container>
 			requires std::is_invocable_v<
 				decltype(&right_type::template match<Container>),
 				const right_type&,
 				const Container&>
-		[[nodiscard]] constexpr auto match_right(const Container& container)
-		//
+		[[nodiscard]] constexpr auto match_right(const Container& container)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&right_type::template match<Container>),
-					const right_type&,
-					const Container&>
-			) -> bool { return static_cast<const derived_type&>(*this).right_value.template match<Container>(container); }
+				decltype(&right_type::template match<Container>),
+				const right_type&,
+				const Container&>) -> bool { return static_cast<const derived_type&>(*this).right_value.template match<Container>(container); }
 	};
 
 	template<typename Derived, typename ValueType, typename SizeType, typename... Strings>
@@ -509,25 +458,21 @@ namespace gal::prometheus::infrastructure
 			requires std::is_invocable_v<
 				decltype(&subtype<Index>::template match<Char>),
 				const Char*>
-		[[nodiscard]] constexpr static auto match(const Char* string)
-		//
+		[[nodiscard]] constexpr static auto match(const Char* string)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&subtype<Index>::template match<Char>),
-					const Char*>
-			) -> bool { return subtype<Index>::template match<Char>(string); }
+				decltype(&subtype<Index>::template match<Char>),
+				const Char*>) -> bool { return subtype<Index>::template match<Char>(string); }
 
 		template<std::size_t Index, typename Char = value_type>
 			requires std::is_invocable_v<
 				decltype(&subtype<Index>::template match<Char>),
 				const subtype<Index>&,
 				const Char*>
-		[[nodiscard]] constexpr auto match(const Char* string) const
-		//
+		[[nodiscard]] constexpr auto match(const Char* string) const//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&subtype<Index>::template match<Char>),
-					const subtype<Index>&,
-					const Char*>
-			) -> bool { return static_cast<const derived_type&>(*this).template value<Index>().template match<Char>(string); }
+				decltype(&subtype<Index>::template match<Char>),
+				const subtype<Index>&,
+				const Char*>) -> bool { return static_cast<const derived_type&>(*this).template value<Index>().template match<Char>(string); }
 
 		template<std::size_t Index, typename Container, typename Getter, typename Comparator>
 			requires std::is_invocable_v<
@@ -538,14 +483,12 @@ namespace gal::prometheus::infrastructure
 		[[nodiscard]] constexpr static auto match(
 				const Container& container,
 				Getter           getter,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&subtype<Index>::template match<Container, Getter, Comparator>),
-					const Container&,
-					Getter,
-					Comparator>
-			) -> bool { return subtype<Index>::template match<Container, Getter, Comparator>(container, getter, comparator); }
+				decltype(&subtype<Index>::template match<Container, Getter, Comparator>),
+				const Container&,
+				Getter,
+				Comparator>) -> bool { return subtype<Index>::template match<Container, Getter, Comparator>(container, getter, comparator); }
 
 		template<std::size_t Index, typename Container, typename Getter, typename Comparator>
 			requires std::is_invocable_v<
@@ -557,15 +500,13 @@ namespace gal::prometheus::infrastructure
 		[[nodiscard]] constexpr auto match(
 				const Container& container,
 				Getter           getter,
-				Comparator       comparator) const
-		//
+				Comparator       comparator) const//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&subtype<Index>::template match<Container, Getter, Comparator>),
-					const subtype<Index>&,
-					const Container&,
-					Getter,
-					Comparator>
-			) -> bool { return static_cast<const derived_type&>(*this).template value<Index>().template match<Container, Getter, Comparator>(container, getter, comparator); }
+				decltype(&subtype<Index>::template match<Container, Getter, Comparator>),
+				const subtype<Index>&,
+				const Container&,
+				Getter,
+				Comparator>) -> bool { return static_cast<const derived_type&>(*this).template value<Index>().template match<Container, Getter, Comparator>(container, getter, comparator); }
 
 		template<std::size_t Index, typename Container, typename Comparator>
 			requires std::is_invocable_v<
@@ -574,13 +515,11 @@ namespace gal::prometheus::infrastructure
 				Comparator>
 		[[nodiscard]] constexpr static auto match(
 				const Container& container,
-				Comparator       comparator)
-		//
+				Comparator       comparator)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&subtype<Index>::template match<Container, Comparator>),
-					const Container&,
-					Comparator>
-			) -> bool { return subtype<Index>::template match<Container, Comparator>(container, comparator); }
+				decltype(&subtype<Index>::template match<Container, Comparator>),
+				const Container&,
+				Comparator>) -> bool { return subtype<Index>::template match<Container, Comparator>(container, comparator); }
 
 		template<std::size_t Index, typename Container, typename Comparator>
 			requires std::is_invocable_v<
@@ -590,38 +529,32 @@ namespace gal::prometheus::infrastructure
 				Comparator>
 		[[nodiscard]] constexpr auto match(
 				const Container& container,
-				Comparator       comparator) const
-		//
+				Comparator       comparator) const//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&subtype<Index>::template match<Container, Comparator>),
-					const subtype<Index>&,
-					const Container&,
-					Comparator>
-			) -> bool { return static_cast<const derived_type&>(*this).template value<Index>().template match<Container, Comparator>(container, comparator); }
+				decltype(&subtype<Index>::template match<Container, Comparator>),
+				const subtype<Index>&,
+				const Container&,
+				Comparator>) -> bool { return static_cast<const derived_type&>(*this).template value<Index>().template match<Container, Comparator>(container, comparator); }
 
 		template<std::size_t Index, typename Container>
 			requires std::is_invocable_v<
 				decltype(&subtype<Index>::template match<Container>),
 				const Container&>
-		[[nodiscard]] constexpr static auto match(const Container& container)
-		//
+		[[nodiscard]] constexpr static auto match(const Container& container)//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&subtype<Index>::template match<Container>),
-					const Container&>
-			) -> bool { return subtype<Index>::template match<Container>(container); }
+				decltype(&subtype<Index>::template match<Container>),
+				const Container&>) -> bool { return subtype<Index>::template match<Container>(container); }
 
 		template<std::size_t Index, typename Container>
 			requires std::is_invocable_v<
 				decltype(&subtype<Index>::template match<Container>),
 				const subtype<Index>&,
 				const Container&>
-		[[nodiscard]] constexpr auto match(const auto& container) const
-		//
+		[[nodiscard]] constexpr auto match(const auto& container) const//
 			noexcept(std::is_nothrow_invocable_v<
-					decltype(&subtype<Index>::template match<Container>),
-					const subtype<Index>&,
-					const Container&>
-			) -> bool { return static_cast<const derived_type&>(*this).template value<Index>().template match<Container>(container); }
+				decltype(&subtype<Index>::template match<Container>),
+				const subtype<Index>&,
+				const Container&>) -> bool { return static_cast<const derived_type&>(*this).template value<Index>().template match<Container>(container); }
 	};
 
 	// basic_fixed_string
@@ -637,13 +570,16 @@ namespace gal::prometheus::infrastructure
 		struct basic_fixed_string;
 
 		template<typename>
-		struct is_fixed_string : std::false_type {};
+		struct is_fixed_string : std::false_type { };
 
 		template<typename T, std::size_t N>
-		struct is_fixed_string<basic_fixed_string<T, N>> : std::true_type {};
+		struct is_fixed_string<basic_fixed_string<T, N>> : std::true_type { };
 
-		template<typename T>
-		constexpr auto is_fixed_string_v = is_fixed_string<T>::value;
+		template<typename>
+		constexpr auto is_fixed_string_v = false;
+
+		template<typename T, std::size_t N>
+		constexpr auto is_fixed_string_v<basic_fixed_string<T, N>> = true;
 
 		template<typename T>
 		concept fixed_string_t = is_fixed_string_v<T>;
@@ -672,8 +608,7 @@ namespace gal::prometheus::infrastructure
 			template<value_type... Cs>
 				requires(
 					// DO NOT USE `basic_char_array<T, Cs...>::size`!
-					sizeof...(Cs) - ((Cs == 0) or ...)
-					>= N)
+					sizeof...(Cs) - ((Cs == 0) or ...) >= N)
 			constexpr explicit(false) basic_fixed_string(const basic_char_array<value_type, Cs...>& char_array) noexcept { std::ranges::copy(std::ranges::begin(char_array), std::ranges::begin(char_array) + N, value); }
 
 			template<std::ranges::range String>
@@ -699,7 +634,7 @@ namespace gal::prometheus::infrastructure
 			}
 
 			template<typename String>
-				requires (not is_fixed_string_v<String>) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
+				requires(not is_fixed_string_v<String>) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
 			friend constexpr auto operator==(const basic_fixed_string& lhs, const String& rhs) noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> bool { return lhs.operator basic_fixed_string_view<value_type>() == basic_fixed_string_view<value_type>{rhs}; }
 
 			template<typename String>
@@ -723,12 +658,10 @@ namespace gal::prometheus::infrastructure
 
 		template<typename T, T... Cs>
 		// DO NOT USE `basic_char_array<T, Cs...>::size`!
-		basic_fixed_string(basic_char_array<T, Cs...> char_array) ->
-			basic_fixed_string<
-				T,
-				// DO NOT USE `basic_char_array<T, Cs...>::size`!
-				sizeof...(Cs) - ((Cs == 0) or ...)
-			>;
+		basic_fixed_string(basic_char_array<T, Cs...> char_array) -> basic_fixed_string<
+			T,
+			// DO NOT USE `basic_char_array<T, Cs...>::size`!
+			sizeof...(Cs) - ((Cs == 0) or ...)>;
 
 		template<typename, typename>
 		struct basic_bilateral_fixed_string;
@@ -740,8 +673,7 @@ namespace gal::prometheus::infrastructure
 					typename basic_fixed_string<T, Left>::value_type,
 					typename basic_fixed_string<T, Left>::size_type,
 					basic_fixed_string<T, Left>,
-					basic_fixed_string<T, Right>
-				>
+					basic_fixed_string<T, Right>>
 		{
 			using left_type = basic_fixed_string<T, Left>;
 			using right_type = basic_fixed_string<T, Right>;
@@ -781,8 +713,7 @@ namespace gal::prometheus::infrastructure
 					typename basic_fixed_string_view<T>::value_type,
 					typename basic_fixed_string_view<T>::size_type,
 					basic_fixed_string_view<T>,
-					basic_fixed_string_view<T>
-				>
+					basic_fixed_string_view<T>>
 		{
 			using left_type = basic_fixed_string_view<T>;
 			using right_type = basic_fixed_string_view<T>;
@@ -902,8 +833,7 @@ namespace gal::prometheus::infrastructure
 					typename basic_char_array<T, Left...>::value_type,
 					typename basic_char_array<T, Left...>::size_type,
 					basic_char_array<T, Left...>,
-					basic_char_array<T, Right...>
-				>
+					basic_char_array<T, Right...>>
 		{
 			using left_type = basic_char_array<T, Left...>;
 			using right_type = basic_char_array<T, Right...>;
@@ -1013,17 +943,17 @@ namespace gal::prometheus::infrastructure
 export namespace std
 {
 	// for `std::totally_ordered_with`
-	template<gal::prometheus::infrastructure::fixed_string_t FixedString, typename String, template<typename> typename Q1, template<typename> typename Q2>
-		requires std::is_constructible_v<gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>, String>
+	template<gal::prometheus::string::fixed_string_t FixedString, typename String, template<typename> typename Q1, template<typename> typename Q2>
+		requires std::is_constructible_v<gal::prometheus::string::basic_fixed_string_view<typename FixedString::value_type>, String>
 	struct basic_common_reference<FixedString, String, Q1, Q2>
 	{
-		using type = gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>;
+		using type = gal::prometheus::string::basic_fixed_string_view<typename FixedString::value_type>;
 	};
 
-	template<typename String, gal::prometheus::infrastructure::fixed_string_t FixedString, template<typename> typename Q1, template<typename> typename Q2>
-		requires std::is_constructible_v<gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>, String>
+	template<typename String, gal::prometheus::string::fixed_string_t FixedString, template<typename> typename Q1, template<typename> typename Q2>
+		requires std::is_constructible_v<gal::prometheus::string::basic_fixed_string_view<typename FixedString::value_type>, String>
 	struct basic_common_reference<String, FixedString, Q1, Q2>
 	{
-		using type = gal::prometheus::infrastructure::basic_fixed_string_view<typename FixedString::value_type>;
+		using type = gal::prometheus::string::basic_fixed_string_view<typename FixedString::value_type>;
 	};
-}
+}// namespace std

@@ -10,7 +10,7 @@ module;
 export module gal.prometheus.chars:utf_8;
 
 import std;
-import gal.prometheus.infrastructure;
+import gal.prometheus.utility;
 
 import :converter;
 import :category;
@@ -57,10 +57,10 @@ export namespace gal::prometheus::chars
 			{
 				// A non-ASCII character at the end of string.
 				// Or an unexpected continuation code-unit should be treated as CP-1252.
-				return do_fallback_peek(infrastructure::char_cast<fallback_value_type>(first_code_unit));
+				return do_fallback_peek(utility::char_cast<fallback_value_type>(first_code_unit));
 			}
 
-			const auto length = infrastructure::narrow_cast<std::uint8_t>(std::countl_one(infrastructure::char_cast<std::uint8_t>(first_code_unit)));
+			const auto length = utility::narrow_cast<std::uint8_t>(std::countl_one(utility::char_cast<std::uint8_t>(first_code_unit)));
 			GAL_PROMETHEUS_DEBUG_ASSUME(length >= 2);
 
 			// First part of the code-point.
@@ -69,15 +69,15 @@ export namespace gal::prometheus::chars
 					{
 						code_uint <<= length;
 						code_uint >>= length;
-						return infrastructure::char_cast<code_point_type>(code_uint);
+						return utility::char_cast<code_point_type>(code_uint);
 					}(first_code_unit);
 
 			// Read the first continuation code-unit which is always here.
-			if (const auto code_unit = infrastructure::char_cast<char8_t>(*begin);
+			if (const auto code_unit = utility::char_cast<char8_t>(*begin);
 				(code_unit & 0xc0) != 0x80)
 			{
 				// If the second code-unit is not a UTF-8 continuation character, treat the first code-unit as if it was CP-1252.
-				return do_fallback_peek(infrastructure::char_cast<fallback_value_type>(first_code_unit));
+				return do_fallback_peek(utility::char_cast<fallback_value_type>(first_code_unit));
 			}
 			else
 			{
@@ -93,7 +93,7 @@ export namespace gal::prometheus::chars
 			{
 				if (begin == end) { return {0xfffd, false}; }
 
-				const auto code_unit = infrastructure::char_cast<char8_t>(*begin);
+				const auto code_unit = utility::char_cast<char8_t>(*begin);
 				if ((code_unit & 0b1100'0000) != 0b1000'0000)
 				{
 					// Unexpected end of sequence.
@@ -113,7 +113,7 @@ export namespace gal::prometheus::chars
 						// not a surrogate
 						(code_point < 0xd800 or code_point >= 0xe000) and
 						// not overlong encoded
-						(length == infrastructure::narrow_cast<std::uint8_t>((code_point > 0x7f) + (code_point > 0x7ff) + (code_point > 0xffff) + 1));
+						(length == utility::narrow_cast<std::uint8_t>((code_point > 0x7f) + (code_point > 0x7ff) + (code_point > 0xffff) + 1));
 				not valid) { return {0xfffd, false}; }
 			return {code_point, true};
 		}
@@ -121,14 +121,14 @@ export namespace gal::prometheus::chars
 		template<std::input_iterator Begin, std::sentinel_for<Begin>End>
 		[[nodiscard]] constexpr auto do_read(Begin& begin, const End end) const noexcept -> std::pair<code_point_type, bool>
 		{
-			const auto first_code_uint = infrastructure::char_cast<char8_t>(*begin);
+			const auto first_code_uint = utility::char_cast<char8_t>(*begin);
 			std::ranges::advance(begin, 1);
 
 			if ((first_code_uint & 0x80) == 0)
 			[[likely]]
 			{
 				// ASCII character.
-				return {infrastructure::char_cast<code_point_type>(first_code_uint), true};
+				return {utility::char_cast<code_point_type>(first_code_uint), true};
 			}
 
 			return do_read(begin, end, first_code_uint);
@@ -142,21 +142,21 @@ export namespace gal::prometheus::chars
 			GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x11'0000);
 			GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd800 and code_point < 0xe000));
 
-			const auto num_code_uint = infrastructure::narrow_cast<std::uint8_t>((code_point > 0x7f) + (code_point > 0x7ff) + (code_point > 0xffff));
-			const auto leading_ones  = num_code_uint == 0 ? 0 : infrastructure::char_cast<std::int8_t>(infrastructure::narrow_cast<std::uint8_t>(0x80)) >> num_code_uint;
+			const auto num_code_uint = utility::narrow_cast<std::uint8_t>((code_point > 0x7f) + (code_point > 0x7ff) + (code_point > 0xffff));
+			const auto leading_ones  = num_code_uint == 0 ? 0 : utility::char_cast<std::int8_t>(utility::narrow_cast<std::uint8_t>(0x80)) >> num_code_uint;
 
 			auto shift = num_code_uint * 6;
 
-			*dest = infrastructure::char_cast<value_type>(infrastructure::truncate<std::uint8_t>(code_point >> shift) | infrastructure::truncate<std::uint8_t>(leading_ones));
+			*dest = utility::char_cast<value_type>(utility::truncate<std::uint8_t>(code_point >> shift) | utility::truncate<std::uint8_t>(leading_ones));
 			std::ranges::advance(dest, 1);
 
 			while (shift)
 			{
 				shift -= 6;
 
-				const auto code_unit = infrastructure::truncate<std::uint8_t>(code_point >> shift) & 0b0011'1111 | 0b1000'0000;
+				const auto code_unit = utility::truncate<std::uint8_t>(code_point >> shift) & 0b0011'1111 | 0b1000'0000;
 
-				*dest = infrastructure::char_cast<value_type>(code_unit);
+				*dest = utility::char_cast<value_type>(code_unit);
 				std::ranges::advance(dest, 1);
 			}
 		}
@@ -168,7 +168,7 @@ export namespace gal::prometheus::chars
 			GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x11'0000);
 			GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd800 and code_point < 0xe000));
 
-			return {infrastructure::narrow_cast<std::uint8_t>((code_point > 0x7f) + (code_point > 0x7ff) + (code_point > 0xffff) + 1), true};
+			return {utility::narrow_cast<std::uint8_t>((code_point > 0x7f) + (code_point > 0x7ff) + (code_point > 0xffff) + 1), true};
 		}
 	};
 }

@@ -11,7 +11,9 @@ module;
 export module gal.prometheus.chars:converter;
 
 import std;
-import gal.prometheus.infrastructure;
+import gal.prometheus.error;
+import gal.prometheus.utility;
+import gal.prometheus.string;
 
 export namespace gal::prometheus::chars
 {
@@ -106,10 +108,10 @@ export namespace gal::prometheus::chars
 		}
 	};
 
-	template<infrastructure::basic_fixed_string Category>
+	template<string::basic_fixed_string Category>
 	class CharMap;
 
-	template<infrastructure::basic_fixed_string From, infrastructure::basic_fixed_string To>
+	template<string::basic_fixed_string From, string::basic_fixed_string To>
 	class CharConverter
 	{
 	public:
@@ -143,7 +145,7 @@ export namespace gal::prometheus::chars
 					{
 						// This chunk contains non-ASCII characters.
 						static_assert(sizeof(chunk_type) == 16);
-						const auto size = std::countr_zero(infrastructure::truncate<std::uint16_t>(mask));
+						const auto size = std::countr_zero(utility::truncate<std::uint16_t>(mask));
 						std::ranges::advance(it, size);
 						count += size;
 						break;
@@ -269,7 +271,7 @@ export namespace gal::prometheus::chars
 			const auto num_chars = size / sizeof(value_type_from);
 
 			const auto real_endian = from.endian(iterator, size, e);
-			if (real_endian == std::endian::native and infrastructure::is_floor_align(std::addressof(*iterator))) { return this->template operator()<String>(reinterpret_cast<const value_type_from*>(std::addressof(*iterator)), reinterpret_cast<const value_type_from*>(std::addressof(*iterator)) + num_chars); }
+			if (real_endian == std::endian::native and utility::is_floor_align(std::addressof(*iterator))) { return this->template operator()<String>(reinterpret_cast<const value_type_from*>(std::addressof(*iterator)), reinterpret_cast<const value_type_from*>(std::addressof(*iterator)) + num_chars); }
 
 			String result{};
 			result.resize(static_cast<typename String::size_type>(num_chars));

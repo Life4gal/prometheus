@@ -7,17 +7,16 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:enum_meta;
+export module gal.prometheus.utility:enumeration;
 
 import std;
-import :error.debug;
-import :error.exception;
+import gal.prometheus.error;
 
-export namespace gal::prometheus::infrastructure
+export namespace gal::prometheus::utility
 {
 	template<typename EnumType, typename NameType>
 		requires std::is_enum_v<EnumType>
-	struct enum_meta_data
+	struct enumeration_pair
 	{
 		using value_type = EnumType;
 		using name_type = NameType;
@@ -26,32 +25,166 @@ export namespace gal::prometheus::infrastructure
 		name_type  name;
 	};
 
+	namespace enumeration_detail
+	{
+		template<typename NameType>
+		struct enumeration_name
+		{
+			using type = std::decay_t<NameType>;
+		};
+
+		template<>
+		struct enumeration_name<char*>
+		{
+			using type = std::basic_string_view<char>;
+		};
+
+		template<>
+		struct enumeration_name<const char*>
+		{
+			using type = std::basic_string_view<char>;
+		};
+
+		template<std::size_t N>
+		struct enumeration_name<char[N]>
+		{
+			using type = std::basic_string_view<char>;
+		};
+
+		template<std::size_t N>
+		struct enumeration_name<const char[N]>
+		{
+			using type = std::basic_string_view<char>;
+		};
+
+		template<>
+		struct enumeration_name<char8_t*>
+		{
+			using type = std::basic_string_view<char8_t>;
+		};
+
+		template<>
+		struct enumeration_name<const char8_t*>
+		{
+			using type = std::basic_string_view<char8_t>;
+		};
+
+		template<std::size_t N>
+		struct enumeration_name<char8_t[N]>
+		{
+			using type = std::basic_string_view<char8_t>;
+		};
+
+		template<std::size_t N>
+		struct enumeration_name<const char8_t[N]>
+		{
+			using type = std::basic_string_view<char8_t>;
+		};
+
+		template<>
+		struct enumeration_name<char16_t*>
+		{
+			using type = std::basic_string_view<char16_t>;
+		};
+
+		template<>
+		struct enumeration_name<const char16_t*>
+		{
+			using type = std::basic_string_view<char16_t>;
+		};
+
+		template<std::size_t N>
+		struct enumeration_name<char16_t[N]>
+		{
+			using type = std::basic_string_view<char16_t>;
+		};
+
+		template<std::size_t N>
+		struct enumeration_name<const char16_t[N]>
+		{
+			using type = std::basic_string_view<char16_t>;
+		};
+
+		template<>
+		struct enumeration_name<char32_t*>
+		{
+			using type = std::basic_string_view<char32_t>;
+		};
+
+		template<>
+		struct enumeration_name<const char32_t*>
+		{
+			using type = std::basic_string_view<char32_t>;
+		};
+
+		template<std::size_t N>
+		struct enumeration_name<char32_t[N]>
+		{
+			using type = std::basic_string_view<char32_t>;
+		};
+
+		template<std::size_t N>
+		struct enumeration_name<const char32_t[N]>
+		{
+			using type = std::basic_string_view<char32_t>;
+		};
+
+		template<>
+		struct enumeration_name<wchar_t*>
+		{
+			using type = std::basic_string_view<wchar_t>;
+		};
+
+		template<>
+		struct enumeration_name<const wchar_t*>
+		{
+			using type = std::basic_string_view<wchar_t>;
+		};
+
+		template<std::size_t N>
+		struct enumeration_name<wchar_t[N]>
+		{
+			using type = std::basic_string_view<wchar_t>;
+		};
+
+		template<std::size_t N>
+		struct enumeration_name<const wchar_t[N]>
+		{
+			using type = std::basic_string_view<wchar_t>;
+		};
+
+		template<typename NameType>
+		using enumeration_name_t = typename enumeration_name<NameType>::type;
+	}
+
+	template<typename EnumType, typename NameType>
+	enumeration_pair(const EnumType&, const NameType&) -> enumeration_pair<EnumType, enumeration_detail::enumeration_name_t<NameType>>;
+
 	template<typename EnumType, typename NameType, std::size_t Total>
 		requires std::is_enum_v<EnumType> and (Total != 0)
-	class EnumMeta
+	class Enumerations
 	{
 	public:
-		using meta_data_type = enum_meta_data<EnumType, NameType>;
+		using pair_type = enumeration_pair<EnumType, NameType>;
 
-		using value_type = typename meta_data_type::value_type;
-		using name_type = typename meta_data_type::name_type;
+		using value_type = typename pair_type::value_type;
+		using name_type = typename pair_type::name_type;
 
 		constexpr static auto size = Total;
 
 	private:
-		using data_type = std::array<meta_data_type, size>;
+		using data_type = std::array<pair_type, size>;
 		using size_type = typename data_type::size_type;
 
 		[[nodiscard]] constexpr static auto to_underlying(const value_type e) noexcept -> std::underlying_type_t<value_type> { return static_cast<std::underlying_type_t<value_type>>(e); }
 
-		bool contiguous_{false};
-
-		std::array<meta_data_type, size> meta_;
+		bool                        contiguous_;
+		std::array<pair_type, size> pairs_;
 
 		template<std::size_t Index, typename... Reset>
 		constexpr auto register_meta(value_type value, name_type name, const Reset&... reset_meta_data) noexcept -> void
 		{
-			meta_[Index] = {.value = value, .name = std::move(name)};
+			pairs_[Index] = {.value = value, .name = std::move(name)};
 
 			if constexpr (sizeof...(reset_meta_data) > 0) { this->template register_meta<Index + 1>(reset_meta_data...); }
 		}
@@ -59,25 +192,25 @@ export namespace gal::prometheus::infrastructure
 		[[nodiscard]] constexpr auto check_contiguous() const noexcept -> bool
 		{
 			return std::ranges::all_of(
-					meta_,
-					[init = EnumMeta::to_underlying(min())](const value_type e) mutable -> bool { return EnumMeta::to_underlying(e) == init++; },
-					[](const meta_data_type&                                 meta_data) -> value_type { return meta_data.value; });
+					pairs_,
+					[init = Enumerations::to_underlying(min())](const value_type e) mutable -> bool { return Enumerations::to_underlying(e) == init++; },
+					[](const pair_type&                                          meta_data) -> value_type { return meta_data.value; });
 		}
 
 		[[nodiscard]] constexpr auto find(const value_type e) const noexcept -> const name_type*
 		{
 			if (contiguous_)
 			{
-				const auto index = EnumMeta::to_underlying(e) - EnumMeta::to_underlying(meta_.front().value);
-				return (index >= 0 && std::cmp_less(index, size)) ? &meta_[static_cast<size_type>(index)].name : nullptr;
+				const auto index = Enumerations::to_underlying(e) - Enumerations::to_underlying(pairs_.front().value);
+				return (index >= 0 && std::cmp_less(index, size)) ? &pairs_[static_cast<size_type>(index)].name : nullptr;
 			}
 
 			if (const auto it = std::ranges::find(
-						meta_,
+						pairs_,
 						e,
-						[](const meta_data_type& meta_data) -> value_type { return meta_data.value; });
+						[](const pair_type& meta_data) -> value_type { return meta_data.value; });
 
-				it != meta_.end()) { return &it->name; }
+				it != pairs_.end()) { return &it->name; }
 
 			return nullptr;
 		}
@@ -86,33 +219,33 @@ export namespace gal::prometheus::infrastructure
 		[[nodiscard]] constexpr auto find(const Name& name) const noexcept -> const value_type*
 		{
 			const auto it = std::ranges::find_if(
-					meta_,
+					pairs_,
 					[&name](const name_type& n) -> bool { return name == n; },
-					[](const meta_data_type& meta_data) -> const name_type& { return meta_data.name; });
+					[](const pair_type&      meta_data) -> const name_type& { return meta_data.name; });
 
-			if (it != meta_.end()) { return &it->value; }
+			if (it != pairs_.end()) { return &it->value; }
 
 			return nullptr;
 		}
 
 	public:
 		template<typename... Args>
-		constexpr explicit(false) EnumMeta(const Args&... meta_data) noexcept
+		constexpr explicit(false) Enumerations(const Args&... meta_data) noexcept
 			requires requires { this->template register_meta<0>(meta_data...); }
 		{
 			this->template register_meta<0>(meta_data...);
 
 			std::ranges::sort(
-					meta_,
-					[](const auto&           lhs, const auto& rhs) -> bool { return EnumMeta::to_underlying(lhs) < EnumMeta::to_underlying(rhs); },
-					[](const meta_data_type& pair) -> value_type { return pair.value; });
+					pairs_,
+					[](const auto&      lhs, const auto& rhs) -> bool { return Enumerations::to_underlying(lhs) < Enumerations::to_underlying(rhs); },
+					[](const pair_type& pair) -> value_type { return pair.value; });
 
 			contiguous_ = check_contiguous();
 		}
 
-		[[nodiscard]] constexpr auto min() const noexcept -> value_type { return meta_.front().value; }
+		[[nodiscard]] constexpr auto min() const noexcept -> value_type { return pairs_.front().value; }
 
-		[[nodiscard]] constexpr auto max() const noexcept -> value_type { return meta_.back().value; }
+		[[nodiscard]] constexpr auto max() const noexcept -> value_type { return pairs_.back().value; }
 
 		[[nodiscard]] constexpr auto contiguous() const noexcept -> bool { return contiguous_; }
 
@@ -159,14 +292,14 @@ export namespace gal::prometheus::infrastructure
 	     * @brief Get a name from an enum-value.
 	     * @param e The enum value to lookup.
 	     * @return The name belonging with the enum value.
-	     * @throws OutOfRangeError When the value does not exist.
+	     * @throws error::OutOfRangeError When the value does not exist.
 	     */
 		[[nodiscard]] constexpr auto at(const value_type e) const -> const name_type&
 		{
 			if (auto* it = this->find(e);
 				it != nullptr) { return *it; }
 
-			throw OutOfRangeError{"EnumMeta::at"};
+			throw error::OutOfRangeError{"Enumerations::at"};
 		}
 
 		/** 
@@ -187,21 +320,21 @@ export namespace gal::prometheus::infrastructure
 	     * @brief Get an enum-value from a name.
 	     * @param name The name to lookup in the enum.
 	     * @return The enum-value belonging with the name.
-	     * @throws OutOfRangeError When the name does not exist.
+	     * @throws error::OutOfRangeError When the name does not exist.
 	     */
 		[[nodiscard]] constexpr auto at(const name_type& name) const -> value_type
 		{
 			if (auto* it = this->find(name);
 				it != nullptr) { return *it; }
 
-			throw OutOfRangeError{"EnumMeta::at"};
+			throw error::OutOfRangeError{"Enumerations::at"};
 		}
 
 		/** 
 	     * @brief Get an enum-value from a name.
 	     * @param name The name to lookup in the enum.
 	     * @return The enum-value belonging with the name.
-	     * @throws OutOfRangeError When the name does not exist.
+	     * @throws error::OutOfRangeError When the name does not exist.
 	     */
 		template<typename Name>
 			requires requires(const name_type& lhs, const Name& rhs)
@@ -215,7 +348,7 @@ export namespace gal::prometheus::infrastructure
 			if (auto* it = this->find(name);
 				it != nullptr) { return *it; }
 
-			throw OutOfRangeError{"EnumMeta::at"};
+			throw error::OutOfRangeError{"Enumerations::at"};
 		}
 
 		/** 
@@ -342,139 +475,6 @@ export namespace gal::prometheus::infrastructure
 		}
 	};
 
-	template<typename NameType>
-	struct enum_meta_name
-	{
-		using type = std::decay_t<NameType>;
-	};
-
-	template<>
-	struct enum_meta_name<char*>
-	{
-		using type = std::basic_string_view<char>;
-	};
-
-	template<>
-	struct enum_meta_name<const char*>
-	{
-		using type = std::basic_string_view<char>;
-	};
-
-	template<std::size_t N>
-	struct enum_meta_name<char[N]>
-	{
-		using type = std::basic_string_view<char>;
-	};
-
-	template<std::size_t N>
-	struct enum_meta_name<const char[N]>
-	{
-		using type = std::basic_string_view<char>;
-	};
-
-	template<>
-	struct enum_meta_name<char8_t*>
-	{
-		using type = std::basic_string_view<char8_t>;
-	};
-
-	template<>
-	struct enum_meta_name<const char8_t*>
-	{
-		using type = std::basic_string_view<char8_t>;
-	};
-
-	template<std::size_t N>
-	struct enum_meta_name<char8_t[N]>
-	{
-		using type = std::basic_string_view<char8_t>;
-	};
-
-	template<std::size_t N>
-	struct enum_meta_name<const char8_t[N]>
-	{
-		using type = std::basic_string_view<char8_t>;
-	};
-
-	template<>
-	struct enum_meta_name<char16_t*>
-	{
-		using type = std::basic_string_view<char16_t>;
-	};
-
-	template<>
-	struct enum_meta_name<const char16_t*>
-	{
-		using type = std::basic_string_view<char16_t>;
-	};
-
-	template<std::size_t N>
-	struct enum_meta_name<char16_t[N]>
-	{
-		using type = std::basic_string_view<char16_t>;
-	};
-
-	template<std::size_t N>
-	struct enum_meta_name<const char16_t[N]>
-	{
-		using type = std::basic_string_view<char16_t>;
-	};
-
-	template<>
-	struct enum_meta_name<char32_t*>
-	{
-		using type = std::basic_string_view<char32_t>;
-	};
-
-	template<>
-	struct enum_meta_name<const char32_t*>
-	{
-		using type = std::basic_string_view<char32_t>;
-	};
-
-	template<std::size_t N>
-	struct enum_meta_name<char32_t[N]>
-	{
-		using type = std::basic_string_view<char32_t>;
-	};
-
-	template<std::size_t N>
-	struct enum_meta_name<const char32_t[N]>
-	{
-		using type = std::basic_string_view<char32_t>;
-	};
-
-	template<>
-	struct enum_meta_name<wchar_t*>
-	{
-		using type = std::basic_string_view<wchar_t>;
-	};
-
-	template<>
-	struct enum_meta_name<const wchar_t*>
-	{
-		using type = std::basic_string_view<wchar_t>;
-	};
-
-	template<std::size_t N>
-	struct enum_meta_name<wchar_t[N]>
-	{
-		using type = std::basic_string_view<wchar_t>;
-	};
-
-	template<std::size_t N>
-	struct enum_meta_name<const wchar_t[N]>
-	{
-		using type = std::basic_string_view<wchar_t>;
-	};
-
-	template<typename NameType>
-	using enum_meta_name_type = typename enum_meta_name<NameType>::type;
-
-	template<typename EnumType, typename NameType>
-	enum_meta_data(const EnumType&, const NameType&) -> enum_meta_data<EnumType, enum_meta_name_type<NameType>>;
-
 	template<typename EnumType, typename NameType, typename... Reset>
-	// ReSharper disable once CppInconsistentNaming
-	EnumMeta(const EnumType&, const NameType&, const Reset&...) -> EnumMeta<EnumType, enum_meta_name_type<NameType>, (sizeof...(Reset) + 2) / 2>;
-}
+	Enumerations(const EnumType&, const NameType&, const Reset&...) -> Enumerations<EnumType, enumeration_detail::enumeration_name_t<NameType>, (sizeof...(Reset) + 2) / 2>;
+}// namespace gal::prometheus::utility

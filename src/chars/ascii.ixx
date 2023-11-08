@@ -10,7 +10,7 @@ module;
 export module gal.prometheus.chars:ascii;
 
 import std;
-import gal.prometheus.infrastructure;
+import gal.prometheus.utility;
 
 import :converter;
 import :category;
@@ -37,7 +37,7 @@ export namespace gal::prometheus::chars
 		template<std::input_iterator Begin, std::sentinel_for<Begin> End>
 		[[nodiscard]] constexpr auto do_read(Begin& begin, [[maybe_unused]] const End end) const noexcept -> std::pair<code_point_type, bool>
 		{
-			const auto code_point = infrastructure::char_cast<code_point_type>(*begin);
+			const auto code_point = utility::char_cast<code_point_type>(*begin);
 			std::ranges::advance(begin, 1);
 
 			if (code_point < 0x80) { return {code_point, true}; }
@@ -52,8 +52,8 @@ export namespace gal::prometheus::chars
 			GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x11'0000);
 			GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd800 and code_point < 0xe000));
 
-			if (code_point < 0x80) { *dest = infrastructure::char_cast<value_type>(code_point); }
-			else { *dest = infrastructure::char_cast<value_type>(char_placeholder); }
+			if (code_point < 0x80) { *dest = utility::char_cast<value_type>(code_point); }
+			else { *dest = utility::char_cast<value_type>(char_placeholder); }
 
 			std::ranges::advance(dest, 1);
 		}
@@ -65,9 +65,9 @@ export namespace gal::prometheus::chars
 			GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x11'0000);
 			GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd800 and code_point < 0xe000));
 
-			if (code_point < 0x80) { return {infrastructure::narrow_cast<std::uint8_t>(1), true}; }
+			if (code_point < 0x80) { return {utility::narrow_cast<std::uint8_t>(1), true}; }
 
-			return {infrastructure::narrow_cast<std::uint8_t>(1), false};
+			return {utility::narrow_cast<std::uint8_t>(1), false};
 		}
 	};
 }

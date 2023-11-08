@@ -10,7 +10,7 @@ module;
 export module gal.prometheus.i18n:ietf_language_tag;
 
 import std;
-import gal.prometheus.infrastructure;
+import gal.prometheus.string;
 
 import :iso_639;
 import :iso_15924;
@@ -57,8 +57,8 @@ namespace gal::prometheus::i18n
 
 			constexpr explicit IETFLanguageTag(const language_type language, const region_type region = {}, const script_type script = {}) noexcept
 				: language_{language},
-				region_{region},
-				script_{script} {}
+				  region_{region},
+				  script_{script} {}
 
 		public:
 			[[nodiscard]] constexpr explicit operator std::basic_string<element_type>() const noexcept
@@ -125,11 +125,11 @@ namespace gal::prometheus::i18n
 			 */
 			template<std::ranges::range Container = std::vector<IETFLanguageTag>>
 				requires std::is_same_v<std::ranges::range_value_t<Container>, IETFLanguageTag> and
-						std::is_default_constructible_v<Container> and
-						requires
-						{
-							std::declval<Container&>().emplace_back(std::declval<IETFLanguageTag&&>());
-						}
+				         std::is_default_constructible_v<Container> and
+				         requires
+				         {
+					         std::declval<Container&>().emplace_back(std::declval<IETFLanguageTag&&>());
+				         }
 			[[nodiscard]] constexpr auto variants() const -> Container
 			{
 				Container result{};
@@ -187,11 +187,11 @@ namespace gal::prometheus::i18n
 			 */
 			template<std::ranges::range Container = std::vector<IETFLanguageTag>>
 				requires std::is_same_v<std::ranges::range_value_t<Container>, IETFLanguageTag> and
-						std::is_default_constructible_v<Container> and
-						requires
-						{
-							std::declval<Container&>().emplace_back(std::declval<IETFLanguageTag&&>());
-						}
+				         std::is_default_constructible_v<Container> and
+				         requires
+				         {
+					         std::declval<Container&>().emplace_back(std::declval<IETFLanguageTag&&>());
+				         }
 			[[nodiscard]] constexpr auto all_variants() const -> Container
 			{
 				auto result = variants<Container>();
@@ -218,12 +218,12 @@ namespace gal::prometheus::i18n
 			 */
 			template<std::ranges::range Container>
 				requires std::is_same_v<std::ranges::range_value_t<Container>, IETFLanguageTag> and
-						requires(Container& container)
-						{
-							{
-								std::declval<const IETFLanguageTag&>().all_variants<Container>()
-							} -> std::same_as<Container>;
-						}
+				         requires(Container& container)
+				         {
+					         {
+						         std::declval<const IETFLanguageTag&>().all_variants<Container>()
+					         } -> std::same_as<Container>;
+				         }
 			[[nodiscard]] constexpr static auto variants(const Container& languages) -> Container
 			{
 				Container result{};
@@ -2149,7 +2149,7 @@ namespace gal::prometheus::i18n
 
 	[[nodiscard]] constexpr auto ietf_language_tag_tag_info_mapping_from_to_to(const std::basic_string_view<IETFLanguageTag::element_type> string) noexcept -> std::optional<std::basic_string_view<IETFLanguageTag::element_type>>
 	{
-		const auto lower_string = infrastructure::to_lower(string);
+		const auto lower_string = string::to_lower(string);
 
 		if (const auto it = std::ranges::lower_bound(
 					ietf_language_tag_tag_info_database,
@@ -2242,12 +2242,12 @@ namespace gal::prometheus::i18n
 				}
 				else
 				{
-					if (not region and not script and each_string_view.size() == 3 and infrastructure::is_alpha(each_string_view))
+					if (not region and not script and each_string_view.size() == 3 and string::is_alpha(each_string_view))
 					{
 						// Up to 3 optional 3 letter extended language codes.
 						// Ignore these for backward compatibility.
 					}
-					else if (not region and not script and each_string_view.size() == 4 and infrastructure::is_alpha(each_string_view))
+					else if (not region and not script and each_string_view.size() == 4 and string::is_alpha(each_string_view))
 					{
 						// An optional script sub-tag, based on a four-letter script code from ISO 15924 (usually written in Title Case).
 						script = script_type::parse(each_string_view);
@@ -2255,11 +2255,11 @@ namespace gal::prometheus::i18n
 					else if (
 						not region and
 						(
-							(each_string_view.size() == 2 and infrastructure::is_alpha(each_string_view))
-							//
-							or
-							//
-							(each_string_view.size() == 3 and infrastructure::is_digit(each_string_view))
+							(each_string_view.size() == 2 and string::is_alpha(each_string_view))
+						 //
+						 or
+						 //
+						 (each_string_view.size() == 3 and string::is_digit(each_string_view))
 						)
 					)
 					{
@@ -2267,7 +2267,7 @@ namespace gal::prometheus::i18n
 						// or a three-digit code from UN M.49 for geographical regions.
 						region = region_type::parse(each_string_view);
 					}
-					else if ((each_string_view.size() >= 5 and each_string_view.size() <= 8) or (each_string_view.size() == 4 and infrastructure::is_digit(each_string_view.front())))
+					else if ((each_string_view.size() >= 5 and each_string_view.size() <= 8) or (each_string_view.size() == 4 and string::is_digit(each_string_view.front())))
 					{
 						// A variant has 5 to 8 letters or a 4 digit + letters code.
 					}

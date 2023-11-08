@@ -10,7 +10,8 @@ module;
 export module gal.prometheus.i18n:iso_15924;
 
 import std;
-import gal.prometheus.infrastructure;
+import gal.prometheus.string;
+import gal.prometheus.error;
 
 namespace gal::prometheus::i18n
 {
@@ -31,7 +32,7 @@ namespace gal::prometheus::i18n
 
 			using element_type = char;
 
-			using code_info_code4_type = infrastructure::fixed_string<4>;
+			using code_info_code4_type = string::fixed_string<4>;
 
 			struct code_info
 			{
@@ -45,7 +46,7 @@ namespace gal::prometheus::i18n
 				// https://en.wikipedia.org/wiki/IETF_language_tag#Syntax_of_language_tags
 				// An optional script subtag, based on a four-letter script code from ISO 15924 (usually written in Title Case);
 				constexpr code_info(const element_type (&c)[5], const value_type n) noexcept
-					: code4{infrastructure::to_tittle(code_info_code4_type{c})},
+					: code4{string::to_tittle(code_info_code4_type{c})},
 					number{n} { }
 			};
 
@@ -364,9 +365,9 @@ namespace gal::prometheus::i18n
 		constexpr auto ISO15924::parse(const std::basic_string_view<element_type> string) noexcept -> std::optional<ISO15924>
 		{
 			// number
-			if (infrastructure::is_digit(string))
+			if (string::is_digit(string))
 			{
-				if (const auto result = infrastructure::from_string<value_type, false>(string);
+				if (const auto result = string::from_string<value_type, false>(string);
 					result.has_value())
 				{
 					// GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW_STRING_PARSE_ERROR(
@@ -381,9 +382,9 @@ namespace gal::prometheus::i18n
 			}
 
 			// code
-			if (infrastructure::is_alpha(string) and string.size() == 4)
+			if (string::is_alpha(string) and string.size() == 4)
 			{
-				const auto target = infrastructure::to_tittle(string);
+				const auto target = string::to_tittle(string);
 
 				// ReSharper disable once CppTooWideScopeInitStatement
 				const auto it = std::ranges::lower_bound(

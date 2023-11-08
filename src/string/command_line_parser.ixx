@@ -8,17 +8,14 @@ module;
 #include <prometheus/macro.hpp>
 #include <cstdlib>
 
-export module gal.prometheus.infrastructure:command_line_parser;
+export module gal.prometheus.string:command_line_parser;
 
 import std;
-import :error.exception;
-import :error.debug;
-import :compiler;
-import :type_traits;
-import :functor;
-import :string_pool;
+import gal.prometheus.utility;
+import gal.prometheus.error;
+import gal.prometheus.container;
 
-namespace gal::prometheus::infrastructure
+namespace gal::prometheus::string
 {
 	using regex_char_type = char;
 
@@ -73,35 +70,35 @@ namespace gal::prometheus::infrastructure
 
 	export
 	{
-		class CommandLineOptionNameFormatError final : public StringParseError
+		class CommandLineOptionNameFormatError final : public error::StringParseError
 		{
 		public:
 			explicit CommandLineOptionNameFormatError(const std::string_view option)
 				: StringParseError{std::format("Cannot parse `{}` as option name", option)} {}
 		};
 
-		class CommandLineOptionAlreadyExistsError final : public InvalidArgumentError
+		class CommandLineOptionAlreadyExistsError final : public error::InvalidArgumentError
 		{
 		public:
 			explicit CommandLineOptionAlreadyExistsError(const std::string_view option)
 				: InvalidArgumentError{std::format("Option `{}` already exists!", option)} {}
 		};
 
-		class CommandLineOptionUnrecognizedError final : public OutOfRangeError
+		class CommandLineOptionUnrecognizedError final : public error::OutOfRangeError
 		{
 		public:
 			explicit CommandLineOptionUnrecognizedError(const std::string_view option)
 				: OutOfRangeError{std::format("Unrecognized option:\n {}", option)} {}
 		};
 
-		class CommandLineOptionRequiredNotPresentError final : public OutOfRangeError
+		class CommandLineOptionRequiredNotPresentError final : public error::OutOfRangeError
 		{
 		public:
 			explicit CommandLineOptionRequiredNotPresentError(const std::string_view option)
 				: OutOfRangeError{std::format("Required option `{}` not present", option)} {}
 		};
 
-		class CommandLineOptionRequiredNotSetError final : public StringParseError
+		class CommandLineOptionRequiredNotSetError final : public error::StringParseError
 		{
 		public:
 			explicit CommandLineOptionRequiredNotSetError(const std::string_view option)
@@ -174,7 +171,7 @@ namespace gal::prometheus::infrastructure
 		if (result.size() != 3)
 		{
 			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
-			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<descriptor_integer>())};
+			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, utility::compiler::type_name<descriptor_integer>())};
 			#else
 			return std::nullopt;
 			#endif
@@ -226,7 +223,7 @@ namespace gal::prometheus::infrastructure
 		if (result.size() != 5)
 		{
 			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
-			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<descriptor_option>())};
+			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, utility::compiler::type_name<descriptor_option>())};
 			#else
 			return std::nullopt;
 			#endif
@@ -260,7 +257,7 @@ namespace gal::prometheus::infrastructure
 		if (result.size() != 3)
 		{
 			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
-			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<descriptor_list<Range>>())};
+			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, utility::compiler::type_name<descriptor_list<Range>>())};
 			#else
 			return std::nullopt;
 			#endif
@@ -269,8 +266,8 @@ namespace gal::prometheus::infrastructure
 		regex_token_iterator<Range> token_iterator{result[0].first, result[0].second, regex_separator, -1};
 
 		return std::ranges::subrange{token_iterator, regex_token_iterator<Range>{}} |
-				std::views::transform(sub_match_to_string_view<Range>) |
-				std::views::common;
+		       std::views::transform(sub_match_to_string_view<Range>) |
+		       std::views::common;
 	}
 
 	struct string_parse_functor
@@ -290,7 +287,7 @@ namespace gal::prometheus::infrastructure
 			if (parse_boolean<false>(range)) { return false; }
 
 			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
-			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<bool>())};
+			return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, utility::compiler::type_name<bool>())};
 			#else
 			return std::nullopt;
 			#endif
@@ -298,7 +295,7 @@ namespace gal::prometheus::infrastructure
 
 		// integral
 		// not bool, avoid ambiguous
-		template<traits::integral T, regex_string_type Range>
+		template<std::integral T, regex_string_type Range>
 			requires(not std::is_same_v<T, bool>)
 		[[nodiscard]] auto operator()(const Range& range) ->
 			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
@@ -319,11 +316,11 @@ namespace gal::prometheus::infrastructure
 								type result;
 								if (
 									const auto [last, error] = std::from_chars(value.data(), value.data() + value.size(), result, base_num);
-									error != std::errc{} or last != value.data() + value.size()) { return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<type>())}; }
+									error != std::errc{} or last != value.data() + value.size()) { return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, utility::compiler::type_name<type>())}; }
 
 								if (is_negative)
 								{
-									if constexpr (not std::numeric_limits<T>::is_signed) { return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, compiler::type_name<type>())}; }
+									if constexpr (not std::numeric_limits<T>::is_signed) { return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, utility::compiler::type_name<type>())}; }
 
 									return static_cast<T>(-static_cast<T>(result - 1) - 1);
 								}
@@ -361,10 +358,10 @@ namespace gal::prometheus::infrastructure
 		// not string, avoid ambiguous
 		template<std::ranges::range OutRange, regex_string_type Range>
 			requires(not std::is_constructible_v<OutRange, Range>) and
-					requires
-					{
-						std::declval<string_parse_functor&>().operator()<std::ranges::range_value_t<OutRange>>(std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(parse_list(std::declval<const Range&>()).value())>>>());
-					}
+			        requires
+			        {
+				        std::declval<string_parse_functor&>().operator()<std::ranges::range_value_t<OutRange>>(std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(parse_list(std::declval<const Range&>()).value())>>>());
+			        }
 		auto operator()(const Range& range, OutRange& out) -> void
 		{
 			const auto list = parse_list(range);
@@ -429,10 +426,10 @@ namespace gal::prometheus::infrastructure
 		// not string, avoid ambiguous
 		template<std::ranges::range OutRange, regex_string_type Range>
 			requires(not std::is_constructible_v<OutRange, Range>) and
-					requires
-					{
-						std::declval<string_parse_functor&>().operator()(std::declval<const Range&>(), std::declval<OutRange&>());
-					}
+			        requires
+			        {
+				        std::declval<string_parse_functor&>().operator()(std::declval<const Range&>(), std::declval<OutRange&>());
+			        }
 		[[nodiscard]] auto operator()(const Range& range) -> OutRange
 		{
 			OutRange result{};
@@ -550,10 +547,10 @@ namespace gal::prometheus::infrastructure
 					const string_view_type option_long_format,
 					const value_type       value) noexcept
 				: option_short_format_{option_short_format},
-				option_long_format_{option_long_format},
-				value_{value},
-				// `Defaults` use implicit_value, if the option is given `explicitly` the `default_value` is used, if the option is given `explicitly` and a value is specified the specified value is used.
-				current_value_{value_.iv} { }
+				  option_long_format_{option_long_format},
+				  value_{value},
+				  // `Defaults` use implicit_value, if the option is given `explicitly` the `default_value` is used, if the option is given `explicitly` and a value is specified the specified value is used.
+				  current_value_{value_.iv} { }
 
 			[[nodiscard]] constexpr auto set() const noexcept -> bool { return not current_value_.empty(); }
 
@@ -585,7 +582,7 @@ namespace gal::prometheus::infrastructure
 					#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
 					if (value.has_value()) { return *std::move(value); }
 
-					std::cerr << std::format("Cannot parse `{}` as `{}`.", current_value_, compiler::type_name<T>());
+					std::cerr << std::format("Cannot parse `{}` as `{}`.", current_value_, utility::compiler::type_name<T>());
 					return std::nullopt;
 					#else
 					return value;
@@ -599,7 +596,7 @@ namespace gal::prometheus::infrastructure
 		{
 		public:
 			using string_type = StringType;
-			using string_pool_type = StringPool<typename string_type::value_type, false>;
+			using string_pool_type = container::StringPool<typename string_type::value_type, false>;
 			using string_view_type = typename string_pool_type::view_type;
 
 			using option_type = CommandLineOption<string_type, string_view_type>;
@@ -648,8 +645,8 @@ namespace gal::prometheus::infrastructure
 
 			[[nodiscard]] auto options() noexcept -> auto
 			{
-				return functor::y_combinator{
-						functor::overloaded{
+				return utility::functor::y_combinator{
+						utility::functor::overloaded{
 								[this](auto& self, const string_view_type option, const typename option_type::value_type value) -> auto& {
 									const auto option_names = parse_list(option);
 									if (not option_names.has_value()) { throw CommandLineOptionNameFormatError{option}; }
@@ -687,7 +684,7 @@ namespace gal::prometheus::infrastructure
 
 			[[nodiscard]] auto aliases() noexcept -> auto
 			{
-				return functor::y_combinator{
+				return utility::functor::y_combinator{
 						[this](auto& self, const string_view_type alias_name, const string_view_type target_option_name) -> auto& {
 							const auto option_names = parse_list(alias_name);
 							if (not option_names.has_value()) { throw CommandLineOptionNameFormatError{alias_name}; }

@@ -10,10 +10,11 @@ module;
 export module gal.prometheus.i18n:iso_639;
 
 import std;
-import gal.prometheus.infrastructure;
+import gal.prometheus.error;
+import gal.prometheus.utility;
 
 #if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-	#define WORKAROUND_C2248 1
+#define WORKAROUND_C2248 1
 #else
 	#define WORKAROUND_C2248 0
 #endif
@@ -101,8 +102,8 @@ export namespace gal::prometheus::i18n
 
 			if (value == 0) { return 0; }
 
-			if (value <= 26) { return 'a' + infrastructure::narrow_cast<element_type>(value - 1); }
-			return '1' + infrastructure::narrow_cast<element_type>(value - 27);
+			if (value <= 26) { return 'a' + utility::narrow_cast<element_type>(value - 1); }
+			return '1' + utility::narrow_cast<element_type>(value - 27);
 		}
 
 		[[nodiscard]] constexpr auto value() noexcept -> value_type& { return value_; }

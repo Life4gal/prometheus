@@ -10,7 +10,8 @@ module;
 export module gal.prometheus.i18n:iso_3166;
 
 import std;
-import gal.prometheus.infrastructure;
+import gal.prometheus.string;
+import gal.prometheus.error;
 
 namespace gal::prometheus::i18n
 {
@@ -31,8 +32,8 @@ namespace gal::prometheus::i18n
 
 			using element_type = char;
 
-			using code_info_code2_type = infrastructure::fixed_string<2>;
-			using code_info_code3_type = infrastructure::fixed_string<3>;
+			using code_info_code2_type = string::fixed_string<2>;
+			using code_info_code3_type = string::fixed_string<3>;
 
 			struct code_info
 			{
@@ -436,9 +437,9 @@ namespace gal::prometheus::i18n
 		constexpr auto ISO3166::parse(const std::basic_string_view<element_type> string) noexcept -> std::optional<ISO3166>
 		{
 			// number
-			if (infrastructure::is_digit(string))
+			if (string::is_digit(string))
 			{
-				if (const auto result = infrastructure::from_string<value_type, false>(string);
+				if (const auto result = string::from_string<value_type, false>(string);
 					result.has_value())
 				{
 					// GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW_STRING_PARSE_ERROR(
@@ -453,12 +454,12 @@ namespace gal::prometheus::i18n
 			}
 
 			// code
-			if (infrastructure::is_alpha(string))
+			if (string::is_alpha(string))
 			{
 				// code2
 				if (string.size() == 2)
 				{
-					const auto upper_string = infrastructure::to_upper(string);
+					const auto upper_string = string::to_upper(string);
 
 					// ReSharper disable once CppTooWideScopeInitStatement
 					const auto it = std::ranges::lower_bound(
@@ -481,7 +482,7 @@ namespace gal::prometheus::i18n
 				// code3
 				if (string.size() == 3)
 				{
-					const auto upper_string = infrastructure::to_upper(string);
+					const auto upper_string = string::to_upper(string);
 
 					// ReSharper disable once CppTooWideScopeInitStatement
 					const auto it = std::ranges::lower_bound(

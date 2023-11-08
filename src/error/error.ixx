@@ -3,14 +3,11 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-module;
+export module gal.prometheus.error;
 
-#include <prometheus/macro.hpp>
+export import :debug;
+export import :platform;
+export import :exception;
 
-export module gal.prometheus.infrastructure:error;
-
-export import :error.debug;
-export import :error.exception;
-export import :error.platform;
-
-import :error.impl;
+import :debug.impl;
+import :platform.impl;

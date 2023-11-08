@@ -7,13 +7,14 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:function_ref;
+export module gal.prometheus.utility:function_ref;
 
 import std;
-import :aligned_union;
-import :error.debug;
+import gal.prometheus.error;
 
-namespace gal::prometheus::infrastructure
+import :aligned_union;
+
+namespace gal::prometheus::utility
 {
 	template<typename>
 	struct compatible_function_pointer
@@ -40,16 +41,13 @@ namespace gal::prometheus::infrastructure
 		class FunctionRef;
 
 		template<typename>
-		struct is_function_ref : std::false_type { };
+		constexpr auto is_function_ref_v = false;
 
 		template<typename Signature>
-		struct is_function_ref<FunctionRef<Signature>> : std::true_type { };
+		constexpr auto is_function_ref_v<FunctionRef<Signature>> = true;
 
 		template<typename T>
-		constexpr auto is_function_ref_v = is_function_ref<T>::value;
-
-		template<typename T>
-		concept function_ref_t = is_function_ref_v<T>;
+		concept function_ref = is_function_ref_v<T>;
 
 		/**
 		 * @brief A reference to a function.
@@ -91,7 +89,8 @@ namespace gal::prometheus::infrastructure
 			template<typename FunctionType>
 			constexpr static auto do_invoke_function(
 					data_type data,
-					Args...   args) noexcept(noexcept(static_cast<result_type>(std::invoke(reinterpret_cast<FunctionType>(data.load<function_pointer>()), static_cast<Args>(args)...))))// NOLINT(clang-diagnostic-cast-function-type-strict)
+					Args...   args)                                                                                                                                 //
+				noexcept(noexcept(static_cast<result_type>(std::invoke(reinterpret_cast<FunctionType>(data.load<function_pointer>()), static_cast<Args>(args)...))))// NOLINT(clang-diagnostic-cast-function-type-strict)
 				-> result_type
 			{
 				auto pointer  = data.load<function_pointer>();
@@ -103,7 +102,8 @@ namespace gal::prometheus::infrastructure
 			template<typename Functor>
 			constexpr static auto do_invoke_functor(
 					data_type data,
-					Args...   args) noexcept(noexcept(static_cast<result_type>(std::invoke(*static_cast<Functor*>(data.load<functor_pointer>()), static_cast<Args>(args)...))))
+					Args...   args)//
+				noexcept(noexcept(static_cast<result_type>(std::invoke(*static_cast<Functor*>(data.load<functor_pointer>()), static_cast<Args>(args)...))))
 				-> result_type
 			{
 				auto  pointer = data.load<functor_pointer>();
@@ -115,18 +115,17 @@ namespace gal::prometheus::infrastructure
 			template<typename FunctionPointer>
 			constexpr FunctionRef(constructor_tag, FunctionPointer function) noexcept
 				: data_{data_type::constructor_tag<function_pointer>{}, reinterpret_cast<function_pointer>(function)}// NOLINT(clang-diagnostic-cast-function-type-strict)
-				,
-				invoker_{&do_invoke_function<typename compatible_function_pointer<FunctionPointer>::type>}
+				  ,
+				  invoker_{&do_invoke_function<typename compatible_function_pointer<FunctionPointer>::type>}
 			{
 				// throw exception?
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(function, "function pointer must not be null");
 			}
 
 		public:
-			template<
-				typename FunctionPointer>
+			template<typename FunctionPointer>
 				requires compatible_function_pointer<FunctionPointer>::template
-				value<Return, Args...>
+				value<Return, Args...>//
 			constexpr explicit(false) FunctionRef(FunctionPointer function) noexcept(std::is_nothrow_constructible_v<FunctionRef, constructor_tag, FunctionPointer>)
 				: FunctionRef{constructor_tag{}, function} { }
 
@@ -135,12 +134,12 @@ namespace gal::prometheus::infrastructure
 			 */
 			template<typename StatelessLambda>
 				requires(not compatible_function_pointer<StatelessLambda>::template value<Return, Args...>) and
-						std::is_invocable_v<StatelessLambda, Args...> and
-						(std::is_void_v<Return> or std::is_convertible_v<std::invoke_result_t<StatelessLambda, Args...>, Return>) and
-						requires(StatelessLambda& functor)
-						{
-							(+functor)(std::declval<Args>()...);
-						}
+				        std::is_invocable_v<StatelessLambda, Args...> and
+				        (std::is_void_v<Return> or std::is_convertible_v<std::invoke_result_t<StatelessLambda, Args...>, Return>) and
+				        requires(StatelessLambda& functor)
+				        {
+					        (+functor)(std::declval<Args>()...);
+				        }
 			// note: const reference to avoid ambiguous
 			constexpr explicit(false) FunctionRef(const StatelessLambda& functor)
 				: FunctionRef{constructor_tag{}, +functor} { }
@@ -151,14 +150,14 @@ namespace gal::prometheus::infrastructure
 			 */
 			template<typename Functor>
 				requires(not compatible_function_pointer<Functor>::template value<Return, Args...>) and
-						(not is_function_ref_v<Functor>) and
-						std::is_invocable_v<Functor, Args...> and
-						(std::is_void_v<Return> or std::is_convertible_v<std::invoke_result_t<Functor, Args...>, Return>)
+				        (not is_function_ref_v<Functor>) and
+				        std::is_invocable_v<Functor, Args...> and
+				        (std::is_void_v<Return> or std::is_convertible_v<std::invoke_result_t<Functor, Args...>, Return>)
 			constexpr explicit(false) FunctionRef(Functor& functor) noexcept
 				: data_{data_type::constructor_tag<functor_pointer>{}, const_cast<functor_pointer>(static_cast<const void*>(&functor))},
-				invoker_{&do_invoke_functor<Functor>} { }
+				  invoker_{&do_invoke_functor<Functor>} { }
 
 			constexpr auto operator()(Args... args) noexcept(noexcept(std::invoke(invoker_, data_, static_cast<Args>(args)...))) { return std::invoke(invoker_, data_, static_cast<Args>(args)...); }
 		};
 	}
-}
+}// namespace gal::prometheus::utility

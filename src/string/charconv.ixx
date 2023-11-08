@@ -7,14 +7,12 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:charconv;
+export module gal.prometheus.string:charconv;
 
 import std;
-import :type_traits;
-import :error.exception;
-import :error.debug;
+import gal.prometheus.error;
 
-export namespace gal::prometheus::infrastructure
+export namespace gal::prometheus::string
 {
 	[[nodiscard]] constexpr auto is_upper(const char c) noexcept -> bool
 	{
@@ -158,7 +156,7 @@ export namespace gal::prometheus::infrastructure
 		return result;
 	}
 
-	// @see infrastructure.string.ixx
+	// @see string.meta_string.ixx
 	// ------------------------------------------------------------
 	// begin
 	// ------------------------------------------------------------
@@ -231,7 +229,7 @@ export namespace gal::prometheus::infrastructure
 	// end
 	// ------------------------------------------------------------
 
-	template<traits::integral T, bool Throw = true>
+	template<std::integral T, bool Throw = true>
 	[[nodiscard]] constexpr auto from_string(const std::basic_string_view<char> string, int base = 10) noexcept(not Throw) -> std::conditional_t<Throw, T, std::optional<T>>
 	{
 		const auto begin = string.data();
@@ -262,7 +260,7 @@ export namespace gal::prometheus::infrastructure
 		return result;
 	}
 
-	template<traits::floating_point T, bool Throw = true>
+	template<std::floating_point T, bool Throw = true>
 	[[nodiscard]] constexpr auto from_string(const std::basic_string_view<char> string) noexcept(not Throw) -> std::conditional_t<Throw, T, std::optional<T>>
 	{
 		const auto begin = string.data();

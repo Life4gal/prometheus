@@ -7,13 +7,13 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:aligned_union;
+export module gal.prometheus.utility:aligned_union;
 
 import std;
 import :concepts;
-import :functor;
+import :functional;
 
-export namespace gal::prometheus::infrastructure
+export namespace gal::prometheus::utility
 {
 	template<typename... Ts>
 		requires(not std::is_reference_v<Ts> && ...)
@@ -24,7 +24,7 @@ export namespace gal::prometheus::infrastructure
 		constexpr static std::size_t max_alignment = functor::max(alignof(Ts)...);
 
 		template<typename T>
-			requires concepts::any_of_t<T, Ts...>
+			requires concepts::any_of<T, Ts...>
 		struct constructor_tag { };
 
 	private:
@@ -37,18 +37,20 @@ export namespace gal::prometheus::infrastructure
 			requires std::is_constructible_v<T, Args...>
 		constexpr explicit AlignedUnion(constructor_tag<T>, Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) { this->template store<T>(std::forward<Args>(args)...); }
 
-		constexpr AlignedUnion(const AlignedUnion&) noexcept((std::is_nothrow_copy_constructible_v<Ts> && ...))
+		constexpr AlignedUnion(const AlignedUnion&) noexcept((std::is_nothrow_copy_constructible_v<Ts> && ...))//
 			requires(std::is_copy_constructible_v<Ts> && ...)
 		= default;
-		constexpr auto operator=(const AlignedUnion&) noexcept((std::is_nothrow_copy_assignable_v<Ts> && ...)) -> AlignedUnion& requires(std::is_copy_assignable_v<Ts> && ...)
+		constexpr auto operator=(const AlignedUnion&) noexcept((std::is_nothrow_copy_assignable_v<Ts> && ...)) -> AlignedUnion&//
+			requires(std::is_copy_assignable_v<Ts> && ...)
 		= default;
 		// constexpr      AlignedUnion(const AlignedUnion&)               = delete;
 		// constexpr auto operator=(const AlignedUnion&) -> AlignedUnion& = delete;
 
-		constexpr AlignedUnion(AlignedUnion&&) noexcept((std::is_nothrow_move_constructible_v<Ts> && ...))
+		constexpr AlignedUnion(AlignedUnion&&) noexcept((std::is_nothrow_move_constructible_v<Ts> && ...))//
 			requires(std::is_move_constructible_v<Ts> && ...)
 		= default;
-		constexpr auto operator=(AlignedUnion&&) noexcept((std::is_nothrow_move_assignable_v<Ts> && ...)) -> AlignedUnion& requires(std::is_move_assignable_v<Ts> && ...)
+		constexpr auto operator=(AlignedUnion&&) noexcept((std::is_nothrow_move_assignable_v<Ts> && ...)) -> AlignedUnion&//
+			requires(std::is_move_assignable_v<Ts> && ...)
 		= default;
 		// constexpr      AlignedUnion(AlignedUnion&&)               = delete;
 		// constexpr auto operator=(AlignedUnion&&) -> AlignedUnion& = delete;
@@ -56,16 +58,16 @@ export namespace gal::prometheus::infrastructure
 		constexpr ~AlignedUnion() noexcept = default;
 
 		template<typename T, typename... Args>
-			requires concepts::any_of_t<T, Ts...> and std::is_constructible_v<T, Args...>
+			requires concepts::any_of<T, Ts...> and std::is_constructible_v<T, Args...>
 		constexpr auto store(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) { std::construct_at(reinterpret_cast<T*>(&data_), std::forward<Args>(args)...); }
 
 		// Note: If the type saved by AlignedUnion has a non-trivial destructor but no destroy is called, leaving AlignedUnion to destruct or calling store (if it already has a value) will be undefined behavior! (maybe memory or resource leak)
 		template<typename T>
-			requires concepts::any_of_t<T, Ts...>
+			requires concepts::any_of<T, Ts...>
 		constexpr auto destroy() noexcept(std::is_nothrow_destructible_v<T>) -> void { std::destroy_at(reinterpret_cast<T*>(&data_)); }
 
 		template<typename New, typename Old, typename... Args>
-			requires concepts::any_of_t<New, Ts...> and concepts::any_of_t<Old, Ts...> and std::is_constructible_v<New, Args...>
+			requires concepts::any_of<New, Ts...> and concepts::any_of<Old, Ts...> and std::is_constructible_v<New, Args...>
 		constexpr auto exchange(Args&&... args) noexcept(std::is_nothrow_constructible_v<New, Args...> and std::is_nothrow_move_constructible_v<Old>) -> Old
 		{
 			auto&& old = std::move(this->template load<Old>());
@@ -74,7 +76,7 @@ export namespace gal::prometheus::infrastructure
 		}
 
 		template<typename New, typename Old, typename... Args>
-			requires concepts::any_of_t<New, Ts...> and concepts::any_of_t<Old, Ts...> and std::is_constructible_v<New, Args...>
+			requires concepts::any_of<New, Ts...> and concepts::any_of<Old, Ts...> and std::is_constructible_v<New, Args...>
 		constexpr auto replace(Args&&... args) noexcept(std::is_nothrow_constructible_v<New, Args...> and std::is_nothrow_destructible_v<Old>) -> void
 		{
 			this->template destroy<Old>();
@@ -82,14 +84,15 @@ export namespace gal::prometheus::infrastructure
 		}
 
 		template<typename T>
-			requires concepts::any_of_t<T, Ts...>
+			requires concepts::any_of<T, Ts...>
 		[[nodiscard]] constexpr auto load() noexcept -> T& { return *std::launder(reinterpret_cast<T*>(data_)); }
 
 		template<typename T>
-			requires concepts::any_of_t<T, Ts...>
+			requires concepts::any_of<T, Ts...>
 		[[nodiscard]] constexpr auto load() const noexcept -> const T& { return *std::launder(reinterpret_cast<const T*>(data_)); }
 
 		// Compare pointers, returns true iff both AlignedUnion store the same pointer.
+		// fixme: remove it?
 		[[nodiscard]] constexpr auto operator==(const AlignedUnion& other) const noexcept -> bool
 		{
 			GAL_PROMETHEUS_DISABLE_WARNING_PUSH
@@ -101,23 +104,23 @@ export namespace gal::prometheus::infrastructure
 		}
 
 		template<typename T>
-			requires concepts::any_of_t<T, Ts...> and std::is_copy_constructible_v<T>
+			requires concepts::any_of<T, Ts...> and std::is_copy_constructible_v<T>
 		[[nodiscard]] constexpr explicit operator T() const noexcept(std::is_nothrow_copy_constructible_v<T>) { return load<T>(); }
 
 		template<typename T>
-			requires concepts::any_of_t<T, Ts...>
+			requires concepts::any_of<T, Ts...>
 		[[nodiscard]] constexpr explicit operator T&() noexcept { return load<T>(); }
 
 		template<typename T>
-			requires concepts::any_of_t<T, Ts...>
+			requires concepts::any_of<T, Ts...>
 		[[nodiscard]] constexpr explicit operator const T&() const noexcept { return load<T>(); }
 
 		template<typename T>
-			requires concepts::any_of_t<T, Ts...>
+			requires concepts::any_of<T, Ts...>
 		[[nodiscard]] constexpr auto equal(const AlignedUnion& other) const noexcept(noexcept(std::declval<const T&>() == std::declval<const T&>())) -> bool { return load<T>() == other.template load<T>(); }
 
 		template<typename T>
-			requires concepts::any_of_t<T, Ts...>
+			requires concepts::any_of<T, Ts...>
 		[[nodiscard]] constexpr auto equal(const T& other) const noexcept(noexcept(std::declval<const T&>() == std::declval<const T&>())) -> bool { return load<T>() == other; }
 	};
 }

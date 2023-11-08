@@ -7,12 +7,12 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:string_pool;
+export module gal.prometheus.container:string_pool;
 
 import std;
-import :error.debug;
+import gal.prometheus.error;
 
-export namespace gal::prometheus::infrastructure
+export namespace gal::prometheus::container
 {
 	template<typename CharType = char, bool IsNullTerminate = true, typename CharTrait = std::char_traits<CharType>>
 	class StringPool
@@ -36,8 +36,8 @@ export namespace gal::prometheus::infrastructure
 		public:
 			constexpr explicit StringBlock(const size_type capacity)
 				: memory_{std::make_unique<value_type[]>(capacity)},
-				capacity_{capacity},
-				size_{0} {}
+				  capacity_{capacity},
+				  size_{0} {}
 
 			[[nodiscard]] constexpr static size_type length_of(const view_type str) noexcept
 			{
@@ -299,8 +299,8 @@ export namespace gal::prometheus::infrastructure
 
 			block_iterator iterator;
 			(((iterator = pool_.insert(pool_.end(), std::make_move_iterator(pools.pool_.begin()), std::make_move_iterator(pools.pool_.end()))),
-			pools.pool_.clear(),
-			std::ranges::inplace_merge(pool_.begin(), iterator, pool_.end(), [](const auto& a, const auto& b) { return not a.more_available_space_than(b); })),
+			  pools.pool_.clear(),
+			  std::ranges::inplace_merge(pool_.begin(), iterator, pool_.end(), [](const auto& a, const auto& b) { return not a.more_available_space_than(b); })),
 				...);
 		}
 
@@ -311,7 +311,7 @@ export namespace gal::prometheus::infrastructure
 
 			block_iterator iterator;
 			(((iterator = pool_.insert(pool_.end(), pools.pool_.begin(), pools.pool_.end())),
-			std::ranges::inplace_merge(pool_.begin(), iterator, pool_.end(), [](const auto& a, const auto& b) { return not a.more_available_space_than(b); })),
+			  std::ranges::inplace_merge(pool_.begin(), iterator, pool_.end(), [](const auto& a, const auto& b) { return not a.more_available_space_than(b); })),
 				...);
 		}
 

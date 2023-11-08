@@ -306,33 +306,53 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/test/test.ixx
 	
 		# =========================
-		# INFRASTRUCTURE
+		# ERROR
 		# =========================
-	
-		${PROJECT_SOURCE_DIR}/src/infrastructure/type_traits.ixx
-	
-		${PROJECT_SOURCE_DIR}/src/infrastructure/error.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/error_debug.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/error_exception.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/error_platform.ixx
-		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/infrastructure/error_impl_win.ixx>
-	
-		${PROJECT_SOURCE_DIR}/src/infrastructure/cast.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/enum_meta.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/functor.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/concepts.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/aligned_union.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/function_ref.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/wildcard_match.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/plane.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/string.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/charconv.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/memory.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/compiler.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/string_pool.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/command_line_parser.ixx
-	
-		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
+
+		${PROJECT_SOURCE_DIR}/src/error/debug.ixx
+		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/error/debug.win.ixx>
+		${PROJECT_SOURCE_DIR}/src/error/platform.ixx
+		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/error/platform.win.ixx>
+		${PROJECT_SOURCE_DIR}/src/error/exception.ixx
+
+		${PROJECT_SOURCE_DIR}/src/error/error.ixx
+
+		# =========================
+		# UTILITY
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/utility/concepts.ixx
+		${PROJECT_SOURCE_DIR}/src/utility/functional.ixx
+		${PROJECT_SOURCE_DIR}/src/utility/aligned_union.ixx
+		${PROJECT_SOURCE_DIR}/src/utility/cast.ixx
+		${PROJECT_SOURCE_DIR}/src/utility/enumeration.ixx
+		${PROJECT_SOURCE_DIR}/src/utility/compiler.ixx
+		${PROJECT_SOURCE_DIR}/src/utility/function_ref.ixx
+		${PROJECT_SOURCE_DIR}/src/utility/memory.ixx
+
+		${PROJECT_SOURCE_DIR}/src/utility/utility.ixx
+
+		# =========================
+		# STRING
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/string/cast.ixx
+		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/string/cast.win.ixx>
+		${PROJECT_SOURCE_DIR}/src/string/charconv.ixx
+		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.ixx
+		${PROJECT_SOURCE_DIR}/src/string/meta_string.ixx
+		${PROJECT_SOURCE_DIR}/src/string/command_line_parser.ixx
+
+		${PROJECT_SOURCE_DIR}/src/string/string.ixx
+
+		# =========================
+		# CONTAINER
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/container/string_pool.ixx
+		${PROJECT_SOURCE_DIR}/src/container/plane.ixx
+
+		${PROJECT_SOURCE_DIR}/src/container/container.ixx
 
 		# =========================
 		# COROUTINE

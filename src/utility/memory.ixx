@@ -7,15 +7,15 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:memory;
+export module gal.prometheus.utility:memory;
 
 import std;
-import :type_traits;
-import :cast;
-import :error.debug;
-import :error.exception;
+import gal.prometheus.error;
 
-namespace gal::prometheus::infrastructure
+import :concepts;
+import :cast;
+
+namespace gal::prometheus::utility
 {
 	export
 	{
@@ -37,7 +37,7 @@ namespace gal::prometheus::infrastructure
 		/**
 		 * @brief Make an unaligned load of an unsigned integer.
 		 */
-		template<traits::arithmetic T, traits::byte_like In>
+		template<concepts::arithmetic T, concepts::byte_like In>
 		[[nodiscard]] constexpr auto unaligned_load(const In* source) noexcept -> T
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(source, "Cannot unaligned_load from null!");
@@ -70,13 +70,13 @@ namespace gal::prometheus::infrastructure
 			return result;
 		}
 
-		template<traits::arithmetic T>
+		template<concepts::arithmetic T>
 		[[nodiscard]] constexpr auto unaligned_load(const void* source) noexcept -> T { return unaligned_load<T>(static_cast<const std::byte*>(source)); }
 
 		/**
 		 * @brief Make an unaligned store of an unsigned integer.
 		 */
-		template<traits::arithmetic T, traits::byte_like In>
+		template<concepts::arithmetic T, concepts::byte_like In>
 		constexpr auto unaligned_store(const T value, In* dest) noexcept -> void
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(dest, "Cannot unaligned_store from null!");
@@ -109,7 +109,7 @@ namespace gal::prometheus::infrastructure
 			}
 		}
 
-		template<traits::arithmetic T>
+		template<concepts::arithmetic T>
 		constexpr auto unaligned_store(const T value, void* dest) noexcept -> void { unaligned_load<T>(value, static_cast<std::byte*>(dest)); }
 
 		/**
@@ -140,4 +140,4 @@ namespace gal::prometheus::infrastructure
 			return GAL_PROMETHEUS_START_LIFETIME_AS(T, reinterpret_cast<const T*>(reinterpret_cast<char*>(pointer) + distance));
 		}
 	}
-}
+}// namespace gal::prometheus::utility

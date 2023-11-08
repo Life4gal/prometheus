@@ -7,43 +7,43 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:plane;
+export module gal.prometheus.container:plane;
 
 import std;
-import :error.debug;
-import :concepts;
+import gal.prometheus.utility;
+import gal.prometheus.error;
 
 // https://en.cppreference.com/w/cpp/language/operator_member_access
 #if __has_cpp_attribute(__cpp_multidimensional_subscript)
 	#define PLANE_SUBSCRIPT_OPERATOR_SUBSCRIPT 1
 #else
-	#define PLANE_SUBSCRIPT_OPERATOR_SUBSCRIPT 0
+#define PLANE_SUBSCRIPT_OPERATOR_SUBSCRIPT 0
 #endif
 
 // https://cplusplus.github.io/LWG/issue3320
 // https://wg21.link/p2278r4
 // https://en.cppreference.com/w/cpp/iterator/basic_const_iterator
 #if GAL_PROMETHEUS_COMPILER_MSVC
-	#if __has_cpp_attribute(__cpp_lib_concepts) and _HAS_CXX23
+#if __has_cpp_attribute(__cpp_lib_concepts) and _HAS_CXX23
 		#define PLANE_PHANTOM_CONST_ITERATOR 1
-	#else
-		#define PLANE_PHANTOM_CONST_ITERATOR 0
-	#endif
 #else
-	#if __has_cpp_attribute(__cpp_lib_ranges_as_const)
+#define PLANE_PHANTOM_CONST_ITERATOR 0
+#endif
+#else
+#if __has_cpp_attribute(__cpp_lib_ranges_as_const)
 		#define PLANE_PHANTOM_CONST_ITERATOR 1
-	#else
+#else
 		#define PLANE_PHANTOM_CONST_ITERATOR 0
-	#endif
+#endif
 #endif
 
-export namespace gal::prometheus::infrastructure
+export namespace gal::prometheus::container
 {
 	// fixme: default allocator?
 	template<typename T>
 	using plane_default_allocator = std::allocator<T>;
 
-	template<typename T, concepts::allocator_t Allocator = plane_default_allocator<T>>
+	template<typename T, utility::concepts::allocator Allocator = plane_default_allocator<T>>
 	class Plane;
 	template<typename T>
 	class PlaneView;
@@ -97,7 +97,7 @@ export namespace gal::prometheus::infrastructure
 		public:
 			constexpr Iterator(std::reference_wrapper<plane_type> plane, const size_type current_row) noexcept
 				: plane_{plane},
-				current_row_{current_row} { }
+				  current_row_{current_row} { }
 
 			constexpr auto operator++() noexcept -> Iterator&
 			{
@@ -211,9 +211,9 @@ export namespace gal::prometheus::infrastructure
 	public:
 		constexpr PlaneView() noexcept
 			: data_{nullptr},
-			width_{0},
-			height_{0},
-			stride_{0} {}
+			  width_{0},
+			  height_{0},
+			  stride_{0} {}
 
 		constexpr PlaneView(
 				pointer         data,
@@ -222,9 +222,9 @@ export namespace gal::prometheus::infrastructure
 				const size_type stride)
 			noexcept
 			: data_{data},
-			width_{width},
-			height_{height},
-			stride_{stride} {}
+			  width_{width},
+			  height_{height},
+			  stride_{stride} {}
 
 		constexpr PlaneView(
 				pointer         data,
@@ -288,8 +288,7 @@ export namespace gal::prometheus::infrastructure
 		#if PLANE_SUBSCRIPT_OPERATOR_SUBSCRIPT
 			[[nodiscard]] constexpr auto operator[](const size_type x, const size_type y) noexcept -> reference
 		#else
-		[[nodiscard]] constexpr auto operator()(const size_type x,
-												const size_type y) noexcept -> reference
+		[[nodiscard]] constexpr auto operator()(const size_type x, const size_type y) noexcept -> reference
 			#endif
 		{
 			GAL_PROMETHEUS_DEBUG_ASSUME(x < width_);
@@ -301,8 +300,7 @@ export namespace gal::prometheus::infrastructure
 		#if PLANE_SUBSCRIPT_OPERATOR_SUBSCRIPT
 			[[nodiscard]] constexpr auto operator[](const size_type x, const size_type y) const noexcept -> const_reference
 		#else
-		[[nodiscard]] constexpr auto operator()(const size_type x,
-												const size_type y) const noexcept -> const_reference
+		[[nodiscard]] constexpr auto operator()(const size_type x, const size_type y) const noexcept -> const_reference
 			#endif
 		{
 			GAL_PROMETHEUS_DEBUG_ASSUME(x < width_);
@@ -367,7 +365,8 @@ export namespace gal::prometheus::infrastructure
 	PlaneView(
 			T*                      data,
 			S                       width,
-			std::type_identity_t<S> height) -> PlaneView<T>;
+			std::type_identity_t<S> height//
+			) -> PlaneView<T>;
 
 	template<typename T, typename S>
 		requires std::is_convertible_v<S, typename PlaneView<T>::size_type>
@@ -376,7 +375,8 @@ export namespace gal::prometheus::infrastructure
 			T*                      data,
 			S                       width,
 			std::type_identity_t<S> height,
-			std::type_identity_t<S> stride) -> PlaneView<T>;
+			std::type_identity_t<S> stride//
+			) -> PlaneView<T>;
 
 	template<typename T, typename Allocator>
 	// ReSharper disable once CppInconsistentNaming
@@ -386,7 +386,7 @@ export namespace gal::prometheus::infrastructure
 	// ReSharper disable once CppInconsistentNaming
 	PlaneView(Plane<T, Allocator>& plane) -> PlaneView<T>;
 
-	template<typename T, concepts::allocator_t Allocator>
+	template<typename T, utility::concepts::allocator Allocator>
 	class Plane
 	{
 	public:
@@ -428,10 +428,10 @@ export namespace gal::prometheus::infrastructure
 	public:
 		constexpr Plane(const Plane& other) noexcept(false)
 			: data_{nullptr},
-			width_{other.width()},
-			height_{other.height()},
-			capacity_{other.size()},
-			allocator_{allocator_traits_type::select_on_container_copy_construction(other.allocator_)}
+			  width_{other.width()},
+			  height_{other.height()},
+			  capacity_{other.size()},
+			  allocator_{allocator_traits_type::select_on_container_copy_construction(other.allocator_)}
 		{
 			data_ = allocator_traits_type::allocate(allocator_, capacity_);
 			std::ranges::uninitialized_copy(other, *this);
@@ -490,10 +490,10 @@ export namespace gal::prometheus::infrastructure
 
 		constexpr Plane(Plane&& other) noexcept
 			: data_{std::exchange(other.data_, nullptr)},
-			width_{std::exchange(other.width_, 0)},
-			height_{std::exchange(other.height_, 0)},
-			capacity_{std::exchange(other.capacity_, 0)},
-			allocator_{std::exchange(other.allocator_, allocator_type{})} {}
+			  width_{std::exchange(other.width_, 0)},
+			  height_{std::exchange(other.height_, 0)},
+			  capacity_{std::exchange(other.capacity_, 0)},
+			  allocator_{std::exchange(other.allocator_, allocator_type{})} {}
 
 		constexpr auto operator=(Plane&& other) noexcept(false) -> Plane&
 		{
@@ -571,20 +571,20 @@ export namespace gal::prometheus::infrastructure
 
 		constexpr Plane() noexcept
 			: data_{nullptr},
-			width_{0},
-			height_{0},
-			capacity_{0},
-			allocator_{} {}
+			  width_{0},
+			  height_{0},
+			  capacity_{0},
+			  allocator_{} {}
 
 		constexpr Plane(
 				const size_type width,
 				const size_type height,
 				allocator_type  allocator = allocator_type{}) noexcept(false)
 			: data_{allocator_traits_type::allocate(allocator, width * height)},
-			width_{width},
-			height_{height},
-			capacity_{width * height},
-			allocator_{allocator} { std::ranges::uninitialized_value_construct(*this); }
+			  width_{width},
+			  height_{height},
+			  capacity_{width * height},
+			  allocator_{allocator} { std::ranges::uninitialized_value_construct(*this); }
 
 		template<std::convertible_to<value_type> U>
 		constexpr Plane(
@@ -594,10 +594,10 @@ export namespace gal::prometheus::infrastructure
 				const size_type stride,
 				allocator_type  allocator = allocator_type{}) noexcept(false)
 			: data_{allocator_traits_type::allocate(allocator, width * height)},
-			width_{width},
-			height_{height},
-			capacity_{width * height},
-			allocator_{allocator}
+			  width_{width},
+			  height_{height},
+			  capacity_{width * height},
+			  allocator_{allocator}
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(source);
 
@@ -708,8 +708,7 @@ export namespace gal::prometheus::infrastructure
 		#if PLANE_SUBSCRIPT_OPERATOR_SUBSCRIPT
 			[[nodiscard]] constexpr auto operator[](const size_type x, const size_type y) noexcept -> reference
 		#else
-		[[nodiscard]] constexpr auto operator()(const size_type x,
-												const size_type y) noexcept -> reference
+		[[nodiscard]] constexpr auto operator()(const size_type x, const size_type y) noexcept -> reference
 			#endif
 		{
 			GAL_PROMETHEUS_DEBUG_ASSUME(x < width_);
@@ -721,8 +720,7 @@ export namespace gal::prometheus::infrastructure
 		#if PLANE_SUBSCRIPT_OPERATOR_SUBSCRIPT
 			[[nodiscard]] constexpr auto operator[](const size_type x, const size_type y) const noexcept -> const_reference
 		#else
-		[[nodiscard]] constexpr auto operator()(const size_type x,
-												const size_type y) const noexcept -> const_reference
+		[[nodiscard]] constexpr auto operator()(const size_type x, const size_type y) const noexcept -> const_reference
 			#endif
 		{
 			GAL_PROMETHEUS_DEBUG_ASSUME(x < width_);
@@ -808,7 +806,7 @@ export namespace gal::prometheus::infrastructure
 			S                       width,
 			std::type_identity_t<S> height,
 			std::type_identity_t<S> stride,
-			Allocator               allocator = Allocator{}
+			Allocator               allocator = Allocator{}//
 			) -> Plane<T, Allocator>;
 
 	template<typename T, typename S, typename Allocator = plane_default_allocator<T>>
@@ -819,7 +817,7 @@ export namespace gal::prometheus::infrastructure
 			S                       width,
 			std::type_identity_t<S> height,
 			std::type_identity_t<S> stride,
-			Allocator               allocator = Allocator{}
+			Allocator               allocator = Allocator{}//
 			) -> Plane<T, Allocator>;
 
 	template<typename T, typename S, typename Allocator = plane_default_allocator<T>>
@@ -829,7 +827,7 @@ export namespace gal::prometheus::infrastructure
 			T*                      data,
 			S                       width,
 			std::type_identity_t<S> height,
-			Allocator               allocator = Allocator{}
+			Allocator               allocator = Allocator{}//
 			) -> Plane<T, Allocator>;
 
 	template<typename T, typename S, typename Allocator = plane_default_allocator<T>>
@@ -839,13 +837,14 @@ export namespace gal::prometheus::infrastructure
 			const T*                data,
 			S                       width,
 			std::type_identity_t<S> height,
-			Allocator               allocator = Allocator{}
+			Allocator               allocator = Allocator{}//
 			) -> Plane<T, Allocator>;
 
 	template<typename T, typename Allocator = plane_default_allocator<T>>
 		requires std::is_same_v<Allocator, typename Plane<std::remove_const_t<T>, Allocator>::allocator_type>
 	// ReSharper disable once CppInconsistentNaming
-	Plane(PlaneView<T> source,
-	      Allocator    allocator = Allocator{}
+	Plane(
+			PlaneView<T> source,
+			Allocator    allocator = Allocator{}//
 			) -> Plane<std::remove_const_t<T>, Allocator>;
 }

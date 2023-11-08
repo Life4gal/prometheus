@@ -7,15 +7,13 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:compiler;
+export module gal.prometheus.utility:compiler;
 
 import std;
 
-export namespace gal::prometheus::infrastructure::compiler {}
-
 struct dummy_struct_do_not_put_into_any_namespace {};
 
-namespace gal::prometheus::infrastructure::compiler
+namespace gal::prometheus::utility::compiler
 {
 	template<typename T>
 	[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view

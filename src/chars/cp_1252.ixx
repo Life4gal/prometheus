@@ -10,7 +10,7 @@ module;
 export module gal.prometheus.chars:cp_1252;
 
 import std;
-import gal.prometheus.infrastructure;
+import gal.prometheus.utility;
 
 import :converter;
 import :category;
@@ -27,7 +27,7 @@ namespace gal::prometheus::chars
 		std::ranges::generate_n(
 				data.begin(),
 				0x80,
-				[i = 0]() mutable noexcept -> std::uint8_t { return infrastructure::char_cast<std::uint8_t>(i++); });
+				[i = 0]() mutable noexcept -> std::uint8_t { return utility::char_cast<std::uint8_t>(i++); });
 
 		data[0x81] = 0x81;
 		data[0x8d] = 0x8d;
@@ -38,7 +38,7 @@ namespace gal::prometheus::chars
 		std::ranges::generate_n(
 				data.begin() + 0xa0,
 				0x100 - 0xa0,
-				[i = 0xa0]() mutable noexcept -> std::uint8_t { return infrastructure::char_cast<std::uint8_t>(i++); });
+				[i = 0xa0]() mutable noexcept -> std::uint8_t { return utility::char_cast<std::uint8_t>(i++); });
 
 		data[0x192] = 0x83;
 		data[0x2c6] = 0x88;
@@ -109,7 +109,7 @@ namespace gal::prometheus::chars
 				const auto result = [begin]() noexcept -> std::pair<code_point_type, bool>
 				{
 					// https://en.wikipedia.org/wiki/Windows-1252#Codepage_layout
-					switch (const auto code_point = infrastructure::char_cast<code_point_type>(*begin))
+					switch (const auto code_point = utility::char_cast<code_point_type>(*begin))
 					{
 						case 0x80: { return {0x20ac, true}; }
 						case 0x81: { return {0x81, true}; }
@@ -158,10 +158,10 @@ namespace gal::prometheus::chars
 				GAL_PROMETHEUS_DEBUG_ASSUME(code_point < 0x11'0000);
 				GAL_PROMETHEUS_DEBUG_ASSUME(not(code_point >= 0xd800 and code_point < 0xe000));
 
-				if (code_point < 0x2dd) { *dest = infrastructure::char_cast<value_type>(cp_1252_database_0000_02dc[code_point]); }
-				else if (code_point < 0x2000) { *dest = infrastructure::char_cast<value_type>(char_placeholder); }
-				else if (code_point < 0x2123) { *dest = infrastructure::char_cast<value_type>(cp_1252_database_2000_2122[code_point - 0x2000]); }
-				else { *dest = infrastructure::char_cast<value_type>(char_placeholder); }
+				if (code_point < 0x2dd) { *dest = utility::char_cast<value_type>(cp_1252_database_0000_02dc[code_point]); }
+				else if (code_point < 0x2000) { *dest = utility::char_cast<value_type>(char_placeholder); }
+				else if (code_point < 0x2123) { *dest = utility::char_cast<value_type>(cp_1252_database_2000_2122[code_point - 0x2000]); }
+				else { *dest = utility::char_cast<value_type>(char_placeholder); }
 
 				std::ranges::advance(dest, 1);
 			}
@@ -175,15 +175,15 @@ namespace gal::prometheus::chars
 
 				if (code_point < 0x2dd)
 				{
-					if (code_point == char_placeholder) { return {infrastructure::narrow_cast<std::uint8_t>(1), true}; }
-					return {infrastructure::narrow_cast<std::uint8_t>(1), cp_1252_database_0000_02dc[code_point] != char_placeholder};
+					if (code_point == char_placeholder) { return {utility::narrow_cast<std::uint8_t>(1), true}; }
+					return {utility::narrow_cast<std::uint8_t>(1), cp_1252_database_0000_02dc[code_point] != char_placeholder};
 				}
 
-				if (code_point < 0x2000) { return {infrastructure::narrow_cast<std::uint8_t>(1), false}; }
+				if (code_point < 0x2000) { return {utility::narrow_cast<std::uint8_t>(1), false}; }
 
-				if (code_point < 0x2123) { return {infrastructure::narrow_cast<std::uint8_t>(1), cp_1252_database_2000_2122[infrastructure::wide_cast<std::size_t>(code_point) - 0x2000] != char_placeholder}; }
+				if (code_point < 0x2123) { return {utility::narrow_cast<std::uint8_t>(1), cp_1252_database_2000_2122[utility::wide_cast<std::size_t>(code_point) - 0x2000] != char_placeholder}; }
 
-				return {infrastructure::narrow_cast<std::uint8_t>(1), false};
+				return {utility::narrow_cast<std::uint8_t>(1), false};
 			}
 		};
 	}

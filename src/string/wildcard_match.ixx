@@ -7,12 +7,12 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:wildcard_match;
+export module gal.prometheus.string:wildcard_match;
 
 import std;
-import :error.exception;
+import gal.prometheus.error;
 
-export namespace gal::prometheus::infrastructure
+export namespace gal::prometheus::string
 {
 	// https://en.cppreference.com/w/cpp/language/string_literal
 	/**
@@ -63,36 +63,6 @@ export namespace gal::prometheus::infrastructure
 		value_type alt_open{'('};
 		value_type alt_close{')'};
 		value_type alt_or{'|'};
-
-		constexpr wildcard_type() noexcept = default;
-
-		constexpr wildcard_type(
-				const value_type in_anything,
-				const value_type in_single,
-				const value_type in_escape) noexcept
-			: anything{in_anything},
-			single{in_single},
-			escape{in_escape} {}
-
-		constexpr wildcard_type(
-				const value_type in_anything,
-				const value_type in_single,
-				const value_type in_escape,
-				const value_type in_set_open,
-				const value_type in_set_close,
-				const value_type in_set_not,
-				const value_type in_alt_open,
-				const value_type in_alt_close,
-				const value_type in_alt_or) noexcept
-			: anything{in_anything},
-			single{in_single},
-			escape{in_escape},
-			set_open{in_set_open},
-			set_close{in_set_close},
-			set_not{in_set_not},
-			alt_open{in_alt_open},
-			alt_close{in_alt_close},
-			alt_or{in_alt_or} {}
 	};
 
 	template<>
@@ -117,36 +87,6 @@ export namespace gal::prometheus::infrastructure
 		value_type alt_open{L'('};
 		value_type alt_close{L')'};
 		value_type alt_or{L'|'};
-
-		constexpr wildcard_type() noexcept = default;
-
-		constexpr wildcard_type(
-				const value_type in_anything,
-				const value_type in_single,
-				const value_type in_escape) noexcept
-			: anything{in_anything},
-			single{in_single},
-			escape{in_escape} {}
-
-		constexpr wildcard_type(
-				const value_type in_anything,
-				const value_type in_single,
-				const value_type in_escape,
-				const value_type in_set_open,
-				const value_type in_set_close,
-				const value_type in_set_not,
-				const value_type in_alt_open,
-				const value_type in_alt_close,
-				const value_type in_alt_or) noexcept
-			: anything{in_anything},
-			single{in_single},
-			escape{in_escape},
-			set_open{in_set_open},
-			set_close{in_set_close},
-			set_not{in_set_not},
-			alt_open{in_alt_open},
-			alt_close{in_alt_close},
-			alt_or{in_alt_or} {}
 	};
 
 	template<>
@@ -171,36 +111,6 @@ export namespace gal::prometheus::infrastructure
 		value_type alt_open{u8'('};
 		value_type alt_close{u8')'};
 		value_type alt_or{u8'|'};
-
-		constexpr wildcard_type() noexcept = default;
-
-		constexpr wildcard_type(
-				const value_type in_anything,
-				const value_type in_single,
-				const value_type in_escape) noexcept
-			: anything{in_anything},
-			single{in_single},
-			escape{in_escape} {}
-
-		constexpr wildcard_type(
-				const value_type in_anything,
-				const value_type in_single,
-				const value_type in_escape,
-				const value_type in_set_open,
-				const value_type in_set_close,
-				const value_type in_set_not,
-				const value_type in_alt_open,
-				const value_type in_alt_close,
-				const value_type in_alt_or) noexcept
-			: anything{in_anything},
-			single{in_single},
-			escape{in_escape},
-			set_open{in_set_open},
-			set_close{in_set_close},
-			set_not{in_set_not},
-			alt_open{in_alt_open},
-			alt_close{in_alt_close},
-			alt_or{in_alt_or} {}
 	};
 
 	template<>
@@ -225,36 +135,6 @@ export namespace gal::prometheus::infrastructure
 		value_type alt_open{u'('};
 		value_type alt_close{u')'};
 		value_type alt_or{u'|'};
-
-		constexpr wildcard_type() noexcept = default;
-
-		constexpr wildcard_type(
-				const value_type in_anything,
-				const value_type in_single,
-				const value_type in_escape) noexcept
-			: anything{in_anything},
-			single{in_single},
-			escape{in_escape} {}
-
-		constexpr wildcard_type(
-				const value_type in_anything,
-				const value_type in_single,
-				const value_type in_escape,
-				const value_type in_set_open,
-				const value_type in_set_close,
-				const value_type in_set_not,
-				const value_type in_alt_open,
-				const value_type in_alt_close,
-				const value_type in_alt_or) noexcept
-			: anything{in_anything},
-			single{in_single},
-			escape{in_escape},
-			set_open{in_set_open},
-			set_close{in_set_close},
-			set_not{in_set_not},
-			alt_open{in_alt_open},
-			alt_close{in_alt_close},
-			alt_or{in_alt_or} {}
 	};
 
 	template<>
@@ -279,36 +159,6 @@ export namespace gal::prometheus::infrastructure
 		value_type alt_open{U'('};
 		value_type alt_close{U')'};
 		value_type alt_or{U'|'};
-
-		constexpr wildcard_type() noexcept = default;
-
-		constexpr wildcard_type(
-				const value_type in_anything,
-				const value_type in_single,
-				const value_type in_escape) noexcept
-			: anything{in_anything},
-			single{in_single},
-			escape{in_escape} {}
-
-		constexpr wildcard_type(
-				const value_type in_anything,
-				const value_type in_single,
-				const value_type in_escape,
-				const value_type in_set_open,
-				const value_type in_set_close,
-				const value_type in_set_not,
-				const value_type in_alt_open,
-				const value_type in_alt_close,
-				const value_type in_alt_or) noexcept
-			: anything{in_anything},
-			single{in_single},
-			escape{in_escape},
-			set_open{in_set_open},
-			set_close{in_set_close},
-			set_not{in_set_not},
-			alt_open{in_alt_open},
-			alt_close{in_alt_close},
-			alt_or{in_alt_or} {}
 	};
 
 	namespace wildcard_match_detail
@@ -347,7 +197,8 @@ export namespace gal::prometheus::infrastructure
 				SequenceIterator                                sequence_end,
 				PatternIterator                                 pattern_begin,
 				PatternIterator                                 pattern_end,
-				match_result<SequenceIterator, PatternIterator> match_result) noexcept -> full_match_result<SequenceIterator, PatternIterator>
+				match_result<SequenceIterator, PatternIterator> match_result//
+				) noexcept -> full_match_result<SequenceIterator, PatternIterator>
 		{
 			return {
 					.result = match_result.result,
@@ -363,7 +214,8 @@ export namespace gal::prometheus::infrastructure
 		constexpr auto make_match_result(
 				bool             result,
 				SequenceIterator sequence,
-				PatternIterator  pattern) noexcept -> match_result<SequenceIterator, PatternIterator>
+				PatternIterator  pattern//
+				) noexcept -> match_result<SequenceIterator, PatternIterator>
 		{
 			return {
 					.result = result,
@@ -378,8 +230,8 @@ export namespace gal::prometheus::infrastructure
 		constexpr auto just_throw_it(const char* message, T t = T{}) -> T
 		{
 			return message == nullptr
-						? t
-						: throw InvalidArgumentError(message);
+				       ? t
+				       : throw error::InvalidArgumentError(message);
 		}
 
 		enum class CheckSetState
@@ -426,7 +278,8 @@ export namespace gal::prometheus::infrastructure
 				PatternIterator                                                                  begin,
 				PatternIterator                                                                  end,
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
-				CheckSetState                                                                    state    = CheckSetState::OPEN) -> PatternIterator
+				CheckSetState                                                                    state    = CheckSetState::OPEN//
+				) -> PatternIterator
 		{
 			auto rollback = begin;
 			while (begin not_eq end)
@@ -514,7 +367,8 @@ export namespace gal::prometheus::infrastructure
 				PatternIterator                                                                  pattern_end,
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard   = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
 				const Comparator&                                                                comparator = Comparator{},
-				MatchSetState                                                                    state      = MatchSetState::OPEN) -> match_result<SequenceIterator, PatternIterator>
+				MatchSetState                                                                    state      = MatchSetState::OPEN//
+				) -> match_result<SequenceIterator, PatternIterator>
 		{
 			while (pattern_begin not_eq pattern_end)
 			{
@@ -676,7 +530,8 @@ export namespace gal::prometheus::infrastructure
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
 				CheckAltState                                                                    state    = CheckAltState::OPEN,
 				std::size_t                                                                      depth    = 0,
-				bool                                                                             is_sub   = false) -> PatternIterator
+				bool                                                                             is_sub   = false//
+				) -> PatternIterator
 		{
 			auto rollback = begin;
 			while (begin not_eq end)
@@ -774,7 +629,8 @@ export namespace gal::prometheus::infrastructure
 		constexpr auto check_sub_alt_exist(
 				PatternIterator                                                                  begin,
 				PatternIterator                                                                  end,
-				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{}) -> PatternIterator { return check_alt_exist<true>(begin, end, wildcard, CheckAltState::NEXT, 1, true); }
+				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{}//
+				) -> PatternIterator { return check_alt_exist<true>(begin, end, wildcard, CheckAltState::NEXT, 1, true); }
 
 		/**
 		* @brief determine whether the target sequence can match the pattern
@@ -800,7 +656,8 @@ export namespace gal::prometheus::infrastructure
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard   = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
 				const Comparator&                                                                comparator = Comparator{},
 				bool                                                                             partial    = false,
-				bool                                                                             escape     = false) -> match_result<SequenceIterator, PatternIterator>;
+				bool                                                                             escape     = false//
+				) -> match_result<SequenceIterator, PatternIterator>;
 
 		/**
 		* @brief determine whether the target sequence can match the pattern of the two parts
@@ -828,7 +685,8 @@ export namespace gal::prometheus::infrastructure
 				PatternIterator                                                                  pattern2_end,
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard   = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
 				const Comparator&                                                                comparator = Comparator{},
-				bool                                                                             partial    = false) -> match_result<SequenceIterator, PatternIterator>
+				bool                                                                             partial    = false//
+				) -> match_result<SequenceIterator, PatternIterator>
 		{
 			// is the target sequence partial matches pattern1
 			if (auto result1 = match(
@@ -886,7 +744,8 @@ export namespace gal::prometheus::infrastructure
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard,
 				const Comparator&                                                                comparator,
 				bool                                                                             partial,
-				const bool                                                                       escape) -> match_result<SequenceIterator, PatternIterator>
+				const bool                                                                       escape//
+				) -> match_result<SequenceIterator, PatternIterator>
 		{
 			// not a valid pattern
 			if (pattern_begin == pattern_end)
@@ -1087,8 +946,8 @@ export namespace gal::prometheus::infrastructure
 			PatternIterator                                                                       pattern_begin,
 			PatternIterator                                                                       pattern_end,
 			const wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>& wildcard   = wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>{},
-			const Comparator&                                                                     comparator = Comparator{})
-		-> wildcard_match_detail::full_match_result<SequenceIterator, PatternIterator>
+			const Comparator&                                                                     comparator = Comparator{}//
+			) -> wildcard_match_detail::full_match_result<SequenceIterator, PatternIterator>
 	{
 		return wildcard_match_detail::make_full_match_result(
 				sequence_begin,
@@ -1111,8 +970,8 @@ export namespace gal::prometheus::infrastructure
 			PatternIterator                                                                       pattern_begin,
 			PatternIterator                                                                       pattern_end,
 			const wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>& wildcard   = wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>{},
-			const Comparator&                                                                     comparator = Comparator{})
-		-> wildcard_match_detail::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), PatternIterator>
+			const Comparator&                                                                     comparator = Comparator{}//
+			) -> wildcard_match_detail::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), PatternIterator>
 	{
 		return match(
 				std::cbegin(std::forward<Sequence>(sequence)),
@@ -1130,8 +989,8 @@ export namespace gal::prometheus::infrastructure
 			SequenceIterator                                          sequence_end,
 			Pattern&&                                                 pattern,
 			const wildcard_type<std::ranges::range_value_t<Pattern>>& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{},
-			const Comparator&                                         comparator = Comparator{})
-		-> wildcard_match_detail::full_match_result<SequenceIterator, decltype(std::ranges::cbegin(std::declval<const Pattern&>()))>
+			const Comparator&                                         comparator = Comparator{}//
+			) -> wildcard_match_detail::full_match_result<SequenceIterator, decltype(std::ranges::cbegin(std::declval<const Pattern&>()))>
 	{
 		return match(
 				sequence_begin,
@@ -1148,8 +1007,8 @@ export namespace gal::prometheus::infrastructure
 			Sequence&&                                                sequence,
 			Pattern&&                                                 pattern,
 			const wildcard_type<std::ranges::range_value_t<Pattern>>& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{},
-			const Comparator&                                         comparator = Comparator{})
-		-> wildcard_match_detail::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), decltype(std::ranges::cbegin(std::declval<const Pattern&>()))>
+			const Comparator&                                         comparator = Comparator{}//
+			) -> wildcard_match_detail::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), decltype(std::ranges::cbegin(std::declval<const Pattern&>()))>
 	{
 		return match(
 				std::cbegin(std::forward<Sequence>(sequence)),
@@ -1186,9 +1045,9 @@ export namespace gal::prometheus::infrastructure
 				wildcard&&          w = wildcard{},
 				comparator          c = comparator{})
 			: borrow_pattern_begin_{std::ranges::cbegin(pattern)},
-			borrow_pattern_end_{std::ranges::cend(pattern)},
-			current_wildcard_{std::forward<wildcard>(w)},
-			current_comparator_{c} {}
+			  borrow_pattern_end_{std::ranges::cend(pattern)},
+			  current_wildcard_{std::forward<wildcard>(w)},
+			  current_comparator_{c} {}
 
 		constexpr auto replace(wildcard&& new_wildcard) noexcept -> Comparator&
 		{
@@ -1208,7 +1067,8 @@ export namespace gal::prometheus::infrastructure
 		constexpr auto
 		operator()(
 				SequenceIterator sequence_begin,
-				SequenceIterator sequence_end) const -> wildcard_match_detail::full_match_result<SequenceIterator, const_iterator>
+				SequenceIterator sequence_end//
+				) const -> wildcard_match_detail::full_match_result<SequenceIterator, const_iterator>
 		{
 			return match(
 					sequence_begin,
