@@ -2,13 +2,13 @@
 
 import std;
 import gal.prometheus.test;
-import gal.prometheus.infrastructure;
+import gal.prometheus.string;
 
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace infrastructure;
-	using namespace infrastructure::literals;
+	using namespace string;
+	using namespace string::literals;
 
 	struct point
 	{
@@ -30,7 +30,7 @@ namespace
 }
 
 template<>
-struct infrastructure::wildcard_type<point>
+struct string::wildcard_type<point>
 {
 	using value_type = point;
 
@@ -51,7 +51,7 @@ struct infrastructure::wildcard_type<point>
 
 namespace
 {
-	GAL_PROMETHEUS_NO_DESTROY test::suite<"infrastructure.wildcard_match"> _ = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"string.wildcard_match"> _ = []
 	{
 		using namespace test;
 

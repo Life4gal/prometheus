@@ -2,15 +2,15 @@
 
 import std;
 import gal.prometheus.test;
-import gal.prometheus.infrastructure;
+import gal.prometheus.string;
 
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace infrastructure;
+	using namespace string;
 	using namespace std::string_view_literals;
 
-	GAL_PROMETHEUS_NO_DESTROY test::suite<"infrastructure.char_array"> _ = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"string.meta_string"> _ = []
 	{
 		using namespace test;
 

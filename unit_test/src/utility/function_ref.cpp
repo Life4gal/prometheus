@@ -2,14 +2,14 @@
 
 import std;
 import gal.prometheus.test;
-import gal.prometheus.infrastructure;
+import gal.prometheus.utility;
 
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace infrastructure;
+	using namespace utility;
 
-	GAL_PROMETHEUS_NO_DESTROY test::suite<"infrastructure.function_ref"> _ = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"utility.function_ref"> _ = []
 	{
 		using namespace test;
 

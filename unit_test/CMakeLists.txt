@@ -9,16 +9,26 @@ add_executable(
 		${PROJECT_SOURCE_DIR}/src/main.cpp
 
 		# =================================
-		# INFRASTRUCTURE
+		# UTILITY
 		# =================================
 
-		${PROJECT_SOURCE_DIR}/src/infrastructure/cast.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/enum_meta.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/aligned_union.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/function_ref.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/wildcard_match.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/plane.cpp
-		${PROJECT_SOURCE_DIR}/src/infrastructure/string.cpp
+		${PROJECT_SOURCE_DIR}/src/utility/cast.cpp
+		${PROJECT_SOURCE_DIR}/src/utility/enum_meta.cpp
+		${PROJECT_SOURCE_DIR}/src/utility/aligned_union.cpp
+		${PROJECT_SOURCE_DIR}/src/utility/function_ref.cpp
+
+		# =================================
+		# STRING
+		# =================================
+
+		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.cpp
+		${PROJECT_SOURCE_DIR}/src/string/meta_string.cpp
+
+		# =================================
+		# CONTAINER
+		# =================================
+
+		${PROJECT_SOURCE_DIR}/src/container/plane.cpp
 
 		# =================================
 		# COROUTINE

@@ -3,7 +3,6 @@
 import std;
 import gal.prometheus.test;
 import gal.prometheus.i18n;
-import gal.prometheus.infrastructure;
 
 namespace
 {

@@ -2,7 +2,7 @@
 
 import std;
 import gal.prometheus.test;
-import gal.prometheus.infrastructure;
+import gal.prometheus.utility;
 import gal.prometheus.chars;
 
 GAL_PROMETHEUS_DISABLE_WARNING_PUSH
@@ -23,28 +23,28 @@ namespace
 		static std::uniform_int_distribution full_dist{0x010'000, 0x10f'fff};
 
 		const auto s = size_dist(rand);
-		if (s < 90) { return infrastructure::char_cast<char32_t>(ascii_dist(rand)); }
+		if (s < 90) { return utility::char_cast<char32_t>(ascii_dist(rand)); }
 
-		if (s < 95) { return infrastructure::char_cast<char32_t>(latin_dist(rand)); }
+		if (s < 95) { return utility::char_cast<char32_t>(latin_dist(rand)); }
 
 		if (s < 98)
 		{
-			auto c = infrastructure::char_cast<char32_t>(basic_dist(rand));
+			auto c = utility::char_cast<char32_t>(basic_dist(rand));
 			if (c >= 0xd800 and c < 0xe000) { c += 0x800; }
 			return c;
 		}
 
-		return infrastructure::char_cast<char32_t>(full_dist(rand));
+		return utility::char_cast<char32_t>(full_dist(rand));
 	}
 
 	auto generate_string(const char32_t code_point, std::u16string& string) noexcept -> void
 	{
-		if (code_point < 0x01'0000) { string += infrastructure::char_cast<char16_t>(code_point); }
+		if (code_point < 0x01'0000) { string += utility::char_cast<char16_t>(code_point); }
 		else
 		{
 			const auto cp = code_point - 0x01'0000;
-			string += infrastructure::char_cast<char16_t>(0xd800 + (cp >> 10));
-			string += infrastructure::char_cast<char16_t>(0xdc00 + (cp & 0x03ff));
+			string += utility::char_cast<char16_t>(0xd800 + (cp >> 10));
+			string += utility::char_cast<char16_t>(0xdc00 + (cp & 0x03ff));
 		}
 	}
 

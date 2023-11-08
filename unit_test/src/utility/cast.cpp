@@ -2,12 +2,12 @@
 
 import std;
 import gal.prometheus.test;
-import gal.prometheus.infrastructure;
+import gal.prometheus.utility;
 
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace infrastructure;
+	using namespace utility;
 
 	class Foo
 	{
@@ -35,7 +35,7 @@ namespace
 		#endif
 	};
 
-	GAL_PROMETHEUS_NO_DESTROY test::suite<"infrastructure.cast"> _ = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"utility.cast"> _ = []
 	{
 		using namespace test;
 

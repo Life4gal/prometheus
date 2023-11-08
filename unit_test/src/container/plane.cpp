@@ -2,7 +2,7 @@
 
 import std;
 import gal.prometheus.test;
-import gal.prometheus.infrastructure;
+import gal.prometheus.container;
 
 #if __has_cpp_attribute(__cpp_multidimensional_subscript)
 	#define PLANE_SUBSCRIPT_OPERATOR_SUBSCRIPT 1
@@ -13,7 +13,7 @@ import gal.prometheus.infrastructure;
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace infrastructure;
+	using namespace container;
 
 	using plane_type = Plane<std::uint8_t>;
 	using plane_view_type = PlaneView<std::uint8_t>;
@@ -36,7 +36,7 @@ namespace
 		return result;
 	}
 
-	GAL_PROMETHEUS_NO_DESTROY test::suite<"infrastructure.plane_view"> _1 = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"container.plane_view"> _1 = []
 	{
 		using namespace test;
 
@@ -194,7 +194,7 @@ namespace
 		};
 	};
 
-	GAL_PROMETHEUS_NO_DESTROY test::suite<"infrastructure.plane"> _2 = []
+	GAL_PROMETHEUS_NO_DESTROY test::suite<"container.plane"> _2 = []
 	{
 		using namespace test;
 

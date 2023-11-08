@@ -2,7 +2,7 @@
 
 import std;
 import gal.prometheus.test;
-import gal.prometheus.infrastructure;
+import gal.prometheus.utility;
 import gal.prometheus.chars;
 
 namespace
@@ -18,7 +18,7 @@ namespace
 		{
 			std::string identity{};
 			identity.reserve(128);
-			for (int i = 0; i < 128; ++i) { identity.push_back(infrastructure::char_cast<char>(i)); }
+			for (int i = 0; i < 128; ++i) { identity.push_back(utility::char_cast<char>(i)); }
 
 			for (std::string::size_type i = 0; i < identity.size(); ++i)
 			{
@@ -36,7 +36,7 @@ namespace
 		{
 			std::string identity{};
 			identity.reserve(128);
-			for (int i = 0; i < 128; ++i) { identity.push_back(infrastructure::char_cast<char>(i)); }
+			for (int i = 0; i < 128; ++i) { identity.push_back(utility::char_cast<char>(i)); }
 
 			for (std::string::size_type i = 0; i < identity.size(); ++i)
 			{
