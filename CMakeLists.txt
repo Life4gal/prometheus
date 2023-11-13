@@ -355,6 +355,14 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/container/container.ixx
 
 		# =========================
+		# SIMD
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/simd/instruction_set.ixx
+
+		${PROJECT_SOURCE_DIR}/src/simd/simd.ixx
+
+		# =========================
 		# COROUTINE
 		# =========================
 
