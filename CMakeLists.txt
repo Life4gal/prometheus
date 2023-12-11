@@ -386,12 +386,23 @@ target_sources(
 		# CHARS
 		# =========================
 
+		${PROJECT_SOURCE_DIR}/src/chars/encoding.ixx
 		${PROJECT_SOURCE_DIR}/src/chars/converter.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/category.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/ascii.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/cp_1252.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/utf_8.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/utf_16.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/table.ixx
+
+		# scalar
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_ascii.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf8.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf16.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf32.ixx
+
+		# AVX-512
+#		${PROJECT_SOURCE_DIR}/src/chars/icelake.ixx
+#		${PROJECT_SOURCE_DIR}/src/chars/icelake_ascii.ixx
+#		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf8.ixx
+#		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf16.ixx
+#		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf32.ixx
 
 		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
 )

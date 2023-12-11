@@ -19,27 +19,104 @@ import :converter;
 
 namespace gal::prometheus::chars
 {
-	using input_category = CharsCategory::ASCII;
-	using input_type	 = chars::input_type<input_category>;
-	using pointer_type	 = input_type::const_pointer;
-	using size_type		 = input_type::size_type;
-
 	template<>
 	class Scalar<"ascii">
 	{
 	public:
-		template<bool WithError, CharsCategory OutputCategory>
-		[[nodiscard]] constexpr auto convert(const input_type input, typename output_type<OutputCategory>::pointer output) const noexcept -> auto
+		constexpr static auto input_category = CharsCategory::ASCII;
+		using input_type					 = chars::input_type<input_category>;
+		using pointer_type					 = input_type::const_pointer;
+		using size_type						 = input_type::size_type;
+
+		[[nodiscard]] constexpr auto validate(const input_type input) const noexcept -> result_type
+		{
+			(void)this;
+
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+
+			const auto		   input_length		= input.size();
+
+			const pointer_type it_input_begin	= input.data();
+			pointer_type	   it_input_current = it_input_begin;
+			const pointer_type it_input_end		= it_input_begin + input_length;
+
+			for (; it_input_current + 16 <= it_input_end; it_input_current += 16)
+			{
+				const auto v1 = utility::unaligned_load<std::uint64_t>(it_input_current + 0);
+				const auto v2 = utility::unaligned_load<std::uint64_t>(it_input_current + sizeof(std::uint64_t));
+
+				if (const auto value = v1 | v2;
+					(value & 0x8080'8080'8080'8080) != 0)
+				{
+					break;
+				}
+			}
+
+			if (const auto it =
+						std::ranges::find_if(
+								it_input_current,
+								it_input_end,
+								[](const auto byte) noexcept
+								{ return byte >= 0b1000'0000; });
+				it != it_input_end)
+			{
+				return result_type{.error = ErrorCode::TOO_LARGE, .count = static_cast<std::size_t>(std::ranges::distance(it, it_input_begin))};
+			}
+
+			return result_type{.error = ErrorCode::NONE, .count = input_length};
+		}
+
+		// note: we are not BOM aware
+		template<CharsCategory OutputCategory>
+		[[nodiscard]] constexpr auto length(const input_type input) const noexcept -> size_type
+		{
+			(void)this;
+
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+
+			if constexpr (OutputCategory == CharsCategory::ASCII)
+			{
+				return input.size();
+			}
+			else if constexpr (OutputCategory == CharsCategory::UTF8)
+			{
+				return std::transform_reduce(
+						input.begin(),
+						input.end(),
+						static_cast<size_type>(0),
+						std::plus<>{},
+						[](const auto byte) noexcept
+						{
+							return +(byte >> 7);
+						});
+			}
+			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE)
+			{
+				return input.size();
+			}
+			else if constexpr (OutputCategory == CharsCategory::UTF32)
+			{
+				return input.size();
+			}
+			else
+			{
+				GAL_PROMETHEUS_STATIC_UNREACHABLE();
+			}
+		}
+
+		template<InputProcessCriterion Criterion, CharsCategory OutputCategory, bool CheckNextBlock = true>
+		[[nodiscard]] constexpr auto convert(const input_type input, typename output_type<OutputCategory>::pointer output) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
 			(void)this;
 
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
 
-			using output_char_type						= typename output_type<OutputCategory>::value_type;
 			using output_pointer_type					= typename output_type<OutputCategory>::pointer;
+			using output_char_type						= typename output_type<OutputCategory>::value_type;
 
 			const auto				  input_length		= input.size();
+			const auto				  output_length		= output.size();
 
 			const pointer_type		  it_input_begin	= input.data();
 			pointer_type			  it_input_current	= it_input_begin;
@@ -48,111 +125,95 @@ namespace gal::prometheus::chars
 			const output_pointer_type it_output_begin	= output;
 			output_pointer_type		  it_output_current = it_output_begin;
 
-			if constexpr (OutputCategory == CharsCategory::UTF8)
+			if constexpr (OutputCategory == CharsCategory::ASCII)
 			{
-				while (it_input_current < it_input_end)
+				std::memcpy(it_output_current, it_input_current, input_length);
+				it_input_current += input_length;
+				it_output_current += input_length;
+			}
+			else if constexpr (OutputCategory == CharsCategory::UTF8)
+			{
+				for (; it_input_current < it_input_end; ++it_input_current)
 				{
-					// try to convert the next block of 16 ASCII bytes
-					// if it is safe to read 16 more bytes, check that they are ascii
-					if (it_input_current + 16 <= it_input_end)
+					const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
+
+					if constexpr (CheckNextBlock)
 					{
-						const auto v1 = utility::unaligned_load<std::uint64_t>(it_input_current);
-						const auto v2 = utility::unaligned_load<std::uint64_t>(it_input_current + sizeof(std::uint64_t));
-
-						// We are only interested in these bits: 1000'1000'1000'1000, so it makes sense to concatenate everything
-						// if NONE of these are set, e.g. all of them are zero, then everything is ASCII
-						if (const auto v = v1 | v2;
-							(v & 0x8080808080808080) == 0)
+						// if it is safe to read 16 more bytes, check that they are ascii
+						if (it_input_current + 16 <= it_input_end)
 						{
-							std::ranges::transform(
-									std::ranges::subrange{it_input_current, it_input_current + 16},
-									it_output_current,
-									[](const auto c) noexcept -> void
-									{ return utility::char_cast<output_char_type>(c); });
+							const auto v1 = utility::unaligned_load<std::uint64_t>(it_input_current + 0);
+							const auto v2 = utility::unaligned_load<std::uint64_t>(it_input_current + sizeof(std::uint64_t));
 
-							it_input_current += 16;
-							it_output_current += 16;
-							continue;
+							if (const auto value = v1 | v2;
+								(value & 0x8080'8080'8080'8080) == 0)
+							{
+								std::ranges::transform(
+										it_input_current,
+										it_input_current + 16,
+										it_output_current,
+										[](const auto byte) noexcept
+										{
+											return utility::char_cast<output_char_type>(byte);
+										});
+
+								// 15 more step
+								it_input_current += 15;
+								it_output_current += 16;
+								continue;
+							}
 						}
 					}
 
-					if (const auto byte = utility::char_cast<unsigned char>(*it_input_current);
+					if (const auto byte = *it_input_current;
 						(byte & 0x80) == 0)
 					{
-						// ASCII
-						*it_output_current = utility::char_cast<output_char_type>(byte);
-
-						it_input_current += 1;
+						*(it_output_current + 0) = utility::char_cast<output_char_type>(byte);
 						it_output_current += 1;
 					}
 					else
 					{
-						*it_output_current = utility::char_cast<output_char_type>((byte >> 6) | 0b1100'0000);
-						it_output_current += 1;
-
-						*it_output_current = utility::char_cast<output_char_type>((byte & 0b11'1111) | 0b1000'0000);
-						it_output_current += 1;
-
-						it_input_current += 1;
+						*(it_output_current + 0) = utility::char_cast<output_char_type>((byte >> 6) | 0b1100'0000);
+						*(it_output_current + 1) = utility::char_cast<output_char_type>((byte & 0b0011'1111) | 0b1000'0000);
+						it_output_current += 2;
 					}
 				}
-
-				if constexpr (const auto count = static_cast<std::size_t>(it_output_current - it_output_begin);
-							  WithError)
-				{
-					return result_type{.error = ErrorCode::NONE, .count = count};
-				}
-				else
-				{
-					return count;
-				}
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE)
+			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE or OutputCategory == CharsCategory::UTF32)
 			{
 				std::ranges::transform(
 						it_input_current,
 						it_input_end,
 						it_output_current,
-						[](const auto c) noexcept -> void
+						[](const auto byte) noexcept
 						{
-							if constexpr (OutputCategory == CharsCategory::UTF16_BE)
+							if constexpr (OutputCategory == CharsCategory::UTF32 or ((OutputCategory == CharsCategory::UTF16_LE) == (std::endian::native == std::endian::little)))
 							{
-								return std::byteswap(utility::char_cast<output_char_type>(c));
+								return utility::char_cast<output_char_type>(byte);
 							}
 							else
 							{
-								return utility::char_cast<output_char_type>(c);
+								return utility::char_cast<output_char_type>(std::byteswap(utility::char_cast<output_char_type>(byte)));
 							}
 						});
-
-				if constexpr (WithError)
-				{
-					return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(input_length)};
-				}
-				else
-				{
-					return static_cast<std::size_t>(input_length);
-				}
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF32)
+			else
 			{
-				std::ranges::transform(
-						it_input_current,
-						it_input_end,
-						it_output_current,
-						[](const auto c) noexcept -> void
-						{ return utility::char_cast<output_char_type>(c); });
-
-				if constexpr (WithError)
-				{
-					return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(input_length)};
-				}
-				else
-				{
-					return static_cast<std::size_t>(input_length);
-				}
+				GAL_PROMETHEUS_UNREACHABLE();
 			}
-			else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+
+			if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or Criterion == InputProcessCriterion::ASSUME_VALID_INPUT)
+			{
+				return static_cast<std::size_t>(it_output_current - it_output_begin);
+			}
+			if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+			{
+				return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
+			}
+			else
+			{
+				GAL_PROMETHEUS_STATIC_UNREACHABLE();
+			}
 		}
 	};
 

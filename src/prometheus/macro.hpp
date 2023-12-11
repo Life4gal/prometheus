@@ -137,7 +137,7 @@
 					}                                                          \
 				}(ptr)
 #define GAL_PROMETHEUS_START_LIFETIME_AS_ARRAY(type, ptr, size)                                                                                                                           \
-				[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>(GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE gal_prometheus_start_lifetime_as_p)                                                                                                                                                      \
+				[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>(GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE gal_prometheus_start_lifetime_as_p, const std::size_t s)                                                                                                                                                      \
 					requires(std::is_trivially_copyable_v<type> && GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(type))                                                                                                                                                      \
 				{                                                                                                                                                                                                                                          \
 					if constexpr (std::is_const_v<std::remove_pointer_t<GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>>) \
@@ -150,14 +150,30 @@
 						const auto* gal_prometheus_start_lifetime_as_source = gal_prometheus_start_lifetime_as_p;                                                                                                                                   \
 						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_dest);                                                                                                                                                       \
 						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_source);                                                                                                                   \
-						auto* gal_prometheus_start_lifetime_as_moved = static_cast<std::add_pointer_t<type>>(std::memmove(gal_prometheus_start_lifetime_as_dest, gal_prometheus_start_lifetime_as_source, sizeof(type) * size));                                                                  \
+						auto* gal_prometheus_start_lifetime_as_moved = static_cast<std::add_pointer_t<type>>(std::memmove(gal_prometheus_start_lifetime_as_dest, gal_prometheus_start_lifetime_as_source, sizeof(type) * s));                                                                  \
 						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_moved); \
 						return std::launder(gal_prometheus_start_lifetime_as_moved);                                                                     \
 					}                                                                                                                                 \
-				}(ptr)
+				}(ptr, size)
 #endif
 
-#define GAL_PROMETHEUS_PRIVATE_STRING_CAT(lhs, rhs) lhs##rhs
+// fixme: UB
+#define GAL_PROMETHEUS_UNRESTRICTED_CHAR_POINTER_CAST(required_type, pointer) \
+	[]<typename T>(const char* p) noexcept -> const T* requires(std::is_same_v<T, char8_t> or std::is_same_v<T, char16_t> or std::is_same_v<T, char32_t>) { return reinterpret_cast<const T*>(p); }.template operator()<required_type>(pointer)
+
+// fixme: UB
+#define GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(required_type, pointer) \
+	[]<typename Out, typename In>(In p) noexcept -> Out \
+		requires( \
+		std::is_pointer_v<Out> and std::is_pointer_v<In> and \
+		std::is_standard_layout_v<typename std::pointer_traits<Out>::element_type> and std::is_trivial_v<typename std::pointer_traits<Out>::element_type> and \
+		std::is_standard_layout_v<typename std::pointer_traits<In>::element_type> and std::is_trivial_v<typename std::pointer_traits<In>::element_type> \
+		) \
+	{ \
+		return reinterpret_cast<Out>(p); \
+	}.template operator()<required_type>(pointer)
+
+#define GAL_PROMETHEUS_PRIVATE_STRING_CAT(lhs, rhs) lhs## rhs
 #define GAL_PROMETHEUS_STRING_CAT(lhs, rhs) GAL_PROMETHEUS_PRIVATE_STRING_CAT(lhs, rhs)
 
 #define GAL_PROMETHEUS_PRIVATE_ARGS_N_0(_0, ...) _0
@@ -231,7 +247,7 @@
 #define GAL_PROMETHEUS_TO_STRING(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_TO_STRING_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(__VA_ARGS__)
 
 // =========================
-// MODULE: gal.prometheus.infrastructure:exception
+// MODULE: gal.prometheus.error
 // =========================
 
 // fixme
@@ -282,7 +298,7 @@
 #endif
 
 // =========================
-// MODULE: gal.prometheus.string:meta_string
+// MODULE: gal.prometheus.string
 // =========================
 
 #define GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(string_type, this_string, string_length, begin_index) \
@@ -425,3 +441,84 @@
 
 #define GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW_STRING_PARSE_ERROR(expression, message, ...) GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW(::gal::prometheus::error::StringParseError, expression, message __VA_OPT__(, ) __VA_ARGS__)
 #define GAL_PROMETHEUS_RUNTIME_THROW_STRING_PARSE_ERROR(message, ...) GAL_PROMETHEUS_RUNTIME_THROW(::gal::prometheus::error::StringParseError, message __VA_OPT__(, ) __VA_ARGS__)
+
+// =========================
+// MODULE: gal.prometheus.simd
+// =========================
+
+// AVX512F
+#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512F)
+#if defined(__AVX512F__) && __AVX512F__ == 1
+		#define GAL_PROMETHEUS_SIMD_HAS_AVX512F 1
+#endif
+#endif
+
+// AVX512DQ
+#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512DQ)
+#if defined(__AVX512DQ__) && __AVX512DQ__ == 1
+		#define GAL_PROMETHEUS_SIMD_HAS_AVX512DQ 1
+#endif
+#endif
+
+// AVX512IFMA
+#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512IFMA)
+#if defined(__AVX512IFMA__) && __AVX512IFMA__ == 1
+		#define GAL_PROMETHEUS_SIMD_HAS_AVX512IFMA 1
+#endif
+#endif
+
+// AVX512CD
+#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512CD)
+#if defined(__AVX512CD__) && __AVX512CD__ == 1
+		#define GAL_PROMETHEUS_SIMD_HAS_AVX512CD 1
+#endif
+#endif
+
+// AVX512BW
+#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512BW)
+#if defined(__AVX512BW__) && __AVX512BW__ == 1
+		#define GAL_PROMETHEUS_SIMD_HAS_AVX512BW 1
+#endif
+#endif
+
+// AVX512VL
+#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512VL)
+#if defined(__AVX512VL__) && __AVX512VL__ == 1
+		#define GAL_PROMETHEUS_SIMD_HAS_AVX512VL 1
+#endif
+#endif
+
+// AVX512VBMI
+#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512VBMI)
+#if defined(__AVX512VBMI__) && __AVX512VBMI__ == 1
+		#define GAL_PROMETHEUS_SIMD_HAS_AVX512VBMI 1
+#endif
+#endif
+
+// AVX512VBMI2
+#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512VBMI2)
+#if defined(__AVX512VBMI2__) && __AVX512VBMI2__ == 1
+		#define GAL_PROMETHEUS_SIMD_HAS_AVX512VBMI2 1
+#endif
+#endif
+
+// AVX512VNNI
+#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512VNNI)
+#if defined(__AVX512VNNI__) && __AVX512VNNI__ == 1
+		#define GAL_PROMETHEUS_SIMD_HAS_AVX512VNNI 1
+#endif
+#endif
+
+// AVX512BITALG
+#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512BITALG)
+#if defined(__AVX512BITALG__) && __AVX512BITALG__ == 1
+		#define GAL_PROMETHEUS_SIMD_HAS_AVX512BITALG 1
+#endif
+#endif
+
+// AVX512VPOPCNTDQ
+#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512VPOPCNTDQ)
+#if defined(__AVX512VPOPCNTDQ__) && __AVX512VPOPCNTDQ__ == 1
+		#define GAL_PROMETHEUS_SIMD_HAS_AVX512VPOPCNTDQ 1
+#endif
+#endif

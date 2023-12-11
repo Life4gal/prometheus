@@ -60,6 +60,13 @@ namespace gal::prometheus::chars
 
 			UTF32,
 		};
+
+		enum class InputProcessCriterion
+		{
+			ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT,
+			RETURN_RESULT_TYPE,
+			ASSUME_VALID_INPUT,
+		};
 	}
 
 	namespace converter_detail
