@@ -25,6 +25,7 @@ namespace gal::prometheus::chars
 	public:
 		constexpr static auto input_category = CharsCategory::ASCII;
 		using input_type					 = chars::input_type<input_category>;
+		using char_type						 = input_type::value_type;
 		using pointer_type					 = input_type::const_pointer;
 		using size_type						 = input_type::size_type;
 
@@ -66,6 +67,11 @@ namespace gal::prometheus::chars
 			return result_type{.error = ErrorCode::NONE, .count = input_length};
 		}
 
+		[[nodiscard]] constexpr auto validate(const pointer_type input) const noexcept -> result_type
+		{
+			return this->validate({input, std::char_traits<char_type>::length(input)});
+		}
+
 		// note: we are not BOM aware
 		template<CharsCategory OutputCategory>
 		[[nodiscard]] constexpr auto length(const input_type input) const noexcept -> size_type
@@ -104,7 +110,14 @@ namespace gal::prometheus::chars
 			}
 		}
 
-		template<InputProcessCriterion Criterion, CharsCategory OutputCategory, bool CheckNextBlock = true>
+		// note: we are not BOM aware
+		template<CharsCategory OutputCategory>
+		[[nodiscard]] constexpr auto length(const pointer_type input) const noexcept -> size_type
+		{
+			return this->length<OutputCategory>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		template<CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
 		[[nodiscard]] constexpr auto convert(const input_type input, typename output_type<OutputCategory>::pointer output) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
 			(void)this;
@@ -116,7 +129,6 @@ namespace gal::prometheus::chars
 			using output_char_type						= typename output_type<OutputCategory>::value_type;
 
 			const auto				  input_length		= input.size();
-			const auto				  output_length		= output.size();
 
 			const pointer_type		  it_input_begin	= input.data();
 			pointer_type			  it_input_current	= it_input_begin;
@@ -127,7 +139,7 @@ namespace gal::prometheus::chars
 
 			if constexpr (OutputCategory == CharsCategory::ASCII)
 			{
-				std::memcpy(it_output_current, it_input_current, input_length);
+				std::memcpy(it_output_current, it_input_current, input_length * sizeof(char_type));
 				it_input_current += input_length;
 				it_output_current += input_length;
 			}
@@ -135,8 +147,6 @@ namespace gal::prometheus::chars
 			{
 				for (; it_input_current < it_input_end; ++it_input_current)
 				{
-					const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
-
 					if constexpr (CheckNextBlock)
 					{
 						// if it is safe to read 16 more bytes, check that they are ascii
@@ -214,6 +224,43 @@ namespace gal::prometheus::chars
 			{
 				GAL_PROMETHEUS_STATIC_UNREACHABLE();
 			}
+		}
+
+		template<CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
+		[[nodiscard]] constexpr auto convert(const pointer_type input, typename output_type<OutputCategory>::pointer output) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
+		{
+			return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
+		}
+
+		template<typename StringType, CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
+			requires requires(StringType& string) {
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<typename output_type<OutputCategory>::pointer>;
+			}
+		[[nodiscard]] constexpr auto convert(const input_type input) const noexcept -> StringType
+		{
+			StringType result{};
+			result.resize(this->length<OutputCategory>(input));
+
+			(void)this->convert<OutputCategory, Criterion, CheckNextBlock>(input, result.data());
+			return result;
+		}
+
+		template<typename StringType, CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
+			requires requires(StringType& string) {
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<typename output_type<OutputCategory>::pointer>;
+			}
+		[[nodiscard]] constexpr auto convert(const pointer_type input) const noexcept -> StringType
+		{
+			StringType result{};
+			result.resize(this->length<OutputCategory>(input));
+
+			return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
 	};
 

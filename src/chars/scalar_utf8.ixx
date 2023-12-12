@@ -25,6 +25,7 @@ namespace gal::prometheus::chars
 	public:
 		constexpr static auto input_category = CharsCategory::UTF8;
 		using input_type					 = chars::input_type<input_category>;
+		using char_type						 = input_type::value_type;
 		using pointer_type					 = input_type::const_pointer;
 		using size_type						 = input_type::size_type;
 
@@ -136,6 +137,11 @@ namespace gal::prometheus::chars
 			return {.error = ErrorCode::NONE, .count = input_length};
 		}
 
+		[[nodiscard]] constexpr auto validate(const pointer_type input) const noexcept -> result_type
+		{
+			return this->validate({input, std::char_traits<char_type>::length(input)});
+		}
+
 		// Finds the previous leading byte starting backward from input.data() and validates with errors from there.
 		// Used to pinpoint the location of an error when an invalid chunk is detected.
 		[[nodiscard]] constexpr auto rewind_and_validate(const pointer_type begin, const pointer_type current, const pointer_type end) const noexcept -> result_type
@@ -212,7 +218,14 @@ namespace gal::prometheus::chars
 			}
 		}
 
-		template<InputProcessCriterion Criterion, CharsCategory OutputCategory, bool CheckNextBlock = true>
+		// note: we are not BOM aware
+		template<CharsCategory OutputCategory>
+		[[nodiscard]] constexpr auto length(const pointer_type input) const noexcept -> size_type
+		{
+			return this->length<OutputCategory>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		template<CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
 		[[nodiscard]] constexpr auto convert(const input_type input, typename output_type<OutputCategory>::pointer output) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
 			(void)this;
@@ -224,7 +237,6 @@ namespace gal::prometheus::chars
 			using output_char_type						= typename output_type<OutputCategory>::value_type;
 
 			const auto				  input_length		= input.size();
-			const auto				  output_length		= output.size();
 
 			const pointer_type		  it_input_begin	= input.data();
 			pointer_type			  it_input_current	= it_input_begin;
@@ -235,7 +247,7 @@ namespace gal::prometheus::chars
 
 			if constexpr (OutputCategory == CharsCategory::UTF8)
 			{
-				std::memcpy(it_output_current, it_input_current, input_length);
+				std::memcpy(it_output_current, it_input_current, input_length * sizeof(char_type));
 				it_input_current += input_length;
 				it_output_current += input_length;
 			}
@@ -322,6 +334,8 @@ namespace gal::prometheus::chars
 						{
 							GAL_PROMETHEUS_UNREACHABLE();
 						}
+
+						it_output_current += 1;
 					}
 					else if ((leading_byte & 0b1110'0000) == 0b1100'0000)
 					{
@@ -337,7 +351,7 @@ namespace gal::prometheus::chars
 							{
 								return result_type{.error = ErrorCode::TOO_SHORT, .count = length_if_error};
 							}
-							if constexpr (Criterion == InputProcessCriterion::ASSUME_VALID_INPUT)
+							else if constexpr (Criterion == InputProcessCriterion::ASSUME_VALID_INPUT)
 							{
 								break;
 							}
@@ -359,7 +373,7 @@ namespace gal::prometheus::chars
 							{
 								return result_type{.error = ErrorCode::TOO_SHORT, .count = length_if_error};
 							}
-							if constexpr (Criterion == InputProcessCriterion::ASSUME_VALID_INPUT)
+							else if constexpr (Criterion == InputProcessCriterion::ASSUME_VALID_INPUT)
 							{
 								break;
 							}
@@ -540,18 +554,17 @@ namespace gal::prometheus::chars
 								}
 							}
 
-							*it_output_current = utility::char_cast<output_char_type>(
-									[code_point]() noexcept
-									{
-										if constexpr (OutputCategory != CharsCategory::UTF32 and (OutputCategory == CharsCategory::UTF16_LE) != (std::endian::native == std::endian::little))
-										{
-											return std::byteswap(code_point);
-										}
-										else
-										{
-											return code_point;
-										}
-									}());
+							*it_output_current = [cp = utility::char_cast<output_char_type>(code_point)]() noexcept
+							{
+								if constexpr (OutputCategory != CharsCategory::UTF32 and (OutputCategory == CharsCategory::UTF16_LE) != (std::endian::native == std::endian::little))
+								{
+									return std::byteswap(cp);
+								}
+								else
+								{
+									return cp;
+								}
+							}();
 
 							// 2 more step
 							it_input_current += 2;
@@ -744,6 +757,43 @@ namespace gal::prometheus::chars
 			}
 		}
 
+		template<CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
+		[[nodiscard]] constexpr auto convert(const pointer_type input, typename output_type<OutputCategory>::pointer output) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
+		{
+			return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
+		}
+
+		template<typename StringType, CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
+			requires requires(StringType& string) {
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<typename output_type<OutputCategory>::pointer>;
+			}
+		[[nodiscard]] constexpr auto convert(const input_type input) const noexcept -> StringType
+		{
+			StringType result{};
+			result.resize(this->length<OutputCategory>(input));
+
+			(void)this->convert<OutputCategory, Criterion, CheckNextBlock>(input, result.data());
+			return result;
+		}
+
+		template<typename StringType, CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
+			requires requires(StringType& string) {
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<typename output_type<OutputCategory>::pointer>;
+			}
+		[[nodiscard]] constexpr auto convert(const pointer_type input) const noexcept -> StringType
+		{
+			StringType result{};
+			result.resize(this->length<OutputCategory>(input));
+
+			return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
+		}
+
 		template<CharsCategory OutputCategory>
 		[[nodiscard]] constexpr auto rewind_and_convert(const pointer_type furthest_possible_begin, const input_type input, typename output_type<OutputCategory>::pointer output) const noexcept -> result_type
 		{
@@ -755,8 +805,6 @@ namespace gal::prometheus::chars
 			// fixme
 			GAL_PROMETHEUS_DEBUG_ASSUME(furthest_possible_begin - input.data() <= 3);
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
-
-			using output_pointer_type		  = typename output_type<OutputCategory>::pointer;
 
 			const auto		   input_length	  = input.size();
 
