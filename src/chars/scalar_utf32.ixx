@@ -47,7 +47,7 @@ namespace gal::prometheus::chars
 
 				if (const auto word = *it_input_current;
 					word > 0x10'ffff) { return result_type{.error = ErrorCode::TOO_LARGE, .count = counf_if_error}; }
-				else if (word >= 0xd800 and word <= 0xdffff) { return result_type{.error = ErrorCode::SURROGATE, .count = counf_if_error}; }
+				else if (word >= 0xd800 and word <= 0xdfff) { return result_type{.error = ErrorCode::SURROGATE, .count = counf_if_error}; }
 
 				it_input_current += 1;
 			}
