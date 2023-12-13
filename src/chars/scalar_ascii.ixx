@@ -93,7 +93,7 @@ namespace gal::prometheus::chars
 						std::plus<>{},
 						[](const auto byte) noexcept
 						{
-							return +(byte >> 7);
+							return 1 + (byte >> 7);
 						});
 			}
 			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE)
@@ -216,7 +216,7 @@ namespace gal::prometheus::chars
 			{
 				return static_cast<std::size_t>(it_output_current - it_output_begin);
 			}
-			if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+			else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
 			{
 				return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
 			}
