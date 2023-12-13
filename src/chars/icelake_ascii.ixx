@@ -104,33 +104,33 @@ namespace gal::prometheus::chars
 
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
+			const auto		   input_length		= input.size();
+
+			const pointer_type it_input_begin	= input.data();
+			pointer_type	   it_input_current = it_input_begin;
+			const pointer_type it_input_end		= it_input_begin + input_length;
+
 			if constexpr (OutputCategory == CharsCategory::ASCII)
 			{
 				return input.size();
 			}
 			else if constexpr (OutputCategory == CharsCategory::UTF8)
 			{
-				const auto input_length	 = input.size();
-				const auto input_data	 = input.data();
+				auto eight_64bits = _mm512_setzero_si512();
 
-				// number of 512-bit chunks that fits into the length.
-				auto	   result_length = input_length / sizeof(__m512i) * sizeof(__m512i);
-				auto	   eight_64bits	 = _mm512_setzero_si512();
-				auto	   i			 = static_cast<size_type>(0);
-
-				while (i + sizeof(__m512i) <= input_length)
+				while (it_input_current + sizeof(__m512i) <= it_input_end)
 				{
-					const auto iterations = std::ranges::min(static_cast<size_type>((input_length - i) / sizeof(__m512i)), static_cast<size_type>(255));
-					const auto max_i	  = i + iterations * sizeof(__m512i) - sizeof(__m512i);
+					const auto iterations	 = std::ranges::min(static_cast<size_type>((it_input_end - it_input_current) / sizeof(__m512i)), static_cast<size_type>(255));
+					const auto this_turn_end = it_input_current + iterations * sizeof(__m512i) - sizeof(__m512i);
 
-					auto	   runner	  = _mm512_setzero_si512();
+					auto	   runner		 = _mm512_setzero_si512();
 
-					for (; i + 4 * sizeof(__m512i) <= max_i; i += 4 * sizeof(__m512i))
+					for (; it_input_current + 4 * sizeof(__m512i) <= this_turn_end; it_input_current += 4 * sizeof(__m512i))
 					{
-						const auto in_0		   = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, input_data + i + 0 * sizeof(__m512i)));
-						const auto in_1		   = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, input_data + i + 1 * sizeof(__m512i)));
-						const auto in_2		   = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, input_data + i + 2 * sizeof(__m512i)));
-						const auto in_3		   = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, input_data + i + 3 * sizeof(__m512i)));
+						const auto in_0		   = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 0 * sizeof(__m512i)));
+						const auto in_1		   = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 1 * sizeof(__m512i)));
+						const auto in_2		   = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 2 * sizeof(__m512i)));
+						const auto in_3		   = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 3 * sizeof(__m512i)));
 
 						const auto mask_0	   = _mm512_cmpgt_epi8_mask(_mm512_setzero_si512(), in_0);
 						const auto mask_1	   = _mm512_cmpgt_epi8_mask(_mm512_setzero_si512(), in_1);
@@ -148,9 +148,9 @@ namespace gal::prometheus::chars
 						runner				   = _mm512_sub_epi8(runner, not_ascii_3);
 					}
 
-					for (; i <= max_i; i += sizeof(__m512i))
+					for (; it_input_current <= this_turn_end; it_input_current += sizeof(__m512i))
 					{
-						const auto in		 = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, input_data + i + 0 * sizeof(__m512i)));
+						const auto in		 = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 0 * sizeof(__m512i)));
 						const auto mask		 = _mm512_cmpgt_epi8_mask(_mm512_setzero_si512(), in);
 						const auto not_ascii = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask, 0xff);
 						runner				 = _mm512_sub_epi8(runner, not_ascii);
@@ -161,16 +161,20 @@ namespace gal::prometheus::chars
 
 				const auto half_0 = _mm512_extracti64x4_epi64(eight_64bits, 0);
 				const auto half_1 = _mm512_extracti64x4_epi64(eight_64bits, 1);
-				result_length += _mm256_extract_epi64(half_0, 0) +
-								 _mm256_extract_epi64(half_0, 1) +
-								 _mm256_extract_epi64(half_0, 2) +
-								 _mm256_extract_epi64(half_0, 3) +
-								 _mm256_extract_epi64(half_1, 0) +
-								 _mm256_extract_epi64(half_1, 1) +
-								 _mm256_extract_epi64(half_1, 2) +
-								 _mm256_extract_epi64(half_1, 3);
 
-				return result_length + instance::scalar::ascii.length<OutputCategory>({input_data + i, input_length - i});
+				const auto result_length =
+						// number of 512-bit chunks that fits into the length.
+						input_length / sizeof(__m512i) * sizeof(__m512i) +//
+						_mm256_extract_epi64(half_0, 0) +
+						_mm256_extract_epi64(half_0, 1) +
+						_mm256_extract_epi64(half_0, 2) +
+						_mm256_extract_epi64(half_0, 3) +
+						_mm256_extract_epi64(half_1, 0) +
+						_mm256_extract_epi64(half_1, 1) +
+						_mm256_extract_epi64(half_1, 2) +
+						_mm256_extract_epi64(half_1, 3);
+
+				return result_length + instance::scalar::ascii.length<OutputCategory>({it_input_current, static_cast<size_type>(it_input_end - it_input_current)});
 			}
 			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE)
 			{
