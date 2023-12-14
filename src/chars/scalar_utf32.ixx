@@ -380,7 +380,7 @@ namespace gal::prometheus::chars
 			{
 				return static_cast<std::size_t>(it_output_current - it_output_begin);
 			}
-			if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+			else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
 			{
 				return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
 			}
