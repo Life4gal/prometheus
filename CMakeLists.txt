@@ -1,19 +1,19 @@
 ﻿cmake_minimum_required(VERSION 3.25)
 
-if (CMAKE_VERSION VERSION_LESS "3.26")
-	# 3.25
-	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "3c375311-a3c9-4396-a187-3227ef642046")
-elseif (CMAKE_VERSION VERSION_LESS "3.27")
-	# 3.26
-	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
-elseif (CMAKE_VERSION VERSION_LESS "3.28")
-	# 3.27
-	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
-else ()
-	message(FATAL_ERROR "See `https://github.com/Kitware/CMake/blob/v${CMAKE_VERSION}/Help/dev/experimental.rst`.")
-endif (CMAKE_VERSION VERSION_LESS "3.26")
-# turn on the dynamic depends for ninja
-set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP ON)
+#if (CMAKE_VERSION VERSION_LESS "3.26")
+#	# 3.25
+#	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "3c375311-a3c9-4396-a187-3227ef642046")
+#elseif (CMAKE_VERSION VERSION_LESS "3.27")
+#	# 3.26
+#	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+#elseif (CMAKE_VERSION VERSION_LESS "3.28")
+#	# 3.27
+#	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
+#else ()
+#	message(FATAL_ERROR "See `https://github.com/Kitware/CMake/blob/v${CMAKE_VERSION}/Help/dev/experimental.rst`.")
+#endif (CMAKE_VERSION VERSION_LESS "3.26")
+## turn on the dynamic depends for ninja
+#set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP ON)
 
 set(PROJECT_NAME_PREFIX "GAL_PROMETHEUS_")
 
@@ -206,206 +206,206 @@ add_library(
 		${PROJECT_NAME}
 )
 
-set(${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH ${CMAKE_BINARY_DIR}/temp_module)
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-	if (NOT DEFINED ENV{VCToolsInstallDir})
-		message(FATAL_ERROR "Unable to find path to VC Tools in environment variables!")
-	endif (NOT DEFINED ENV{VCToolsInstallDir})
+#set(${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH ${CMAKE_BINARY_DIR}/temp_module)
+#if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+#	if (NOT DEFINED ENV{VCToolsInstallDir})
+#		message(FATAL_ERROR "Unable to find path to VC Tools in environment variables!")
+#	endif (NOT DEFINED ENV{VCToolsInstallDir})
+#
+#	if (NOT EXISTS $ENV{VCToolsInstallDir})
+#		message(FATAL_ERROR "Invalid VC Tools installation path!")
+#	else ()
+#		message(STATUS "Found VC Tools in: [$ENV{VCToolsInstallDir}]")
+#	endif (NOT EXISTS $ENV{VCToolsInstallDir})
+#
+#	if (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
+#		message(FATAL_ERROR "Cannot find std.ixx! Please check MSVC version(${CMAKE_CXX_COMPILER_VERSION})!")
+#	else ()
+#		message(STATUS "Found module std.ixx in: [$ENV{VCToolsInstallDir}modules\\std.ixx]")
+#	endif (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
+#
+#	configure_file(
+#			$ENV{VCToolsInstallDir}modules/std.ixx
+#			${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx
+#			COPYONLY
+#	)
+#
+#	set_source_files_properties(
+#			${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx
+#			PROPERTIES
+#			COMPILE_OPTIONS "/Wv:18"
+#	)
+#elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+#	# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_clang.cmake
+#	# Default to C++ extensions being off. Clang's modules support have trouble
+#	# with extensions right now.
+#	set(CMAKE_CXX_EXTENSIONS OFF)
+#
+#	# fixme: https://discourse.cmake.org/t/c-20-modules-update/7330/24
+#	# fixme:
+#	# PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace.
+#	# Stack dump:
+#	# 0.	Program arguments: "C:/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/Llvm/x64/bin/clang-scan-deps.exe" -format=p1689 -- C:\\PROGRA~1\\MIB055~1\\2022\\Preview\\VC\\Tools\\Llvm\\x64\\bin\\clang-cl.exe -DGAL_PROMETHEUS_COMPILER_CLANG_CL -DGAL_PROMETHEUS_COMPILER_ID=\"Clang\" -DGAL_PROMETHEUS_COMPILER_NAME=\"Clang.16.0.5\" -DGAL_PROMETHEUS_COMPILER_VERSION=\"16.0.5\" -DGAL_PROMETHEUS_MAJOR_VERSION=0 -DGAL_PROMETHEUS_MINOR_VERSION=0 -DGAL_PROMETHEUS_PATCH_VERSION=6 -DGAL_PROMETHEUS_PLATFORM_WINDOWS -DGAL_PROMETHEUS_VERSION=\"0.0.6\" -IC:\workspace\life4gal\prometheus\src  -x c++ C:\workspace\life4gal\prometheus\src\infrastructure\type_traits.ixx -c -o CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj -MT CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi -MD -MF CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi.d > CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi"
+#	# Exception Code: 0xC0000005
+#	# #0 0x00007ff7b4803c75 C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe 0x3c75 C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe 0x3efc9d0
+#	# #1 0x00007ff7b4803c75 (C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe+0x3c75)
+#	# #2 0x00007ff7b86fc9d0 (C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe+0x3efc9d0)
+#	# 0x00007FF7B4803C75, C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe(0x00007FF7B4800000) + 0x3C75 byte(s)
+#	# 0x00007FF7B86FC9D0, C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe(0x00007FF7B4800000) + 0x3EFC9D0 byte(s)
+#	# 0x00007FFA728526AD, C:\WINDOWS\System32\KERNEL32.DLL(0x00007FFA72840000) + 0x126AD byte(s), BaseThreadInitThunk() + 0x1D byte(s)
+#	# 0x00007FFA72C2AA68, C:\WINDOWS\SYSTEM32\ntdll.dll(0x00007FFA72BD0000) + 0x5AA68 byte(s), RtlUserThreadStart() + 0x28 byte(s)
+#	string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
+#			"\"${CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS}\""
+#			" -format=p1689"
+#			" --"
+#			" \"<CMAKE_CXX_COMPILER>\" <DEFINES> <INCLUDES> "#<FLAGS>"
+#			" -x c++ <SOURCE> -c -o <OBJECT>"
+#			" -MT <DYNDEP_FILE>"
+#			" -MD -MF <DEP_FILE>"
+#			" > <DYNDEP_FILE>")
+#	set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "clang")
+#    set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "@<MODULE_MAP_FILE>")
+#elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+#	# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_gcc.cmake
+#	string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
+#			"<CMAKE_CXX_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -E -x c++ <SOURCE>"
+#			" -MT <DYNDEP_FILE> -MD -MF <DEP_FILE>"
+#			" -fmodules-ts "#-fdep-file=<DYNDEP_FILE> -fdep-output=<OBJECT> -fdep-format=trtbd"
+#			" -o <PREPROCESSED_SOURCE>")
+#	set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "gcc")
+#	set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "-fmodules-ts -fmodule-mapper=<MODULE_MAP_FILE> -fdep-format=trtbd -x c++")
+#else ()
+#	message(FATAL_ERROR "Unsupported compilers: ${CMAKE_CXX_COMPILER}")
+#endif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
-	if (NOT EXISTS $ENV{VCToolsInstallDir})
-		message(FATAL_ERROR "Invalid VC Tools installation path!")
-	else ()
-		message(STATUS "Found VC Tools in: [$ENV{VCToolsInstallDir}]")
-	endif (NOT EXISTS $ENV{VCToolsInstallDir})
+## MODULE SOURCE
+#target_sources(
+#		${PROJECT_NAME}
+#		# fixme: Possible conflicts with other libraries?
+#		PUBLIC
+#		FILE_SET std_module
+#		TYPE CXX_MODULES
+#		BASE_DIRS "${PROJECT_SOURCE_DIR}"
+#		FILES
+#
+#		$<$<CXX_COMPILER_ID:MSVC>:${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx>
+#)
 
-	if (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
-		message(FATAL_ERROR "Cannot find std.ixx! Please check MSVC version(${CMAKE_CXX_COMPILER_VERSION})!")
-	else ()
-		message(STATUS "Found module std.ixx in: [$ENV{VCToolsInstallDir}modules\\std.ixx]")
-	endif (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
-
-	configure_file(
-			$ENV{VCToolsInstallDir}modules/std.ixx
-			${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx
-			COPYONLY
-	)
-
-	set_source_files_properties(
-			${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx
-			PROPERTIES
-			COMPILE_OPTIONS "/Wv:18"
-	)
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_clang.cmake
-	# Default to C++ extensions being off. Clang's modules support have trouble
-	# with extensions right now.
-	set(CMAKE_CXX_EXTENSIONS OFF)
-
-	# fixme: https://discourse.cmake.org/t/c-20-modules-update/7330/24
-	# fixme:
-	# PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace.
-	# Stack dump:
-	# 0.	Program arguments: "C:/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/Llvm/x64/bin/clang-scan-deps.exe" -format=p1689 -- C:\\PROGRA~1\\MIB055~1\\2022\\Preview\\VC\\Tools\\Llvm\\x64\\bin\\clang-cl.exe -DGAL_PROMETHEUS_COMPILER_CLANG_CL -DGAL_PROMETHEUS_COMPILER_ID=\"Clang\" -DGAL_PROMETHEUS_COMPILER_NAME=\"Clang.16.0.5\" -DGAL_PROMETHEUS_COMPILER_VERSION=\"16.0.5\" -DGAL_PROMETHEUS_MAJOR_VERSION=0 -DGAL_PROMETHEUS_MINOR_VERSION=0 -DGAL_PROMETHEUS_PATCH_VERSION=6 -DGAL_PROMETHEUS_PLATFORM_WINDOWS -DGAL_PROMETHEUS_VERSION=\"0.0.6\" -IC:\workspace\life4gal\prometheus\src  -x c++ C:\workspace\life4gal\prometheus\src\infrastructure\type_traits.ixx -c -o CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj -MT CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi -MD -MF CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi.d > CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi"
-	# Exception Code: 0xC0000005
-	# #0 0x00007ff7b4803c75 C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe 0x3c75 C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe 0x3efc9d0
-	# #1 0x00007ff7b4803c75 (C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe+0x3c75)
-	# #2 0x00007ff7b86fc9d0 (C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe+0x3efc9d0)
-	# 0x00007FF7B4803C75, C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe(0x00007FF7B4800000) + 0x3C75 byte(s)
-	# 0x00007FF7B86FC9D0, C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe(0x00007FF7B4800000) + 0x3EFC9D0 byte(s)
-	# 0x00007FFA728526AD, C:\WINDOWS\System32\KERNEL32.DLL(0x00007FFA72840000) + 0x126AD byte(s), BaseThreadInitThunk() + 0x1D byte(s)
-	# 0x00007FFA72C2AA68, C:\WINDOWS\SYSTEM32\ntdll.dll(0x00007FFA72BD0000) + 0x5AA68 byte(s), RtlUserThreadStart() + 0x28 byte(s)
-	string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
-			"\"${CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS}\""
-			" -format=p1689"
-			" --"
-			" \"<CMAKE_CXX_COMPILER>\" <DEFINES> <INCLUDES> "#<FLAGS>"
-			" -x c++ <SOURCE> -c -o <OBJECT>"
-			" -MT <DYNDEP_FILE>"
-			" -MD -MF <DEP_FILE>"
-			" > <DYNDEP_FILE>")
-	set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "clang")
-    set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "@<MODULE_MAP_FILE>")
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_gcc.cmake
-	string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
-			"<CMAKE_CXX_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -E -x c++ <SOURCE>"
-			" -MT <DYNDEP_FILE> -MD -MF <DEP_FILE>"
-			" -fmodules-ts "#-fdep-file=<DYNDEP_FILE> -fdep-output=<OBJECT> -fdep-format=trtbd"
-			" -o <PREPROCESSED_SOURCE>")
-	set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "gcc")
-	set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "-fmodules-ts -fmodule-mapper=<MODULE_MAP_FILE> -fdep-format=trtbd -x c++")
-else ()
-	message(FATAL_ERROR "Unsupported compilers: ${CMAKE_CXX_COMPILER}")
-endif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-
-# MODULE SOURCE
-target_sources(
-		${PROJECT_NAME}
-		# fixme: Possible conflicts with other libraries?
-		PUBLIC
-		FILE_SET std_module
-		TYPE CXX_MODULES
-		BASE_DIRS "${PROJECT_SOURCE_DIR}"
-		FILES
-
-		$<$<CXX_COMPILER_ID:MSVC>:${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx>
-)
-
-target_sources(
-		${PROJECT_NAME}
-		PUBLIC
-		FILE_SET public_module_files
-		TYPE CXX_MODULES
-		BASE_DIRS "${PROJECT_SOURCE_DIR}"
-		FILES
-
-		# =========================
-		# TEST
-		# =========================
-	
-		${PROJECT_SOURCE_DIR}/src/test/test.ixx
-	
-		# =========================
-		# ERROR
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/error/debug.ixx
-		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/error/debug.win.ixx>
-		${PROJECT_SOURCE_DIR}/src/error/platform.ixx
-		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/error/platform.win.ixx>
-		${PROJECT_SOURCE_DIR}/src/error/exception.ixx
-
-		${PROJECT_SOURCE_DIR}/src/error/error.ixx
-
-		# =========================
-		# UTILITY
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/utility/concepts.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/functional.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/aligned_union.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/cast.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/enumeration.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/compiler.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/function_ref.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/memory.ixx
-
-		${PROJECT_SOURCE_DIR}/src/utility/utility.ixx
-
-		# =========================
-		# STRING
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/string/cast.ixx
-		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/string/cast.win.ixx>
-		${PROJECT_SOURCE_DIR}/src/string/charconv.ixx
-		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.ixx
-		${PROJECT_SOURCE_DIR}/src/string/meta_string.ixx
-		${PROJECT_SOURCE_DIR}/src/string/command_line_parser.ixx
-
-		${PROJECT_SOURCE_DIR}/src/string/string.ixx
-
-		# =========================
-		# CONTAINER
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/container/string_pool.ixx
-		${PROJECT_SOURCE_DIR}/src/container/plane.ixx
-
-		${PROJECT_SOURCE_DIR}/src/container/container.ixx
-
-		# =========================
-		# SIMD
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/simd/instruction_set.ixx
-
-		${PROJECT_SOURCE_DIR}/src/simd/simd.ixx
-
-		# =========================
-		# COROUTINE
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/coroutine/task.ixx
-		${PROJECT_SOURCE_DIR}/src/coroutine/generator.ixx
-
-		${PROJECT_SOURCE_DIR}/src/coroutine/coroutine.ixx
-
-		# =========================
-		# I18N
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/i18n/iso_639.ixx
-		${PROJECT_SOURCE_DIR}/src/i18n/iso_3166.ixx
-		${PROJECT_SOURCE_DIR}/src/i18n/iso_15924.ixx
-		${PROJECT_SOURCE_DIR}/src/i18n/ietf_language_tag.ixx
-
-		${PROJECT_SOURCE_DIR}/src/i18n/i18n.ixx
-
-		# =========================
-		# CHARS
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/chars/encoding.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/converter.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/table.ixx
-
-		# scalar
-		${PROJECT_SOURCE_DIR}/src/chars/scalar.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_ascii.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf8.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf16.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf32.ixx
-
-		# AVX-512
-#		${PROJECT_SOURCE_DIR}/src/chars/icelake.ixx
-#		${PROJECT_SOURCE_DIR}/src/chars/icelake_ascii.ixx
-#		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf8.ixx
-#		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf16.ixx
-#		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf32.ixx
-
-		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
-)
+#target_sources(
+#		${PROJECT_NAME}
+#		PUBLIC
+#		FILE_SET public_module_files
+#		TYPE CXX_MODULES
+#		BASE_DIRS "${PROJECT_SOURCE_DIR}"
+#		FILES
+#
+#		# =========================
+#		# TEST
+#		# =========================
+#	
+#		${PROJECT_SOURCE_DIR}/src/test/test.ixx
+#	
+#		# =========================
+#		# ERROR
+#		# =========================
+#
+#		${PROJECT_SOURCE_DIR}/src/error/debug.ixx
+#		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/error/debug.win.ixx>
+#		${PROJECT_SOURCE_DIR}/src/error/platform.ixx
+#		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/error/platform.win.ixx>
+#		${PROJECT_SOURCE_DIR}/src/error/exception.ixx
+#
+#		${PROJECT_SOURCE_DIR}/src/error/error.ixx
+#
+#		# =========================
+#		# UTILITY
+#		# =========================
+#
+#		${PROJECT_SOURCE_DIR}/src/utility/concepts.ixx
+#		${PROJECT_SOURCE_DIR}/src/utility/functional.ixx
+#		${PROJECT_SOURCE_DIR}/src/utility/aligned_union.ixx
+#		${PROJECT_SOURCE_DIR}/src/utility/cast.ixx
+#		${PROJECT_SOURCE_DIR}/src/utility/enumeration.ixx
+#		${PROJECT_SOURCE_DIR}/src/utility/compiler.ixx
+#		${PROJECT_SOURCE_DIR}/src/utility/function_ref.ixx
+#		${PROJECT_SOURCE_DIR}/src/utility/memory.ixx
+#
+#		${PROJECT_SOURCE_DIR}/src/utility/utility.ixx
+#
+#		# =========================
+#		# STRING
+#		# =========================
+#
+#		${PROJECT_SOURCE_DIR}/src/string/cast.ixx
+#		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/string/cast.win.ixx>
+#		${PROJECT_SOURCE_DIR}/src/string/charconv.ixx
+#		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.ixx
+#		${PROJECT_SOURCE_DIR}/src/string/meta_string.ixx
+#		${PROJECT_SOURCE_DIR}/src/string/command_line_parser.ixx
+#
+#		${PROJECT_SOURCE_DIR}/src/string/string.ixx
+#
+#		# =========================
+#		# CONTAINER
+#		# =========================
+#
+#		${PROJECT_SOURCE_DIR}/src/container/string_pool.ixx
+#		${PROJECT_SOURCE_DIR}/src/container/plane.ixx
+#
+#		${PROJECT_SOURCE_DIR}/src/container/container.ixx
+#
+#		# =========================
+#		# SIMD
+#		# =========================
+#
+#		${PROJECT_SOURCE_DIR}/src/simd/instruction_set.ixx
+#
+#		${PROJECT_SOURCE_DIR}/src/simd/simd.ixx
+#
+#		# =========================
+#		# COROUTINE
+#		# =========================
+#
+#		${PROJECT_SOURCE_DIR}/src/coroutine/task.ixx
+#		${PROJECT_SOURCE_DIR}/src/coroutine/generator.ixx
+#
+#		${PROJECT_SOURCE_DIR}/src/coroutine/coroutine.ixx
+#
+#		# =========================
+#		# I18N
+#		# =========================
+#
+#		${PROJECT_SOURCE_DIR}/src/i18n/iso_639.ixx
+#		${PROJECT_SOURCE_DIR}/src/i18n/iso_3166.ixx
+#		${PROJECT_SOURCE_DIR}/src/i18n/iso_15924.ixx
+#		${PROJECT_SOURCE_DIR}/src/i18n/ietf_language_tag.ixx
+#
+#		${PROJECT_SOURCE_DIR}/src/i18n/i18n.ixx
+#
+#		# =========================
+#		# CHARS
+#		# =========================
+#
+#		${PROJECT_SOURCE_DIR}/src/chars/encoding.ixx
+#		${PROJECT_SOURCE_DIR}/src/chars/converter.ixx
+#		${PROJECT_SOURCE_DIR}/src/chars/table.ixx
+#
+#		# scalar
+#		${PROJECT_SOURCE_DIR}/src/chars/scalar.ixx
+#		${PROJECT_SOURCE_DIR}/src/chars/scalar_ascii.ixx
+#		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf8.ixx
+#		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf16.ixx
+#		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf32.ixx
+#
+#		# AVX-512
+##		${PROJECT_SOURCE_DIR}/src/chars/icelake.ixx
+##		${PROJECT_SOURCE_DIR}/src/chars/icelake_ascii.ixx
+##		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf8.ixx
+##		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf16.ixx
+##		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf32.ixx
+#
+#		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
+#)
 
 target_sources(
 		${PROJECT_NAME}
@@ -416,8 +416,11 @@ target_sources(
 		FILES
 
 		${PROJECT_SOURCE_DIR}/src/prometheus/macro.hpp
-
+		
 		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/prometheus/windows.hpp>
+
+		# for linker
+		${PROJECT_SOURCE_DIR}/src/prometheus/dummy.cpp
 )
 
 # SET FLAGS
