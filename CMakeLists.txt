@@ -407,6 +407,30 @@ add_library(
 #		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
 #)
 
+
+target_sources(
+		${PROJECT_NAME}
+
+		PRIVATE
+		${PROJECT_SOURCE_DIR}/src/prometheus/dummy.cpp
+
+		PUBLIC
+		
+		# =========================
+		# META
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/meta/string.hpp
+		${PROJECT_SOURCE_DIR}/src/meta/name.hpp
+		${PROJECT_SOURCE_DIR}/src/meta/enum_name.hpp
+
+		# =========================
+		# UTILITY
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/utility/functional.hpp
+)
+
 target_sources(
 		${PROJECT_NAME}
 		PUBLIC
@@ -418,9 +442,6 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/prometheus/macro.hpp
 		
 		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/prometheus/windows.hpp>
-
-		# for linker
-		${PROJECT_SOURCE_DIR}/src/prometheus/dummy.cpp
 )
 
 # SET FLAGS
