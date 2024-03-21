@@ -5,7 +5,6 @@
 #include <limits>
 
 #include <meta/name.hpp>
-#include <utility/functional.hpp>
 
 namespace gal::prometheus::meta
 {
@@ -552,8 +551,8 @@ namespace gal::prometheus::meta
 		{
 			// fixme: auto deducting category
 
-			const auto begin_value = enum_name::begin_enum_value_from_value<EnumType, min, max, enum_name::EnumCategory::ENUM>();
-			const auto end_value   = enum_name::end_enum_value_from_value<EnumType, static_cast<decltype(min)>(begin_value), max, enum_name::EnumCategory::ENUM>();
+			constexpr auto begin_value = enum_name::begin_enum_value_from_value<EnumType, min, max, enum_name::EnumCategory::ENUM>();
+			constexpr auto end_value   = enum_name::end_enum_value_from_value<EnumType, static_cast<decltype(min)>(begin_value), max, enum_name::EnumCategory::ENUM>();
 
 			return enum_name::names_from_value<EnumType, begin_value, end_value>;
 		}
@@ -563,7 +562,7 @@ namespace gal::prometheus::meta
 		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto name_of(const EnumType enum_value) noexcept -> std::string_view
 	{
-		const auto list = names_of<EnumType>();
+		constexpr auto list = names_of<EnumType>();
 
 		if (const auto it = std::ranges::find(list, enum_value, [](const auto& pair) noexcept -> EnumType { return pair.first; });
 			it != std::ranges::end(list)) { return it->second; }
@@ -574,7 +573,7 @@ namespace gal::prometheus::meta
 		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto name_of(const std::integral auto enum_value) noexcept -> std::string_view
 	{
-		const auto list = names_of<EnumType>();
+		constexpr auto list = names_of<EnumType>();
 
 		if (const auto it = std::ranges::find(list, enum_value, [](const auto& pair) noexcept -> auto { return std::to_underlying(pair.first); });
 			it != std::ranges::end(list)) { return it->second; }
@@ -585,7 +584,7 @@ namespace gal::prometheus::meta
 		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto value_of(const std::string_view enum_name) noexcept -> std::optional<EnumType>
 	{
-		const auto list = names_of<EnumType>();
+		constexpr auto list = names_of<EnumType>();
 
 		if (const auto it = std::ranges::find(list, enum_name, [](const auto& pair) noexcept -> std::string_view { return pair.second; });
 			it != std::ranges::end(list)) { return it->first; }
