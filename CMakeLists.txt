@@ -24,7 +24,7 @@ set(
 
 set(
 		${PROJECT_NAME_PREFIX}MINOR_VERSION
-		1
+		2
 )
 
 set(
@@ -425,10 +425,10 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/meta/enum_name.hpp
 
 		# =========================
-		# UTILITY
+		# FUNCTIONAL
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/utility/functional.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
 )
 
 target_sources(
