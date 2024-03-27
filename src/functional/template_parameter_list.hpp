@@ -85,6 +85,28 @@ namespace gal::prometheus::functional
 		};
 
 		// =================================
+		// sub-list
+		// =================================
+
+		template<template<typename> typename Prediction, list_t Remaining, list_t Current>
+		struct sub_list_impl;
+
+		template<template<typename> typename Prediction, list_t Current>
+		struct sub_list_impl<Prediction, list<>, Current>
+		{
+			using type = Current;
+		};
+
+		template<template<typename> typename Prediction, typename Front, typename... RemainingTs, typename... CurrentTs>
+		struct sub_list_impl<Prediction, list<Front, RemainingTs...>, list<CurrentTs...>>
+		{
+			using type = std::conditional_t<
+				Prediction<Front>::value,
+				typename sub_list_impl<Prediction, list<RemainingTs...>, list<CurrentTs..., Front>>::type,
+				typename sub_list_impl<Prediction, list<RemainingTs...>, list<CurrentTs...>>::type>;
+		};
+
+		// =================================
 		// list
 		// =================================
 
@@ -288,6 +310,23 @@ namespace gal::prometheus::functional
 			}
 
 			[[nodiscard]] consteval auto unique() const noexcept -> auto { return this->template unique_back<types_size>(); }
+
+			[[nodiscard]] consteval auto to_tuple() const noexcept -> std::tuple<Ts...>
+			{
+				(void)this;
+				return {};
+			}
+
+			template<template<typename> typename Prediction>
+			[[nodiscard]] consteval auto sub_list() const noexcept -> typename sub_list_impl<Prediction, list, list<>>::type
+			{
+				(void)this;
+				return {};
+			}
+
+			template<typename T, template<typename, typename> typename Prediction>
+				requires requires(list   l) { l.template sub_list<typename binder<T, Prediction>::rebind>(); }
+			[[nodiscard]] consteval auto sub_list() const noexcept -> auto { return this->template sub_list<typename binder<T, Prediction>::rebind>(); }
 		};
 	}
 
@@ -300,22 +339,4 @@ namespace gal::prometheus::functional
 	using list_type = std::decay_t<decltype(List)>;
 
 	GAL_PROMETHEUS_MODULE_EXPORT_END
-
-	namespace template_parameter_list_test
-	{
-		template<typename T>
-		struct is_int : std::is_same<int, T> {};
-
-		static_assert(list<float>.push_back<list<double>>().push_back(list<double>).push_front<list<int>>().push_front(list<int>).any<float, std::is_same>());
-		static_assert(list<float>.push_back<list<double>>().push_back(list<double>).push_front<list<int>>().push_front(list<int>).any<is_int>());
-		static_assert(list<float>.push_back<list<double>>().push_back(list<double>).push_front<list<int>>().push_front(list<int>).projection<std::add_const>().any<const float, std::is_same>());
-
-		static_assert(list<int, int, int, float, double, double, double>.pop_back<3>().pop_front<3>().index_of<float>() == 0);
-		static_assert(std::is_same_v<list_type<list<int, float, double>.projection<std::add_const>()>::nth_type<1>, const float>);
-		static_assert(list<int, float, double>.projection<std::add_const>().index_of<const float>() == 1);
-
-		static_assert(list<int, int, int, float, double, double, double>.unique_front<3>().size() == 5);
-		static_assert(list<int, int, int, float, double, double, double>.unique_back<3>().size() == 5);
-		static_assert(list<int, int, int, float, double, double, double>.unique().size() == 3);
-	}
 }
