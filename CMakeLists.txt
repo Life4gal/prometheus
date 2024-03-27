@@ -29,7 +29,7 @@ set(
 
 set(
 		${PROJECT_NAME_PREFIX}PATCH_VERSION
-		0
+		1
 )
 
 set(${PROJECT_NAME_PREFIX}VERSION ${${PROJECT_NAME_PREFIX}MAJOR_VERSION}.${${PROJECT_NAME_PREFIX}MINOR_VERSION}.${${PROJECT_NAME_PREFIX}PATCH_VERSION})
@@ -429,6 +429,13 @@ target_sources(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/template_parameter_list.hpp
+
+		# =========================
+		# INFRASTRUCTURE
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/infrastructure/state_machine.hpp
 )
 
 target_sources(
