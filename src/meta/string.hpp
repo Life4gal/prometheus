@@ -520,7 +520,7 @@ namespace gal::prometheus::meta
 		// }
 	};
 
-	template<basic_fixed_string_t auto FixedString>
+	template<basic_fixed_string FixedString>
 	[[nodiscard]] constexpr auto to_char_array() noexcept -> auto
 	{
 		using fixed_string_type = decltype(FixedString);
