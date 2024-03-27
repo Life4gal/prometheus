@@ -98,7 +98,7 @@
 	[]<bool AlwaysFalse = false>() { static_assert(AlwaysFalse, "[UNREACHABLE BRANCH]" __VA_OPT__(":\"") __VA_ARGS__ __VA_OPT__("\"")); }(); \
 	GAL_PROMETHEUS_UNREACHABLE()
 
-#if __has_cpp_attribute(__cpp_if_consteval)
+#if defined(__cpp_if_consteval)
 	#define GAL_PROMETHEUS_IF_CONSTANT_EVALUATED if consteval
 	#define GAL_PROMETHEUS_IF_NOT_CONSTANT_EVALUATED if not consteval
 #else
@@ -107,13 +107,13 @@
 #endif
 
 // fixme
-#if __has_cpp_attribute(__cpp_lib_is_implicit_lifetime)
+#if defined(__cpp_lib_is_implicit_lifetime)
 	#define GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(type) std::is_implicit_lifetime_v<type>
 #else
 #define GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(type) std::is_standard_layout_v<type> and std::is_trivial_v<type>
 #endif
 
-#if __has_cpp_attribute(__cpp_lib_start_lifetime_as)
+#if defined(__cpp_lib_start_lifetime_as)
 	#define GAL_PROMETHEUS_START_LIFETIME_AS(type, ptr) std::start_lifetime_as<type>(ptr)
 	#define GAL_PROMETHEUS_START_LIFETIME_AS_ARRAY(type, ptr) std::start_lifetime_as_array<type>(ptr)
 #else
@@ -246,6 +246,137 @@
 
 #define GAL_PROMETHEUS_TO_STRING(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_TO_STRING_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(__VA_ARGS__)
 
+// todo
+#define GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+#define GAL_PROMETHEUS_MODULE_EXPORT_END
+#define GAL_PROMETHEUS_MODULE_EXPORT_STD_BEGIN namespace std
+
+// =========================
+// MODULE: gal.prometheus.meta
+// =========================
+
+#define GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(string_type, this_string, string_length, begin_index) \
+	[]<std::size_t... Index>(std::index_sequence<Index...>) constexpr noexcept                       \
+			 { return ::gal::prometheus::meta::string_type<                                                       \
+					   [](std::size_t index) constexpr noexcept                                               \
+					   {                                                                                      \
+						   return (this_string)[(begin_index) + index];                                            \
+					   }(Index)...>{}; }(std::make_index_sequence<string_length>{})
+
+#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(string_type, string) GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(string_type, string, sizeof(string) / sizeof((string)[0]), 0)
+#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(string_type, inner_string_type, left_string, right_string) ::gal::prometheus::string::string_type<GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, left_string), GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, right_string)>
+#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(string_type, inner_string_type, this_string) ::gal::prometheus::string::string_type<GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(inner_string_type, this_string, sizeof(this_string) / sizeof((this_string)[0]) / 2, 0), GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(inner_string_type, this_string, sizeof(this_string) / sizeof((this_string)[0]) / 2, sizeof(this_string) / sizeof((this_string)[0]) / 2)>
+
+#define GAL_PROMETHEUS_STRING_CHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(char_array, string)
+#define GAL_PROMETHEUS_STRING_WCHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(wchar_array, string)
+// ReSharper disable once CppInconsistentNaming
+#define GAL_PROMETHEUS_STRING_U8CHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(u8char_array, string)
+// ReSharper disable once CppInconsistentNaming
+#define GAL_PROMETHEUS_STRING_U16CHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(u16char_array, string)
+// ReSharper disable once CppInconsistentNaming
+#define GAL_PROMETHEUS_STRING_U32CHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(u32char_array, string)
+
+// #define GAL_PROMETHEUS_STRING_CHAR_BILATERAL_ARRAY(left_string, right_string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(char_bilateral_array, char_array, left_string, right_string)
+// #define GAL_PROMETHEUS_STRING_WCHAR_BILATERAL_ARRAY(left_string, right_string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(wchar_bilateral_array, wchar_array, left_string, right_string)
+// // ReSharper disable once CppInconsistentNaming
+// #define GAL_PROMETHEUS_STRING_U8CHAR_BILATERAL_ARRAY(left_string, right_string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(u8char_bilateral_array, u8char_array, left_string, right_string)
+// // ReSharper disable once CppInconsistentNaming
+// #define GAL_PROMETHEUS_STRING_U16CHAR_BILATERAL_ARRAY(left_string, right_string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(u16char_bilateral_array, u16char_array, left_string, right_string)
+// // ReSharper disable once CppInconsistentNaming
+// #define GAL_PROMETHEUS_STRING_U32CHAR_BILATERAL_ARRAY(left_string, right_string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(u32char_bilateral_array, u32char_array, left_string, right_string)
+
+// #define GAL_PROMETHEUS_STRING_CHAR_SYMMETRY_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(char_bilateral_array, char_array, string)
+// #define GAL_PROMETHEUS_STRING_WCHAR_SYMMETRY_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(wchar_bilateral_array, wchar_array, string)
+// // ReSharper disable once CppInconsistentNaming
+// #define GAL_PROMETHEUS_STRING_U8CHAR_SYMMETRY_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(u8char_bilateral_array, u8char_array, string)
+// // ReSharper disable once CppInconsistentNaming
+// #define GAL_PROMETHEUS_STRING_U16CHAR_SYMMETRY_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(u16char_bilateral_array, u16char_array, string)
+// // ReSharper disable once CppInconsistentNaming
+// #define GAL_PROMETHEUS_STRING_U32CHAR_SYMMETRY_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(u32char_bilateral_array, u32char_array, string)
+
+// #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_1(string_type, inner_string_type, string1) \
+// 	::gal::prometheus::string::string_type< \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1) \
+// 	>
+// #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_2(string_type, inner_string_type, string1, string2) \
+// 	::gal::prometheus::string::string_type< \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2) \
+// 	>
+// #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_3(string_type, inner_string_type, string1, string2, string3) \
+// 	::gal::prometheus::string::string_type< \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3) \
+// 	>
+// #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_4(string_type, inner_string_type, string1, string2, string3, string4) \
+// 	::gal::prometheus::string::string_type< \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4) \
+// 	>
+// #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_5(string_type, inner_string_type, string1, string2, string3, string4, string5) \
+// 	::gal::prometheus::string::string_type< \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string5) \
+// 	>
+// #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_6(string_type, inner_string_type, string1, string2, string3, string4, string5, string6) \
+// 	::gal::prometheus::string::string_type< \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string5), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string6) \
+// 	>
+// #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_7(string_type, inner_string_type, string1, string2, string3, string4, string5, string6, string7) \
+// 	::gal::prometheus::string::string_type< \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string5), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string6), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string7) \
+// 	>
+// #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_8(string_type, inner_string_type, string1, string2, string3, string4, string5, string6, string7, string8) \
+// 	::gal::prometheus::string::string_type< \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string5), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string6), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string7), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string8) \
+// 	>
+// #define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_9(string_type, inner_string_type, string1, string2, string3, string4, string5, string6, string7, string8, string9) \
+// 	::gal::prometheus::string::string_type< \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string5), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string6), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string7), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string8), \
+// 		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string9) \
+// 	>
+
+// #define GAL_PROMETHEUS_STRING_CHAR_MULTIPLE_ARRAY(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(char_multiple_array, char_array, __VA_ARGS__)
+// #define GAL_PROMETHEUS_STRING_WCHAR_MULTIPLE_ARRAY(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(wchar_multiple_array, wchar_array, __VA_ARGS__)
+// // ReSharper disable once CppInconsistentNaming
+// #define GAL_PROMETHEUS_STRING_U8CHAR_MULTIPLE_ARRAY(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(u8char_multiple_array, u8char_array, __VA_ARGS__)
+// // ReSharper disable once CppInconsistentNaming
+// #define GAL_PROMETHEUS_STRING_U16CHAR_MULTIPLE_ARRAY(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(u16char_multiple_array, u16char_array, __VA_ARGS__)
+// // ReSharper disable once CppInconsistentNaming
+// #define GAL_PROMETHEUS_STRING_U32CHAR_MULTIPLE_ARRAY(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(u32char_multiple_array, u32char_array, __VA_ARGS__)
+
+
 // =========================
 // MODULE: gal.prometheus.error
 // =========================
@@ -296,131 +427,6 @@
 #else
 	#define GAL_PROMETHEUS_DEBUG_UNREACHABLE(...) GAL_PROMETHEUS_UNREACHABLE()
 #endif
-
-// =========================
-// MODULE: gal.prometheus.string
-// =========================
-
-#define GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(string_type, this_string, string_length, begin_index) \
-	decltype([]<std::size_t... Index>(std::index_sequence<Index...>) constexpr noexcept                       \
-			 { return ::gal::prometheus::string::string_type<                                                       \
-					   [](std::size_t index) constexpr noexcept                                               \
-					   {                                                                                      \
-						   return (this_string)[(begin_index) + index];                                            \
-					   }(Index)...>{}; }(std::make_index_sequence<string_length>{}))
-
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(string_type, string) GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(string_type, string, sizeof(string) / sizeof((string)[0]), 0)
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(string_type, inner_string_type, left_string, right_string) ::gal::prometheus::string::string_type<GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, left_string), GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, right_string)>
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(string_type, inner_string_type, this_string) ::gal::prometheus::string::string_type<GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(inner_string_type, this_string, sizeof(this_string) / sizeof((this_string)[0]) / 2, 0), GAL_PROMETHEUS_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(inner_string_type, this_string, sizeof(this_string) / sizeof((this_string)[0]) / 2, sizeof(this_string) / sizeof((this_string)[0]) / 2)>
-
-#define GAL_PROMETHEUS_STRING_CHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(char_array, string)
-#define GAL_PROMETHEUS_STRING_WCHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(wchar_array, string)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U8CHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(u8char_array, string)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U16CHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(u16char_array, string)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U32CHAR_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(u32char_array, string)
-
-#define GAL_PROMETHEUS_STRING_CHAR_BILATERAL_ARRAY(left_string, right_string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(char_bilateral_array, char_array, left_string, right_string)
-#define GAL_PROMETHEUS_STRING_WCHAR_BILATERAL_ARRAY(left_string, right_string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(wchar_bilateral_array, wchar_array, left_string, right_string)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U8CHAR_BILATERAL_ARRAY(left_string, right_string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(u8char_bilateral_array, u8char_array, left_string, right_string)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U16CHAR_BILATERAL_ARRAY(left_string, right_string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(u16char_bilateral_array, u16char_array, left_string, right_string)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U32CHAR_BILATERAL_ARRAY(left_string, right_string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(u32char_bilateral_array, u32char_array, left_string, right_string)
-
-#define GAL_PROMETHEUS_STRING_CHAR_SYMMETRY_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(char_bilateral_array, char_array, string)
-#define GAL_PROMETHEUS_STRING_WCHAR_SYMMETRY_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(wchar_bilateral_array, wchar_array, string)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U8CHAR_SYMMETRY_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(u8char_bilateral_array, u8char_array, string)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U16CHAR_SYMMETRY_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(u16char_bilateral_array, u16char_array, string)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U32CHAR_SYMMETRY_ARRAY(string) GAL_PROMETHEUS_PRIVATE_STRING_CHAR_SYMMETRY_ARRAY(u32char_bilateral_array, u32char_array, string)
-
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_1(string_type, inner_string_type, string1) \
-	::gal::prometheus::string::string_type< \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1) \
-	>
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_2(string_type, inner_string_type, string1, string2) \
-	::gal::prometheus::string::string_type< \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2) \
-	>
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_3(string_type, inner_string_type, string1, string2, string3) \
-	::gal::prometheus::string::string_type< \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3) \
-	>
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_4(string_type, inner_string_type, string1, string2, string3, string4) \
-	::gal::prometheus::string::string_type< \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4) \
-	>
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_5(string_type, inner_string_type, string1, string2, string3, string4, string5) \
-	::gal::prometheus::string::string_type< \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string5) \
-	>
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_6(string_type, inner_string_type, string1, string2, string3, string4, string5, string6) \
-	::gal::prometheus::string::string_type< \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string5), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string6) \
-	>
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_7(string_type, inner_string_type, string1, string2, string3, string4, string5, string6, string7) \
-	::gal::prometheus::string::string_type< \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string5), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string6), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string7) \
-	>
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_8(string_type, inner_string_type, string1, string2, string3, string4, string5, string6, string7, string8) \
-	::gal::prometheus::string::string_type< \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string5), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string6), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string7), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string8) \
-	>
-#define GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_9(string_type, inner_string_type, string1, string2, string3, string4, string5, string6, string7, string8, string9) \
-	::gal::prometheus::string::string_type< \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string1), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string2), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string3), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string4), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string5), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string6), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string7), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string8), \
-		GAL_PROMETHEUS_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, string9) \
-	>
-
-#define GAL_PROMETHEUS_STRING_CHAR_MULTIPLE_ARRAY(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(char_multiple_array, char_array, __VA_ARGS__)
-#define GAL_PROMETHEUS_STRING_WCHAR_MULTIPLE_ARRAY(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(wchar_multiple_array, wchar_array, __VA_ARGS__)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U8CHAR_MULTIPLE_ARRAY(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(u8char_multiple_array, u8char_array, __VA_ARGS__)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U16CHAR_MULTIPLE_ARRAY(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(u16char_multiple_array, u16char_array, __VA_ARGS__)
-// ReSharper disable once CppInconsistentNaming
-#define GAL_PROMETHEUS_STRING_U32CHAR_MULTIPLE_ARRAY(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_STRING_CHAR_MULTIPLE_ARRAY_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(u32char_multiple_array, u32char_array, __VA_ARGS__)
 
 #define GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW(error_type, expression, message, ...) \
 	do \
