@@ -338,5 +338,8 @@ namespace gal::prometheus::functional
 	template<template_parameter_list::list_t auto List>
 	using list_type = std::decay_t<decltype(List)>;
 
+	template<typename T>
+	concept list_t = template_parameter_list::list_t<T>;
+
 	GAL_PROMETHEUS_MODULE_EXPORT_END
 }
