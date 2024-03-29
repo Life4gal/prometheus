@@ -1,8 +1,30 @@
 #pragma once
 
+#if GAL_PROMETHEUS_USE_MODULE
+module;
+
+#include <prometheus/macro.hpp>
+
+export module gal.prometheus.infrastructure:state_machine;
+
+import std;
+import gal.prometheus.functional;
+
+#else
+#include <functional>
+#include <type_traits>
+
 #include <meta/string.hpp>
 #include <functional/functional.hpp>
 #include <functional/template_parameter_list.hpp>
+#endif
+
+#if defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_GNU)
+	#define STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE auto
+	#define STATE_MACHINE_WORKAROUND_REQUIRED
+#else
+	#define STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE state
+#endif
 
 namespace gal::prometheus::infrastructure
 {
@@ -39,17 +61,18 @@ namespace gal::prometheus::infrastructure
 		struct nothing {};
 
 		constexpr auto absence = []() noexcept { return true; };
-		constexpr auto ignore  = []() noexcept {};
-		using ignore_type = decltype(ignore);
+		using absence_type = std::decay_t<decltype(absence)>;
+		constexpr auto ignore = []() noexcept {};
+		using ignore_type = std::decay_t<decltype(ignore)>;
 
-		template<bool IsEntryPoint, state From, state To, typename EventType = nothing, typename GuardType = decltype(absence), typename ActionType = ignore_type, typename SentryEntryType = ignore_type, typename SentryExitType = ignore_type>
+		template<bool IsEntryPoint, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE From, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE To, typename EventType = nothing, typename GuardType = absence_type, typename ActionType = ignore_type, typename SentryEntryType = ignore_type, typename SentryExitType = ignore_type>
 			requires(From != state_continue)
 		struct transition;
 
 		template<typename>
 		struct is_transition : std::false_type {};
 
-		template<bool IsEntryPoint, state From, state To, typename EventType, typename GuardType, typename ActionType, typename SentryEntryType, typename SentryExitType>
+		template<bool IsEntryPoint, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE From, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE To, typename EventType, typename GuardType, typename ActionType, typename SentryEntryType, typename SentryExitType>
 		struct is_transition<transition<IsEntryPoint, From, To, EventType, GuardType, ActionType, SentryEntryType, SentryExitType>> : std::true_type {};
 
 		template<typename T>
@@ -57,11 +80,13 @@ namespace gal::prometheus::infrastructure
 		template<typename T>
 		concept transition_t = is_transition_v<T>;
 
-		template<bool IsEntryPoint, state From, state To, typename EventType, typename GuardType, typename ActionType, typename SentryEntryType, typename SentryExitType>
+		template<bool IsEntryPoint, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE From, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE To, typename EventType, typename GuardType, typename ActionType, typename SentryEntryType, typename SentryExitType>
 			requires(From != state_continue)
 		struct transition
 		{
+			#if not defined(STATE_MACHINE_WORKAROUND_REQUIRED)
 			friend StateMachine;
+			#endif
 
 			constexpr static auto is_entry_point = IsEntryPoint;
 			constexpr static auto from           = From;
@@ -222,7 +247,10 @@ namespace gal::prometheus::infrastructure
 				return {.guard = std::move(guard), .action = std::move(action), .sentry_entry = std::move(sentry_entry), .sentry_exit = std::forward<SentryExit>(new_exit)};
 			}
 
+			#if not defined(STATE_MACHINE_WORKAROUND_REQUIRED)
 		private:
+			#endif
+
 			template<std::size_t EntryIndex, typename StateMachine, typename Event, typename... Args>
 				requires(event_type{}.template any<Event>())
 			[[nodiscard]] constexpr auto operator()(StateMachine& state_machine, const Event& event, Args&&... args) -> bool
@@ -271,6 +299,13 @@ namespace gal::prometheus::infrastructure
 
 		template<transition_t... Transition>
 		struct is_transition_list<transition_list_type<Transition...>> : std::true_type {};
+
+		#if defined(STATE_MACHINE_WORKAROUND_REQUIRED)
+		// @see transition_list below
+		template<template<typename...> typename T, transition_t... Transition>
+			requires std::is_base_of_v<transition_list_type<Transition...>, T<Transition...>>
+		struct is_transition_list<T<Transition...>> : std::true_type {};
+		#endif
 
 		template<typename T>
 		constexpr auto is_transition_list_v = is_transition_list<T>::value;
@@ -331,7 +366,9 @@ namespace gal::prometheus::infrastructure
 		template<template<typename...> typename List, typename... Transitions>
 		class StateMachine<List<Transitions...>>
 		{
+			#if not defined(STATE_MACHINE_WORKAROUND_REQUIRED)
 			friend transition;
+			#endif
 
 		public:
 			// mapping list
@@ -383,6 +420,12 @@ namespace gal::prometheus::infrastructure
 				}(std::make_index_sequence<entry_point_list.size()>{});
 			}
 
+			#if defined(STATE_MACHINE_WORKAROUND_REQUIRED)
+
+		public:
+			#endif
+
+			// friend ==> transition::operator()
 			template<std::size_t EntryIndex, typename State>
 			constexpr auto transform() noexcept -> void//
 			{
@@ -393,6 +436,11 @@ namespace gal::prometheus::infrastructure
 			template<transition_t Transition>
 				requires(transitions_list.template any<Transition>())
 			[[nodiscard]] constexpr auto get_transition() noexcept -> Transition& { return static_cast<Transition&>(transitions_); }
+
+			#if defined(STATE_MACHINE_WORKAROUND_REQUIRED)
+
+		private:
+			#endif
 
 		public:
 			template<typename L>
@@ -470,7 +518,11 @@ namespace gal::prometheus::infrastructure
 						return (do_check_each_transition.template operator()<TransitionsIndex>() or ...);
 					};
 
+					#if not defined(GAL_PROMETHEUS_COMPILER_GNU)
 					return (do_check_each_state.template operator()<EntriesIndex>(std::make_index_sequence<transitions_of_event<EventType>.size()>{}) or ...);
+					#else
+					return (do_check_each_state.template operator()<EntriesIndex>(std::make_index_sequence<transitions_type_of_event<EventType>::types_size>{}) or ...);
+					#endif
 				}(std::make_index_sequence<entry_point_list.size()>{});
 			}
 		};
@@ -492,17 +544,27 @@ namespace gal::prometheus::infrastructure
 	// state_machine.is(s1, s2);
 	// state_machine.process(e{});
 	// state_machine.is(s4, s2); // <== only the first entry_point changes state.
-	[[nodiscard]] constexpr auto any_state = state_machine_detail::transition<false, state_machine_detail::state_any, state_machine_detail::state_continue>{};
+	constexpr auto any_state = state_machine_detail::transition<false, state_machine_detail::state_any, state_machine_detail::state_continue>{};
 
-	template<typename... Transitions>
+	template<state_machine_detail::transition_t... Transitions>
 		requires((Transitions::is_entry_point + ...) >= 1)
+	#if defined(STATE_MACHINE_WORKAROUND_REQUIRED)
+	struct transition_list : state_machine_detail::transition_list_type<Transitions...>
+	{
+		using state_machine_detail::transition_list_type<Transitions...>::transition_list_type;
+	};
+
+	template<state_machine_detail::transition_t... Transitions>
+	transition_list(Transitions&&...) -> transition_list<Transitions...>;
+	#else
 	using transition_list = state_machine_detail::transition_list_type<Transitions...>;
+	#endif
 
 	template<typename Invocable>
 		requires std::is_invocable_v<Invocable> and state_machine_detail::is_transition_list_v<decltype(std::declval<Invocable>()())>
 	struct state_machine final : state_machine_detail::StateMachine<decltype(std::declval<Invocable>()())>
 	{
-		constexpr explicit(false) state_machine(Invocable function) noexcept
+		constexpr explicit(false) state_machine(Invocable function) noexcept// NOLINT(*-explicit-constructor)
 			: state_machine_detail::StateMachine<decltype(std::declval<Invocable>()())>{function()} {}
 	};
 
@@ -511,3 +573,8 @@ namespace gal::prometheus::infrastructure
 
 	GAL_PROMETHEUS_MODULE_EXPORT_END
 }
+
+#undef STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE
+#if defined(STATE_MACHINE_WORKAROUND_REQUIRED)
+#undef STATE_MACHINE_WORKAROUND_REQUIRED
+#endif
