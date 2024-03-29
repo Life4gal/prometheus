@@ -1,11 +1,22 @@
 #pragma once
 
+#if GAL_PROMETHEUS_USE_MODULE
+module;
+
+#include <prometheus/macro.hpp>
+
+export module gal.prometheus.meta:string;
+
+import std;
+
+#else
 #include <algorithm>
 #include <functional>
 #include <prometheus/macro.hpp>
 #include <ranges>
 #include <string>
 #include <type_traits>
+#endif
 
 namespace gal::prometheus::meta
 {

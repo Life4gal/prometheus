@@ -1,6 +1,19 @@
 #pragma once
 
+#if GAL_PROMETHEUS_USE_MODULE
+module;
+
+#include <prometheus/macro.hpp>
+
+export module gal.prometheus.functional;
+
+import std;
+export import :template_parameter_list;
+
+#else
 #include <type_traits>
+#include <functional>
+#endif
 
 namespace gal::prometheus::functional
 {

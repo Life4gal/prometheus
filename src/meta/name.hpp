@@ -1,7 +1,17 @@
 #pragma once
 
-#include <string>
-#include <string_view>
+#if GAL_PROMETHEUS_USE_MODULE
+module;
+
+#include <prometheus/macro.hpp>
+
+export module gal.prometheus.meta:name;
+
+import std;
+
+#else
+	#include <string_view>
+#endif
 
 struct dummy_struct_do_not_put_into_any_namespace {};
 
@@ -12,32 +22,32 @@ enum class DummyEnumDoNotPutIntoAnyNamespace
 
 namespace gal::prometheus::meta
 {
+	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+
 	namespace name
 	{
 		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-		template<typename>
+		template<typename...>
 		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__FUNCSIG__, sizeof(__FUNCSIG__)}; }
 
-		template<auto>
+		template<auto...>
 		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__FUNCSIG__, sizeof(__FUNCSIG__)}; }
 
 		#elif defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
-		template<typename T>// DO NOT REMOVE `T`
+		template<typename... Ts>// DO NOT REMOVE `Ts`
 		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }
 
-		template<auto V>// DO NOT REMOVE `V`
+		template<auto... Vs>// DO NOT REMOVE `Vs`
 		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }
 
 		#else
-		template<typename>
+		template<typename...>
 		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }
 
-		template<auto>
+		template<auto...>
 		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }
 		#endif
 	}
-
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
 
 	template<typename T>
 	[[nodiscard]] constexpr auto name_of_type() noexcept -> std::string_view

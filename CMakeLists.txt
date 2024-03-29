@@ -425,6 +425,8 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/meta/enum_name.hpp
 		${PROJECT_SOURCE_DIR}/src/meta/member_name.hpp
 
+		${PROJECT_SOURCE_DIR}/src/meta/meta.hpp
+
 		# =========================
 		# FUNCTIONAL
 		# =========================
