@@ -40,18 +40,18 @@
 	#define GAL_PROMETHEUS_PRIVATE_DO_PRAGMA(X) _Pragma(#X)
 	#define GAL_PROMETHEUS_DISABLE_WARNING(warningName) GAL_PROMETHEUS_PRIVATE_DO_PRAGMA(GCC diagnostic ignored #warningName)
 #elif defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) || defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) || defined(GAL_PROMETHEUS_COMPILER_CLANG)
-	#define GAL_PROMETHEUS_ASSUME(condition) __builtin_assume(not not(condition))
-	#define GAL_PROMETHEUS_UNREACHABLE() __builtin_unreachable()
-	#define GAL_PROMETHEUS_DEBUG_TRAP() __builtin_trap()
-	#define GAL_PROMETHEUS_IMPORTED_SYMBOL __attribute__((visibility("default")))
-	#define GAL_PROMETHEUS_EXPORTED_SYMBOL __attribute__((visibility("default")))
-	#define GAL_PROMETHEUS_LOCAL_SYMBOL __attribute__((visibility("hidden")))
+#define GAL_PROMETHEUS_ASSUME(condition) __builtin_assume(not not(condition))
+#define GAL_PROMETHEUS_UNREACHABLE() __builtin_unreachable()
+#define GAL_PROMETHEUS_DEBUG_TRAP() __builtin_trap()
+#define GAL_PROMETHEUS_IMPORTED_SYMBOL __attribute__((visibility("default")))
+#define GAL_PROMETHEUS_EXPORTED_SYMBOL __attribute__((visibility("default")))
+#define GAL_PROMETHEUS_LOCAL_SYMBOL __attribute__((visibility("hidden")))
 
-	#define GAL_PROMETHEUS_DISABLE_WARNING_PUSH _Pragma("clang diagnostic push")
-	#define GAL_PROMETHEUS_DISABLE_WARNING_POP _Pragma("clang diagnostic pop")
+#define GAL_PROMETHEUS_DISABLE_WARNING_PUSH _Pragma("clang diagnostic push")
+#define GAL_PROMETHEUS_DISABLE_WARNING_POP _Pragma("clang diagnostic pop")
 
-	#define GAL_PROMETHEUS_PRIVATE_DO_PRAGMA(X) _Pragma(#X)
-	#define GAL_PROMETHEUS_DISABLE_WARNING(warningName) GAL_PROMETHEUS_PRIVATE_DO_PRAGMA(clang diagnostic ignored #warningName)
+#define GAL_PROMETHEUS_PRIVATE_DO_PRAGMA(X) _Pragma(#X)
+#define GAL_PROMETHEUS_DISABLE_WARNING(warningName) GAL_PROMETHEUS_PRIVATE_DO_PRAGMA(clang diagnostic ignored #warningName)
 #else
 	#define GAL_PROMETHEUS_UNREACHABLE()
 	#define GAL_PROMETHEUS_DEBUG_TRAP()
@@ -67,7 +67,7 @@
 #if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 #define GAL_PROMETHEUS_DISABLE_WARNING_MSVC(...) GAL_PROMETHEUS_DISABLE_WARNING(__VA_ARGS__)
 #else
-	#define GAL_PROMETHEUS_DISABLE_WARNING_MSVC(...)
+#define GAL_PROMETHEUS_DISABLE_WARNING_MSVC(...)
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_GNU)
@@ -77,19 +77,27 @@
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) || defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) || defined(GAL_PROMETHEUS_COMPILER_CLANG)
-	#define GAL_PROMETHEUS_DISABLE_WARNING_CLANG(...) GAL_PROMETHEUS_DISABLE_WARNING(__VA_ARGS__)
+#define GAL_PROMETHEUS_DISABLE_WARNING_CLANG(...) GAL_PROMETHEUS_DISABLE_WARNING(__VA_ARGS__)
 #else
 #define GAL_PROMETHEUS_DISABLE_WARNING_CLANG(...)
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-#define GAL_PROMETHEUS_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+	#define GAL_PROMETHEUS_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#elif defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
+	#if __clang_major__ >= 18
+			// https://github.com/llvm/llvm-project/pull/65675
+			// https://github.com/llvm/llvm-project/pull/67199
+			#define GAL_PROMETHEUS_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+	#else
+		#define GAL_PROMETHEUS_NO_UNIQUE_ADDRESS
+	#endif
 #else
 	#define GAL_PROMETHEUS_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) || defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) || defined(GAL_PROMETHEUS_COMPILER_CLANG)
-	#define GAL_PROMETHEUS_NO_DESTROY [[clang::no_destroy]]
+#define GAL_PROMETHEUS_NO_DESTROY [[clang::no_destroy]]
 #else
 #define GAL_PROMETHEUS_NO_DESTROY
 #endif
@@ -247,9 +255,17 @@
 #define GAL_PROMETHEUS_TO_STRING(...) GAL_PROMETHEUS_STRING_CAT(GAL_PROMETHEUS_PRIVATE_TO_STRING_, GAL_PROMETHEUS_ARGS_LEN(__VA_ARGS__))(__VA_ARGS__)
 
 // todo
-#define GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
-#define GAL_PROMETHEUS_MODULE_EXPORT_END
-#define GAL_PROMETHEUS_MODULE_EXPORT_STD_BEGIN namespace std
+#define GAL_PROMETHEUS_USE_MODULE 0
+
+#if GAL_PROMETHEUS_USE_MODULE
+	#define GAL_PROMETHEUS_MODULE_EXPORT_BEGIN export {
+	#define GAL_PROMETHEUS_MODULE_EXPORT_END }
+	#define GAL_PROMETHEUS_MODULE_EXPORT_STD_BEGIN export namespace std
+#else
+	#define GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	#define GAL_PROMETHEUS_MODULE_EXPORT_END
+	#define GAL_PROMETHEUS_MODULE_EXPORT_STD_BEGIN namespace std
+#endif
 
 // =========================
 // MODULE: gal.prometheus.meta
