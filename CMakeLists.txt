@@ -423,6 +423,7 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/meta/string.hpp
 		${PROJECT_SOURCE_DIR}/src/meta/name.hpp
 		${PROJECT_SOURCE_DIR}/src/meta/enum_name.hpp
+		${PROJECT_SOURCE_DIR}/src/meta/member_name.hpp
 
 		# =========================
 		# FUNCTIONAL
@@ -475,6 +476,9 @@ target_compile_definitions(
 		${PROJECT_NAME_PREFIX}COMPILER_VERSION="${${PROJECT_NAME_PREFIX}COMPILER_VERSION}"
 		${PROJECT_NAME_PREFIX}COMPILER_NAME="${${PROJECT_NAME_PREFIX}COMPILER_NAME}"
 		${${PROJECT_NAME_PREFIX}PLATFORM}
+
+		# module
+		${PROJECT_NAME_PREFIX}USE_MODULE=0
 
 		# Tool macros for platform determination.
 		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_NAME_PREFIX}COMPILER_MSVC>
