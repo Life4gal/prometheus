@@ -9,10 +9,14 @@ export module gal.prometheus.functional;
 
 import std;
 export import :type_list;
+export import :value_list;
 
 #else
 #include <type_traits>
 #include <functional>
+
+#include <functional/type_list.hpp>
+#include <functional/value_list.hpp>
 #endif
 
 namespace gal::prometheus::functional
