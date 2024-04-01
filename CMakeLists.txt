@@ -432,13 +432,14 @@ target_sources(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
-		${PROJECT_SOURCE_DIR}/src/functional/template_parameter_list.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/type_list.hpp
 
 		# =========================
 		# INFRASTRUCTURE
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/infrastructure/state_machine.hpp
+		${PROJECT_SOURCE_DIR}/src/infrastructure/unit_test.hpp
 )
 
 target_sources(

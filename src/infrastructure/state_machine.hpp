@@ -16,14 +16,14 @@ import gal.prometheus.functional;
 
 #include <meta/string.hpp>
 #include <functional/functional.hpp>
-#include <functional/template_parameter_list.hpp>
+#include <functional/type_list.hpp>
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_GNU)
 	#define STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE auto
 	#define STATE_MACHINE_WORKAROUND_REQUIRED
 #else
-	#define STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE state
+#define STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE state
 #endif
 
 namespace gal::prometheus::infrastructure
@@ -116,13 +116,13 @@ namespace gal::prometheus::infrastructure
 			}
 
 			template<typename... Event>
-			[[nodiscard]] constexpr auto when() const & noexcept -> transition<is_entry_point, from, to, functional::list_type<functional::list<Event...>>, guard_type, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto when() const & noexcept -> transition<is_entry_point, from, to, functional::type_list_type<functional::type_list<Event...>>, guard_type, action_type, sentry_entry_type, sentry_exit_type>//
 			{
 				return {.guard = guard, .action = action, .sentry_entry = sentry_entry, .sentry_exit = sentry_exit};
 			}
 
 			template<typename... Event>
-			[[nodiscard]] constexpr auto when() && noexcept -> transition<is_entry_point, from, to, functional::list_type<functional::list<Event...>>, guard_type, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto when() && noexcept -> transition<is_entry_point, from, to, functional::type_list_type<functional::type_list<Event...>>, guard_type, action_type, sentry_entry_type, sentry_exit_type>//
 			{
 				return {.guard = std::move(guard), .action = std::move(action), .sentry_entry = std::move(sentry_entry), .sentry_exit = std::move(sentry_exit)};
 			}
@@ -248,6 +248,7 @@ namespace gal::prometheus::infrastructure
 			}
 
 			#if not defined(STATE_MACHINE_WORKAROUND_REQUIRED)
+
 		private:
 			#endif
 
@@ -316,7 +317,7 @@ namespace gal::prometheus::infrastructure
 		struct transitions_mapping_type
 		{
 		private:
-			constexpr static auto list = functional::list<Transitions...>;
+			constexpr static auto list = functional::type_list<Transitions...>;
 
 			template<transition_t Transition>
 			struct is_entry_point
@@ -344,23 +345,23 @@ namespace gal::prometheus::infrastructure
 
 		public:
 			constexpr static auto transitions_list = list;
-			using transitions_list_type = functional::list_type<transitions_list>;
+			using transitions_list_type = functional::type_list_type<transitions_list>;
 
 			constexpr static auto entry_point_list = list.template sub_list<is_entry_point>();
-			using entry_point_list_type = functional::list_type<entry_point_list>;
+			using entry_point_list_type = functional::type_list_type<entry_point_list>;
 
 			constexpr static auto state_list = list.template projection<projection_from>().unique();
-			using state_list_type = functional::list_type<state_list>;
+			using state_list_type = functional::type_list_type<state_list>;
 
 			template<typename State>
 			constexpr static auto state_to_transitions_list = list.template sub_list<State, contains_state>();
 			template<typename State>
-			using state_to_transitions_list_type = functional::list_type<state_to_transitions_list<State>>;
+			using state_to_transitions_list_type = functional::type_list_type<state_to_transitions_list<State>>;
 
 			template<typename EventType>
 			constexpr static auto event_to_transitions_list = list.template sub_list<EventType, contains_event>();
 			template<typename EventType>
-			using event_to_transitions_list_type = functional::list_type<event_to_transitions_list<EventType>>;
+			using event_to_transitions_list_type = functional::type_list_type<event_to_transitions_list<EventType>>;
 		};
 
 		template<template<typename...> typename List, typename... Transitions>

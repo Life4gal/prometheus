@@ -5,24 +5,24 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.functional:template_parameter_list;
+export module gal.prometheus.functional:type_list;
 
 import std;
 
 #else
-	#include <tuple>
-	#include <type_traits>
+#include <tuple>
+#include <type_traits>
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_GNU)
-	#define TEMPLATE_PARAMETER_LIST_WORKAROUND_BINDER(T, Prediction) binder<T, Prediction>::template rebind
+	#define TYPE_LIST_WORKAROUND_BINDER(T, Prediction) binder<T, Prediction>::template rebind
 #else
-	#define TEMPLATE_PARAMETER_LIST_WORKAROUND_BINDER(T, Prediction) typename binder<T, Prediction>::rebind
+#define TYPE_LIST_WORKAROUND_BINDER(T, Prediction) typename binder<T, Prediction>::rebind
 #endif
 
 namespace gal::prometheus::functional
 {
-	namespace template_parameter_list
+	namespace type_list_detail
 	{
 		template<typename... Ts>
 		struct list;
@@ -171,7 +171,7 @@ namespace gal::prometheus::functional
 			[[nodiscard]] consteval auto all() const noexcept -> bool
 			{
 				(void)this;
-				return this->template all<TEMPLATE_PARAMETER_LIST_WORKAROUND_BINDER(T, Prediction)>();
+				return this->template all<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>();
 			}
 
 			template<typename T>
@@ -185,7 +185,7 @@ namespace gal::prometheus::functional
 			}
 
 			template<typename T, template<typename, typename> typename Prediction>
-			[[nodiscard]] consteval auto any() const noexcept -> bool { return this->template any<TEMPLATE_PARAMETER_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
+			[[nodiscard]] consteval auto any() const noexcept -> bool { return this->template any<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
 
 			template<typename T>
 			[[nodiscard]] consteval auto any() const noexcept -> bool { return this->any<T, std::is_same>(); }
@@ -199,8 +199,8 @@ namespace gal::prometheus::functional
 			}
 
 			template<typename T, template<typename, typename> typename Prediction>
-				requires requires(list   l) { l.template index_of<TEMPLATE_PARAMETER_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
-			[[nodiscard]] consteval auto index_of() const noexcept -> std::size_t { return this->template index_of<TEMPLATE_PARAMETER_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
+				requires requires(list   l) { l.template index_of<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
+			[[nodiscard]] consteval auto index_of() const noexcept -> std::size_t { return this->template index_of<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
 
 			template<typename T>
 				requires requires(list   l) { l.template index_of<T, std::is_same>(); }
@@ -342,23 +342,23 @@ namespace gal::prometheus::functional
 			}
 
 			template<typename T, template<typename, typename> typename Prediction>
-				requires requires(list   l) { l.template sub_list<TEMPLATE_PARAMETER_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
-			[[nodiscard]] consteval auto sub_list() const noexcept -> auto { return this->template sub_list<TEMPLATE_PARAMETER_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
+				requires requires(list   l) { l.template sub_list<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
+			[[nodiscard]] consteval auto sub_list() const noexcept -> auto { return this->template sub_list<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
 		};
 	}
 
 	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
 
 	template<typename... Ts>
-	constexpr auto list = template_parameter_list::list<Ts...>{};
+	constexpr auto type_list = type_list_detail::list<Ts...>{};
 
-	template<template_parameter_list::list_t auto List>
-	using list_type = std::decay_t<decltype(List)>;
+	template<type_list_detail::list_t auto List>
+	using type_list_type = std::decay_t<decltype(List)>;
 
 	template<typename T>
-	concept list_t = template_parameter_list::list_t<T>;
+	concept type_list_t = type_list_detail::list_t<T>;
 
 	GAL_PROMETHEUS_MODULE_EXPORT_END
 }
 
-#undef TEMPLATE_PARAMETER_LIST_WORKAROUND_BINDER
+#undef TYPE_LIST_WORKAROUND_BINDER

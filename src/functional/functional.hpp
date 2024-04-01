@@ -8,7 +8,7 @@ module;
 export module gal.prometheus.functional;
 
 import std;
-export import :template_parameter_list;
+export import :type_list;
 
 #else
 #include <type_traits>
