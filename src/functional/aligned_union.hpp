@@ -35,7 +35,7 @@ namespace gal::prometheus::functional
 	public:
 		constexpr static auto type_list = functional::type_list<Ts...>;
 
-		constexpr static auto max_size      = functor::max(sizeof...(Ts)...);
+		constexpr static auto max_size      = functor::max(sizeof(Ts)...);
 		constexpr static auto max_alignment = functor::max(alignof(Ts)...);
 
 		template<typename T>
