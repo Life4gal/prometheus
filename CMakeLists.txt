@@ -443,8 +443,19 @@ target_sources(
 
 		${PROJECT_SOURCE_DIR}/src/functional/type_list.hpp
 		${PROJECT_SOURCE_DIR}/src/functional/value_list.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/functor.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/aligned_union.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/function_ref.hpp
 
 		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
+
+		# =========================
+		# MEMORY
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/memory/read_write.hpp
+
+		${PROJECT_SOURCE_DIR}/src/memory/memory.hpp
 
 		# =========================
 		# STRING
@@ -453,6 +464,24 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.hpp
 
 		${PROJECT_SOURCE_DIR}/src/string/string.hpp
+
+		# =========================
+		# CHARS
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/chars/encoding.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_ascii.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf8.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf16.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf32.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/icelake.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_ascii.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf8.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf16.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf32.hpp
+
+		${PROJECT_SOURCE_DIR}/src/chars/chars.hpp
 
 		# =========================
 		# INFRASTRUCTURE

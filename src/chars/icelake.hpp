@@ -10,15 +10,16 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.chars;
+export module gal.prometheus.chars:icelake;
 
-import std;
-export import :encoding;
-export import :scalar;
-export import :icelake;
+export import :icelake.ascii;
+export import :icelake.utf8;
+export import :icelake.utf16;
+export import :icelake.utf32;
 
 #else
-#include <chars/encoding.hpp>
-#include <chars/scalar.hpp>
-#include <chars/icelake.hpp>
+#include <chars/icelake_ascii.hpp>
+#include <chars/icelake_utf8.hpp>
+#include <chars/icelake_utf16.hpp>
+#include <chars/icelake_utf32.hpp>
 #endif
