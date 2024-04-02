@@ -1,3 +1,8 @@
+// This file is part of prometheus
+// Copyright (C) 2022-2024 Life4gal <life4gal@gmail.com>
+// This file is subject to the license terms in the LICENSE file
+// found in the top-level directory of this distribution.
+
 #pragma once
 
 #if GAL_PROMETHEUS_USE_MODULE
@@ -13,6 +18,8 @@ import std;
 #include <tuple>
 #include <type_traits>
 #include <concepts>
+
+#include <prometheus/macro.hpp>
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_GNU)

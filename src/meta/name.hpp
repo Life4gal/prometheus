@@ -1,3 +1,8 @@
+// This file is part of prometheus
+// Copyright (C) 2022-2024 Life4gal <life4gal@gmail.com>
+// This file is subject to the license terms in the LICENSE file
+// found in the top-level directory of this distribution.
+
 #pragma once
 
 #if GAL_PROMETHEUS_USE_MODULE
@@ -10,7 +15,9 @@ export module gal.prometheus.meta:name;
 import std;
 
 #else
-	#include <string_view>
+#include <string_view>
+
+#include <prometheus/macro.hpp>
 #endif
 
 struct dummy_struct_do_not_put_into_any_namespace {};
@@ -28,24 +35,24 @@ namespace gal::prometheus::meta
 	{
 		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 		template<typename...>
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__FUNCSIG__, sizeof(__FUNCSIG__)}; }
+		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__FUNCSIG__, sizeof(__FUNCSIG__)}; }  // NOLINT(clang-diagnostic-language-extension-token)
 
 		template<auto...>
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__FUNCSIG__, sizeof(__FUNCSIG__)}; }
+		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__FUNCSIG__, sizeof(__FUNCSIG__)}; }// NOLINT(clang-diagnostic-language-extension-token)
 
 		#elif defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
 		template<typename... Ts>// DO NOT REMOVE `Ts`
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }
+		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }// NOLINT(clang-diagnostic-language-extension-token)
 
 		template<auto... Vs>// DO NOT REMOVE `Vs`
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }
+		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }// NOLINT(clang-diagnostic-language-extension-token)
 
 		#else
 		template<typename...>
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }
+		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }// NOLINT(clang-diagnostic-language-extension-token)
 
 		template<auto...>
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }
+		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }// NOLINT(clang-diagnostic-language-extension-token)
 		#endif
 	}
 
