@@ -428,12 +428,31 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/meta/meta.hpp
 
 		# =========================
+		# ERROR
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/error/debug.hpp
+		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/error/debug_win.hpp>
+		${PROJECT_SOURCE_DIR}/src/error/exception.hpp
+
+		${PROJECT_SOURCE_DIR}/src/error/error.hpp
+
+		# =========================
 		# FUNCTIONAL
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
 		${PROJECT_SOURCE_DIR}/src/functional/type_list.hpp
 		${PROJECT_SOURCE_DIR}/src/functional/value_list.hpp
+
+		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
+
+		# =========================
+		# STRING
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.hpp
+
+		${PROJECT_SOURCE_DIR}/src/string/string.hpp
 
 		# =========================
 		# INFRASTRUCTURE
@@ -441,6 +460,8 @@ target_sources(
 
 		${PROJECT_SOURCE_DIR}/src/infrastructure/state_machine.hpp
 		${PROJECT_SOURCE_DIR}/src/infrastructure/unit_test.hpp
+
+		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.hpp
 )
 
 target_sources(
