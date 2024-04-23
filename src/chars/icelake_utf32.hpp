@@ -562,10 +562,10 @@ namespace gal::prometheus::chars
 		using scalar_type = Scalar<"utf32">;
 
 		constexpr static auto input_category = scalar_type::input_category;
-		using input_type = scalar_type::input_type;
-		using char_type = scalar_type::char_type;
-		using pointer_type = scalar_type::pointer_type;
-		using size_type = scalar_type::size_type;
+		using input_type                     = scalar_type::input_type;
+		using char_type                      = scalar_type::char_type;
+		using pointer_type                   = scalar_type::pointer_type;
+		using size_type                      = scalar_type::size_type;
 
 		template<bool ReturnResultType>
 		[[nodiscard]] constexpr auto validate(const input_type input) const noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
@@ -681,8 +681,23 @@ namespace gal::prometheus::chars
 
 				return result_length + instance::scalar_utf32.length<OutputCategory>({it_input_current, input_length - (it_input_current - it_input_begin)});
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE) { return instance::scalar_utf32.length<OutputCategory>(input); }
-			else if constexpr (OutputCategory == CharsCategory::UTF32) { return instance::scalar_utf32.length<OutputCategory>(input); }
+			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE)
+			{
+				const auto v_0000_ffff = _mm512_set1_epi32(0x0000'ffff);
+
+				auto result_length = static_cast<size_type>(0);
+
+				for (; it_input_current + 16 <= it_input_end; it_input_current += 16)
+				{
+					const auto utf32              = _mm512_loadu_si512(it_input_current);
+					const auto surrogates_bitmask = _mm512_cmpgt_epu32_mask(utf32, v_0000_ffff);
+
+					result_length += 16 + std::popcount(surrogates_bitmask);
+				}
+
+				return result_length + instance::scalar_utf32.length<OutputCategory>({it_input_current, input_length - (it_input_current - it_input_begin)});
+			}
+			else if constexpr (OutputCategory == CharsCategory::UTF32) { return input_length; }
 			else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
 		}
 
