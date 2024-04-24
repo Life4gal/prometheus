@@ -660,7 +660,7 @@ namespace gal::prometheus::unit_test
 			class OperandCompareEqual
 			{
 			public:
-				using left_type = L;
+				using left_type  = L;
 				using right_type = R;
 
 			private:
@@ -751,8 +751,8 @@ namespace gal::prometheus::unit_test
 			class OperandCompareApprox
 			{
 			public:
-				using left_type = L;
-				using right_type = R;
+				using left_type    = L;
+				using right_type   = R;
 				using epsilon_type = Epsilon;
 
 			private:
@@ -836,7 +836,7 @@ namespace gal::prometheus::unit_test
 			class OperandCompareNotEqual
 			{
 			public:
-				using left_type = L;
+				using left_type  = L;
 				using right_type = R;
 
 			private:
@@ -928,8 +928,8 @@ namespace gal::prometheus::unit_test
 			class OperandCompareNotApprox
 			{
 			public:
-				using left_type = L;
-				using right_type = R;
+				using left_type    = L;
+				using right_type   = R;
 				using epsilon_type = Epsilon;
 
 			private:
@@ -1014,7 +1014,7 @@ namespace gal::prometheus::unit_test
 			class OperandCompareGreaterThan
 			{
 			public:
-				using left_type = L;
+				using left_type  = L;
 				using right_type = R;
 
 			private:
@@ -1090,7 +1090,7 @@ namespace gal::prometheus::unit_test
 			class OperandCompareGreaterEqual
 			{
 			public:
-				using left_type = L;
+				using left_type  = L;
 				using right_type = R;
 
 			private:
@@ -1166,7 +1166,7 @@ namespace gal::prometheus::unit_test
 			class OperandCompareLessThan
 			{
 			public:
-				using left_type = L;
+				using left_type  = L;
 				using right_type = R;
 
 			private:
@@ -1242,7 +1242,7 @@ namespace gal::prometheus::unit_test
 			class OperandCompareLessEqual
 			{
 			public:
-				using left_type = L;
+				using left_type  = L;
 				using right_type = R;
 
 			private:
@@ -1317,7 +1317,7 @@ namespace gal::prometheus::unit_test
 			class OperandLogicalAnd
 			{
 			public:
-				using left_type = L;
+				using left_type  = L;
 				using right_type = R;
 
 			private:
@@ -1340,7 +1340,7 @@ namespace gal::prometheus::unit_test
 			class OperandLogicalOr
 			{
 			public:
-				using left_type = L;
+				using left_type  = L;
 				using right_type = R;
 
 			private:
@@ -1519,17 +1519,17 @@ namespace gal::prometheus::unit_test
 				using container_type = std::vector<T>;
 
 			public:
-				using value_type = typename container_type::value_type;
-				using allocator_type = typename container_type::allocator_type;
-				using pointer = typename container_type::pointer;
-				using const_pointer = typename container_type::const_pointer;
-				using reference = typename container_type::reference;
-				using const_reference = typename container_type::const_reference;
-				using size_type = typename container_type::size_type;
-				using difference_type = typename container_type::difference_type;
-				using iterator = typename container_type::iterator;
-				using const_iterator = typename container_type::const_iterator;
-				using reverse_iterator = typename container_type::reverse_iterator;
+				using value_type             = typename container_type::value_type;
+				using allocator_type         = typename container_type::allocator_type;
+				using pointer                = typename container_type::pointer;
+				using const_pointer          = typename container_type::const_pointer;
+				using reference              = typename container_type::reference;
+				using const_reference        = typename container_type::const_reference;
+				using size_type              = typename container_type::size_type;
+				using difference_type        = typename container_type::difference_type;
+				using iterator               = typename container_type::iterator;
+				using const_iterator         = typename container_type::const_iterator;
+				using reverse_iterator       = typename container_type::reverse_iterator;
 				using const_reverse_iterator = typename container_type::const_reverse_iterator;
 
 			private:
@@ -1557,8 +1557,8 @@ namespace gal::prometheus::unit_test
 			template<typename V>
 			using map_type = std::unordered_map<std::string, V, hasher, std::equal_to<>>;
 
-			using clock_type = std::chrono::high_resolution_clock;
-			using time_point_type = clock_type::time_point;
+			using clock_type           = std::chrono::high_resolution_clock;
+			using time_point_type      = clock_type::time_point;
 			using time_difference_type = std::chrono::milliseconds;
 
 			constexpr static std::string_view anonymous_suite_name{"anonymous_suite"};
@@ -1769,7 +1769,7 @@ namespace gal::prometheus::unit_test
 				// Output all information at once only at the end of the outermost (at the top-level of suite) test.
 				if (active_test_.size() == 1 or force)
 				{
-					const auto           do_bump = functional::y_combinator{
+					const auto do_bump = functional::y_combinator{
 							[this](auto& self, const result_type& result) -> void
 							{
 								out_ << result.report_string;
@@ -2251,10 +2251,10 @@ namespace gal::prometheus::unit_test
 
 			using suite_type = events::EventSuite;
 
-			using suite_list_type = std::vector<suite_type>;
+			using suite_list_type      = std::vector<suite_type>;
 			using suite_list_size_type = suite_list_type::size_type;
 
-			using nested_test_path_type = std::array<std::string_view, 16>;
+			using nested_test_path_type      = std::array<std::string_view, 16>;
 			using nested_test_path_size_type = nested_test_path_type::size_type;
 
 		private:
@@ -2438,28 +2438,28 @@ namespace gal::prometheus::unit_test
 	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
 
 	template<typename T>
-	using as = unit_test_detail::operand::OperandValue<T>;
-	using as_c = as<char>;
-	using as_i = as<int>;
-	using as_u = as<unsigned>;
-	using as_l = as<long>;
-	using as_ul = as<unsigned long>;
-	using as_ll = as<long long>;
+	using as     = unit_test_detail::operand::OperandValue<T>;
+	using as_c   = as<char>;
+	using as_i   = as<int>;
+	using as_u   = as<unsigned>;
+	using as_l   = as<long>;
+	using as_ul  = as<unsigned long>;
+	using as_ll  = as<long long>;
 	using as_ull = as<unsigned long long>;
-	using as_i8 = as<std::int8_t>;
-	using as_u8 = as<std::uint8_t>;
+	using as_i8  = as<std::int8_t>;
+	using as_u8  = as<std::uint8_t>;
 	using as_i16 = as<std::int16_t>;
 	using as_u16 = as<std::uint16_t>;
 	using as_i32 = as<std::int32_t>;
 	using as_u32 = as<std::uint32_t>;
 	using as_i64 = as<std::int64_t>;
 	using as_u64 = as<std::uint64_t>;
-	using as_f = as<float>;
-	using as_d = as<double>;
-	using as_ld = as<long double>;
-	using as_b = as<bool>;
-	using as_s = as<std::string>;
-	using as_sv = as<std::string_view>;
+	using as_f   = as<float>;
+	using as_d   = as<double>;
+	using as_ld  = as<long double>;
+	using as_b   = as<bool>;
+	using as_s   = as<std::string>;
+	using as_sv  = as<std::string_view>;
 
 	constexpr auto category = [](const std::string_view name) -> unit_test_detail::categories_type { return {name}; };
 	constexpr auto cat      = category;
@@ -2495,87 +2495,6 @@ namespace gal::prometheus::unit_test
 	{
 		template<typename... Ts, events::event_t EventType>
 		constexpr auto register_event(EventType&& event) noexcept -> decltype(auto) { return executor<typename identity<override, Ts...>::type>().on(std::forward<EventType>(event)); }
-
-		template<meta::basic_fixed_string StringLiteral>
-		class DispatcherTestLiteral
-		{
-			// fixme:
-			// Although we could save the `name` in the template parameter, the `categories` obviously can't, so we must use a static variable to save it.
-			// This requires that the user must not save any DispatcherTestLiteral objects (unless it can be guaranteed that no other DispatcherTestLiteral objects will be created before assigning that one).
-			inline static categories_type categories_{};
-
-			std::move_only_function<void()> function_{};
-
-			constexpr DispatcherTestLiteral() noexcept = default;
-
-		public:
-			[[nodiscard]] constexpr static auto make() noexcept -> DispatcherTestLiteral { return {}; }
-
-			template<std::invocable InvocableType>
-			constexpr explicit(false) DispatcherTestLiteral(InvocableType invocable) noexcept
-				: function_{
-						[invocable]() noexcept
-						{
-							register_event(events::EventTest<InvocableType>{
-									.name = StringLiteral.operator std::string_view(),
-									// always move
-									.categories = std::move(categories_),
-									.invocable = invocable,
-									.arg = events::none{}});
-						}} {}
-
-			constexpr      DispatcherTestLiteral(const DispatcherTestLiteral& other)               = delete;
-			constexpr auto operator=(const DispatcherTestLiteral& other) -> DispatcherTestLiteral& = delete;
-
-			constexpr      DispatcherTestLiteral(DispatcherTestLiteral&& other) noexcept               = default;
-			constexpr auto operator=(DispatcherTestLiteral&& other) noexcept -> DispatcherTestLiteral& = default;
-
-			constexpr ~DispatcherTestLiteral() noexcept { if (function_) { std::invoke(function_); } }
-
-			// ReSharper disable once CppMemberFunctionMayBeConst
-			constexpr auto add_categories(const categories_type& categories) -> void
-			{
-				(void)this;
-				categories_.append_range(categories);
-			}
-		};
-
-		class DispatcherTest
-		{
-			std::string_view name_;
-
-			categories_type categories_;
-
-		public:
-			constexpr explicit DispatcherTest(const std::string_view name) noexcept
-				: name_{name} {}
-
-			template<std::invocable InvocableType>
-			constexpr auto operator=(InvocableType invocable) const & noexcept -> InvocableType// NOLINT(misc-unconventional-assign-operator)
-			{
-				register_event(events::EventTest<InvocableType>{
-						.name = name_,
-						.categories = categories_,
-						.invocable = invocable,
-						.arg = events::none{}});
-
-				return invocable;
-			}
-
-			template<std::invocable InvocableType>
-			constexpr auto operator=(InvocableType invocable) && noexcept -> InvocableType// NOLINT(misc-unconventional-assign-operator)
-			{
-				register_event(events::EventTest<InvocableType>{
-						.name = name_,
-						.categories = std::move(categories_),
-						.invocable = invocable,
-						.arg = events::none{}});
-
-				return invocable;
-			}
-
-			constexpr auto add_categories(const categories_type& categories) -> void { categories_.append_range(categories); }
-		};
 
 		class DispatcherLogger
 		{
@@ -2717,6 +2636,105 @@ namespace gal::prometheus::unit_test
 				else { return expect_result<Expression>{register_event<Expression>(events::EventAssertion<Expression>{.expression = std::forward<Expression>(expression), .location = location})}; }
 			}
 		};
+
+		template<typename D>
+		class DispatcherTestBase
+		{
+		protected:
+			categories_type categories_;
+
+		public:
+			template<std::invocable InvocableType>
+			constexpr auto operator=(InvocableType invocable) const & noexcept -> InvocableType// NOLINT(misc-unconventional-assign-operator)
+			{
+				register_event(events::EventTest<InvocableType>{
+						.name = static_cast<D&>(*this).name(),
+						.categories = categories_,
+						.invocable = invocable,
+						.arg = events::none{}});
+
+				return invocable;
+			}
+
+			template<std::invocable InvocableType>
+			constexpr auto operator=(InvocableType invocable) && noexcept -> InvocableType// NOLINT(misc-unconventional-assign-operator)
+			{
+				register_event(events::EventTest<InvocableType>{
+						.name = static_cast<D&>(*this).name(),
+						.categories = std::move(categories_),
+						.invocable = invocable,
+						.arg = events::none{}});
+
+				return invocable;
+			}
+
+		private:
+			[[nodiscard]] constexpr auto do_move() && noexcept -> D&& { return std::move(*static_cast<D*>(this)); }
+
+		public:
+			#if __cpp_multidimensional_subscript < 202110L
+			// todo
+			#endif
+			template<typename... Args>
+			[[nodiscard]] constexpr auto operator[](Args&&... args) && noexcept -> D&&
+			{
+				const auto process = [this]<typename T>(T&& t) noexcept -> void
+				{
+					using type = std::decay_t<T>;
+
+					// ==========================================
+					// SKIP
+					// ==========================================
+					if constexpr (std::is_same_v<type, tag_skip>) { categories_.emplace_back(tag_skip::value); }
+					// ==========================================
+					// SILENCE
+					// ==========================================
+					else if constexpr (std::is_same_v<type, DispatcherSilence>) { categories_.emplace_back(tag_silence::value); }
+					// ==========================================
+					// IGNORE PASS
+					// ==========================================
+					else if constexpr (std::is_same_v<type, DispatcherIgnorePass>) { categories_.emplace_back(tag_ignore_pass::value); }
+					// ==========================================
+					// ANY
+					// ==========================================
+					else if constexpr (std::is_same_v<type, categories_type::value_type>) { categories_.push_back(std::forward<T>(t)); }
+					// ==========================================
+					// ANY RANGE
+					// ==========================================
+					else if constexpr (std::is_same_v<type, categories_type>) { categories_.append_range(std::forward<T>(t)); }
+					else { GAL_PROMETHEUS_STATIC_UNREACHABLE("unknown type"); }
+				};
+
+				(process(std::forward<Args>(args)), ...);
+
+				return std::move(*this).do_move();
+			}
+		};
+
+		template<meta::basic_fixed_string StringLiteral>
+		class DispatcherTestLiteral : public DispatcherTestBase<DispatcherTestLiteral<StringLiteral>>
+		{
+		public:
+			using DispatcherTestBase<DispatcherTestLiteral>::operator=;
+
+			// @see `_test`
+			[[nodiscard]] constexpr static auto make() noexcept -> DispatcherTestLiteral { return {}; }
+
+			[[nodiscard]] constexpr static auto name() noexcept -> auto { return StringLiteral.operator std::string_view(); }
+		};
+
+		class DispatcherTest : public DispatcherTestBase<DispatcherTest>
+		{
+			std::string_view name_;
+
+		public:
+			using DispatcherTestBase<DispatcherTest>::operator=;
+
+			constexpr explicit DispatcherTest(const std::string_view name) noexcept
+				: name_{name} {}
+
+			[[nodiscard]] constexpr auto name() const noexcept -> auto { return name_; }
+		};
 	}
 
 	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
@@ -2728,7 +2746,6 @@ namespace gal::prometheus::unit_test
 	constexpr unit_test_detail::dispatcher::DispatcherExpect     expect{};
 
 	using test = unit_test_detail::dispatcher::DispatcherTest;
-	using should = test;
 
 	// Overload the following operators to implement auto-dispatch.
 	inline namespace operators
@@ -2780,30 +2797,6 @@ namespace gal::prometheus::unit_test
 		[[nodiscard]] constexpr auto operator or(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)//
 			requires(not unit_test_detail::dispatcher::is_dispatched_expression_v<Lhs>) and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs)); } { return that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs); }
 
-		template<typename Test>
-		[[nodiscard]] constexpr auto operator/(const unit_test_detail::categories_type& categories, Test test) noexcept -> Test//
-			requires requires { test.add_categories(categories); }
-		{
-			test.add_categories(categories);
-			return test;
-		}
-
-		template<typename Test>
-		[[nodiscard]] constexpr auto operator/(Test test, const unit_test_detail::categories_type& categories) noexcept -> Test//
-			requires requires { test.add_categories(categories); }
-		{
-			test.add_categories(categories);
-			return test;
-		}
-
-		constexpr auto operator/(const unit_test_detail::categories_type& lhs, const unit_test_detail::categories_type& rhs) noexcept -> unit_test_detail::categories_type
-		{
-			unit_test_detail::categories_type result{lhs};
-			result.append_range(rhs);
-
-			return result;
-		}
-
 		template<typename Function, std::ranges::range Container>
 			requires std::is_invocable_v<Function, std::ranges::range_value_t<Container>>
 		[[nodiscard]] constexpr auto operator|(const Function& function, const Container& container) noexcept -> auto
@@ -2824,125 +2817,6 @@ namespace gal::prometheus::unit_test
 											.arg = arg});
 						});
 			};
-		}
-
-		// ==========================================
-		// SKIP
-		// ==========================================
-
-		template<typename Test>
-		[[nodiscard]] constexpr auto operator/(const unit_test_detail::tag_skip, Test test) noexcept -> Test//
-			requires requires { test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_skip::value}); }
-		{
-			test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_skip::value});
-			return test;
-		}
-
-		template<typename Test>
-		[[nodiscard]] constexpr auto operator/(Test test, const unit_test_detail::tag_skip) noexcept -> Test//
-			requires requires { test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_skip::value}); }
-		{
-			test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_skip::value});
-			return test;
-		}
-
-		constexpr auto operator/(const unit_test_detail::tag_skip, const unit_test_detail::categories_type& rhs) noexcept -> unit_test_detail::categories_type
-		{
-			unit_test_detail::categories_type result{unit_test_detail::tag_skip::value};
-			result.append_range(rhs);
-
-			return result;
-		}
-
-		constexpr auto operator/(const unit_test_detail::categories_type& lhs, const unit_test_detail::tag_skip) noexcept -> unit_test_detail::categories_type
-		{
-			unit_test_detail::categories_type result{lhs};
-
-			result.emplace_back(unit_test_detail::tag_skip::value);
-
-			return result;
-		}
-
-		// ==========================================
-		// SILENCE
-		// ==========================================
-
-		template<typename Test>
-		// [[nodiscard]] constexpr auto operator/(const unit_test_detail::tag_silence, Test test) noexcept -> Test//
-		[[nodiscard]] constexpr auto operator/(const unit_test_detail::dispatcher::DispatcherSilence&, Test test) noexcept -> Test//
-			requires requires { test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_silence::value}); }
-		{
-			test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_silence::value});
-			return test;
-		}
-
-		template<typename Test>
-		// [[nodiscard]] constexpr auto operator/(Test test, const unit_test_detail::tag_silence) noexcept -> Test//
-		[[nodiscard]] constexpr auto operator/(Test test, const unit_test_detail::dispatcher::DispatcherSilence&) noexcept -> Test//
-			requires requires { test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_silence::value}); }
-		{
-			test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_silence::value});
-			return test;
-		}
-
-		// constexpr auto operator/(const unit_test_detail::tag_silence, const unit_test_detail::categories_type& rhs) noexcept -> categories_type
-		constexpr auto operator/(const unit_test_detail::dispatcher::DispatcherSilence&, const unit_test_detail::categories_type& rhs) noexcept -> unit_test_detail::categories_type
-		{
-			unit_test_detail::categories_type result{unit_test_detail::tag_silence::value};
-			result.append_range(rhs);
-
-			return result;
-		}
-
-		// constexpr auto operator/(const unit_test_detail::categories_type& lhs, const unit_test_detail::tag_silence) noexcept -> categories_type
-		constexpr auto operator/(const unit_test_detail::categories_type& lhs, const unit_test_detail::dispatcher::DispatcherSilence&) noexcept -> unit_test_detail::categories_type
-		{
-			unit_test_detail::categories_type result{lhs};
-
-			result.emplace_back(unit_test_detail::tag_silence::value);
-
-			return result;
-		}
-
-		// ==========================================
-		// IGNORE PASS
-		// ==========================================
-
-		template<typename Test>
-		// [[nodiscard]] constexpr auto operator/(const unit_test_detail::tag_ignore_pass, Test test) noexcept -> Test//
-		[[nodiscard]] constexpr auto operator/(const unit_test_detail::dispatcher::DispatcherIgnorePass&, Test test) noexcept -> Test//
-			requires requires { test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_ignore_pass::value}); }
-		{
-			test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_ignore_pass::value});
-			return test;
-		}
-
-		template<typename Test>
-		// [[nodiscard]] constexpr auto operator/(Test test, const unit_test_detail::tag_ignore_pass) noexcept -> Test//
-		[[nodiscard]] constexpr auto operator/(Test test, const unit_test_detail::dispatcher::DispatcherIgnorePass&) noexcept -> Test//
-			requires requires { test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_ignore_pass::value}); }
-		{
-			test.add_categories(unit_test_detail::categories_type{unit_test_detail::tag_ignore_pass::value});
-			return test;
-		}
-
-		// constexpr auto operator/(const unit_test_detail::tag_ignore_pass, const categories_type& rhs) noexcept -> categories_type
-		constexpr auto operator/(const unit_test_detail::dispatcher::DispatcherIgnorePass&, const unit_test_detail::categories_type& rhs) noexcept -> unit_test_detail::categories_type
-		{
-			unit_test_detail::categories_type result{unit_test_detail::tag_ignore_pass::value};
-			result.append_range(rhs);
-
-			return result;
-		}
-
-		// constexpr auto operator/(const unit_test_detail::categories_type& lhs, const unit_test_detail::tag_ignore_pass) noexcept -> categories_type
-		constexpr auto operator/(const unit_test_detail::categories_type& lhs, const unit_test_detail::dispatcher::DispatcherIgnorePass&) noexcept -> unit_test_detail::categories_type
-		{
-			unit_test_detail::categories_type result{lhs};
-
-			result.emplace_back(unit_test_detail::tag_ignore_pass::value);
-
-			return result;
 		}
 	}// namespace operators
 
