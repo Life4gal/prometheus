@@ -50,7 +50,7 @@ namespace gal::prometheus::meta
 		wrapper(T&) -> wrapper<T>;
 
 		template<typename T>
-		extern const T extern_var{};
+		extern constexpr T extern_var{};
 
 		template<typename T, typename... Args>
 		[[nodiscard]] constexpr auto member_size_impl() noexcept -> std::size_t//
@@ -65,7 +65,7 @@ namespace gal::prometheus::meta
 		template<typename T>
 		[[nodiscard]] constexpr auto member_size() noexcept -> std::size_t//
 		{
-			return member_size_impl<T>();
+			return member_size_impl<std::remove_cvref_t<T>>();
 		}
 
 		template<typename T>
@@ -429,6 +429,29 @@ namespace gal::prometheus::meta
 
 	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
 
+	template<typename T, typename BareType = std::remove_cvref_t<T>>
+		requires std::is_aggregate_v<BareType>
+	[[nodiscard]] constexpr auto member_size() noexcept -> std::size_t { return member_name::member_size<T>(); }
+
+	template<std::size_t N, typename T, typename BareType = std::remove_cvref_t<T>>
+		requires std::is_aggregate_v<BareType>
+	[[nodicard]] constexpr auto member_of_index(T&& value) noexcept -> decltype(auto)
+	{
+		return member_name::visit(
+				[]<typename... Ts>(Ts&&... args) noexcept -> auto { return member_name::nth_element<N>(std::forward<Ts>(args)...); },
+				std::forward<T>(value));
+	}
+
+	template<typename Function, typename T, typename BareType = std::remove_cvref_t<T>>
+		requires std::is_aggregate_v<BareType>
+	constexpr auto member_for_each(Function function, T&& value) noexcept -> void
+	{
+		[function, v_o = std::forward<T>(value)]<std::size_t... Index>(std::index_sequence<Index...>) mutable noexcept -> void//
+		{
+			(function.template operator()<Index>(meta::member_of_index<Index>(std::forward<decltype(v_o)>(v_o))), ...);
+		}(std::make_index_sequence<member_size<T>()>{});
+	}
+
 	template<typename T, std::size_t N, typename BareType = std::remove_cvref_t<T>>
 		requires std::is_aggregate_v<BareType>
 	[[nodiscard]] constexpr auto name_of_member() noexcept -> std::string_view
@@ -443,14 +466,14 @@ namespace gal::prometheus::meta
 		// MSVC
 		// class std::basic_string_view<char,struct std::char_traits<char> > `__calling_convention` `namespace`::get_full_function_name<struct `namespace`::member_name::wrapper<`member_type` const >{const `member_type`&:`namespace`::member_name::extern_var<struct `my_struct`>->`member_name`}>(void) noexcept
 		constexpr auto full_function_name_size = full_function_name.size();
-
+		
 		constexpr std::string_view splitter{">->"};
 		constexpr auto             splitter_size = splitter.size();
-
+		
 		// class std::basic_string_view<char,struct std::char_traits<char> > `__calling_convention` `namespace`::get_full_function_name<struct `namespace`::member_name::wrapper<`member_type` const >{const `member_type`&:`namespace`::member_name::extern_var<struct `my_struct`>->
 		static_assert(full_function_name.find(splitter) != std::string_view::npos);
 		constexpr auto full_function_name_prefix_size = full_function_name.find(splitter) + splitter_size;
-
+		
 		// }>(void) noexcept
 		constexpr std::string_view suffix{"}>(void) noexcept"};
 		constexpr auto             full_function_name_suffix_size = suffix.size() + 1;
