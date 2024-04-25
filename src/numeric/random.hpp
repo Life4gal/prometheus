@@ -15,7 +15,7 @@ module;
 export module gal.prometheus.numeric:random;
 
 import std;
-export import :random_engine;
+import :random_engine;
 
 #else
 #include <chrono>
@@ -32,7 +32,6 @@ namespace gal::prometheus::numeric
 	using default_floating_point_distribution = std::uniform_real_distribution<T>;
 	using default_boolean_distribution        = std::bernoulli_distribution;
 
-	#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 	namespace random_detail
 	{
 		struct any {};
@@ -46,8 +45,17 @@ namespace gal::prometheus::numeric
 
 		template<template<typename> typename Target, template<typename> typename Current>
 		constexpr auto is_distribution_alias_v = is_distribution_alias<Target, Current>::value;
+
+		template<template<typename> typename Distribution, typename T>
+		struct is_user_defined_distribution : std::true_type
+		{
+			// We always assume that the target distribution contains static_assert (or concept) to restrict the type of T. If it does not, then we assume that it supports arbitrary types.
+			static_assert(std::is_default_constructible_v<Distribution<T>> or std::is_constructible_v<Distribution<T>, T> or std::is_constructible_v<Distribution<T>, T, T>);
+		};
+
+		template<template<typename> typename Distribution, typename T>
+		constexpr auto is_user_defined_distribution_v = is_user_defined_distribution<Distribution, T>::value;
 	}
-	#endif
 
 	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
 
@@ -88,7 +96,6 @@ namespace gal::prometheus::numeric
 	template<>
 	struct is_distribution_compatible<default_floating_point_distribution, long double> : std::true_type {};
 
-	#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 	template<template<typename> typename DistributionAlias>
 		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, short> : std::true_type {};
@@ -132,7 +139,11 @@ namespace gal::prometheus::numeric
 	template<template<typename> typename DistributionAlias>
 		requires (random_detail::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, long double> : std::true_type {};
-	#endif
+
+	// In fact, this holds true for arbitrary types, but if UserDefinedDistribution does not support type T, it should raise a compile error.
+	template<template<typename> typename UserDefinedDistribution, typename T>
+		requires(random_detail::is_user_defined_distribution_v<UserDefinedDistribution, T>)
+	struct is_distribution_compatible<UserDefinedDistribution, T> : std::true_type {};
 
 	template<template<typename> typename Distribution, typename T>
 	constexpr bool is_distribution_compatible_v = is_distribution_compatible<Distribution, T>::value;
