@@ -16,6 +16,7 @@ import std;
 
 #else
 #include <string_view>
+#include <source_location>
 
 #include <prometheus/macro.hpp>
 #endif
@@ -33,27 +34,11 @@ namespace gal::prometheus::meta
 
 	namespace name
 	{
-		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-		template<typename...>
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__FUNCSIG__, sizeof(__FUNCSIG__)}; }  // NOLINT(clang-diagnostic-language-extension-token)
-
-		template<auto...>
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__FUNCSIG__, sizeof(__FUNCSIG__)}; }// NOLINT(clang-diagnostic-language-extension-token)
-
-		#elif defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
 		template<typename... Ts>// DO NOT REMOVE `Ts`
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }// NOLINT(clang-diagnostic-language-extension-token)
+		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return std::source_location::current().function_name(); }
 
 		template<auto... Vs>// DO NOT REMOVE `Vs`
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }// NOLINT(clang-diagnostic-language-extension-token)
-
-		#else
-		template<typename...>
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }// NOLINT(clang-diagnostic-language-extension-token)
-
-		template<auto...>
-		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return {__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__)}; }// NOLINT(clang-diagnostic-language-extension-token)
-		#endif
+		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return std::source_location::current().function_name(); }
 	}
 
 	template<typename T>
@@ -66,7 +51,7 @@ namespace gal::prometheus::meta
 		constexpr auto             full_function_name_size = full_function_name.size();
 
 		constexpr std::string_view dummy_struct_name{"struct dummy_struct_do_not_put_into_any_namespace"};
-		constexpr auto dummy_struct_name_size = std::ranges::size(dummy_struct_name);
+		constexpr auto             dummy_struct_name_size = std::ranges::size(dummy_struct_name);
 
 		// const class std::basic_string_view<char, struct std::char_traits<char>> `__calling_convention` `namespace`::get_full_function_name<
 		constexpr auto full_function_name_prefix_size = full_function_name.find(dummy_struct_name);
