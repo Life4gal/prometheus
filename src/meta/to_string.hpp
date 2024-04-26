@@ -13,8 +13,7 @@ module;
 export module gal.prometheus.meta:to_string;
 
 import std;
-export import :string;
-export import :member_name;
+import :member_name;
 
 #else
 #include <format>
@@ -25,6 +24,8 @@ export import :member_name;
 
 namespace gal::prometheus::meta
 {
+	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+
 	template<
 		std::ranges::output_range<char> StringType = std::basic_string<char>,
 		bool ContainsTypeName = true,
@@ -136,4 +137,6 @@ namespace gal::prometheus::meta
 		meta::to_string<StringType, ContainsTypeName>(t, out);
 		return out;
 	}
+
+	GAL_PROMETHEUS_MODULE_EXPORT_END
 }
