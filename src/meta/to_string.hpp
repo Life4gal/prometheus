@@ -26,139 +26,114 @@ export import :member_name;
 namespace gal::prometheus::meta
 {
 	template<
-		std::ranges::input_range StringType = std::basic_string<char>,
-		std::ranges::view StringViewType = std::basic_string_view<char>,
+		std::ranges::output_range<char> StringType = std::basic_string<char>,
 		bool ContainsTypeName = true,
 		typename T>
-		requires(
-			std::is_same_v<typename StringType::value_type, typename StringViewType::value_type> and
-			std::is_same_v<typename StringType::value_type, char>)
-	[[nodiscard]] constexpr auto to_string(const T& t) noexcept -> decltype(auto)
+		requires std::ranges::contiguous_range<StringType>
+	constexpr auto to_string(const T& t, StringType& out) noexcept -> void
 	{
 		using type = T;
 
-		// construct from T
-		if constexpr (std::is_constructible_v<StringType, type>) { return StringType{t}; }
-		// construct from T
-		else if constexpr (std::is_constructible_v<StringViewType, type>) { return StringViewType{t}; }
-		// member function
-		else if constexpr (requires { t.to_string(); }) { return t.to_string(); }
-		// nullptr
-		else if constexpr (std::is_null_pointer_v<type>) { return StringViewType{"nullptr"}; }
-		// pointer
-		else if constexpr (std::is_pointer_v<type>)
+		// formatter
+		if constexpr (std::formattable<type, char>)
 		{
-			if (t == nullptr)
-			{
-				if constexpr (ContainsTypeName)
-				{
-					StringType s;
-					std::format_to(std::back_inserter(s), "{}(0x00000000)", meta::name_of<type>());
-					return s;
-				}
-				else { return StringType{"nullptr"}; }
-			}
-
-			if constexpr (ContainsTypeName)
-			{
-				StringType s;
-				std::format_to(
-						std::back_inserter(s),
-						"{}(0x{:x} => {})",
-						meta::name_of<type>(),
-						reinterpret_cast<std::uintptr_t>(t),
-						// sub-element does not contains type name.
-						meta::to_string<StringType, StringViewType, false>(*t)
-						);
-				return s;
-			}
+			if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}({})", meta::name_of<type>(), t); }
+			else { std::format_to(std::back_inserter(out), "{}", t); }
+		}
+		// appendable
+		// note: prefer formattable than appendable
+		else if constexpr (requires { out.append(t); }) { out.append(t); }
+		else if constexpr (requires { out.emplace_back(t); }) { out.emplace_back(t); }
+		else if constexpr (requires { out.push_back(t); }) { out.push_back(t); }
+		else if constexpr (requires { out += t; }) { out += t; }
+		// construct from T
+		else if constexpr (std::is_constructible_v<StringType, type>)
+		{
+			if constexpr (requires { out.append(StringType{t}); }) { out.append(StringType{t}); }
+			else if constexpr (requires { out.emplace_back(StringType{t}); }) { out.emplace_back(StringType{t}); }
+			else if constexpr (requires { out.push_back(StringType{t}); }) { out.push_back(StringType{t}); }
+			else if constexpr (requires { out += StringType{t}; }) { out += StringType{t}; }
+			else { GAL_PROMETHEUS_STATIC_UNREACHABLE("not appendable."); }
+		}
+		// member function
+		else if constexpr (requires { t.to_string(); })
+		{
+			if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(", meta::name_of<type>()); }
+			meta::to_string<StringType, false>(t.to_string(), out);
+			if constexpr (ContainsTypeName) { out.push_back(')'); }
+		}
+		// pointer
+		else if constexpr (std::is_null_pointer_v<type> or std::is_pointer_v<type>)
+		{
+			if constexpr (std::is_null_pointer_v<type>) { meta::to_string<StringType, false>("nullptr", out); }
 			else
 			{
-				StringType s;
-				std::format_to(
-						std::back_inserter(s),
-						"0x{:x} => {}",
-						reinterpret_cast<std::uintptr_t>(t),
-						// sub-element does not contains type name.
-						meta::to_string<StringType, StringViewType, false>(*t));
-				return s;
+				if (t == nullptr)
+				{
+					if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(0x00000000)", meta::name_of<type>()); }
+					else { meta::to_string<StringType, false>(nullptr, out); }
+				}
+
+				if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(", meta::name_of<type>()); }
+				// address
+				std::format_to(std::back_inserter(out), "0x{:x} => ", reinterpret_cast<std::uintptr_t>(t));
+				// sub-element does not contains type name.
+				meta::to_string<StringType, false>(*t, out);
+				if constexpr (ContainsTypeName) { out.push_back(')'); }
 			}
 		}
 		// container
 		else if constexpr (std::ranges::range<type>)
 		{
-			StringType result;
-
-			if constexpr (ContainsTypeName) { result.append_range(meta::name_of<type>()); }
-
-			result.push_back('[');
+			if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}", meta::name_of<type>()); }
+			out.push_back('[');
 
 			std::ranges::for_each(
 					t,
-					[&result]<typename S>(S&& string) noexcept -> void
-					{
-						result.append_range(std::forward<S>(string));
-						result.push_back(',');
-					},
-					[]<typename E>(const E& element) noexcept -> decltype(auto)
+					[&out]<typename E>(const E& element) noexcept -> decltype(auto)
 					{
 						// sub-element does not contains type name.
-						return meta::to_string<StringType, StringViewType, false>(element);
+						meta::to_string<StringType, false>(element, out);
+						out.push_back(',');
 					});
 
-			result.back() = ']';
-
-			return result;
+			out.back() = ']';
 		}
-		// aggregate 
-		else if constexpr (std::is_aggregate_v<type>)
+		// meta::member_gettable
+		else if constexpr (meta::member_gettable_t<type>)
 		{
-			StringType result;
+			if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}", meta::name_of<type>()); }
+			out.push_back('{');
 
-			if constexpr (ContainsTypeName) { result.append_range(meta::name_of<type>()); }
-
-			result.push_back('{');
-
-			if constexpr (meta::member_size<type>() == 0) { result.push_back(','); }
+			if constexpr (meta::member_size<type>() == 0) { out.push_back(','); }
 			else
 			{
 				meta::member_for_each(
-						[&result]<std::size_t Index, typename E>(const E& element) noexcept -> void
+						[&out]<std::size_t Index, typename E>(const E& element) noexcept -> void
 						{
-							std::format_to(std::back_inserter(result), ".{} = ", meta::name_of_member<type, Index>());
+							std::format_to(std::back_inserter(out), ".{} = ", meta::name_of_member<type, Index>());
 							// sub-element does not contains type name.
-							result.append_range(meta::to_string<StringType, StringViewType, false>(element));
-							result.push_back(',');
+							meta::to_string<StringType, false>(element, out);
+							out.push_back(',');
 						},
 						t);
 			}
 
-			result.back() = '}';
-
-			return result;
-		}
-		// formatter
-		else if constexpr (std::formattable<type, char>)
-		{
-			if constexpr (ContainsTypeName)
-			{
-				StringType s;
-				std::format_to(std::back_inserter(s), "{}({})", meta::name_of<type>(), t);
-				return s;
-			}
-			else
-			{
-				StringType s;
-				std::format_to(std::back_inserter(s), "{}", t);
-				return s;
-			}
+			out.back() = '}';
 		}
 		// any
-		else
-		{
-			StringType s;
-			std::format_to(std::back_inserter(s), "{}(?)", meta::name_of<type>());
-			return s;
-		}
+		else { std::format_to(std::back_inserter(out), "{}(?)", meta::name_of<type>()); }
+	}
+
+	template<
+		std::ranges::output_range<char> StringType = std::basic_string<char>,
+		bool ContainsTypeName = true,
+		typename T>
+		requires std::ranges::contiguous_range<StringType>
+	[[nodiscard]] constexpr auto to_string(const T& t) noexcept -> StringType
+	{
+		StringType out;
+		meta::to_string<StringType, ContainsTypeName>(t, out);
+		return out;
 	}
 }
