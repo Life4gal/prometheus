@@ -10,7 +10,7 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.meta:string;
+export module gal.prometheus.meta:enum_name;
 
 import std;
 import :name;
@@ -26,7 +26,7 @@ import :name;
 
 namespace gal::prometheus::meta
 {
-	using enum_range_size_type = std::int16_t;
+	using enum_range_size_type                                   = std::int16_t;
 	constexpr static enum_range_size_type enum_range_default_min = -128;
 	constexpr static enum_range_size_type enum_range_default_max = 127;
 
@@ -521,11 +521,12 @@ namespace gal::prometheus::meta
 		{
 			if constexpr (Category == EnumCategory::ENUM)
 			{
-				constexpr auto bound_0 = range_min<EnumType>::value;
-				constexpr auto bound_1 = std::numeric_limits<Underlying>::min();
-
-				if constexpr (std::cmp_less(bound_0, bound_1)) { return bound_1; }
-				else { return bound_0; }
+				// constexpr auto bound_0 = range_min<EnumType>::value;
+				// constexpr auto bound_1 = std::numeric_limits<Underlying>::min();
+				//
+				// if constexpr (std::cmp_less(bound_0, bound_1)) { return bound_1; }
+				// else { return bound_0; }
+				return range_min<EnumType>::value;
 			}
 			else { return static_cast<Underlying>(0); }
 		}
@@ -535,11 +536,12 @@ namespace gal::prometheus::meta
 		{
 			if constexpr (Category == EnumCategory::ENUM)
 			{
-				constexpr auto bound_0 = range_max<EnumType>::value;
-				constexpr auto bound_1 = std::numeric_limits<Underlying>::max();
-
-				if constexpr (std::cmp_less(bound_0, bound_1)) { return bound_1; }
-				else { return bound_0; }
+				// constexpr auto bound_0 = range_max<EnumType>::value;
+				// constexpr auto bound_1 = std::numeric_limits<Underlying>::max();
+				//
+				// if constexpr (std::cmp_less(bound_0, bound_1)) { return bound_1; }
+				// else { return bound_0; }
+				return range_max<EnumType>::value;
 			}
 			else { return std::numeric_limits<Underlying>::digits - 1; }
 		}
@@ -553,12 +555,15 @@ namespace gal::prometheus::meta
 		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto names_of() noexcept -> auto
 	{
-		constexpr auto min = enum_name::range_min<EnumType>::value;//get_range_min<EnumType, Category>();
-		constexpr auto max = enum_name::range_max<EnumType>::value;//get_range_max<EnumType, Category>();
+		// fixme: auto deducting category
+		constexpr auto is_flag  = enum_name::range_is_flag<EnumType>::value;
+		constexpr auto category = is_flag ? enum_name::EnumCategory::FLAG : enum_name::EnumCategory::ENUM;
+
+		constexpr auto min = enum_name::get_range_min<EnumType, category>();
+		constexpr auto max = enum_name::get_range_max<EnumType, category>();
 		static_assert(max > min);
 
-		if constexpr (constexpr auto is_flag = enum_name::range_is_flag<EnumType>::value;
-			is_flag)
+		if constexpr (is_flag)
 		{
 			constexpr auto begin_shift = enum_name::begin_enum_shift_from_value<EnumType, min, max>();
 			constexpr auto end_shift   = enum_name::begin_enum_shift_from_value<EnumType, (static_cast<decltype(max)>(1) << begin_shift), max>();
@@ -567,8 +572,6 @@ namespace gal::prometheus::meta
 		}
 		else
 		{
-			// fixme: auto deducting category
-
 			constexpr auto begin_value = enum_name::begin_enum_value_from_value<EnumType, min, max, enum_name::EnumCategory::ENUM>();
 			constexpr auto end_value   = enum_name::end_enum_value_from_value<EnumType, static_cast<decltype(min)>(begin_value), max, enum_name::EnumCategory::ENUM>();
 
