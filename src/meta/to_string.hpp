@@ -14,12 +14,14 @@ export module gal.prometheus.meta:to_string;
 
 import std;
 import :member_name;
+import :enum_name;
 
 #else
 #include <format>
 
 #include <prometheus/macro.hpp>
 #include <meta/member_name.hpp>
+#include <meta/enum_name.hpp>
 #endif
 
 namespace gal::prometheus::meta
@@ -122,8 +124,16 @@ namespace gal::prometheus::meta
 
 			out.back() = '}';
 		}
+		// enum
+		else if constexpr (std::is_enum_v<type>)//
+		{
+			std::format_to(std::back_inserter(out), "{}", meta::name_of(t));
+		}
 		// any
-		else { std::format_to(std::back_inserter(out), "{}(?)", meta::name_of<type>()); }
+		else//
+		{
+			std::format_to(std::back_inserter(out), "{}(?)", meta::name_of<type>());
+		}
 	}
 
 	template<
