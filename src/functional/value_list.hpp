@@ -15,7 +15,6 @@ export module gal.prometheus.functional:value_list;
 import std;
 
 #else
-#include <tuple>
 #include <type_traits>
 #include <concepts>
 
@@ -163,7 +162,7 @@ namespace gal::prometheus::functional
 			}
 
 			template<template<auto> typename Projection>
-			[[nodiscard]] consteval auto projection() const noexcept -> list<Projection<Values>::value...>// NOLINT(modernize-type-traits)
+			[[nodiscard]] consteval auto projection() const noexcept -> list<Projection<Values>::value...> // NOLINT(modernize-type-traits)
 			{
 				(void)this;
 				return {};
@@ -194,7 +193,10 @@ namespace gal::prometheus::functional
 			}
 
 			template<auto Value, template<auto, auto> typename Prediction>
-			[[nodiscard]] consteval auto any() const noexcept -> bool { return this->template any<VALUE_LIST_WORKAROUND_BINDER(Value, Prediction)>(); }
+			[[nodiscard]] consteval auto any() const noexcept -> bool //
+			{
+				return this->template any<VALUE_LIST_WORKAROUND_BINDER(Value, Prediction)>();
+			}
 
 			template<auto Value>
 			[[nodiscard]] consteval auto any() const noexcept -> bool { return this->any<Value, same_value>(); }
@@ -216,16 +218,22 @@ namespace gal::prometheus::functional
 			}
 
 			template<auto Value, template<auto, auto> typename Prediction>
-				requires requires(list   l) { l.template index_of<VALUE_LIST_WORKAROUND_BINDER(Value, Prediction)>(); }
-			[[nodiscard]] consteval auto index_of() const noexcept -> std::size_t { return this->template index_of<VALUE_LIST_WORKAROUND_BINDER(Value, Prediction)>(); }
+				requires requires(list l) { l.template index_of<VALUE_LIST_WORKAROUND_BINDER(Value, Prediction)>(); }
+			[[nodiscard]] consteval auto index_of() const noexcept -> std::size_t //
+			{
+				return this->template index_of<VALUE_LIST_WORKAROUND_BINDER(Value, Prediction)>();
+			}
 
 			template<auto Value>
-				requires requires(list   l) { l.template index_of<Value, same_value>(); }
-			[[nodiscard]] consteval auto index_of() const noexcept -> std::size_t { return this->template index_of<Value, same_value>(); }
-
-			[[nodiscard]] consteval auto reverse() const noexcept -> auto//
+				requires requires(list l) { l.template index_of<Value, same_value>(); }
+			[[nodiscard]] consteval auto index_of() const noexcept -> std::size_t //
 			{
-				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> auto//
+				return this->template index_of<Value, same_value>();
+			}
+
+			[[nodiscard]] consteval auto reverse() const noexcept -> auto //
+			{
+				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> auto //
 				{
 					return list<nth_value<values_size - 1 - Index>()...>{};
 				}(std::make_index_sequence<values_size>{});
@@ -239,7 +247,10 @@ namespace gal::prometheus::functional
 			}
 
 			template<auto... Us>
-			[[nodiscard]] consteval auto push_back(const list<Us...>) const noexcept -> list<Values..., Us...> { return this->push_back<Us...>(); }
+			[[nodiscard]] consteval auto push_back(const list<Us...>) const noexcept -> list<Values..., Us...> //
+			{
+				return this->template push_back<Us...>();
+			}
 
 			template<list_t auto List>
 			[[nodiscard]] consteval auto push_back() const noexcept -> auto { return this->push_back(List); }
@@ -252,7 +263,10 @@ namespace gal::prometheus::functional
 			}
 
 			template<auto... Us>
-			[[nodiscard]] consteval auto push_front(const list<Us...>) const noexcept -> list<Us..., Values...> { return this->push_front<Us...>(); }
+			[[nodiscard]] consteval auto push_front(const list<Us...>) const noexcept -> list<Us..., Values...> //
+			{
+				return this->template push_front<Us...>();
+			}
 
 			template<list_t auto List>
 			[[nodiscard]] consteval auto push_front() const noexcept -> auto { return this->push_front(List); }
@@ -267,7 +281,7 @@ namespace gal::prometheus::functional
 				else if constexpr (N == values_size) { return list<>{}; }
 				else
 				{
-					return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> auto//
+					return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> auto //
 					{
 						return list<nth_value<Index>()...>{};
 					}(std::make_index_sequence<values_size - N>{});
@@ -284,7 +298,7 @@ namespace gal::prometheus::functional
 				else if constexpr (N == values_size) { return list<>{}; }
 				else
 				{
-					return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> auto//
+					return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> auto //
 					{
 						return list<nth_value<N + Index>...>{};
 					}(std::make_index_sequence<values_size - N>{});
@@ -293,11 +307,17 @@ namespace gal::prometheus::functional
 
 			template<std::size_t N = 1>
 				requires(N <= values_size)
-			[[nodiscard]] consteval auto back() const noexcept -> auto { return this->template pop_front<values_size - N>(); }
+			[[nodiscard]] consteval auto back() const noexcept -> auto //
+			{
+				return this->template pop_front<values_size - N>();
+			}
 
 			template<std::size_t N = 1>
 				requires(N <= values_size)
-			[[nodiscard]] consteval auto front() const noexcept -> auto { return this->template pop_back<values_size - N>(); }
+			[[nodiscard]] consteval auto front() const noexcept -> auto //
+			{
+				return this->template pop_back<values_size - N>();
+			}
 
 			template<std::size_t N = values_size>
 				requires(N <= values_size)
@@ -308,13 +328,16 @@ namespace gal::prometheus::functional
 				if constexpr (N <= 1) { return list{}; }
 				else
 				{
-					using type = typename unique_impl<decltype(list{}.template front<N>().template pop_front<1>()), decltype(list{}.template front<1>())>::type;
+					using type = typename unique_impl<
+						decltype(list{}.template front<N>().template pop_front<1>()),
+						decltype(list{}.template front<1>())
+					>::type;
 
-					if constexpr (N == values_size)//
+					if constexpr (N == values_size) //
 					{
 						return type{};
 					}
-					else//
+					else //
 					{
 						return type{}.template push_back<list{}.template back<values_size - N>()>();
 					}
@@ -330,13 +353,16 @@ namespace gal::prometheus::functional
 				if constexpr (N <= 1) { return list{}; }
 				else
 				{
-					using type = typename unique_impl<decltype(list{}.template back<N>().template pop_front<1>()), decltype(list{}.template back<N>().template front<1>())>::type;
+					using type = typename unique_impl<
+						decltype(list{}.template back<N>().template pop_front<1>()),
+						decltype(list{}.template back<N>().template front<1>())
+					>::type;
 
-					if constexpr (N == values_size)//
+					if constexpr (N == values_size) //
 					{
 						return type{};
 					}
-					else//
+					else //
 					{
 						return this->template front<values_size - N>().template push_back<type{}>();
 					}
@@ -353,8 +379,11 @@ namespace gal::prometheus::functional
 			}
 
 			template<auto Value, template<auto, auto> typename Prediction>
-				requires requires(list   l) { l.template sub_list<VALUE_LIST_WORKAROUND_BINDER(Value, Prediction)>(); }
-			[[nodiscard]] consteval auto sub_list() const noexcept -> auto { return this->template sub_list<VALUE_LIST_WORKAROUND_BINDER(Value, Prediction)>(); }
+				requires requires(list l) { l.template sub_list<VALUE_LIST_WORKAROUND_BINDER(Value, Prediction)>(); }
+			[[nodiscard]] consteval auto sub_list() const noexcept -> auto //
+			{
+				return this->template sub_list<VALUE_LIST_WORKAROUND_BINDER(Value, Prediction)>();
+			}
 		};
 
 		template<char... Cs>
@@ -386,10 +415,10 @@ namespace gal::prometheus::functional
 				(
 					(
 						result = Cs == '\''
-							         ?//
+							         ? //
 							         result
-							         :                                                     //
-							         result * static_cast<T>(10) + static_cast<T>(Cs - '0')//
+							         : //
+							         result * static_cast<T>(10) + static_cast<T>(Cs - '0') //
 					),
 					...);
 
@@ -402,37 +431,37 @@ namespace gal::prometheus::functional
 			{
 				(void)this;
 
-				auto result   = static_cast<T>(0);
+				auto result = static_cast<T>(0);
 				auto fraction = static_cast<T>(0.1);
 
 				bool past = false;
 				((
 						result = Cs == '\''
-							         ?//
+							         ? //
 							         result
-							         ://
+							         : //
 							         (
 								         Cs == '.'
-									         ?//
+									         ? //
 									         (past = true, result)
-									         ://
+									         : //
 									         (past
-										          ?//
+										          ? //
 										          [](T& f, const T r) noexcept -> T
 										          {
 											          const auto ret = r + static_cast<T>(Cs - '0') * f;
 											          f *= static_cast<T>(0.1);
 											          return ret;
 										          }(fraction, result)
-										          :                                                       //
-										          result * static_cast<T>(10) + static_cast<T>(Cs - '0')))//
+										          : //
+										          result * static_cast<T>(10) + static_cast<T>(Cs - '0'))) //
 					),
 					...);
 
 				return result;
 			}
 
-			[[nodiscard]] constexpr auto numerator_length() const noexcept -> std::size_t//
+			[[nodiscard]] constexpr auto numerator_length() const noexcept -> std::size_t //
 				requires(((Cs >= '0' and Cs <= '9') or Cs == '\'' or Cs == '.') and ...)
 			{
 				(void)this;
@@ -442,16 +471,16 @@ namespace gal::prometheus::functional
 				bool found = false;
 				((
 						Cs == '.'
-							?                                                  //
-							(found = true, (void)found)                        // NOLINT(clang-diagnostic-comma)
-							:                                                  //
-							(length += not found and Cs != '\'', (void)found)),// NOLINT(clang-diagnostic-comma)
+							? //
+							(found = true, (void)found) // NOLINT(clang-diagnostic-comma)
+							: //
+							(length += not found and Cs != '\'', (void)found)), // NOLINT(clang-diagnostic-comma)
 					...);
 
 				return length;
 			}
 
-			[[nodiscard]] constexpr auto denominator_length() const noexcept -> std::size_t//
+			[[nodiscard]] constexpr auto denominator_length() const noexcept -> std::size_t //
 				requires(((Cs >= '0' and Cs <= '9') or Cs == '\'' or Cs == '.') and ...)
 			{
 				(void)this;
@@ -461,10 +490,10 @@ namespace gal::prometheus::functional
 				bool found = false;
 				((
 						Cs == '.'
-							?                                              //
-							(found = true, (void)found)                    // NOLINT(clang-diagnostic-comma)
-							:                                              //
-							(length += found and Cs != '\'', (void)found)),// NOLINT(clang-diagnostic-comma)
+							? //
+							(found = true, (void)found) // NOLINT(clang-diagnostic-comma)
+							: //
+							(length += found and Cs != '\'', (void)found)), // NOLINT(clang-diagnostic-comma)
 					...);
 
 				return length;
@@ -472,7 +501,7 @@ namespace gal::prometheus::functional
 		};
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	template<auto... Values>
 	constexpr auto value_list = value_list_detail::list<Values...>{};
@@ -492,5 +521,7 @@ namespace gal::prometheus::functional
 	template<typename T>
 	concept char_list_t = value_list_detail::char_list_t<T>;
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
+
+#undef VALUE_LIST_WORKAROUND_BINDER
