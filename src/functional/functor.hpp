@@ -24,7 +24,7 @@ import std;
 
 namespace gal::prometheus::functional
 {
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	template<typename FunctionType>
 	struct y_combinator
@@ -34,7 +34,8 @@ namespace gal::prometheus::functional
 		function_type function;
 
 		template<typename... Args>
-		constexpr auto operator()(Args&&... args) const noexcept(std::is_nothrow_invocable_v<function_type, decltype(*this), Args...>) -> decltype(auto)//
+		constexpr auto operator()(Args&&... args) const
+			noexcept(std::is_nothrow_invocable_v<function_type, decltype(*this), Args...>) -> decltype(auto) //
 		{
 			// we pass ourselves to function, the lambda should take the first argument as `auto&& self` or similar.
 			return std::invoke(function, *this, std::forward<Args>(args)...);
@@ -48,7 +49,7 @@ namespace gal::prometheus::functional
 			: Ts{std::forward<Ts>(ts)}... {}
 	};
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace functional_detail
 	{
@@ -63,7 +64,8 @@ namespace gal::prometheus::functional
 		struct unary_invoker
 		{
 			template<typename... Args>
-			[[nodiscard]] constexpr auto operator()(const Args&... args) const noexcept((std::is_nothrow_invocable_r_v<bool, decltype(DefaultFunctor), Args> and ...)) -> bool//
+			[[nodiscard]] constexpr auto operator()(const Args&... args) const
+				noexcept((std::is_nothrow_invocable_r_v<bool, decltype(DefaultFunctor), Args> and ...)) -> bool //
 				requires(std::is_invocable_r_v<bool, decltype(DefaultFunctor), Args> and ...)
 			{
 				if constexpr (sizeof...(Args) == 0) { return true; }
@@ -71,11 +73,14 @@ namespace gal::prometheus::functional
 				if constexpr (FoldType == InvokeFoldType::ALL) { return (DefaultFunctor(args) and ...); }
 				else if constexpr (FoldType == InvokeFoldType::ANY) { return (DefaultFunctor(args) or ...); }
 				else if constexpr (FoldType == InvokeFoldType::NONE) { return not(DefaultFunctor(args) or ...); }
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 			}
 
 			template<typename Function, typename... Args>
-			[[nodiscard]] constexpr auto operator()(Function function, const Args&... args) const noexcept((std::is_nothrow_invocable_r_v<bool, Function, Args> and ...)) -> bool//
+			[[nodiscard]] constexpr auto operator()(
+					Function function,
+					const Args&... args
+					) const noexcept((std::is_nothrow_invocable_r_v<bool, Function, Args> and ...)) -> bool //
 				requires(std::is_invocable_r_v<bool, Function, Args> and ...)
 			{
 				if constexpr (sizeof...(Args) == 0) { return true; }
@@ -83,7 +88,7 @@ namespace gal::prometheus::functional
 				if constexpr (FoldType == InvokeFoldType::ALL) { return (function(args) and ...); }
 				else if constexpr (FoldType == InvokeFoldType::ANY) { return (function(args) or ...); }
 				else if constexpr (FoldType == InvokeFoldType::NONE) { return not(function(args) or ...); }
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 			}
 		};
 
@@ -92,14 +97,14 @@ namespace gal::prometheus::functional
 		{
 			template<typename Lhs, typename Rhs, typename... Reset>
 			[[nodiscard]] constexpr auto operator()(
-					const Lhs&      lhs,
-					const Rhs&      rhs,
-					const Reset&... reset//
+					const Lhs& lhs,
+					const Rhs& rhs,
+					const Reset&... reset //
 					) const
 				noexcept(
-					noexcept(DefaultFunctor(lhs, rhs)) and            //
-					noexcept((DefaultFunctor(lhs, reset) and ...)) and//
-					noexcept((DefaultFunctor(rhs, reset) and ...))    //
+					noexcept(DefaultFunctor(lhs, rhs)) and //
+					noexcept((DefaultFunctor(lhs, reset) and ...)) and //
+					noexcept((DefaultFunctor(rhs, reset) and ...)) //
 				) -> const auto&
 			{
 				if constexpr (sizeof...(reset) == 0) { return DefaultFunctor(lhs, rhs) ? lhs : rhs; }
@@ -109,15 +114,15 @@ namespace gal::prometheus::functional
 			template<typename Function, typename Lhs, typename Rhs, typename... Reset>
 				requires std::is_invocable_r_v<bool, Function, Lhs, Rhs>
 			[[nodiscard]] constexpr auto operator()(
-					Function        function,
-					const Lhs&      lhs,
-					const Rhs&      rhs,
-					const Reset&... reset//
+					Function function,
+					const Lhs& lhs,
+					const Rhs& rhs,
+					const Reset&... reset //
 					) const
 				noexcept(
-					noexcept(function(lhs, rhs)) and            //
-					noexcept((function(lhs, reset) and ...)) and//
-					noexcept((function(rhs, reset) and ...))    //
+					noexcept(function(lhs, rhs)) and //
+					noexcept((function(lhs, reset) and ...)) and //
+					noexcept((function(rhs, reset) and ...)) //
 				) -> const auto&
 			{
 				if constexpr (sizeof...(reset) == 0) { return function(lhs, rhs) ? lhs : rhs; }
@@ -125,26 +130,44 @@ namespace gal::prometheus::functional
 			}
 		};
 
-		[[maybe_unused]] constexpr auto as_boolean            = [](const auto& i) noexcept((static_cast<bool>(i))) -> bool { return static_cast<bool>(i); };
-		[[maybe_unused]] constexpr auto compare_greater_than  = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs > rhs)) -> bool { return lhs > rhs; };
-		[[maybe_unused]] constexpr auto compare_greater_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs >= rhs)) -> bool { return lhs >= rhs; };
-		[[maybe_unused]] constexpr auto compare_less_than     = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs < rhs)) -> bool { return lhs < rhs; };
-		[[maybe_unused]] constexpr auto compare_less_equal    = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs <= rhs)) -> bool { return lhs <= rhs; };
-		[[maybe_unused]] constexpr auto compare_equal         = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs == rhs)) -> bool { return lhs == rhs; };
-		[[maybe_unused]] constexpr auto compare_not_equal     = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs != rhs)) -> bool { return lhs != rhs; };
-	}// namespace functional_detail
+		[[maybe_unused]] constexpr auto as_boolean = [](const auto& i) noexcept((static_cast<bool>(i))) -> bool { return static_cast<bool>(i); };
+		[[maybe_unused]] constexpr auto compare_greater_than = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs > rhs)) -> bool
+		{
+			return lhs > rhs;
+		};
+		[[maybe_unused]] constexpr auto compare_greater_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs >= rhs)) -> bool
+		{
+			return lhs >= rhs;
+		};
+		[[maybe_unused]] constexpr auto compare_less_than = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs < rhs)) -> bool
+		{
+			return lhs < rhs;
+		};
+		[[maybe_unused]] constexpr auto compare_less_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs <= rhs)) -> bool
+		{
+			return lhs <= rhs;
+		};
+		[[maybe_unused]] constexpr auto compare_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs == rhs)) -> bool
+		{
+			return lhs == rhs;
+		};
+		[[maybe_unused]] constexpr auto compare_not_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs != rhs)) -> bool
+		{
+			return lhs != rhs;
+		};
+	} // namespace functional_detail
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	namespace functor
 	{
-		constexpr functional_detail::unary_invoker<functional_detail::as_boolean, functional_detail::InvokeFoldType::ALL>  all;
-		constexpr functional_detail::unary_invoker<functional_detail::as_boolean, functional_detail::InvokeFoldType::ANY>  any;
+		constexpr functional_detail::unary_invoker<functional_detail::as_boolean, functional_detail::InvokeFoldType::ALL> all;
+		constexpr functional_detail::unary_invoker<functional_detail::as_boolean, functional_detail::InvokeFoldType::ANY> any;
 		constexpr functional_detail::unary_invoker<functional_detail::as_boolean, functional_detail::InvokeFoldType::NONE> none;
 
 		constexpr functional_detail::binary_invoker<functional_detail::compare_greater_than> max;
-		constexpr functional_detail::binary_invoker<functional_detail::compare_less_than>    min;
-	}// namespace functor
+		constexpr functional_detail::binary_invoker<functional_detail::compare_less_than> min;
+	} // namespace functor
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
