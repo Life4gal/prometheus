@@ -26,7 +26,7 @@ import :name;
 
 namespace gal::prometheus::meta
 {
-	using enum_range_size_type                                   = std::int16_t;
+	using enum_range_size_type = std::int16_t;
 	constexpr static enum_range_size_type enum_range_default_min = -128;
 	constexpr static enum_range_size_type enum_range_default_max = 127;
 
@@ -78,13 +78,16 @@ namespace gal::prometheus::meta
 		struct enum_value_name {};
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	template<typename EnumType>
 		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto name_of() noexcept -> std::string_view
 	{
-		if constexpr (requires { { user_defined::enum_name<EnumType>::value } -> std::convertible_to<std::string_view>; }) { return user_defined::enum_name<EnumType>::value; }
+		if constexpr (requires { { user_defined::enum_name<EnumType>::value } -> std::convertible_to<std::string_view>; })
+		{
+			return user_defined::enum_name<EnumType>::value;
+		}
 		else { return meta::name_of_type<EnumType>(); }
 	}
 
@@ -92,11 +95,14 @@ namespace gal::prometheus::meta
 		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto name_of() noexcept -> std::string_view
 	{
-		if constexpr (requires { { user_defined::enum_value_name<EnumValue>::value } -> std::convertible_to<std::string_view>; }) { return user_defined::enum_name<EnumType>::value; }
+		if constexpr (requires { { user_defined::enum_value_name<EnumValue>::value } -> std::convertible_to<std::string_view>; })
+		{
+			return user_defined::enum_name<EnumType>::value;
+		}
 		else { return meta::name_of_enum_value<EnumValue>(); }
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace enum_name
 	{
@@ -108,7 +114,7 @@ namespace gal::prometheus::meta
 		// 	else { return lower_bound_shift<Value, CurrentShift + 1>(); }
 		// }
 		template<std::unsigned_integral auto Value>
-			requires(Value > 0)// 1 << 0 => 1
+			requires(Value > 0) // 1 << 0 => 1
 		[[nodiscard]] constexpr auto lower_bound_shift() noexcept -> std::size_t { return std::bit_width(Value) - 1; }
 
 		// template<std::unsigned_integral auto Value, std::size_t CurrentShift = std::numeric_limits<std::decay_t<decltype(Value)>>::digits - 1>
@@ -120,7 +126,7 @@ namespace gal::prometheus::meta
 		// 	else { return CurrentShift + 1; }
 		// }
 		template<std::unsigned_integral auto Value>
-			requires(Value > 0)// 1 << 0 => 1
+			requires(Value > 0) // 1 << 0 => 1
 		[[nodiscard]] constexpr auto upper_bound_shift() noexcept -> std::size_t { return std::bit_width(Value); }
 
 		template<auto EnumValue, typename EnumType = std::decay_t<decltype(EnumValue)>>
@@ -134,7 +140,7 @@ namespace gal::prometheus::meta
 
 		template<typename EnumType, std::integral auto EnumValue>
 			requires std::is_enum_v<EnumType>
-		[[nodiscard]] constexpr auto is_valid_enum() noexcept -> bool//
+		[[nodiscard]] constexpr auto is_valid_enum() noexcept -> bool //
 		{
 			return is_valid_enum<static_cast<EnumType>(EnumValue)>();
 		}
@@ -157,14 +163,20 @@ namespace gal::prometheus::meta
 		 * @tparam Max the end value/shift of the enumeration.
 		 * @return true iff all values in between are valid enumeration.
 		 */
-		template<typename EnumType, std::integral auto Min, std::integral auto Max, EnumCategory Category, typename MinType = std::decay_t<decltype(Min)>, typename MaxType = std::decay_t<decltype(Max)>>
-			requires                                                                                                        //
-			std::is_enum_v<EnumType> and                                                                                    // enum
-			std::is_same_v<MinType, MaxType> and                                                                            // same type
-			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) and     // valid value
-			((Category == EnumCategory::FLAG) == (std::is_unsigned_v<MinType> and std::is_unsigned_v<MaxType>)) and         // valid flag
-			((Category == EnumCategory::FLAG) == (Max <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits - 1))// valid Max
-		[[nodiscard]] constexpr auto is_valid_enum() noexcept -> bool                                                       //
+		template<
+			typename EnumType,
+			std::integral auto Min,
+			std::integral auto Max,
+			EnumCategory Category,
+			typename MinType = std::decay_t<decltype(Min)>,
+			typename MaxType = std::decay_t<decltype(Max)>>
+			requires //
+			std::is_enum_v<EnumType> and // enum
+			std::is_same_v<MinType, MaxType> and // same type
+			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) and // valid value
+			((Category == EnumCategory::FLAG) == (std::is_unsigned_v<MinType> and std::is_unsigned_v<MaxType>)) and // valid flag
+			((Category == EnumCategory::FLAG) == (Max <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits - 1)) // valid Max
+		[[nodiscard]] constexpr auto is_valid_enum() noexcept -> bool //
 		{
 			using underlying_type = std::underlying_type_t<MinType>;
 
@@ -172,7 +184,7 @@ namespace gal::prometheus::meta
 
 			if constexpr (Category == EnumCategory::ENUM)
 			{
-				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> bool//
+				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> bool //
 				{
 					return (is_valid_enum<static_cast<MinType>(Min + Index)>() and ...);
 				}(std::make_index_sequence<Max - Min>{});
@@ -182,12 +194,12 @@ namespace gal::prometheus::meta
 				constexpr auto lower = lower_bound_shift<Min>();
 				constexpr auto upper = upper_bound_shift<Max>();
 
-				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> bool//
+				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> bool //
 				{
 					return (is_valid_enum<static_cast<MinType>(static_cast<underlying_type>(1) << (lower + Index))>() and ...);
 				}(std::make_index_sequence<upper - lower>{});
 			}
-			else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
 		template<typename EnumType>
@@ -240,13 +252,19 @@ namespace gal::prometheus::meta
 		 * @tparam Max the end value of the enumeration.
 		 * @return the first possible valid enumeration value if found, else valid_enum_value_not_found.
 		 */
-		template<typename EnumType, std::integral auto Min, std::integral auto Max, EnumCategory Category, typename MinType = std::decay_t<decltype(Min)>, typename MaxType = std::decay_t<decltype(Max)>>
-			requires                                                                                                   //
-			std::is_enum_v<EnumType> and                                                                               // enum
-			std::is_same_v<MinType, MaxType> and                                                                       // same type
-			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) and// valid value
-			((Category == EnumCategory::FLAG) == (std::is_unsigned_v<MinType> and std::is_unsigned_v<MaxType>))        // valid flag
-		[[nodiscard]] constexpr auto begin_enum_value_from_value() noexcept -> std::underlying_type_t<EnumType>        //
+		template<
+			typename EnumType,
+			std::integral auto Min,
+			std::integral auto Max,
+			EnumCategory Category,
+			typename MinType = std::decay_t<decltype(Min)>,
+			typename MaxType = std::decay_t<decltype(Max)>>
+			requires //
+			std::is_enum_v<EnumType> and // enum
+			std::is_same_v<MinType, MaxType> and // same type
+			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) and // valid value
+			((Category == EnumCategory::FLAG) == (std::is_unsigned_v<MinType> and std::is_unsigned_v<MaxType>)) // valid flag
+		[[nodiscard]] constexpr auto begin_enum_value_from_value() noexcept -> std::underlying_type_t<EnumType> //
 		{
 			using underlying_type = std::underlying_type_t<EnumType>;
 
@@ -267,7 +285,7 @@ namespace gal::prometheus::meta
 
 				return begin_enum_value_from_shift<EnumType, lower, upper>();
 			}
-			else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
 		/**
@@ -297,13 +315,19 @@ namespace gal::prometheus::meta
 		 * @tparam Max the end value of the enumeration.
 		 * @return the first possible valid enumeration value if found, else valid_enum_value_not_found.
 		 */
-		template<typename EnumType, std::integral auto Min, std::integral auto Max, EnumCategory Category, typename MinType = std::decay_t<decltype(Min)>, typename MaxType = std::decay_t<decltype(Max)>>
-			requires                                                                                                   //
-			std::is_enum_v<EnumType> and                                                                               // enum
-			std::is_same_v<MinType, MaxType> and                                                                       // same type
-			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) and// valid value
-			((Category == EnumCategory::FLAG) == (std::is_unsigned_v<MinType> and std::is_unsigned_v<MaxType>))        // valid flag
-		[[nodiscard]] constexpr auto end_enum_value_from_value() noexcept -> std::underlying_type_t<EnumType>          //
+		template<
+			typename EnumType,
+			std::integral auto Min,
+			std::integral auto Max,
+			EnumCategory Category,
+			typename MinType = std::decay_t<decltype(Min)>,
+			typename MaxType = std::decay_t<decltype(Max)>>
+			requires //
+			std::is_enum_v<EnumType> and // enum
+			std::is_same_v<MinType, MaxType> and // same type
+			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) and // valid value
+			((Category == EnumCategory::FLAG) == (std::is_unsigned_v<MinType> and std::is_unsigned_v<MaxType>)) // valid flag
+		[[nodiscard]] constexpr auto end_enum_value_from_value() noexcept -> std::underlying_type_t<EnumType> //
 		{
 			using underlying_type = std::underlying_type_t<EnumType>;
 
@@ -324,7 +348,7 @@ namespace gal::prometheus::meta
 
 				return end_enum_value_from_shift<EnumType, lower, upper>();
 			}
-			else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
 		// ================================
@@ -366,12 +390,17 @@ namespace gal::prometheus::meta
 		 * @tparam Max the end of the enumeration (unsigned integer).
 		 * @return n if found, else valid_enum_shift_not_found.
 		 */
-		template<typename EnumType, std::unsigned_integral auto Min, std::unsigned_integral auto Max, typename MinType = std::decay_t<decltype(Min)>, typename MaxType = std::decay_t<decltype(Max)>>
-			requires                                                                                               //
-			std::is_enum_v<EnumType> and                                                                           // enum
-			std::is_same_v<MinType, MaxType> and                                                                   // same type
-			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits)// valid value
-		[[nodiscard]] constexpr auto begin_enum_shift_from_value() noexcept -> std::size_t                         //
+		template<
+			typename EnumType,
+			std::unsigned_integral auto Min,
+			std::unsigned_integral auto Max,
+			typename MinType = std::decay_t<decltype(Min)>,
+			typename MaxType = std::decay_t<decltype(Max)>>
+			requires //
+			std::is_enum_v<EnumType> and // enum
+			std::is_same_v<MinType, MaxType> and // same type
+			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) // valid value
+		[[nodiscard]] constexpr auto begin_enum_shift_from_value() noexcept -> std::size_t //
 		{
 			using underlying_type = std::underlying_type_t<EnumType>;
 
@@ -413,12 +442,17 @@ namespace gal::prometheus::meta
 		 * @tparam Max the end of the enumeration (unsigned integer).
 		 * @return n if found, else valid_enum_shift_not_found.
 		 */
-		template<typename EnumType, std::unsigned_integral auto Min, std::unsigned_integral auto Max, typename MinType = std::decay_t<decltype(Min)>, typename MaxType = std::decay_t<decltype(Max)>>
-			requires                                                                                               //
-			std::is_enum_v<EnumType> and                                                                           // enum
-			std::is_same_v<MinType, MaxType> and                                                                   // same type
-			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits)// valid value
-		[[nodiscard]] constexpr auto end_enum_shift_from_value() noexcept -> std::underlying_type_t<EnumType>      //
+		template<
+			typename EnumType,
+			std::unsigned_integral auto Min,
+			std::unsigned_integral auto Max,
+			typename MinType = std::decay_t<decltype(Min)>,
+			typename MaxType = std::decay_t<decltype(Max)>>
+			requires //
+			std::is_enum_v<EnumType> and // enum
+			std::is_same_v<MinType, MaxType> and // same type
+			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) // valid value
+		[[nodiscard]] constexpr auto end_enum_shift_from_value() noexcept -> std::underlying_type_t<EnumType> //
 		{
 			using underlying_type = std::underlying_type_t<MinType>;
 
@@ -437,14 +471,19 @@ namespace gal::prometheus::meta
 		// list
 		// ================================
 
-		template<typename EnumType, std::integral auto Min, std::integral auto Max, typename MinType = std::decay_t<decltype(Min)>, typename MaxType = std::decay_t<decltype(Max)>>
-			requires                                                                                               //
-			std::is_enum_v<EnumType> and                                                                           // enum
-			std::is_same_v<MinType, MaxType> and                                                                   // same type
-			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits)// valid value
+		template<
+			typename EnumType,
+			std::integral auto Min,
+			std::integral auto Max,
+			typename MinType = std::decay_t<decltype(Min)>,
+			typename MaxType =std::decay_t<decltype(Max)>>
+			requires //
+			std::is_enum_v<EnumType> and // enum
+			std::is_same_v<MinType, MaxType> and // same type
+			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) // valid value
 		[[nodiscard]] constexpr auto generate_names_from_value() noexcept -> std::array<std::pair<EnumType, std::string_view>, Max - Min + 1>
 		{
-			return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept//
+			return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept //
 			{
 				return std::array<std::pair<EnumType, std::string_view>, Max - Min + 1>{{
 						//
@@ -452,23 +491,29 @@ namespace gal::prometheus::meta
 								//
 								static_cast<EnumType>(Min + Index),
 								meta::name_of<static_cast<EnumType>(Min + Index)>()
-						}...//
+						}... //
 				}};
 			}(std::make_index_sequence<Max - Min + 1>{});
 		}
 
-		template<typename EnumType, std::integral auto Min, std::integral auto Max, typename MinType = std::decay_t<decltype(Min)>, typename MaxType = std::decay_t<decltype(Max)>>
-			requires                                                                                               //
-			std::is_enum_v<EnumType> and                                                                           // enum
-			std::is_same_v<MinType, MaxType> and                                                                   // same type
-			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits)// valid value
+		template<
+			typename EnumType,
+			std::integral auto Min,
+			std::integral auto Max,
+			typename MinType = std::decay_t<decltype(Min)>,
+			typename MaxType =std::decay_t<decltype(Max)>>
+			requires //
+			std::is_enum_v<EnumType> and // enum
+			std::is_same_v<MinType, MaxType> and // same type
+			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) // valid value
 		constexpr auto names_from_value = generate_names_from_value<EnumType, Min, Max>();
 
 		template<typename EnumType, std::size_t MinShift, std::size_t MaxShift>
 			requires std::is_enum_v<EnumType> and (MaxShift <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits - 1)
-		[[nodiscard]] constexpr auto generate_names_from_shift() noexcept -> std::array<std::pair<EnumType, std::string_view>, MaxShift - MinShift + 1>
+		[[nodiscard]] constexpr auto generate_names_from_shift()
+			noexcept -> std::array<std::pair<EnumType, std::string_view>, MaxShift - MinShift + 1>
 		{
-			return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept//
+			return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept //
 			{
 				return std::array<std::pair<EnumType, std::string_view>, MaxShift - MinShift + 1>{{
 						//
@@ -476,7 +521,7 @@ namespace gal::prometheus::meta
 								//
 								static_cast<EnumType>(static_cast<std::underlying_type_t<EnumType>>(1) << (MinShift + Index)),
 								meta::name_of<static_cast<EnumType>(static_cast<std::underlying_type_t<EnumType>>(1) << (MinShift + Index))>()
-						}...//
+						}... //
 				}};
 			}(std::make_index_sequence<MaxShift - MinShift + 1>{});
 		}
@@ -499,7 +544,8 @@ namespace gal::prometheus::meta
 					user_defined::enum_range<EnumType>::min
 				} -> std::convertible_to<enum_range_size_type>;
 			}
-		struct range_min<EnumType> : std::integral_constant<decltype(user_defined::enum_range<EnumType>::min), user_defined::enum_range<EnumType>::min> {};
+		struct range_min<EnumType> :
+				std::integral_constant<decltype(user_defined::enum_range<EnumType>::min), user_defined::enum_range<EnumType>::min> {};
 
 		template<typename>
 		struct range_max : std::integral_constant<enum_range_size_type, enum_range_default_max> {};
@@ -511,7 +557,8 @@ namespace gal::prometheus::meta
 					user_defined::enum_range<EnumType>::max
 				} -> std::convertible_to<enum_range_size_type>;
 			}
-		struct range_max<EnumType> : std::integral_constant<decltype(user_defined::enum_range<EnumType>::max), user_defined::enum_range<EnumType>::max> {};
+		struct range_max<EnumType> :
+				std::integral_constant<decltype(user_defined::enum_range<EnumType>::max), user_defined::enum_range<EnumType>::max> {};
 
 		template<typename T>
 		struct range_is_flag : user_defined::enum_is_flag<T> {};
@@ -547,7 +594,7 @@ namespace gal::prometheus::meta
 		}
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	constexpr std::string_view enum_name_not_found{"?"};
 
@@ -556,7 +603,7 @@ namespace gal::prometheus::meta
 	[[nodiscard]] constexpr auto names_of() noexcept -> auto
 	{
 		// fixme: auto deducting category
-		constexpr auto is_flag  = enum_name::range_is_flag<EnumType>::value;
+		constexpr auto is_flag = enum_name::range_is_flag<EnumType>::value;
 		constexpr auto category = is_flag ? enum_name::EnumCategory::FLAG : enum_name::EnumCategory::ENUM;
 
 		constexpr auto min = enum_name::get_range_min<EnumType, category>();
@@ -566,14 +613,20 @@ namespace gal::prometheus::meta
 		if constexpr (is_flag)
 		{
 			constexpr auto begin_shift = enum_name::begin_enum_shift_from_value<EnumType, min, max>();
-			constexpr auto end_shift   = enum_name::begin_enum_shift_from_value<EnumType, (static_cast<decltype(max)>(1) << begin_shift), max>();
+			constexpr auto end_shift = enum_name::begin_enum_shift_from_value<EnumType, (static_cast<decltype(max)>(1) << begin_shift), max>();
 
 			return enum_name::names_from_shift<EnumType, begin_shift, end_shift>;
 		}
 		else
 		{
 			constexpr auto begin_value = enum_name::begin_enum_value_from_value<EnumType, min, max, enum_name::EnumCategory::ENUM>();
-			constexpr auto end_value   = enum_name::end_enum_value_from_value<EnumType, static_cast<decltype(min)>(begin_value), max, enum_name::EnumCategory::ENUM>();
+			constexpr auto end_value =
+					enum_name::end_enum_value_from_value<
+						EnumType,
+						static_cast<decltype(min)>(begin_value),
+						max,
+						enum_name::EnumCategory::ENUM
+					>();
 
 			return enum_name::names_from_value<EnumType, begin_value, end_value>;
 		}
@@ -612,5 +665,5 @@ namespace gal::prometheus::meta
 		return std::nullopt;
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
