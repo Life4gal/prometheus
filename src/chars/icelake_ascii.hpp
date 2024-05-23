@@ -52,9 +52,9 @@ namespace gal::prometheus::chars
 
 			const auto input_length = input.size();
 
-			const pointer_type it_input_begin   = input.data();
-			pointer_type       it_input_current = it_input_begin;
-			const pointer_type it_input_end     = it_input_begin + input_length;
+			const pointer_type it_input_begin = input.data();
+			pointer_type it_input_current = it_input_begin;
+			const pointer_type it_input_end = it_input_begin + input_length;
 
 			const auto ascii = _mm512_set1_epi8(static_cast<char>(0x80));
 			// used iff not ReturnResultType
@@ -82,7 +82,13 @@ namespace gal::prometheus::chars
 			{
 				const auto in = _mm512_maskz_loadu_epi8((__mmask64{1} << (it_input_end - it_input_current)) - 1, it_input_current);
 				if (const auto not_ascii = _mm512_cmp_epu8_mask(in, ascii, _MM_CMPINT_NLT);
-					not_ascii) { return result_type{.error = ErrorCode::TOO_LARGE, .count = static_cast<std::size_t>(it_input_current - it_input_begin) + std::countr_zero(not_ascii)}; }
+					not_ascii)
+				{
+					return result_type{
+							.error = ErrorCode::TOO_LARGE,
+							.count = static_cast<std::size_t>(it_input_current - it_input_begin) + std::countr_zero(not_ascii)
+					};
+				}
 
 				return result_type{.error = ErrorCode::NONE, .count = input_length};
 			}
@@ -100,7 +106,10 @@ namespace gal::prometheus::chars
 		}
 
 		template<bool ReturnResultType>
-		[[nodiscard]] constexpr auto validate(const pointer_type input) const noexcept -> std::conditional_t<ReturnResultType, result_type, bool> { return this->validate<ReturnResultType>({input, std::char_traits<char_type>::length(input)}); }
+		[[nodiscard]] constexpr auto validate(const pointer_type input) const noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
+		{
+			return this->validate<ReturnResultType>({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// note: we are not BOM aware
 		template<CharsCategory OutputCategory>
@@ -112,9 +121,9 @@ namespace gal::prometheus::chars
 
 			const auto input_length = input.size();
 
-			const pointer_type it_input_begin   = input.data();
-			pointer_type       it_input_current = it_input_begin;
-			const pointer_type it_input_end     = it_input_begin + input_length;
+			const pointer_type it_input_begin = input.data();
+			pointer_type it_input_current = it_input_begin;
+			const pointer_type it_input_end = it_input_begin + input_length;
 
 			if constexpr (OutputCategory == CharsCategory::ASCII) { return input.size(); }
 			else if constexpr (OutputCategory == CharsCategory::UTF8)
@@ -123,17 +132,24 @@ namespace gal::prometheus::chars
 
 				while (it_input_current + sizeof(__m512i) <= it_input_end)
 				{
-					const auto iterations    = std::ranges::min(static_cast<size_type>((it_input_end - it_input_current) / sizeof(__m512i)), static_cast<size_type>(255));
+					const auto iterations = std::ranges::min(
+							static_cast<size_type>((it_input_end - it_input_current) / sizeof(__m512i)),
+							static_cast<size_type>(255)
+							);
 					const auto this_turn_end = it_input_current + iterations * sizeof(__m512i) - sizeof(__m512i);
 
 					auto runner = _mm512_setzero_si512();
 
 					for (; it_input_current + 4 * sizeof(__m512i) <= this_turn_end; it_input_current += 4 * sizeof(__m512i))
 					{
-						const auto in_0 = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 0 * sizeof(__m512i)));
-						const auto in_1 = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 1 * sizeof(__m512i)));
-						const auto in_2 = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 2 * sizeof(__m512i)));
-						const auto in_3 = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 3 * sizeof(__m512i)));
+						const auto in_0 = _mm512_loadu_si512(
+								GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 0 * sizeof(__m512i)));
+						const auto in_1 = _mm512_loadu_si512(
+								GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 1 * sizeof(__m512i)));
+						const auto in_2 = _mm512_loadu_si512(
+								GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 2 * sizeof(__m512i)));
+						const auto in_3 = _mm512_loadu_si512(
+								GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 3 * sizeof(__m512i)));
 
 						const auto mask_0 = _mm512_cmpgt_epi8_mask(_mm512_setzero_si512(), in_0);
 						const auto mask_1 = _mm512_cmpgt_epi8_mask(_mm512_setzero_si512(), in_1);
@@ -153,10 +169,11 @@ namespace gal::prometheus::chars
 
 					for (; it_input_current <= this_turn_end; it_input_current += sizeof(__m512i))
 					{
-						const auto in        = _mm512_loadu_si512(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m512i *, it_input_current + 0 * sizeof(__m512i)));
-						const auto mask      = _mm512_cmpgt_epi8_mask(_mm512_setzero_si512(), in);
+						const auto in = _mm512_loadu_si512(
+								GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(const __m512i*, it_input_current + 0 * sizeof(__m512i)));
+						const auto mask = _mm512_cmpgt_epi8_mask(_mm512_setzero_si512(), in);
 						const auto not_ascii = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask, 0xff);
-						runner               = _mm512_sub_epi8(runner, not_ascii);
+						runner = _mm512_sub_epi8(runner, not_ascii);
 					}
 
 					eight_64_bits = _mm512_add_epi64(eight_64_bits, _mm512_sad_epu8(runner, _mm512_setzero_si512()));
@@ -167,7 +184,7 @@ namespace gal::prometheus::chars
 
 				const auto result_length =
 						// number of 512-bit chunks that fits into the length.
-						input_length / sizeof(__m512i) * sizeof(__m512i) +//
+						input_length / sizeof(__m512i) * sizeof(__m512i) + //
 						_mm256_extract_epi64(half_0, 0) +
 						_mm256_extract_epi64(half_0, 1) +
 						_mm256_extract_epi64(half_0, 2) +
@@ -177,19 +194,38 @@ namespace gal::prometheus::chars
 						_mm256_extract_epi64(half_1, 2) +
 						_mm256_extract_epi64(half_1, 3);
 
-				return result_length + instance::scalar_ascii.length<OutputCategory>({it_input_current, static_cast<size_type>(it_input_end - it_input_current)});
+				return result_length + instance::scalar_ascii.length<OutputCategory>(
+						       {it_input_current, static_cast<size_type>(it_input_end - it_input_current)}
+						       );
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE) { return instance::scalar_ascii.length<OutputCategory>(input); }  // NOLINT(bugprone-branch-clone)
+			else if constexpr (OutputCategory == CharsCategory::UTF16)
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("use `CharsCategory::UTF16_LE` or `CharsCategory::UTF16_BE` instead.");
+			}
+			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE)
+			{
+				return instance::scalar_ascii.length<OutputCategory>(input);
+			} // NOLINT(bugprone-branch-clone)
 			else if constexpr (OutputCategory == CharsCategory::UTF32) { return instance::scalar_ascii.length<OutputCategory>(input); }
-			else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
 		// note: we are not BOM aware
 		template<CharsCategory OutputCategory>
-		[[nodiscard]] constexpr auto length(const pointer_type input) const noexcept -> size_type { return this->length<OutputCategory>({input, std::char_traits<char_type>::length(input)}); }
+		[[nodiscard]] constexpr auto length(const pointer_type input) const noexcept -> size_type
+		{
+			return this->length<OutputCategory>({input, std::char_traits<char_type>::length(input)});
+		}
 
-		template<CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
-		[[nodiscard]] constexpr auto convert(const input_type input, typename output_type<OutputCategory>::pointer output) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
+		template<
+			CharsCategory OutputCategory,
+			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr auto convert(
+				const input_type input,
+				typename output_type<OutputCategory>::pointer output
+				) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
 			(void)this;
 
@@ -200,12 +236,12 @@ namespace gal::prometheus::chars
 
 			const auto input_length = input.size();
 
-			const pointer_type it_input_begin   = input.data();
-			pointer_type       it_input_current = it_input_begin;
-			const pointer_type it_input_end     = it_input_begin + input_length;
+			const pointer_type it_input_begin = input.data();
+			pointer_type it_input_current = it_input_begin;
+			const pointer_type it_input_end = it_input_begin + input_length;
 
-			const output_pointer_type it_output_begin   = output;
-			output_pointer_type       it_output_current = it_output_begin;
+			const output_pointer_type it_output_begin = output;
+			output_pointer_type it_output_current = it_output_begin;
 
 			if constexpr (OutputCategory == CharsCategory::ASCII)
 			{
@@ -220,7 +256,7 @@ namespace gal::prometheus::chars
 					constexpr auto alternate_bits = 0x5555'5555'5555'5555ull;
 
 					const auto non_ascii = _mm512_movepi8_mask(in);
-					const auto ascii     = ~non_ascii;
+					const auto ascii = ~non_ascii;
 					// Mask to denote whether the byte is a leading byte that is not ascii.
 					// binary representation of -64: 1100'0000
 					const auto sixth = _mm512_cmpge_epu8_mask(in, _mm512_set1_epi8(static_cast<char>(-64)));
@@ -289,7 +325,7 @@ namespace gal::prometheus::chars
 										(240 & 170) ^ 204));
 					}(input_interleaved, sixth, mask_b);
 
-					const auto out_size   = in_length + std::popcount(non_ascii);
+					const auto out_size = in_length + std::popcount(non_ascii);
 					const auto out_size_a = std::popcount(static_cast<std::uint32_t>(non_ascii)) + 32;
 
 					if constexpr (MaskOut)
@@ -314,8 +350,8 @@ namespace gal::prometheus::chars
 				const auto process_or_just_store = [process](const auto in, output_pointer_type out) noexcept -> size_type
 				{
 					const auto non_ascii = _mm512_movepi8_mask(in);
-					const auto count     = std::popcount(non_ascii);
-					GAL_PROMETHEUS_ASSUME(count >= 0);
+					const auto count = std::popcount(non_ascii);
+					[[assume(count >= 0)]]
 					if (count != 0) { return process.template operator()<false>(in, 64, out); }
 
 					_mm512_storeu_si512(out, in);
@@ -340,7 +376,13 @@ namespace gal::prometheus::chars
 				// with the last 64 bytes, the input also needs to be masked
 				if (it_input_current < it_input_end)
 				{
-					const auto in = _mm512_maskz_loadu_epi8(_bzhi_u64(~0ull, static_cast<unsigned>(it_input_end - it_input_current)), it_input_current);
+					const auto in = _mm512_maskz_loadu_epi8(
+							_bzhi_u64(
+									~0ull,
+									static_cast<unsigned>(it_input_end - it_input_current)
+									),
+							it_input_current
+							);
 					it_output_current += process.template operator()<true>(in, it_input_end - it_input_current, it_output_current);
 				}
 			}
@@ -365,7 +407,7 @@ namespace gal::prometheus::chars
 				for (; it_input_current < it_rounded_input_end; it_input_current += 32, it_output_current += 32)
 				{
 					// Load 32 Latin1 characters into a 256-bit register
-					const auto in = _mm256_loadu_si256(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m256i *, it_input_current));
+					const auto in = _mm256_loadu_si256(GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(const __m256i *, it_input_current));
 					// Zero extend each set of 8 Latin1 characters to 32 16-bit integers
 					const auto out = [&byte_flip](const auto i) noexcept -> auto
 					{
@@ -399,10 +441,14 @@ namespace gal::prometheus::chars
 				// Round down to nearest multiple of 16
 				const auto rounded_input_length = input_length & ~0x1f;
 
-				for (const auto it_rounded_input_end = it_input_begin + rounded_input_length; it_input_current < it_rounded_input_end; it_input_current += 16, it_output_current += 16)
+				for (
+					const auto it_rounded_input_end = it_input_begin + rounded_input_length;
+					it_input_current < it_rounded_input_end;
+					it_input_current += 16, it_output_current += 16
+				)
 				{
 					// Load 16 Latin1 characters into a 128-bit register
-					const auto in = _mm_loadu_si128(GAL_PROMETHEUS_TRIVIAL_REINTERPRET_CAST(const __m128i *, it_input_current));
+					const auto in = _mm_loadu_si128(GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(const __m128i *, it_input_current));
 					// Zero extend each set of 8 Latin1 characters to 16 32-bit integers
 					const auto out = _mm512_cvtepu8_epi32(in);
 					// Store the results back to memory
@@ -411,22 +457,51 @@ namespace gal::prometheus::chars
 
 				if (rounded_input_length != input_length)
 				{
-					const auto processed_length = instance::scalar_ascii.convert<CharsCategory::UTF32, InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT, CheckNextBlock>({it_input_current, input_length - rounded_input_length}, it_output_current);
+					const auto processed_length =
+							instance::scalar_ascii.convert<
+								CharsCategory::UTF32,
+								InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT,
+								CheckNextBlock
+							>(
+									{it_input_current, input_length - rounded_input_length},
+									it_output_current
+									);
 					it_input_current += processed_length;
 					it_output_current += processed_length;
 				}
 			}
-			else { GAL_PROMETHEUS_UNREACHABLE(); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 
-			if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or Criterion == InputProcessCriterion::ASSUME_VALID_INPUT) { return static_cast<std::size_t>(it_output_current - it_output_begin); }
-			if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE) { return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)}; }
-			else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+			if constexpr (
+				Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+				Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+			) { return static_cast<std::size_t>(it_output_current - it_output_begin); }
+			if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+			{
+				return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
+			}
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
-		template<CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
-		[[nodiscard]] constexpr auto convert(const pointer_type input, typename output_type<OutputCategory>::pointer output) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t> { return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output); }
+		template<
+			CharsCategory OutputCategory,
+			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr auto convert(
+				const pointer_type input,
+				typename output_type<OutputCategory>::pointer output
+				) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t> //
+		{
+			return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
+		}
 
-		template<typename StringType, CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
+		template<
+			typename StringType,
+			CharsCategory OutputCategory,
+			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
 			requires requires(StringType& string)
 			{
 				string.resize(std::declval<size_type>());
@@ -443,7 +518,27 @@ namespace gal::prometheus::chars
 			return result;
 		}
 
-		template<typename StringType, CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
+		template<
+			CharsCategory OutputCategory,
+			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr auto convert(const input_type input) const noexcept
+			-> std::basic_string<typename output_type<OutputCategory>::value_type> //
+		{
+			return this->convert<
+				std::basic_string<typename output_type<OutputCategory>::value_type>,
+				OutputCategory,
+				Criterion,
+				CheckNextBlock
+			>(input);
+		}
+
+		template<
+			typename StringType,
+			CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool
+			CheckNextBlock = true
+		>
 			requires requires(StringType& string)
 			{
 				string.resize(std::declval<size_type>());
@@ -458,14 +553,30 @@ namespace gal::prometheus::chars
 
 			return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
+
+		template<
+			CharsCategory OutputCategory,
+			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr auto convert(const pointer_type input) const noexcept
+			-> std::basic_string<typename output_type<OutputCategory>::value_type> //
+		{
+			return this->convert<
+				std::basic_string<typename output_type<OutputCategory>::value_type>,
+				OutputCategory,
+				Criterion,
+				CheckNextBlock
+			>(input);
+		}
 	};
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	namespace instance
 	{
 		constexpr Simd<"ascii"> simd_ascii;
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
