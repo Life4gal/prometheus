@@ -49,9 +49,9 @@ namespace gal::prometheus::chars
 
 			const auto input_length = input.size();
 
-			const pointer_type it_input_begin   = input.data();
-			pointer_type       it_input_current = it_input_begin;
-			const pointer_type it_input_end     = it_input_begin + input_length;
+			const pointer_type it_input_begin = input.data();
+			pointer_type it_input_current = it_input_begin;
+			const pointer_type it_input_end = it_input_begin + input_length;
 
 			while (it_input_current != it_input_end)
 			{
@@ -67,7 +67,10 @@ namespace gal::prometheus::chars
 			return {.error = ErrorCode::NONE, .count = input_length};
 		}
 
-		[[nodiscard]] constexpr auto validate(const pointer_type input) const noexcept -> result_type { return this->validate({input, std::char_traits<char_type>::length(input)}); }
+		[[nodiscard]] constexpr auto validate(const pointer_type input) const noexcept -> result_type
+		{
+			return this->validate({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// note: we are not BOM aware
 		template<CharsCategory OutputCategory>
@@ -87,13 +90,13 @@ namespace gal::prometheus::chars
 						std::plus<>{},
 						[](const auto data) noexcept
 						{
-							return 1// ascii
+							return 1 // ascii
 							       +
-							       (data > 0x7f)// two-byte
+							       (data > 0x7f) // two-byte
 							       +
-							       (data > 0x7ff)// three-byte
+							       (data > 0x7ff) // three-byte
 							       +
-							       (data > 0xffff)// four-byte
+							       (data > 0xffff) // four-byte
 									;
 						});
 			}
@@ -106,22 +109,32 @@ namespace gal::prometheus::chars
 						std::plus<>{},
 						[](const auto data) noexcept
 						{
-							return 1// non-surrogate word
+							return 1 // non-surrogate word
 							       +
-							       (data > 0xffff)// surrogate pair
+							       (data > 0xffff) // surrogate pair
 									;
 						});
 			}
 			else if constexpr (OutputCategory == CharsCategory::UTF32) { return input.size(); }
-			else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
 		// note: we are not BOM aware
 		template<CharsCategory OutputCategory>
-		[[nodiscard]] constexpr auto length(const pointer_type input) const noexcept -> size_type { return this->length<OutputCategory>({input, std::char_traits<char_type>::length(input)}); }
+		[[nodiscard]] constexpr auto length(const pointer_type input) const noexcept -> size_type
+		{
+			return this->length<OutputCategory>({input, std::char_traits<char_type>::length(input)});
+		}
 
-		template<CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
-		[[nodiscard]] constexpr auto convert(const input_type input, typename output_type<OutputCategory>::pointer output) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
+		template<
+			CharsCategory OutputCategory,
+			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr auto convert(
+				const input_type input,
+				typename output_type<OutputCategory>::pointer output
+				) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
 			(void)this;
 
@@ -133,12 +146,12 @@ namespace gal::prometheus::chars
 
 			const auto input_length = input.size();
 
-			const pointer_type it_input_begin   = input.data();
-			pointer_type       it_input_current = it_input_begin;
-			const pointer_type it_input_end     = it_input_begin + input_length;
+			const pointer_type it_input_begin = input.data();
+			pointer_type it_input_current = it_input_begin;
+			const pointer_type it_input_end = it_input_begin + input_length;
 
-			const output_pointer_type it_output_begin   = output;
-			output_pointer_type       it_output_current = it_output_begin;
+			const output_pointer_type it_output_begin = output;
+			output_pointer_type it_output_current = it_output_begin;
 
 			if constexpr (OutputCategory == CharsCategory::ASCII)
 			{
@@ -172,8 +185,11 @@ namespace gal::prometheus::chars
 						if ((word & 0xffff'ff00) != 0)
 						{
 							if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
-							else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE) { return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error}; }
-							else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+							else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+							{
+								return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error};
+							}
+							else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 						}
 					}
 
@@ -230,8 +246,11 @@ namespace gal::prometheus::chars
 							if (word >= 0xd800 and word <= 0xdfff)
 							{
 								if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
-								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE) { return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error}; }
-								else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+								{
+									return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error};
+								}
+								else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 							}
 						}
 						// 0b1110'???? 0b10??'???? 0b10??'????
@@ -248,8 +267,11 @@ namespace gal::prometheus::chars
 							if (word > 0x0010'ffff)
 							{
 								if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
-								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE) { return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error}; }
-								else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+								{
+									return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error};
+								}
+								else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 							}
 						}
 						// 0b1111'0??? 0b10??'???? 0b10??'???? 0b10??'????
@@ -275,12 +297,18 @@ namespace gal::prometheus::chars
 							if (word >= 0xd800 and word <= 0xdfff)
 							{
 								if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
-								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE) { return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error}; }
+								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+								{
+									return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error};
+								}
 							}
 						}
 						const auto real_word = [w = static_cast<output_char_type>(word)]() noexcept
 						{
-							if constexpr ((OutputCategory == CharsCategory::UTF16_LE) != (std::endian::native == std::endian::little)) { return std::byteswap(w); }
+							if constexpr ((OutputCategory == CharsCategory::UTF16_LE) != (std::endian::native == std::endian::little))
+							{
+								return std::byteswap(w);
+							}
 							else { return w; }
 						}();
 
@@ -294,13 +322,19 @@ namespace gal::prometheus::chars
 							if (word > 0x0010'ffff)
 							{
 								if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
-								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE) { return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error}; }
+								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+								{
+									return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error};
+								}
 							}
 							const auto [high_surrogate, low_surrogate] = [real_word = word - 0x0001'0000]() noexcept
 							{
 								const auto high = 0xd800 + (real_word >> 10);
-								const auto low  = 0xdc00 + (real_word & 0x3ff);
-								if constexpr ((OutputCategory == CharsCategory::UTF16_LE) != (std::endian::native == std::endian::little)) { return std::make_pair(std::byteswap(high), std::byteswap(low)); }
+								const auto low = 0xdc00 + (real_word & 0x3ff);
+								if constexpr ((OutputCategory == CharsCategory::UTF16_LE) != (std::endian::native == std::endian::little))
+								{
+									return std::make_pair(std::byteswap(high), std::byteswap(low));
+								}
 								else { return std::make_pair(high, low); }
 							}();
 
@@ -317,17 +351,38 @@ namespace gal::prometheus::chars
 				it_input_current += input_length;
 				it_output_current += input_length;
 			}
-			else { GAL_PROMETHEUS_UNREACHABLE(); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 
-			if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or Criterion == InputProcessCriterion::ASSUME_VALID_INPUT) { return static_cast<std::size_t>(it_output_current - it_output_begin); }
-			else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE) { return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)}; }
-			else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+			if constexpr (
+				Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+				Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+			) { return static_cast<std::size_t>(it_output_current - it_output_begin); }
+			else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+			{
+				return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
+			}
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
-		template<CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
-		[[nodiscard]] constexpr auto convert(const pointer_type input, typename output_type<OutputCategory>::pointer output) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t> { return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output); }
+		template<
+			CharsCategory OutputCategory,
+			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr auto convert(
+				const pointer_type input,
+				typename output_type<OutputCategory>::pointer output
+				) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
+		{
+			return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
+		}
 
-		template<typename StringType, CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
+		template<
+			typename StringType,
+			CharsCategory OutputCategory,
+			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
 			requires requires(StringType& string)
 			{
 				string.resize(std::declval<size_type>());
@@ -344,7 +399,12 @@ namespace gal::prometheus::chars
 			return result;
 		}
 
-		template<typename StringType, CharsCategory OutputCategory, InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE, bool CheckNextBlock = true>
+		template<
+			typename StringType,
+			CharsCategory OutputCategory,
+			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
 			requires requires(StringType& string)
 			{
 				string.resize(std::declval<size_type>());
@@ -361,12 +421,12 @@ namespace gal::prometheus::chars
 		}
 	};
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	namespace instance
 	{
 		constexpr Scalar<"utf32"> scalar_utf32;
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
-}// namespace gal::prometheus::chars
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+} // namespace gal::prometheus::chars
