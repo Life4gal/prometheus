@@ -34,10 +34,19 @@ namespace gal::prometheus::meta
 			std::invoke(std::forward<Getter>(getter), container, std::declval<SizeType>());
 		};
 
-		template<typename Container, typename Getter, typename Comparator, typename SizeType = typename Container::size_type, typename ValueType = typename Container::value_type>
+		template<
+			typename Container,
+			typename Getter,
+			typename Comparator,
+			typename SizeType = typename Container::size_type,
+			typename ValueType =typename Container::value_type>
 		concept comparator_t = requires(const Container& container, Getter&& getter, Comparator&& comparator)
 		{
-			std::invoke(std::forward<Comparator>(comparator), std::invoke(std::forward<Getter>(getter), container, std::declval<SizeType>()), std::declval<ValueType>());
+			std::invoke(
+					std::forward<Comparator>(comparator),
+					std::invoke(std::forward<Getter>(getter), container, std::declval<SizeType>()),
+					std::declval<ValueType>()
+					);
 		};
 
 		template<typename Container, typename SizeType = typename Container::size_type>
@@ -47,9 +56,15 @@ namespace gal::prometheus::meta
 			}
 		struct default_getter
 		{
-			[[nodiscard]] constexpr auto operator()(Container& container, const SizeType index) noexcept(noexcept(container[index])) -> decltype(auto) { return container[index]; }
+			[[nodiscard]] constexpr auto operator()(Container& container, const SizeType index) noexcept(noexcept(container[index])) -> decltype(auto)
+			{
+				return container[index];
+			}
 
-			[[nodiscard]] constexpr auto operator()(const Container& container, const SizeType index) const noexcept(noexcept(container[index])) -> decltype(auto) { return container[index]; }
+			[[nodiscard]] constexpr auto operator()(
+					const Container& container,
+					const SizeType index
+					) const noexcept(noexcept(container[index])) -> decltype(auto) { return container[index]; }
 		};
 
 		template<typename Container, typename ValueType = typename Container::value_type>
@@ -57,7 +72,10 @@ namespace gal::prometheus::meta
 		{
 			using const_reference = std::add_const_t<std::add_lvalue_reference_t<std::remove_cvref_t<ValueType>>>;
 
-			[[nodiscard]] constexpr auto operator()(const_reference left, const_reference right) const noexcept(noexcept(left == right)) { return left == right; }
+			[[nodiscard]] constexpr auto operator()(const_reference left, const_reference right) const noexcept(noexcept(left == right))
+			{
+				return left == right;
+			}
 		};
 
 		template<typename ValueType>
@@ -83,8 +101,12 @@ namespace gal::prometheus::meta
 
 		// member data
 		template<typename T>
-			requires(std::is_member_object_pointer_v<decltype(&T::value)> and not std::is_member_function_pointer_v<decltype(&T::value)>) and
-			        std::is_convertible_v<decltype(std::declval<T>().value), std::add_pointer_t<std::add_const_t<std::remove_pointer_t<std::decay_t<decltype(std::declval<const T&>().value)>>>>>
+			requires
+			(std::is_member_object_pointer_v<decltype(&T::value)> and not std::is_member_function_pointer_v<decltype(&T::value)>) and
+			std::is_convertible_v<
+				decltype(std::declval<T>().value),
+				std::add_pointer_t<std::add_const_t<std::remove_pointer_t<std::decay_t<decltype(std::declval<const T&>().value)>>>>
+			>
 		struct pointer_traits<T>
 		{
 			// const pointer
@@ -135,8 +157,10 @@ namespace gal::prometheus::meta
 		{
 			using pointer = typename pointer_traits<DerivedType>::type;
 
-			constexpr static auto category  = pointer_traits<DerivedType>::value;
-			constexpr static auto is_static = (category == MetaStringDerivedCategory::STATIC) or (category == MetaStringDerivedCategory::STATIC_FUNCTION);
+			constexpr static auto category = pointer_traits<DerivedType>::value;
+			constexpr static auto is_static =
+					(category == MetaStringDerivedCategory::STATIC) or
+					(category == MetaStringDerivedCategory::STATIC_FUNCTION);
 		};
 
 		template<typename DerivedType>
@@ -182,40 +206,63 @@ namespace gal::prometheus::meta
 			using size_type = SizeType;
 
 		private:
-			[[nodiscard]] constexpr auto rep_value() const noexcept -> auto//
+			[[nodiscard]] constexpr auto rep_value() const noexcept -> auto //
 				requires(not lazy_is_static<derived_type>())
 			{
-				if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::MEMBER) { return static_cast<typename lazy_pointer_traits<derived_type>::pointer>(static_cast<const derived_type&>(*this).value); }
-				else if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::MEMBER_FUNCTION) { return static_cast<typename lazy_pointer_traits<derived_type>::pointer>(static_cast<const derived_type&>(*this).data()); }
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::MEMBER)
+				{
+					return static_cast<typename lazy_pointer_traits<derived_type>::pointer>(static_cast<const derived_type&>(*this).value);
+				}
+				else if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::MEMBER_FUNCTION)
+				{
+					return static_cast<typename lazy_pointer_traits<derived_type>::pointer>(static_cast<const derived_type&>(*this).data());
+				}
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 			}
 
-			[[nodiscard]] constexpr static auto rep_value() noexcept -> auto//
+			[[nodiscard]] constexpr static auto rep_value() noexcept -> auto //
 				requires(lazy_is_static<derived_type>())
 			{
-				if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::STATIC) { return static_cast<typename lazy_pointer_traits<derived_type>::pointer>(derived_type::value); }
-				else if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::STATIC_FUNCTION) { return static_cast<typename lazy_pointer_traits<derived_type>::pointer>(derived_type::data()); }
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::STATIC)
+				{
+					return static_cast<typename lazy_pointer_traits<derived_type>::pointer>(derived_type::value);
+				}
+				else if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::STATIC_FUNCTION)
+				{
+					return static_cast<typename lazy_pointer_traits<derived_type>::pointer>(derived_type::data());
+				}
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 			}
 
-			[[nodiscard]] constexpr auto rep_size() const noexcept -> size_type//
+			[[nodiscard]] constexpr auto rep_size() const noexcept -> size_type //
 				requires(not lazy_is_static<derived_type>())
 			{
-				if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::MEMBER) { return static_cast<const derived_type&>(*this).size; }
-				else if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::MEMBER_FUNCTION) { return static_cast<const derived_type&>(*this).size(); }
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::MEMBER)
+				{
+					return static_cast<const derived_type&>(*this).size;
+				}
+				else if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::MEMBER_FUNCTION)
+				{
+					return static_cast<const derived_type&>(*this).size();
+				}
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 			}
 
-			[[nodiscard]] constexpr static auto rep_size() noexcept -> size_type//
+			[[nodiscard]] constexpr static auto rep_size() noexcept -> size_type //
 				requires(lazy_is_static<derived_type>())
 			{
 				if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::STATIC) { return derived_type::size; }
-				else if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::STATIC_FUNCTION) { return derived_type::size(); }
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				else if constexpr (lazy_pointer_traits<derived_type>::category == MetaStringDerivedCategory::STATIC_FUNCTION)
+				{
+					return derived_type::size();
+				}
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 			}
 
 			template<typename StringType>
-			constexpr static auto is_constructible_from_data_v = std::is_constructible_v<StringType, typename lazy_pointer_traits<derived_type>::pointer, size_type>;
+			constexpr static auto is_constructible_from_data_v = std::is_constructible_v<
+				StringType, typename lazy_pointer_traits<derived_type>::pointer, size_type
+			>;
 			template<typename StringType>
 			constexpr static auto is_constructible_from_view_v = std::is_constructible_v<StringType, default_view<value_type>>;
 
@@ -224,70 +271,83 @@ namespace gal::prometheus::meta
 
 			template<typename StringType>
 				requires is_constructible_from_data_v<StringType>
-			[[nodiscard]] constexpr explicit operator StringType() const noexcept//
+			[[nodiscard]] constexpr explicit operator StringType() const noexcept //
 				requires(not lazy_is_static<derived_type>()) { return StringType{rep_value(), rep_size()}; }
 
 			template<typename StringType>
 				requires is_constructible_from_view_v<StringType> and (not is_constructible_from_data_v<StringType>)
-			[[nodiscard]] constexpr explicit(not std::is_convertible_v<default_view<value_type>, StringType>) operator StringType() const noexcept//
+			[[nodiscard]] constexpr explicit(not std::is_convertible_v<default_view<value_type>, StringType>) operator StringType() const noexcept //
 				requires(not lazy_is_static<derived_type>()) { return StringType{default_view<value_type>{rep_value(), rep_size()}}; }
 
 			template<typename StringType>
 				requires is_constructible_from_data_v<StringType>
-			[[nodiscard]] constexpr auto as() const noexcept -> StringType//
+			[[nodiscard]] constexpr auto as() const noexcept -> StringType //
 				requires(not lazy_is_static<derived_type>()) { return StringType{this->operator default_view<value_type>()}; }
 
 			template<typename StringType>
 				requires is_constructible_from_data_v<StringType>
-			[[nodiscard]] constexpr static auto as() noexcept -> StringType//
+			[[nodiscard]] constexpr static auto as() noexcept -> StringType //
 				requires (lazy_is_static<derived_type>()) { return StringType{meta_string_base::rep_value(), meta_string_base::rep_size()}; }
 
 			// =================================================
 
 			template<typename Pointer>
-			[[nodiscard]] friend constexpr auto operator==(const derived_type& lhs, Pointer string) noexcept -> bool//
-				requires (lazy_is_pointer<derived_type, Pointer>())                                                 //
+			[[nodiscard]] friend constexpr auto operator==(const derived_type& lhs, Pointer string) noexcept -> bool //
+				requires (lazy_is_pointer<derived_type, Pointer>()) //
 			{
-				return std::char_traits<value_type>::length(string) == lhs.rep_size() and std::char_traits<value_type>::compare(string, lhs.rep_value(), lhs.rep_size()) == 0;
+				return std::char_traits<value_type>::length(string) == lhs.rep_size() and
+				       std::char_traits<value_type>::compare(
+						       string,
+						       lhs.rep_value(),
+						       lhs.rep_size()
+						       ) == 0;
 			}
 
 			template<typename Pointer>
-			[[nodiscard]] constexpr auto match(Pointer string) const noexcept -> bool                    //
-				requires(lazy_is_pointer<derived_type, Pointer>() and not lazy_is_static<derived_type>())//
+			[[nodiscard]] constexpr auto match(Pointer string) const noexcept -> bool //
+				requires(lazy_is_pointer<derived_type, Pointer>() and not lazy_is_static<derived_type>()) //
 			{
 				return *this == string;
 			}
 
 			template<typename Pointer>
-			[[nodiscard]] constexpr static auto match(Pointer string) noexcept -> bool               //
-				requires(lazy_is_pointer<derived_type, Pointer>() and lazy_is_static<derived_type>())//
+			[[nodiscard]] constexpr static auto match(Pointer string) noexcept -> bool //
+				requires(lazy_is_pointer<derived_type, Pointer>() and lazy_is_static<derived_type>()) //
 			{
-				return std::char_traits<value_type>::length(string) == rep_size() and std::char_traits<value_type>::compare(string, rep_value(), rep_size()) == 0;
+				return std::char_traits<value_type>::length(string) == rep_size() and
+				       std::char_traits<value_type>::compare(
+						       string,
+						       rep_value(),
+						       rep_size()
+						       ) == 0;
 			}
 
 			template<meta_string_base_t Rhs>
-			[[nodiscard]] friend constexpr auto operator==(const derived_type& lhs, const Rhs& rhs) noexcept -> bool//
+			[[nodiscard]] friend constexpr auto operator==(const derived_type& lhs, const Rhs& rhs) noexcept -> bool //
 			{
 				return lhs.template as<default_view<value_type>>() == rhs.template as<default_view<value_type>>();
 			}
 
 			template<meta_string_base_t String>
 				requires(not lazy_is_static<derived_type>())
-			[[nodiscard]] constexpr auto match(const String& rhs) const noexcept -> bool//
+			[[nodiscard]] constexpr auto match(const String& rhs) const noexcept -> bool //
 			{
 				return this->template as<default_view<value_type>>() == rhs.template as<default_view<value_type>>();
 			}
 
 			template<meta_string_base_t String>
 				requires(lazy_is_static<derived_type>())
-			[[nodiscard]] constexpr static auto match(const String& rhs) noexcept -> bool//
+			[[nodiscard]] constexpr static auto match(const String& rhs) noexcept -> bool //
 			{
 				return meta_string_base::as<default_view<value_type>>() == rhs.template as<default_view<value_type>>();
 			}
 
 			template<typename String>
 				requires (std::is_constructible_v<default_view<value_type>, String> and not is_meta_string_base_v<String>)
-			[[nodiscard]] friend constexpr auto operator==(const derived_type& lhs, const String& rhs) noexcept(std::is_nothrow_constructible_v<default_view<value_type>, String>) -> bool//
+			[[nodiscard]] friend constexpr auto operator==(
+					const derived_type& lhs,
+					const String& rhs
+					) noexcept(std::is_nothrow_constructible_v<default_view<value_type>, String>) -> bool //
 			{
 				//
 				return lhs.template as<default_view<value_type>>() == default_view<value_type>{rhs};
@@ -295,7 +355,8 @@ namespace gal::prometheus::meta
 
 			template<typename String>
 				requires(std::is_constructible_v<default_view<value_type>, String> and not is_meta_string_base_v<String>)
-			[[nodiscard]] constexpr auto match(const String& rhs) const noexcept(std::is_nothrow_constructible_v<default_view<value_type>, String>) -> bool//
+			[[nodiscard]] constexpr auto match(const String& rhs) const
+				noexcept(std::is_nothrow_constructible_v<default_view<value_type>, String>) -> bool //
 				requires(not lazy_is_static<derived_type>())
 			{
 				//
@@ -304,7 +365,8 @@ namespace gal::prometheus::meta
 
 			template<typename String>
 				requires(std::is_constructible_v<default_view<value_type>, String> and not is_meta_string_base_v<String>)
-			[[nodiscard]] constexpr static auto match(const String& rhs) noexcept(std::is_nothrow_constructible_v<default_view<value_type>, String>) -> bool//
+			[[nodiscard]] constexpr static auto match(const String& rhs)
+				noexcept(std::is_nothrow_constructible_v<default_view<value_type>, String>) -> bool //
 				requires(lazy_is_static<derived_type>())
 			{
 				//
@@ -316,17 +378,23 @@ namespace gal::prometheus::meta
 				requires getter_t<Container, Getter, size_type> and comparator_t<Container, Getter, Comparator, size_type, value_type>
 			[[nodiscard]] constexpr auto match(
 					const Container& container,
-					Getter           getter,
-					Comparator       comparator                                                         //
-					) const noexcept(noexcept(comparator(getter(container, 0), rep_value()[0]))) -> bool//
+					Getter getter,
+					Comparator comparator //
+					) const noexcept(noexcept(comparator(getter(container, 0), rep_value()[0]))) -> bool //
 				requires(not lazy_is_static<derived_type>())
 			{
 				if (std::ranges::equal(std::ranges::size(container), rep_size())) { return false; }
 
 				return std::ranges::all_of(
 						std::views::iota(static_cast<size_type>(0), rep_size()),
-						[comparator](const auto&              pair) noexcept(noexcept(comparator(pair.first, pair.second))) { return comparator(pair.first, pair.second); },
-						[this, &container, getter](const auto index) noexcept(noexcept(getter(container, index))) { return std::make_pair(std::cref(getter(container, index)), std::cref(rep_value()[index])); });
+						[comparator](const auto& pair) noexcept(noexcept(comparator(pair.first, pair.second)))
+						{
+							return comparator(pair.first, pair.second);
+						},
+						[this, &container, getter](const auto index) noexcept(noexcept(getter(container, index)))
+						{
+							return std::make_pair(std::cref(getter(container, index)), std::cref(rep_value()[index]));
+						});
 			}
 
 			// container + getter + comparator
@@ -334,17 +402,23 @@ namespace gal::prometheus::meta
 				requires getter_t<Container, Getter, size_type> and comparator_t<Container, Getter, Comparator, size_type, value_type>
 			[[nodiscard]] constexpr static auto match(
 					const Container& container,
-					Getter           getter,
-					Comparator       comparator                                                   //
-					) noexcept(noexcept(comparator(getter(container, 0), rep_value()[0]))) -> bool//
+					Getter getter,
+					Comparator comparator //
+					) noexcept(noexcept(comparator(getter(container, 0), rep_value()[0]))) -> bool //
 				requires(lazy_is_static<derived_type>())
 			{
 				if (std::ranges::equal(std::ranges::size(container), rep_size())) { return false; }
 
 				return std::ranges::all_of(
 						std::views::iota(static_cast<size_type>(0), rep_size()),
-						[comparator](const auto&        pair) noexcept(noexcept(comparator(pair.first, pair.second))) { return comparator(pair.first, pair.second); },
-						[&container, getter](const auto index) noexcept(noexcept(getter(container, index))) { return std::make_pair(std::cref(getter(container, index)), std::cref(rep_value()[index])); });
+						[comparator](const auto& pair) noexcept(noexcept(comparator(pair.first, pair.second)))
+						{
+							return comparator(pair.first, pair.second);
+						},
+						[&container, getter](const auto index) noexcept(noexcept(getter(container, index)))
+						{
+							return std::make_pair(std::cref(getter(container, index)), std::cref(rep_value()[index]));
+						});
 			}
 
 			// container + default_getter + comparator
@@ -352,12 +426,15 @@ namespace gal::prometheus::meta
 				requires comparator_t<Container, default_getter<Container, size_type>, Comparator, size_type, value_type>
 			[[nodiscard]] constexpr auto match(
 					const Container& container,
-					Comparator       comparator                                                                                         //
-					) const noexcept(noexcept(comparator(default_getter<Container, size_type>{}(container, 0), rep_value()[0]))) -> bool//
+					Comparator comparator //
+					) const noexcept(noexcept(comparator(default_getter<Container, size_type>{}(container, 0), rep_value()[0]))) -> bool //
 				requires(not lazy_is_static<derived_type>())
 			{
 				//
-				return this->template match<Container, default_getter<Container, size_type>, Comparator>(container, default_getter<Container, size_type>{}, comparator);
+				return this->template match<Container, default_getter<Container, size_type>, Comparator>(
+						container,
+						default_getter<Container, size_type>{},
+						comparator);
 			}
 
 			// container + default_getter + comparator
@@ -365,12 +442,15 @@ namespace gal::prometheus::meta
 				requires comparator_t<Container, default_getter<Container, size_type>, Comparator, size_type, value_type>
 			[[nodiscard]] constexpr static auto match(
 					const Container& container,
-					Comparator       comparator                                                                                   //
-					) noexcept(noexcept(comparator(default_getter<Container, size_type>{}(container, 0), rep_value()[0]))) -> bool//
+					Comparator comparator //
+					) noexcept(noexcept(comparator(default_getter<Container, size_type>{}(container, 0), rep_value()[0]))) -> bool //
 				requires(lazy_is_static<derived_type>())
 			{
 				//
-				return meta_string_base::match<Container, default_getter<Container, size_type>, Comparator>(container, default_getter<Container, size_type>{}, comparator);
+				return meta_string_base::match<Container, default_getter<Container, size_type>, Comparator>(
+						container,
+						default_getter<Container, size_type>{},
+						comparator);
 			}
 
 			// container + getter + default_comparator
@@ -378,12 +458,15 @@ namespace gal::prometheus::meta
 				requires getter_t<Container, Getter, size_type>
 			[[nodiscard]] constexpr auto match(
 					const Container& container,
-					Getter           getter                                                                                              //
-					) const noexcept(noexcept(default_comparator<Container, value_type>{}(getter(container, 0), rep_value()[0]))) -> bool//
+					Getter getter //
+					) const noexcept(noexcept(default_comparator<Container, value_type>{}(getter(container, 0), rep_value()[0]))) -> bool //
 				requires(not lazy_is_static<derived_type>())
 			{
 				//
-				return this->template match<Container, Getter, default_comparator<Container, value_type>>(container, getter, default_comparator<Container, value_type>{});
+				return this->template match<Container, Getter, default_comparator<Container, value_type>>(
+						container,
+						getter,
+						default_comparator<Container, value_type>{});
 			}
 
 			// container + getter + default_comparator
@@ -391,45 +474,56 @@ namespace gal::prometheus::meta
 				requires getter_t<Container, Getter, size_type>
 			[[nodiscard]] constexpr static auto match(
 					const Container& container,
-					Getter           getter                                                                                        //
-					) noexcept(noexcept(default_comparator<Container, value_type>{}(getter(container, 0), rep_value()[0]))) -> bool//
+					Getter getter //
+					) noexcept(noexcept(default_comparator<Container, value_type>{}(getter(container, 0), rep_value()[0]))) -> bool //
 				requires(lazy_is_static<derived_type>())
 			{
 				//
-				return meta_string_base::match<Container, Getter, default_comparator<Container, value_type>>(container, getter, default_comparator<Container, value_type>{});
+				return meta_string_base::match<Container, Getter, default_comparator<Container, value_type>>(
+						container,
+						getter,
+						default_comparator<Container, value_type>{});
 			}
 
 			// container + default_getter + default_comparator
 			template<typename Container, typename Getter>
 				requires getter_t<Container, Getter, size_type>
 			[[nodiscard]] constexpr auto match(
-					const Container& container                                                                                                                           //
-					) const noexcept(noexcept(default_comparator<Container, value_type>{}(default_getter<Container, size_type>{}(container, 0), rep_value()[0]))) -> bool//
+					const Container& container //
+					) const noexcept(noexcept(default_comparator<Container, value_type>{}(default_getter<Container, size_type>{}(container, 0),
+					                                                                      rep_value()[0]))) -> bool //
 				requires(not lazy_is_static<derived_type>())
 			{
 				//
-				return this->template match<Container, Getter, default_comparator<Container, value_type>>(container, default_getter<Container, size_type>{}, default_comparator<Container, value_type>{});
+				return this->template match<Container, Getter, default_comparator<Container, value_type>>(
+						container,
+						default_getter<Container, size_type>{},
+						default_comparator<Container, value_type>{});
 			}
 
 			// container + default_getter + default_comparator
 			template<typename Container, typename Getter>
 				requires getter_t<Container, Getter, size_type>
 			[[nodiscard]] constexpr static auto match(
-					const Container& container                                                                                                                     //
-					) noexcept(noexcept(default_comparator<Container, value_type>{}(default_getter<Container, size_type>{}(container, 0), rep_value()[0]))) -> bool//
+					const Container& container //
+					) noexcept(noexcept(default_comparator<Container, value_type>{}(default_getter<Container, size_type>{}(container, 0),
+					                                                                rep_value()[0]))) -> bool //
 				requires(lazy_is_static<derived_type>())
 			{
 				//
-				return meta_string_base::match<Container, Getter, default_comparator<Container, value_type>>(container, default_getter<Container, size_type>{}, default_comparator<Container, value_type>{});
+				return meta_string_base::match<Container, Getter, default_comparator<Container, value_type>>(
+						container,
+						default_getter<Container, size_type>{},
+						default_comparator<Container, value_type>{});
 			}
 		};
-	}// namespace string
+	} // namespace string
 
 	// =====================================
 	// export
 	// vvv
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	/**
 	 * @brief An immutable array of fixed-length characters.
@@ -449,7 +543,7 @@ namespace gal::prometheus::meta
 	template<typename T>
 	using basic_fixed_string_view = string::default_view<T>;
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	// ^^^
 	// export
@@ -474,13 +568,13 @@ namespace gal::prometheus::meta
 
 		template<typename S>
 		constexpr static auto is_basic_fixed_string_v = is_basic_fixed_string<S>::value;
-	}// namespace string
+	} // namespace string
 
 	// =====================================
 	// export
 	// vvv
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	template<typename S>
 	concept basic_char_array_t = string::is_basic_char_array_v<S>;
@@ -498,9 +592,9 @@ namespace gal::prometheus::meta
 
 		using const_pointer = const value_type*;
 
-		constexpr static size_type  max_size = sizeof...(Cs);
+		constexpr static size_type max_size = sizeof...(Cs);
 		constexpr static value_type value[max_size]{Cs...};
-		constexpr static size_type  size = max_size - (value[max_size - 1] == '\0');
+		constexpr static size_type size = max_size - (value[max_size - 1] == '\0');
 
 		[[nodiscard]] constexpr static const_pointer begin() noexcept { return std::ranges::begin(value); }
 
@@ -508,7 +602,10 @@ namespace gal::prometheus::meta
 
 		template<std::size_t N = max_size>
 			requires(N <= max_size)
-		[[nodiscard]] constexpr static auto as_fixed_string() noexcept { return basic_fixed_string<value_type, N>{basic_fixed_string_view<value_type>{value, N}}; }
+		[[nodiscard]] constexpr static auto as_fixed_string() noexcept
+		{
+			return basic_fixed_string<value_type, N>{basic_fixed_string_view<value_type>{value, N}};
+		}
 
 		// // basic_char_array <=> basic_char_array
 		// template<value_type... U>
@@ -542,7 +639,10 @@ namespace gal::prometheus::meta
 	{
 		using fixed_string_type = decltype(FixedString);
 
-		return []<std::size_t... Index>(const std::index_sequence<Index...>) noexcept { return basic_char_array<typename fixed_string_type::value_type, FixedString.value[Index]...>{}; }(std::make_index_sequence<FixedString.max_size>{});
+		return []<std::size_t... Index>(const std::index_sequence<Index...>) noexcept
+		{
+			return basic_char_array<typename fixed_string_type::value_type, FixedString.value[Index]...>{};
+		}(std::make_index_sequence<FixedString.max_size>{});
 	}
 
 	template<char... Chars>
@@ -572,23 +672,32 @@ namespace gal::prometheus::meta
 
 		constexpr static size_type max_size{N};
 		constexpr static size_type size{max_size - 1};
-		value_type                 value[max_size]{};
+		value_type value[max_size]{};
 
 		constexpr basic_fixed_string() noexcept = default;
 
 		template<std::size_t M>
 			requires(M >= N)
-		constexpr explicit(false) basic_fixed_string(const value_type (&string)[M]) noexcept { std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + size, value); }
+		constexpr explicit(false) basic_fixed_string(const value_type (&string)[M]) noexcept
+		{
+			std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + size, value);
+		}
 
 		template<value_type... Cs>
 			requires(
 				// DO NOT USE `basic_char_array<T, Cs...>::size`!
 				sizeof...(Cs) - ((Cs == 0) or ...) >= N)
-		constexpr explicit(false) basic_fixed_string(const basic_char_array<value_type, Cs...>& char_array) noexcept { std::ranges::copy(std::ranges::begin(char_array), std::ranges::begin(char_array) + N, value); }
+		constexpr explicit(false) basic_fixed_string(const basic_char_array<value_type, Cs...>& char_array) noexcept
+		{
+			std::ranges::copy(std::ranges::begin(char_array), std::ranges::begin(char_array) + N, value);
+		}
 
 		template<std::ranges::range String>
 			requires std::is_same_v<std::ranges::range_value_t<String>, value_type>
-		constexpr explicit basic_fixed_string(const String& string) noexcept { std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + N, value); }
+		constexpr explicit basic_fixed_string(const String& string) noexcept
+		{
+			std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + N, value);
+		}
 
 		[[nodiscard]] constexpr auto begin() noexcept -> pointer { return value; }
 
@@ -683,26 +792,26 @@ namespace gal::prometheus::meta
 	// ReSharper disable once CppInconsistentNaming
 	using fixed_u32string_view = basic_fixed_string_view<char32_t>;
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	// ^^^
 	// export
 	// =====================================
-}// namespace gal::prometheus::meta
+} // namespace gal::prometheus::meta
 
-GAL_PROMETHEUS_MODULE_EXPORT_STD_BEGIN
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
 {
 	// for `std::totally_ordered_with`
 	template<gal::prometheus::meta::basic_char_array_t FixedString, typename String, template<typename> typename Q1, template<typename> typename Q2>
 		requires std::is_constructible_v<gal::prometheus::meta::basic_char_array_view<typename FixedString::value_type>, String>
-	struct basic_common_reference<FixedString, String, Q1, Q2>// NOLINT(cert-dcl58-cpp)
+	struct basic_common_reference<FixedString, String, Q1, Q2> // NOLINT(cert-dcl58-cpp)
 	{
 		using type = gal::prometheus::meta::basic_char_array_view<typename FixedString::value_type>;
 	};
 
 	template<typename String, gal::prometheus::meta::basic_char_array_t FixedString, template<typename> typename Q1, template<typename> typename Q2>
 		requires std::is_constructible_v<gal::prometheus::meta::basic_char_array_view<typename FixedString::value_type>, String>
-	struct basic_common_reference<String, FixedString, Q1, Q2>// NOLINT(cert-dcl58-cpp)
+	struct basic_common_reference<String, FixedString, Q1, Q2> // NOLINT(cert-dcl58-cpp)
 	{
 		using type = gal::prometheus::meta::basic_char_array_view<typename FixedString::value_type>;
 	};
@@ -710,15 +819,15 @@ GAL_PROMETHEUS_MODULE_EXPORT_STD_BEGIN
 	// for `std::totally_ordered_with`
 	template<gal::prometheus::meta::basic_fixed_string_t FixedString, typename String, template<typename> typename Q1, template<typename> typename Q2>
 		requires std::is_constructible_v<gal::prometheus::meta::basic_fixed_string_view<typename FixedString::value_type>, String>
-	struct basic_common_reference<FixedString, String, Q1, Q2>// NOLINT(cert-dcl58-cpp)
+	struct basic_common_reference<FixedString, String, Q1, Q2> // NOLINT(cert-dcl58-cpp)
 	{
 		using type = gal::prometheus::meta::basic_fixed_string_view<typename FixedString::value_type>;
 	};
 
 	template<typename String, gal::prometheus::meta::basic_fixed_string_t FixedString, template<typename> typename Q1, template<typename> typename Q2>
 		requires std::is_constructible_v<gal::prometheus::meta::basic_fixed_string_view<typename FixedString::value_type>, String>
-	struct basic_common_reference<String, FixedString, Q1, Q2>// NOLINT(cert-dcl58-cpp)
+	struct basic_common_reference<String, FixedString, Q1, Q2> // NOLINT(cert-dcl58-cpp)
 	{
 		using type = gal::prometheus::meta::basic_fixed_string_view<typename FixedString::value_type>;
 	};
-}// namespace std
+} // namespace std
