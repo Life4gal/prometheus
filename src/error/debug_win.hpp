@@ -18,7 +18,7 @@ export module gal.prometheus.error:debug.impl;
 
 namespace gal::prometheus::error
 {
-	GAL_PROMETHEUS_MODULE_INLINE auto try_wakeup_debugger() noexcept -> bool
+	GAL_PROMETHEUS_COMPILER_MODULE_INLINE auto try_wakeup_debugger() noexcept -> bool
 	{
 		if (IsDebuggerPresent())
 		{
@@ -26,9 +26,9 @@ namespace gal::prometheus::error
 			return true;
 		}
 
-		__try// NOLINT(clang-diagnostic-language-extension-token)
+		__try // NOLINT(clang-diagnostic-language-extension-token)
 		{
-			__try// NOLINT(clang-diagnostic-language-extension-token)
+			__try // NOLINT(clang-diagnostic-language-extension-token)
 			{
 				// Attempt to break, causing an exception.
 				DebugBreak();

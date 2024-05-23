@@ -23,17 +23,17 @@ import std;
 
 namespace gal::prometheus::error
 {
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-	class Exception
+	class ExceptionBase
 	{
 	public:
-		constexpr         Exception() noexcept                               = default;
-		constexpr         Exception(const Exception&) noexcept               = default;
-		constexpr         Exception(Exception&&) noexcept                    = default;
-		constexpr auto    operator=(const Exception&) noexcept -> Exception& = default;
-		constexpr auto    operator=(Exception&&) noexcept -> Exception&      = default;
-		constexpr virtual ~Exception() noexcept                              = default;
+		constexpr ExceptionBase() noexcept = default;
+		constexpr ExceptionBase(const ExceptionBase&) noexcept = default;
+		constexpr ExceptionBase(ExceptionBase&&) noexcept = default;
+		constexpr auto operator=(const ExceptionBase&) noexcept -> ExceptionBase& = default;
+		constexpr auto operator=(ExceptionBase&&) noexcept -> ExceptionBase& = default;
+		constexpr virtual ~ExceptionBase() noexcept = default;
 
 		[[nodiscard]] constexpr virtual auto what() const noexcept -> const std::string& = 0;
 
@@ -44,21 +44,26 @@ namespace gal::prometheus::error
 
 	template<typename T>
 	// ReSharper disable once CppClassCanBeFinal
-	class ExceptionWithUserData : public Exception
+	class Exception : public ExceptionBase
 	{
 	public:
 		using data_type = T;
 
 	private:
-		std::string          message_;
+		std::string message_;
 		std::source_location location_;
-		std::stacktrace      stacktrace_;
-		data_type            data_;
+		std::stacktrace stacktrace_;
+		data_type data_;
 
 	public:
 		template<typename StringType, typename DataType>
-		constexpr ExceptionWithUserData(StringType&& message, DataType&& data, const std::source_location location, std::stacktrace&& stacktrace) noexcept
-			: Exception{},
+		constexpr Exception(
+				StringType&& message,
+				DataType&& data,
+				const std::source_location location,
+				std::stacktrace&& stacktrace
+				) noexcept
+			: ExceptionBase{},
 			  message_{std::forward<StringType>(message)},
 			  location_{location},
 			  stacktrace_{std::move(stacktrace)},
@@ -75,18 +80,22 @@ namespace gal::prometheus::error
 
 	template<>
 	// ReSharper disable once CppClassCanBeFinal
-	class ExceptionWithUserData<void> : public Exception
+	class Exception<void> : public ExceptionBase
 	{
 	public:
 	private:
-		std::string          message_;
+		std::string message_;
 		std::source_location location_;
-		std::stacktrace      stacktrace_;
+		std::stacktrace stacktrace_;
 
 	public:
 		template<typename StringType>
-		constexpr ExceptionWithUserData(StringType&& message, const std::source_location location, std::stacktrace&& stacktrace) noexcept
-			: Exception{},
+		constexpr Exception(
+				StringType&& message,
+				const std::source_location location,
+				std::stacktrace&& stacktrace
+				) noexcept
+			: ExceptionBase{},
 			  message_{std::forward<StringType>(message)},
 			  location_{location},
 			  stacktrace_{std::move(stacktrace)} {}
@@ -99,25 +108,35 @@ namespace gal::prometheus::error
 	};
 
 	template<typename ExceptionType, typename StringType, typename DataType>
-		requires std::derived_from<ExceptionType, ExceptionWithUserData<DataType>>
+		requires std::derived_from<ExceptionType, Exception<DataType>>
 	[[noreturn]] constexpr auto panic(
-			StringType&&         message,
-			DataType&&           data,
-			std::source_location location   = std::source_location::current(),
-			std::stacktrace      stacktrace = std::stacktrace::current()) noexcept(false) -> ExceptionType//
+			StringType&& message,
+			DataType&& data,
+			std::source_location location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()) noexcept(false) -> ExceptionType //
 	{
-		throw ExceptionType{std::forward<StringType>(message), std::forward<DataType>(data), location, std::move(stacktrace)};// NOLINT(hicpp-exception-baseclass)
+		throw ExceptionType{
+				std::forward<StringType>(message),
+				std::forward<DataType>(data),
+				location,
+				std::move(stacktrace)
+		};
 	}
 
 	template<typename ExceptionType, typename StringType>
-		requires std::derived_from<ExceptionType, ExceptionWithUserData<void>>
+		requires std::derived_from<ExceptionType, Exception<void>>
 	[[noreturn]] constexpr auto panic(
-			StringType&&         message,
-			std::source_location location   = std::source_location::current(),
-			std::stacktrace      stacktrace = std::stacktrace::current()) noexcept(false) -> ExceptionType//
+			StringType&& message,
+			std::source_location location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+			) noexcept(false) -> ExceptionType //
 	{
-		throw ExceptionType{std::forward<StringType>(message), location, std::move(stacktrace)};// NOLINT(hicpp-exception-baseclass)
+		throw ExceptionType{
+				std::forward<StringType>(message),
+				location,
+				std::move(stacktrace)
+		};
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

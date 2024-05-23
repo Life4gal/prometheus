@@ -33,17 +33,17 @@ namespace gal::prometheus::error
 	 */
 	auto try_wakeup_debugger() noexcept -> bool;
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-	GAL_PROMETHEUS_MODULE_INLINE auto debug_break(const char* message) noexcept -> void
+	GAL_PROMETHEUS_COMPILER_MODULE_INLINE auto debug_break(const char* message) noexcept -> void
 	{
 		if (not try_wakeup_debugger())
 		{
-			std::println(std::cerr, "Unexpected behavior occurred but did not run under the debugger, terminate the program. \nReason: {}", message);
+			std::println(stderr, "Unexpected behavior occurred but did not run under the debugger, terminate the program. \nReason: {}", message);
 			terminate_reason.store(message, std::memory_order_relaxed);
 			std::terminate();
 		}
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
