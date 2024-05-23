@@ -46,7 +46,7 @@ namespace gal::prometheus::numeric
 
 		public:
 			using result_type = std::conditional_t<sizeof(T) == sizeof(bit32_type), bit32_type, bit64_type>;
-			using state_type  = std::array<result_type, StateSize>;
+			using state_type = std::array<result_type, StateSize>;
 
 			constexpr static auto bits_of_this = std::numeric_limits<result_type>::digits;
 
@@ -72,8 +72,8 @@ namespace gal::prometheus::numeric
 					seed += static_cast<result_type>(0x9e3779b97f4a7c15ull);
 
 					auto z = seed;
-					z      = static_cast<result_type>((z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ull);
-					z      = static_cast<result_type>((z ^ (z >> 27)) * 0x94d049bb133111ebull);
+					z = static_cast<result_type>((z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ull);
+					z = static_cast<result_type>((z ^ (z >> 27)) * 0x94d049bb133111ebull);
 					return z ^ (z >> 31);
 				}
 			};
@@ -113,11 +113,11 @@ namespace gal::prometheus::numeric
 			constexpr explicit RandomEngineBase() noexcept
 				: RandomEngineBase{state_generator{.seed = static_cast<result_type>(std::random_device{}())}.state()} {}
 
-			constexpr      RandomEngineBase(const RandomEngineBase&) noexcept               = delete;
-			constexpr      RandomEngineBase(RandomEngineBase&&) noexcept                    = default;
+			constexpr RandomEngineBase(const RandomEngineBase&) noexcept = delete;
+			constexpr RandomEngineBase(RandomEngineBase&&) noexcept = default;
 			constexpr auto operator=(const RandomEngineBase&) noexcept -> RandomEngineBase& = delete;
-			constexpr auto operator=(RandomEngineBase&&) noexcept -> RandomEngineBase&      = default;
-			constexpr      ~RandomEngineBase() noexcept                                     = default;
+			constexpr auto operator=(RandomEngineBase&&) noexcept -> RandomEngineBase& = default;
+			constexpr ~RandomEngineBase() noexcept = default;
 
 			[[nodiscard]] constexpr static auto min() noexcept -> result_type { return std::numeric_limits<result_type>::lowest(); }
 
@@ -152,7 +152,7 @@ namespace gal::prometheus::numeric
 			using engine_type = RandomEngineBase<bit32_type, 4, Engine>;
 
 			using result_type = typename engine_type::result_type;
-			using state_type  = typename engine_type::state_type;
+			using state_type = typename engine_type::state_type;
 
 			constexpr static auto rotate(state_type& state) noexcept -> void
 			{
@@ -206,7 +206,7 @@ namespace gal::prometheus::numeric
 			using engine_type = RandomEngineBase<bit64_type, 2, Engine>;
 
 			using result_type = typename engine_type::result_type;
-			using state_type  = typename engine_type::state_type;
+			using state_type = typename engine_type::state_type;
 
 			/**
 			* @brief This is the jump function for the generator. It is equivalent
@@ -218,7 +218,8 @@ namespace gal::prometheus::numeric
 			{
 				return {
 						static_cast<result_type>(0xdf900294d8f554a5ull),
-						static_cast<result_type>(0x170865df4b3201fcull)};
+						static_cast<result_type>(0x170865df4b3201fcull)
+				};
 			}
 
 			/**
@@ -232,7 +233,8 @@ namespace gal::prometheus::numeric
 			{
 				return {
 						static_cast<result_type>(0xd2a98b26625eee7bull),
-						static_cast<result_type>(0xdddf9b1090aa7ac1ull)};
+						static_cast<result_type>(0xdddf9b1090aa7ac1ull)
+				};
 			}
 		};
 
@@ -243,7 +245,7 @@ namespace gal::prometheus::numeric
 			using engine_type = RandomEngineBase<bit64_type, 4, Engine>;
 
 			using result_type = typename engine_type::result_type;
-			using state_type  = typename engine_type::state_type;
+			using state_type = typename engine_type::state_type;
 
 			constexpr static auto rotate(state_type& state) noexcept -> void
 			{
@@ -270,7 +272,8 @@ namespace gal::prometheus::numeric
 						static_cast<result_type>(0x180ec6d33cfd0abaull),
 						static_cast<result_type>(0xd5a61266f0c9392cull),
 						static_cast<result_type>(0xa9582618e03fc9aaull),
-						static_cast<result_type>(0x39abdc4529b1661cull)};
+						static_cast<result_type>(0x39abdc4529b1661cull)
+				};
 			}
 
 			/**
@@ -286,7 +289,8 @@ namespace gal::prometheus::numeric
 						static_cast<result_type>(0x76e15d3efefdcbbfull),
 						static_cast<result_type>(0xc5004e441c522fb3ull),
 						static_cast<result_type>(0x77710069854ee241ull),
-						static_cast<result_type>(0x39109bb02acbe635ull)};
+						static_cast<result_type>(0x39109bb02acbe635ull)
+				};
 			}
 		};
 
@@ -297,7 +301,7 @@ namespace gal::prometheus::numeric
 			using engine_type = RandomEngineBase<bit64_type, 8, Engine>;
 
 			using result_type = typename engine_type::result_type;
-			using state_type  = typename engine_type::state_type;
+			using state_type = typename engine_type::state_type;
 
 			constexpr static auto rotate(state_type& state) noexcept -> void
 			{
@@ -332,7 +336,8 @@ namespace gal::prometheus::numeric
 						static_cast<result_type>(0xb11ac47a7ba28c25ull),
 						static_cast<result_type>(0xf1be7667092bcc1cull),
 						static_cast<result_type>(0x53851efdb6df0aafull),
-						static_cast<result_type>(0x1ebbc8b23eaf25dbull)};
+						static_cast<result_type>(0x1ebbc8b23eaf25dbull)
+				};
 			}
 
 			/**
@@ -352,12 +357,13 @@ namespace gal::prometheus::numeric
 						static_cast<result_type>(0x1cb0940bedbff6ceull),
 						static_cast<result_type>(0xd956c5c4fa1f8e17ull),
 						static_cast<result_type>(0x915e38fd4eda93bcull),
-						static_cast<result_type>(0x5b3ccdfa5d7daca5ull)};
+						static_cast<result_type>(0x5b3ccdfa5d7daca5ull)
+				};
 			}
 		};
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	enum class RandomEngineCategory
 	{
@@ -399,10 +405,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_128>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit32_type,
 				4,
-				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_128>>
+				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_128>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -442,10 +450,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_128>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit32_type,
 				4,
-				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_128>>
+				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_128>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -455,7 +465,10 @@ namespace gal::prometheus::numeric
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
-		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type { return random_engine_detail::rotate_left<7, bits_of_this>(state_[0] + state_[3]) + state_[0]; }
+		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
+		{
+			return random_engine_detail::rotate_left<7, bits_of_this>(state_[0] + state_[3]) + state_[0];
+		}
 
 		constexpr auto do_next() noexcept -> result_type
 		{
@@ -485,10 +498,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit32_type,
 				4,
-				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>>
+				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -498,7 +513,10 @@ namespace gal::prometheus::numeric
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
-		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type { return random_engine_detail::rotate_left<7, bits_of_this>(state_[1] * 5) * 9; }
+		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
+		{
+			return random_engine_detail::rotate_left<7, bits_of_this>(state_[1] * 5) * 9;
+		}
 
 		constexpr auto do_next() noexcept -> result_type
 		{
@@ -533,10 +551,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_128>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit64_type,
 				2,
-				RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_128>>
+				RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_128>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -581,10 +601,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_128>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit64_type,
 				2,
-				RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_128>>
+				RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_128>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -594,7 +616,10 @@ namespace gal::prometheus::numeric
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
-		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type { return random_engine_detail::rotate_left<17, bits_of_this>(state_[0] + state_[1]) + state_[0]; }
+		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
+		{
+			return random_engine_detail::rotate_left<17, bits_of_this>(state_[0] + state_[1]) + state_[0];
+		}
 
 		constexpr auto do_next() noexcept -> result_type
 		{
@@ -618,7 +643,8 @@ namespace gal::prometheus::numeric
 		{
 			return {
 					static_cast<result_type>(0x2bd7a6a6e99c2ddcull),
-					static_cast<result_type>(0x0992ccaf6a6fca05ull)};
+					static_cast<result_type>(0x0992ccaf6a6fca05ull)
+			};
 		}
 
 		/**
@@ -632,7 +658,8 @@ namespace gal::prometheus::numeric
 		{
 			return {
 					static_cast<result_type>(0x360fd5f2cf8d5d99ull),
-					static_cast<result_type>(0x9c6e6877736c46e3ull)};
+					static_cast<result_type>(0x9c6e6877736c46e3ull)
+			};
 		}
 	};
 
@@ -652,10 +679,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit64_type,
 				2,
-				RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>>
+				RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -665,7 +694,10 @@ namespace gal::prometheus::numeric
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
-		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type { return random_engine_detail::rotate_left<7, bits_of_this>(state_[0] * 5) * 9; }
+		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
+		{
+			return random_engine_detail::rotate_left<7, bits_of_this>(state_[0] * 5) * 9;
+		}
 
 		constexpr auto do_next() noexcept -> result_type
 		{
@@ -702,10 +734,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_256>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit64_type,
 				4,
-				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_256>>
+				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_256>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -746,10 +780,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_256>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit64_type,
 				4,
-				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_256>>
+				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_256>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -759,7 +795,10 @@ namespace gal::prometheus::numeric
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
-		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type { return random_engine_detail::rotate_left<23, bits_of_this>(state_[0] + state_[3]) + state_[0]; }
+		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
+		{
+			return random_engine_detail::rotate_left<23, bits_of_this>(state_[0] + state_[3]) + state_[0];
+		}
 
 		constexpr auto do_next() noexcept -> result_type
 		{
@@ -790,10 +829,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_256>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit64_type,
 				4,
-				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_256>>
+				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_256>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -803,7 +844,10 @@ namespace gal::prometheus::numeric
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
-		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type { return random_engine_detail::rotate_left<7, bits_of_this>(state_[1] * 5) * 9; }
+		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
+		{
+			return random_engine_detail::rotate_left<7, bits_of_this>(state_[1] * 5) * 9;
+		}
 
 		constexpr auto do_next() noexcept -> result_type
 		{
@@ -835,10 +879,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_512>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit64_type,
 				8,
-				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_512>>
+				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_512>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -879,10 +925,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_512>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit64_type,
 				8,
-				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_512>>
+				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_512>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -892,7 +940,10 @@ namespace gal::prometheus::numeric
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
-		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type { return random_engine_detail::rotate_left<17, bits_of_this>(state_[0] + state_[2]) + state_[2]; }
+		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
+		{
+			return random_engine_detail::rotate_left<17, bits_of_this>(state_[0] + state_[2]) + state_[2];
+		}
 
 		constexpr auto do_next() noexcept -> result_type
 		{
@@ -923,10 +974,12 @@ namespace gal::prometheus::numeric
 	 */
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_512>
-			: public random_engine_detail::RandomEngineBase<
+			: public
+			random_engine_detail::RandomEngineBase<
 				random_engine_detail::bit64_type,
 				8,
-				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_512>>
+				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_512>
+			>
 	{
 		friend RandomEngineBase;
 
@@ -936,7 +989,10 @@ namespace gal::prometheus::numeric
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
-		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type { return random_engine_detail::rotate_left<7, bits_of_this>(state_[1] * 5) * 9; }
+		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
+		{
+			return random_engine_detail::rotate_left<7, bits_of_this>(state_[1] * 5) * 9;
+		}
 
 		constexpr auto do_next() noexcept -> result_type
 		{
@@ -955,5 +1011,5 @@ namespace gal::prometheus::numeric
 	static_assert(std::uniform_random_bit_generator<random_engine_xsr_512_star_star>);
 	static_assert(sizeof(random_engine_xsr_512_star_star) == 512 / CHAR_BIT);
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
