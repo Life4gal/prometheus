@@ -18,7 +18,6 @@ import :aligned_union;
 
 #else
 #include <type_traits>
-#include <functional>
 #include <tuple>
 
 #include <prometheus/macro.hpp>
@@ -46,11 +45,13 @@ namespace gal::prometheus::functional
 			using type = std::decay_t<FunctionPointer>;
 
 			template<typename Return, typename... Args>
-			constexpr static auto value = std::is_invocable_v<type, Args...> and (std::is_void_v<Return> or std::is_convertible_v<std::invoke_result_t<type, Args...>, Return>);
+			constexpr static auto value =
+					std::is_invocable_v<type, Args...> and
+					(std::is_void_v<Return> or std::is_convertible_v<std::invoke_result_t<type, Args...>, Return>);
 		};
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	template<typename Signature>
 	class FunctionRef;
@@ -72,7 +73,7 @@ namespace gal::prometheus::functional
 	 * A function is compatible if it is callable with regular function call syntax from the given argument types,
 	 * and its return type is either implicitly convertible to the specified return type or the specified return type is `void`.
 	 *
-	 * In general it will store a pointer to the functor, requiring an lvalue.
+	 * In general, it will store a pointer to the functor, requiring a lvalue.
 	 * But if it is created with a function pointer or something convertible to a function pointer,
 	 * it will store the function pointer itself.
 	 */
@@ -99,17 +100,19 @@ namespace gal::prometheus::functional
 		struct constructor_tag {};
 
 		data_type data_;
-		invoker   invoker_;
+		invoker invoker_;
 
 		template<typename FunctionType>
 		constexpr static auto do_invoke_function(
 				data_type data,
-				Args...   args)                                                                                                                                 //
-			noexcept(noexcept(static_cast<result_type>(std::invoke(reinterpret_cast<FunctionType>(data.load<function_pointer>()), static_cast<Args>(args)...))))// NOLINT(clang-diagnostic-cast-function-type-strict)
+				Args... args) //
+			noexcept(noexcept(
+				static_cast<result_type>(std::invoke(reinterpret_cast<FunctionType>(data.load<function_pointer>()), static_cast<Args>(args)...))
+			))
 			-> result_type
 		{
-			auto pointer  = data.load<function_pointer>();
-			auto function = reinterpret_cast<FunctionType>(pointer);// NOLINT(clang-diagnostic-cast-function-type-strict)
+			auto pointer = data.load<function_pointer>();
+			auto function = reinterpret_cast<FunctionType>(pointer); // NOLINT(clang-diagnostic-cast-function-type-strict)
 
 			return static_cast<result_type>(std::invoke(function, static_cast<Args>(args)...));
 		}
@@ -117,11 +120,14 @@ namespace gal::prometheus::functional
 		template<typename Functor>
 		constexpr static auto do_invoke_functor(
 				data_type data,
-				Args...   args)//
-			noexcept(noexcept(static_cast<result_type>(std::invoke(*static_cast<Functor*>(data.load<functor_pointer>()), static_cast<Args>(args)...))))
+				Args... args) //
+			noexcept(noexcept(
+					static_cast<result_type>(std::invoke(*static_cast<Functor*>(data.load<functor_pointer>()), static_cast<Args>(args)...)
+					))
+			)
 			-> result_type
 		{
-			auto  pointer = data.load<functor_pointer>();
+			auto pointer = data.load<functor_pointer>();
 			auto& functor = *static_cast<Functor*>(pointer);
 
 			return static_cast<result_type>(std::invoke(functor, static_cast<Args>(args)...));
@@ -139,8 +145,9 @@ namespace gal::prometheus::functional
 
 	public:
 		template<typename FunctionPointer>
-			requires function_ref_detail::compatible_function_pointer<FunctionPointer>::template value<Return, Args...>//
-		constexpr explicit(false) FunctionRef(FunctionPointer function) noexcept(std::is_nothrow_constructible_v<FunctionRef, constructor_tag, FunctionPointer>)
+			requires function_ref_detail::compatible_function_pointer<FunctionPointer>::template value<Return, Args...> //
+		constexpr explicit(false) FunctionRef(FunctionPointer function)
+			noexcept(std::is_nothrow_constructible_v<FunctionRef, constructor_tag, FunctionPointer>)
 			: FunctionRef{constructor_tag{}, function} {}
 
 		/**
@@ -171,8 +178,11 @@ namespace gal::prometheus::functional
 			: data_{data_type::constructor_tag<functor_pointer>{}, const_cast<functor_pointer>(static_cast<const void*>(&functor))},
 			  invoker_{&do_invoke_functor<Functor>} {}
 
-		constexpr auto operator()(Args... args) noexcept(noexcept(std::invoke(invoker_, data_, static_cast<Args>(args)...))) { return std::invoke(invoker_, data_, static_cast<Args>(args)...); }
+		constexpr auto operator()(Args... args) noexcept(noexcept(std::invoke(invoker_, data_, static_cast<Args>(args)...)))
+		{
+			return std::invoke(invoker_, data_, static_cast<Args>(args)...);
+		}
 	};
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
