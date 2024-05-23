@@ -24,7 +24,7 @@ import gal.prometheus.functional;
 
 namespace gal::prometheus::chars
 {
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	enum class EncodingType
 	{
@@ -48,11 +48,11 @@ namespace gal::prometheus::chars
 		{
 			case EncodingType::UNKNOWN: { return 0; }
 			case EncodingType::UTF8: { return 3; }
-			case EncodingType::UTF16_LE: { return 2; }
+			case EncodingType::UTF16_LE:
 			case EncodingType::UTF16_BE: { return 2; }
-			case EncodingType::UTF32_LE: { return 4; }
+			case EncodingType::UTF32_LE:
 			case EncodingType::UTF32_BE: { return 4; }
-			default: { GAL_PROMETHEUS_DEBUG_UNREACHABLE(); }
+			default: { std::unreachable(); }
 		}
 	}
 
@@ -71,14 +71,26 @@ namespace gal::prometheus::chars
 			if (const auto length = byte.size();
 				length >= functional::functor::max(bom_utf8.size(), bom_utf32_le.size(), bom_utf32_be.size()))
 			{
-				if (std::ranges::equal(bom_utf32_le.begin(), bom_utf32_le.end(), byte.begin(), byte.begin() + bom_utf32_le.size())) { return EncodingType::UTF32_LE; }
-				if (std::ranges::equal(bom_utf32_be.begin(), bom_utf32_be.end(), byte.begin(), byte.begin() + bom_utf32_be.size())) { return EncodingType::UTF32_BE; }
+				if (std::ranges::equal(bom_utf32_le.begin(), bom_utf32_le.end(), byte.begin(), byte.begin() + bom_utf32_le.size()))
+				{
+					return EncodingType::UTF32_LE;
+				}
+				if (std::ranges::equal(bom_utf32_be.begin(), bom_utf32_be.end(), byte.begin(), byte.begin() + bom_utf32_be.size()))
+				{
+					return EncodingType::UTF32_BE;
+				}
 				if (std::ranges::equal(bom_utf8.begin(), bom_utf8.end(), byte.begin(), byte.begin() + bom_utf8.size())) { return EncodingType::UTF8; }
 			}
 			else if (length >= functional::functor::max(bom_utf16_le.size(), bom_utf16_be.size()))
 			{
-				if (std::ranges::equal(bom_utf16_le.begin(), bom_utf16_le.end(), byte.begin(), byte.begin() + bom_utf16_le.size())) { return EncodingType::UTF16_LE; }
-				if (std::ranges::equal(bom_utf16_be.begin(), bom_utf16_be.end(), byte.begin(), byte.begin() + bom_utf16_be.size())) { return EncodingType::UTF16_BE; }
+				if (std::ranges::equal(bom_utf16_le.begin(), bom_utf16_le.end(), byte.begin(), byte.begin() + bom_utf16_le.size()))
+				{
+					return EncodingType::UTF16_LE;
+				}
+				if (std::ranges::equal(bom_utf16_be.begin(), bom_utf16_be.end(), byte.begin(), byte.begin() + bom_utf16_be.size()))
+				{
+					return EncodingType::UTF16_BE;
+				}
 			}
 
 			return EncodingType::UNKNOWN;
@@ -87,7 +99,7 @@ namespace gal::prometheus::chars
 		// [[nodiscard]] constexpr static auto operator()(const std::span<const char> byte) noexcept -> EncodingType
 		[[nodiscard]] constexpr static auto check(const std::span<const char> byte) noexcept -> EncodingType
 		{
-			const auto data = std::span{GAL_PROMETHEUS_UNRESTRICTED_CHAR_POINTER_CAST(char8_t, byte.data()), byte.size()};
+			const auto data = std::span{GAL_PROMETHEUS_SEMANTIC_UNRESTRICTED_CHAR_POINTER_CAST(char8_t, byte.data()), byte.size()};
 			// return operator()(data);
 			return check(data);
 		}
@@ -122,7 +134,9 @@ namespace gal::prometheus::chars
 		// In case of success, indicates the number of code units validated/written.
 		std::size_t count;
 
-		[[nodiscard]] constexpr explicit operator bool() const noexcept { return error == ErrorCode::NONE; }
+		[[nodiscard]] constexpr auto has_error() const noexcept -> bool { return error != ErrorCode::NONE; }
+
+		[[nodiscard]] constexpr explicit operator bool() const noexcept { return not has_error(); }
 	};
 
 	enum class CharsCategory
@@ -145,7 +159,7 @@ namespace gal::prometheus::chars
 		ASSUME_VALID_INPUT,
 	};
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace encoding_detail
 	{
@@ -279,7 +293,7 @@ namespace gal::prometheus::chars
 		};
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	template<CharsCategory Type>
 	using input_type = typename encoding_detail::input_type<Type>::type;
@@ -299,5 +313,5 @@ namespace gal::prometheus::chars
 	template<meta::basic_fixed_string Category>
 	class Converter;
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
