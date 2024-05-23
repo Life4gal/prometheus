@@ -22,7 +22,7 @@ import gal.prometheus.error;
 
 namespace gal::prometheus::string
 {
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	// https://en.cppreference.com/w/cpp/language/string_literal
 	/**
@@ -178,14 +178,14 @@ namespace gal::prometheus::string
 		{
 			bool result;
 
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS SequenceIterator sequence_begin;
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS SequenceIterator sequence_end;
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS SequenceIterator sequence_begin;
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS SequenceIterator sequence_end;
 
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS PatternIterator pattern_begin;
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS PatternIterator pattern_end;
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS PatternIterator pattern_begin;
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS PatternIterator pattern_end;
 
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS SequenceIterator match_result_sequence;
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS PatternIterator  match_result_pattern;
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS SequenceIterator match_result_sequence;
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS PatternIterator match_result_pattern;
 
 			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result; }
 		};
@@ -195,19 +195,19 @@ namespace gal::prometheus::string
 		{
 			bool result;
 
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS SequenceIterator sequence;
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS PatternIterator  pattern;
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS SequenceIterator sequence;
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS PatternIterator pattern;
 
 			[[nodiscard]] constexpr explicit(false) operator bool() const noexcept { return result; }
 		};
 
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator>
 		constexpr auto make_full_match_result(
-				SequenceIterator                                sequence_begin,
-				SequenceIterator                                sequence_end,
-				PatternIterator                                 pattern_begin,
-				PatternIterator                                 pattern_end,
-				match_result<SequenceIterator, PatternIterator> match_result//
+				SequenceIterator sequence_begin,
+				SequenceIterator sequence_end,
+				PatternIterator pattern_begin,
+				PatternIterator pattern_end,
+				match_result<SequenceIterator, PatternIterator> match_result //
 				) noexcept -> full_match_result<SequenceIterator, PatternIterator>
 		{
 			return {
@@ -222,9 +222,9 @@ namespace gal::prometheus::string
 
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator>
 		constexpr auto make_match_result(
-				bool             result,
+				bool result,
 				SequenceIterator sequence,
-				PatternIterator  pattern//
+				PatternIterator pattern //
 				) noexcept -> match_result<SequenceIterator, PatternIterator>
 		{
 			return {
@@ -233,10 +233,10 @@ namespace gal::prometheus::string
 					.pattern = pattern};
 		}
 
-		class InvalidArgumentError final : public error::ExceptionWithUserData<void>
+		class InvalidArgumentError final : public error::Exception<void>
 		{
 		public:
-			using ExceptionWithUserData::ExceptionWithUserData;
+			using Exception::Exception;
 		};
 
 		// todo: this shouldn't be needed
@@ -290,10 +290,11 @@ namespace gal::prometheus::string
 		*/
 		template<bool EmitError, std::input_iterator PatternIterator>
 		constexpr auto check_set_exist(
-				PatternIterator                                                                  begin,
-				PatternIterator                                                                  end,
-				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
-				CheckSetState                                                                    state    = CheckSetState::OPEN//
+				PatternIterator begin,
+				PatternIterator end,
+				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard
+						= wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
+				CheckSetState state = CheckSetState::OPEN //
 				) -> PatternIterator
 		{
 			auto rollback = begin;
@@ -376,13 +377,14 @@ namespace gal::prometheus::string
 		*/
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator = std::equal_to<>>
 		constexpr auto match_set(
-				SequenceIterator                                                                 sequence_begin,
-				SequenceIterator                                                                 sequence_end,
-				PatternIterator                                                                  pattern_begin,
-				PatternIterator                                                                  pattern_end,
-				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard   = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
-				const Comparator&                                                                comparator = Comparator{},
-				MatchSetState                                                                    state      = MatchSetState::OPEN//
+				SequenceIterator sequence_begin,
+				SequenceIterator sequence_end,
+				PatternIterator pattern_begin,
+				PatternIterator pattern_end,
+				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename
+					std::iterator_traits<PatternIterator>::value_type>{},
+				const Comparator& comparator = Comparator{},
+				MatchSetState state = MatchSetState::OPEN //
 				) -> match_result<SequenceIterator, PatternIterator>
 		{
 			while (pattern_begin not_eq pattern_end)
@@ -540,12 +542,13 @@ namespace gal::prometheus::string
 		*/
 		template<bool EmitError, std::input_iterator PatternIterator>
 		constexpr auto check_alt_exist(
-				PatternIterator                                                                  begin,
-				PatternIterator                                                                  end,
-				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
-				CheckAltState                                                                    state    = CheckAltState::OPEN,
-				std::size_t                                                                      depth    = 0,
-				bool                                                                             is_sub   = false//
+				PatternIterator begin,
+				PatternIterator end,
+				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard
+						= wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
+				CheckAltState state = CheckAltState::OPEN,
+				std::size_t depth = 0,
+				bool is_sub = false //
 				) -> PatternIterator
 		{
 			auto rollback = begin;
@@ -642,9 +645,10 @@ namespace gal::prometheus::string
 		*/
 		template<std::input_iterator PatternIterator>
 		constexpr auto check_sub_alt_exist(
-				PatternIterator                                                                  begin,
-				PatternIterator                                                                  end,
-				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{}//
+				PatternIterator begin,
+				PatternIterator end,
+				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard
+						= wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{} //
 				) -> PatternIterator { return check_alt_exist<true>(begin, end, wildcard, CheckAltState::NEXT, 1, true); }
 
 		/**
@@ -664,14 +668,15 @@ namespace gal::prometheus::string
 		*/
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator = std::equal_to<>>
 		constexpr auto match(
-				SequenceIterator                                                                 sequence_begin,
-				SequenceIterator                                                                 sequence_end,
-				PatternIterator                                                                  pattern_begin,
-				PatternIterator                                                                  pattern_end,
-				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard   = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
-				const Comparator&                                                                comparator = Comparator{},
-				bool                                                                             partial    = false,
-				bool                                                                             escape     = false//
+				SequenceIterator sequence_begin,
+				SequenceIterator sequence_end,
+				PatternIterator pattern_begin,
+				PatternIterator pattern_end,
+				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard
+						= wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
+				const Comparator& comparator = Comparator{},
+				bool partial = false,
+				bool escape = false //
 				) -> match_result<SequenceIterator, PatternIterator>;
 
 		/**
@@ -692,15 +697,16 @@ namespace gal::prometheus::string
 		*/
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator = std::equal_to<>>
 		constexpr auto match_alt(
-				SequenceIterator                                                                 sequence_begin,
-				SequenceIterator                                                                 sequence_end,
-				PatternIterator                                                                  pattern1_begin,
-				PatternIterator                                                                  pattern1_end,
-				PatternIterator                                                                  pattern2_begin,
-				PatternIterator                                                                  pattern2_end,
-				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard   = wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
-				const Comparator&                                                                comparator = Comparator{},
-				bool                                                                             partial    = false//
+				SequenceIterator sequence_begin,
+				SequenceIterator sequence_end,
+				PatternIterator pattern1_begin,
+				PatternIterator pattern1_end,
+				PatternIterator pattern2_begin,
+				PatternIterator pattern2_end,
+				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard
+						= wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>{},
+				const Comparator& comparator = Comparator{},
+				bool partial = false //
 				) -> match_result<SequenceIterator, PatternIterator>
 		{
 			// is the target sequence partial matches pattern1
@@ -752,14 +758,14 @@ namespace gal::prometheus::string
 
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator>
 		constexpr auto match(
-				SequenceIterator                                                                 sequence_begin,
-				SequenceIterator                                                                 sequence_end,
-				PatternIterator                                                                  pattern_begin,
-				PatternIterator                                                                  pattern_end,
+				SequenceIterator sequence_begin,
+				SequenceIterator sequence_end,
+				PatternIterator pattern_begin,
+				PatternIterator pattern_end,
 				const wildcard_type<typename std::iterator_traits<PatternIterator>::value_type>& wildcard,
-				const Comparator&                                                                comparator,
-				bool                                                                             partial,
-				const bool                                                                       escape//
+				const Comparator& comparator,
+				bool partial,
+				const bool escape //
 				) -> match_result<SequenceIterator, PatternIterator>
 		{
 			// not a valid pattern
@@ -952,16 +958,17 @@ namespace gal::prometheus::string
 					comparator,
 					partial);
 		}
-	}// namespace wildcard_match_detail
+	} // namespace wildcard_match_detail
 
 	template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator = std::equal_to<>>
 	constexpr auto match(
-			SequenceIterator                                                                      sequence_begin,
-			SequenceIterator                                                                      sequence_end,
-			PatternIterator                                                                       pattern_begin,
-			PatternIterator                                                                       pattern_end,
-			const wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>& wildcard   = wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>{},
-			const Comparator&                                                                     comparator = Comparator{}//
+			SequenceIterator sequence_begin,
+			SequenceIterator sequence_end,
+			PatternIterator pattern_begin,
+			PatternIterator pattern_end,
+			const wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>& wildcard
+					= wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>{},
+			const Comparator& comparator = Comparator{} //
 			) -> wildcard_match_detail::full_match_result<SequenceIterator, PatternIterator>
 	{
 		return wildcard_match_detail::make_full_match_result(
@@ -981,11 +988,12 @@ namespace gal::prometheus::string
 	template<std::ranges::range Sequence, std::input_iterator PatternIterator, typename Comparator = std::equal_to<>>
 	constexpr auto
 	match(
-			Sequence&&                                                                            sequence,
-			PatternIterator                                                                       pattern_begin,
-			PatternIterator                                                                       pattern_end,
-			const wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>& wildcard   = wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>{},
-			const Comparator&                                                                     comparator = Comparator{}//
+			Sequence&& sequence,
+			PatternIterator pattern_begin,
+			PatternIterator pattern_end,
+			const wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>& wildcard
+					= wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>{},
+			const Comparator& comparator = Comparator{} //
 			) -> wildcard_match_detail::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), PatternIterator>
 	{
 		return match(
@@ -1000,11 +1008,11 @@ namespace gal::prometheus::string
 	template<std::input_iterator SequenceIterator, std::ranges::range Pattern, typename Comparator = std::equal_to<>>
 	constexpr auto
 	match(
-			SequenceIterator                                          sequence_begin,
-			SequenceIterator                                          sequence_end,
-			Pattern&&                                                 pattern,
-			const wildcard_type<std::ranges::range_value_t<Pattern>>& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{},
-			const Comparator&                                         comparator = Comparator{}//
+			SequenceIterator sequence_begin,
+			SequenceIterator sequence_end,
+			Pattern&& pattern,
+			const wildcard_type<std::ranges::range_value_t<Pattern>>& wildcard = wildcard_type<std::ranges::range_value_t<Pattern>>{},
+			const Comparator& comparator = Comparator{} //
 			) -> wildcard_match_detail::full_match_result<SequenceIterator, decltype(std::ranges::cbegin(std::declval<const Pattern&>()))>
 	{
 		return match(
@@ -1019,11 +1027,14 @@ namespace gal::prometheus::string
 	template<std::ranges::range Sequence, std::ranges::range Pattern, typename Comparator = std::equal_to<>>
 	constexpr auto
 	match(
-			Sequence&&                                                sequence,
-			Pattern&&                                                 pattern,
-			const wildcard_type<std::ranges::range_value_t<Pattern>>& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{},
-			const Comparator&                                         comparator = Comparator{}//
-			) -> wildcard_match_detail::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), decltype(std::ranges::cbegin(std::declval<const Pattern&>()))>
+			Sequence&& sequence,
+			Pattern&& pattern,
+			const wildcard_type<std::ranges::range_value_t<Pattern>>& wildcard = wildcard_type<std::ranges::range_value_t<Pattern>>{},
+			const Comparator& comparator = Comparator{} //
+			) -> wildcard_match_detail::full_match_result<
+		decltype(std::ranges::cbegin(std::declval<const Sequence&>())),
+		decltype(std::ranges::cbegin(std::declval<const Pattern&>()))
+	>
 	{
 		return match(
 				std::cbegin(std::forward<Sequence>(sequence)),
@@ -1051,14 +1062,14 @@ namespace gal::prometheus::string
 		const_iterator borrow_pattern_begin_;
 		const_iterator borrow_pattern_end_;
 
-		wildcard                                    current_wildcard_;
-		GAL_PROMETHEUS_NO_UNIQUE_ADDRESS comparator current_comparator_;
+		wildcard current_wildcard_;
+		GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS comparator current_comparator_;
 
 	public:
 		constexpr explicit WildcardMatcher(
 				const pattern_type& pattern,
-				wildcard&&          w = wildcard{},
-				comparator          c = comparator{})
+				wildcard&& w = wildcard{},
+				comparator c = comparator{})
 			: borrow_pattern_begin_{std::ranges::cbegin(pattern)},
 			  borrow_pattern_end_{std::ranges::cend(pattern)},
 			  current_wildcard_{std::move(w)},
@@ -1082,7 +1093,7 @@ namespace gal::prometheus::string
 		constexpr auto
 		operator()(
 				SequenceIterator sequence_begin,
-				SequenceIterator sequence_end//
+				SequenceIterator sequence_end //
 				) const -> wildcard_match_detail::full_match_result<SequenceIterator, const_iterator>
 		{
 			return match(
@@ -1096,7 +1107,8 @@ namespace gal::prometheus::string
 
 		template<std::ranges::range Sequence>
 		constexpr auto
-		operator()(const Sequence& sequence) const -> wildcard_match_detail::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), const_iterator>
+		operator()(const Sequence& sequence) const ->
+			wildcard_match_detail::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), const_iterator>
 		{
 			return match(
 					sequence,
@@ -1109,54 +1121,92 @@ namespace gal::prometheus::string
 
 	template<std::ranges::range Pattern, typename Comparator>
 	constexpr auto make_wildcard_matcher(
-			const Pattern&                                       pattern,
-			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard = wildcard_type<std::ranges::range_value_t<Pattern>>{},// NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
-			Comparator comparator = Comparator{})//
-		noexcept(noexcept(WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}))
-		-> WildcardMatcher<Pattern, Comparator> { return WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}; }
+			const Pattern& pattern,
+			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+					= wildcard_type<std::ranges::range_value_t<Pattern>>{},
+			Comparator comparator = Comparator{}) //
+		noexcept(noexcept(
+			WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}
+		))
+		-> WildcardMatcher<Pattern, Comparator>
+	{
+		return WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator};
+	}
 
 	template<std::ranges::range Pattern, typename Comparator>
 	[[nodiscard]] constexpr auto make_wildcard_matcher(
-			const Pattern&                                       pattern,
-			Comparator                                           comparator = Comparator{},
-			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard   = wildcard_type<std::ranges::range_value_t<Pattern>>{})// NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
-		noexcept(noexcept(WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}))
-		-> WildcardMatcher<Pattern, Comparator> { return WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}; }
+			const Pattern& pattern,
+			Comparator comparator = Comparator{},
+			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+					= wildcard_type<std::ranges::range_value_t<Pattern>>{})
+		noexcept(noexcept(
+			WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator}
+		))
+		-> WildcardMatcher<Pattern, Comparator>
+	{
+		return WildcardMatcher<Pattern, Comparator>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard), comparator};
+	}
 
 	template<std::ranges::range Pattern>
 	[[nodiscard]] constexpr auto make_wildcard_matcher(
-			const Pattern&                                       pattern,
-			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard = wildcard_type<std::ranges::range_value_t<Pattern>>{})// NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
-		noexcept(noexcept(WildcardMatcher<Pattern>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard)}))
-		-> WildcardMatcher<Pattern> { return WildcardMatcher<Pattern>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard)}; }
+			const Pattern& pattern,
+			wildcard_type<std::ranges::range_value_t<Pattern>>&& wildcard // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+					= wildcard_type<std::ranges::range_value_t<Pattern>>{})
+		noexcept(noexcept(
+			WildcardMatcher<Pattern>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard)}
+		))
+		-> WildcardMatcher<Pattern>
+	{
+		return WildcardMatcher<Pattern>{pattern, std::forward<wildcard_type<std::ranges::range_value_t<Pattern>>>(wildcard)};
+	}
 
 	namespace literals
 	{
 		constexpr auto operator""_wm(
-				const char*       str,
-				const std::size_t size) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
-			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1})) { return make_wildcard_matcher(std::basic_string_view{str, size + 1}); }
+				const char* str,
+				const std::size_t size
+				) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
+			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1}))
+		{
+			return make_wildcard_matcher(std::basic_string_view{str, size + 1});
+		}
 
 		constexpr auto operator""_wm(
-				const wchar_t*    str,
-				const std::size_t size) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
-			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1})) { return make_wildcard_matcher(std::basic_string_view{str, size + 1}); }
+				const wchar_t* str,
+				const std::size_t size
+				) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
+			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1}))
+		{
+			return make_wildcard_matcher(std::basic_string_view{str, size + 1});
+		}
 
 		constexpr auto operator""_wm(
-				const char8_t*    str,
-				const std::size_t size) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
-			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1})) { return make_wildcard_matcher(std::basic_string_view{str, size + 1}); }
+				const char8_t* str,
+				const std::size_t size
+				) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
+			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1}))
+		{
+			return make_wildcard_matcher(std::basic_string_view{str, size + 1});
+		}
 
 		constexpr auto operator""_wm(
-				const char16_t*   str,
-				const std::size_t size) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
-			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1})) { return make_wildcard_matcher(std::basic_string_view{str, size + 1}); }
+				const char16_t* str,
+				const std::size_t size
+				) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
+			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1}))
+		{
+			return make_wildcard_matcher(std::basic_string_view{str, size + 1});
+		}
 
 		constexpr auto operator""_wm(
-				const char32_t*   str,
-				const std::size_t size) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
-			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1})) { return make_wildcard_matcher(std::basic_string_view{str, size + 1}); }
-	}// namespace literals
+				const char32_t* str,
+				const std::size_t size
+				) noexcept(noexcept(make_wildcard_matcher(std::basic_string_view{str, size + 1})))
+			-> decltype(make_wildcard_matcher(std::basic_string_view{str, size + 1}))
+		{
+			return make_wildcard_matcher(std::basic_string_view{str, size + 1});
+		}
+	} // namespace literals
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
-}// namespace gal::prometheus::string
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+} // namespace gal::prometheus::string
