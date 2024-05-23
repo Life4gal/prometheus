@@ -48,7 +48,7 @@ namespace gal::prometheus::infrastructure
 		using state = meta::basic_char_array<char, Cs...>;
 
 		constexpr auto state_continue = meta::to_char_array<meta::basic_fixed_string{"infrastructure.state_machine.internal_continue_state"}>();
-		constexpr auto state_any      = meta::to_char_array<meta::basic_fixed_string{"infrastructure.state_machine.internal_any_state"}>();
+		constexpr auto state_any = meta::to_char_array<meta::basic_fixed_string{"infrastructure.state_machine.internal_any_state"}>();
 
 		// =====================================
 		// transition
@@ -57,11 +57,20 @@ namespace gal::prometheus::infrastructure
 		template<typename Function, typename EventType, typename... Args>
 		[[nodiscard]] constexpr auto invoke(Function&& function, const EventType& event, Args&&... args) noexcept(false) -> auto
 		{
-			if constexpr (requires { std::invoke(std::forward<Function>(function), event, std::forward<Args>(args)...); }) { return std::invoke(std::forward<Function>(function), event, std::forward<Args>(args)...); }
-			else if constexpr (requires { std::invoke(std::forward<Function>(function), event); }) { return std::invoke(std::forward<Function>(function), event); }
-			else if constexpr (requires { std::invoke(std::forward<Function>(function), std::forward<Args>(args)...); }) { return std::invoke(std::forward<Function>(function), std::forward<Args>(args)...); }
+			if constexpr (requires { std::invoke(std::forward<Function>(function), event, std::forward<Args>(args)...); })
+			{
+				return std::invoke(std::forward<Function>(function), event, std::forward<Args>(args)...);
+			}
+			else if constexpr (requires { std::invoke(std::forward<Function>(function), event); })
+			{
+				return std::invoke(std::forward<Function>(function), event);
+			}
+			else if constexpr (requires { std::invoke(std::forward<Function>(function), std::forward<Args>(args)...); })
+			{
+				return std::invoke(std::forward<Function>(function), std::forward<Args>(args)...);
+			}
 			else if constexpr (requires { std::invoke(std::forward<Function>(function)); }) { return std::invoke(std::forward<Function>(function)); }
-			else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
 		struct nothing {};
@@ -71,22 +80,49 @@ namespace gal::prometheus::infrastructure
 		constexpr auto ignore = []() noexcept {};
 		using ignore_type = std::decay_t<decltype(ignore)>;
 
-		template<bool IsEntryPoint, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE From, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE To, typename EventType = nothing, typename GuardType = absence_type, typename ActionType = ignore_type, typename SentryEntryType = ignore_type, typename SentryExitType = ignore_type>
+		template<
+			bool IsEntryPoint,
+			STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE From,
+			STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE To,
+			typename EventType = nothing,
+			typename GuardType = absence_type,
+			typename ActionType = ignore_type,
+			typename SentryEntryType = ignore_type,
+			typename SentryExitType = ignore_type>
 			requires(From != state_continue)
 		struct transition;
 
 		template<typename>
 		struct is_transition : std::false_type {};
 
-		template<bool IsEntryPoint, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE From, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE To, typename EventType, typename GuardType, typename ActionType, typename SentryEntryType, typename SentryExitType>
-		struct is_transition<transition<IsEntryPoint, From, To, EventType, GuardType, ActionType, SentryEntryType, SentryExitType>> : std::true_type {};
+		template<
+			bool IsEntryPoint,
+			STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE From,
+			STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE To,
+			typename EventType,
+			typename GuardType,
+			typename ActionType,
+			typename SentryEntryType,
+			typename SentryExitType
+		>
+		struct is_transition<transition<IsEntryPoint, From, To, EventType, GuardType, ActionType, SentryEntryType, SentryExitType>> : std::true_type {
+		};
 
 		template<typename T>
 		constexpr auto is_transition_v = is_transition<T>::value;
 		template<typename T>
 		concept transition_t = is_transition_v<T>;
 
-		template<bool IsEntryPoint, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE From, STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE To, typename EventType, typename GuardType, typename ActionType, typename SentryEntryType, typename SentryExitType>
+		template<
+			bool IsEntryPoint,
+			STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE From,
+			STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE To,
+			typename EventType,
+			typename GuardType,
+			typename ActionType,
+			typename SentryEntryType,
+			typename SentryExitType
+		>
 			requires(From != state_continue)
 		struct transition
 		{
@@ -95,8 +131,8 @@ namespace gal::prometheus::infrastructure
 			#endif
 
 			constexpr static auto is_entry_point = IsEntryPoint;
-			constexpr static auto from           = From;
-			constexpr static auto to             = To;
+			constexpr static auto from = From;
+			constexpr static auto to = To;
 
 			using from_type = std::decay_t<decltype(from)>;
 			using to_type = std::decay_t<decltype(to)>;
@@ -106,151 +142,242 @@ namespace gal::prometheus::infrastructure
 			using sentry_entry_type = SentryEntryType;
 			using sentry_exit_type = SentryExitType;
 
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS guard_type        guard{};
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS action_type       action{};
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS sentry_entry_type sentry_entry{};
-			GAL_PROMETHEUS_NO_UNIQUE_ADDRESS sentry_exit_type  sentry_exit{};
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS guard_type guard{};
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS action_type action{};
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS sentry_entry_type sentry_entry{};
+			GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS sentry_exit_type sentry_exit{};
 
 			// =======================
 			// entry_state.start_from_here().when<my_event>().iff(guard).then(action).end<end_state>().on_entry(entry_action).on_exit(exit_action)
 			// =======================
 
-			[[nodiscard]] constexpr auto start_from_here() && noexcept -> transition<true, from, to, event_type, guard_type, action_type, sentry_entry_type, sentry_exit_type>//
-				requires(not is_entry_point and from != state_any)                                                                                                            //
+			[[nodiscard]] constexpr auto start_from_here() && noexcept
+				-> transition<true, from, to, event_type, guard_type, action_type, sentry_entry_type, sentry_exit_type> //
+				requires(not is_entry_point and from != state_any) //
 			{
-				return {.guard = std::move(guard), .action = std::move(action), .sentry_entry = std::move(sentry_entry), .sentry_exit = std::move(sentry_exit)};
+				return {
+						.guard = std::move(guard),
+						.action = std::move(action),
+						.sentry_entry = std::move(sentry_entry),
+						.sentry_exit = std::move(sentry_exit)
+				};
 			}
 
 			template<typename... Event>
-			[[nodiscard]] constexpr auto when() const & noexcept -> transition<is_entry_point, from, to, functional::type_list_type<functional::type_list<Event...>>, guard_type, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto when() const & noexcept
+				-> transition<
+					is_entry_point,
+					from,
+					to,
+					functional::type_list_type<functional::type_list<Event...>>,
+					guard_type,
+					action_type,
+					sentry_entry_type,
+					sentry_exit_type
+				> //
 			{
 				return {.guard = guard, .action = action, .sentry_entry = sentry_entry, .sentry_exit = sentry_exit};
 			}
 
 			template<typename... Event>
-			[[nodiscard]] constexpr auto when() && noexcept -> transition<is_entry_point, from, to, functional::type_list_type<functional::type_list<Event...>>, guard_type, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto when() && noexcept
+				-> transition<
+					is_entry_point,
+					from,
+					to,
+					functional::type_list_type<functional::type_list<Event...>>,
+					guard_type,
+					action_type,
+					sentry_entry_type,
+					sentry_exit_type
+				> //
 			{
-				return {.guard = std::move(guard), .action = std::move(action), .sentry_entry = std::move(sentry_entry), .sentry_exit = std::move(sentry_exit)};
+				return {
+						.guard = std::move(guard),
+						.action = std::move(action),
+						.sentry_entry = std::move(sentry_entry),
+						.sentry_exit = std::move(sentry_exit)
+				};
 			}
 
 			template<typename Guard>
-			[[nodiscard]] constexpr auto iff(const Guard& new_guard) const & noexcept -> transition<is_entry_point, from, to, event_type, std::decay_t<Guard>, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto iff(const Guard& new_guard) const & noexcept
+				-> transition<is_entry_point, from, to, event_type, std::decay_t<Guard>, action_type, sentry_entry_type, sentry_exit_type> //
 			{
 				return {.guard = new_guard, .action = action, .sentry_entry = sentry_entry, .sentry_exit = sentry_exit};
 			}
 
 			template<typename Guard>
-			[[nodiscard]] constexpr auto iff(Guard&& new_guard) const & noexcept -> transition<is_entry_point, from, to, event_type, std::decay_t<Guard>, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto iff(Guard&& new_guard) const & noexcept
+				-> transition<is_entry_point, from, to, event_type, std::decay_t<Guard>, action_type, sentry_entry_type, sentry_exit_type> //
 			{
 				return {.guard = std::forward<Guard>(new_guard), .action = action, .sentry_entry = sentry_entry, .sentry_exit = sentry_exit};
 			}
 
 			template<typename Guard>
-			[[nodiscard]] constexpr auto iff(const Guard& new_guard) && noexcept -> transition<is_entry_point, from, to, event_type, std::decay_t<Guard>, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto iff(const Guard& new_guard) && noexcept
+				-> transition<is_entry_point, from, to, event_type, std::decay_t<Guard>, action_type, sentry_entry_type, sentry_exit_type> //
 			{
-				return {.guard = new_guard, .action = std::move(action), .sentry_entry = std::move(sentry_entry), .sentry_exit = std::move(sentry_exit)};
+				return {
+						.guard = new_guard,
+						.action = std::move(action),
+						.sentry_entry = std::move(sentry_entry),
+						.sentry_exit = std::move(sentry_exit)
+				};
 			}
 
 			template<typename Guard>
-			[[nodiscard]] constexpr auto iff(Guard&& new_guard) && noexcept -> transition<is_entry_point, from, to, event_type, std::decay_t<Guard>, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto iff(Guard&& new_guard) && noexcept
+				-> transition<is_entry_point, from, to, event_type, std::decay_t<Guard>, action_type, sentry_entry_type, sentry_exit_type> //
 			{
-				return {.guard = std::forward<Guard>(new_guard), .action = std::move(action), .sentry_entry = std::move(sentry_entry), .sentry_exit = std::move(sentry_exit)};
+				return {
+						.guard = std::forward<Guard>(new_guard),
+						.action = std::move(action),
+						.sentry_entry = std::move(sentry_entry),
+						.sentry_exit = std::move(sentry_exit)
+				};
 			}
 
 			template<typename Action>
-			[[nodiscard]] constexpr auto then(const Action& new_action) const & noexcept -> transition<is_entry_point, from, to, event_type, guard_type, std::decay_t<Action>, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto then(const Action& new_action) const & noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, std::decay_t<Action>, sentry_entry_type, sentry_exit_type> //
 			{
 				return {.guard = guard, .action = new_action, .sentry_entry = sentry_entry, .sentry_exit = sentry_exit};
 			}
 
 			template<typename Action>
-			[[nodiscard]] constexpr auto then(Action&& new_action) const & noexcept -> transition<is_entry_point, from, to, event_type, guard_type, std::decay_t<Action>, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto then(Action&& new_action) const & noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, std::decay_t<Action>, sentry_entry_type, sentry_exit_type> //
 			{
 				return {.guard = guard, .action = std::forward<Action>(new_action), .sentry_entry = sentry_entry, .sentry_exit = sentry_exit};
 			}
 
 			template<typename Action>
-			[[nodiscard]] constexpr auto then(const Action& new_action) && noexcept -> transition<is_entry_point, from, to, event_type, guard_type, std::decay_t<Action>, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto then(const Action& new_action) && noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, std::decay_t<Action>, sentry_entry_type, sentry_exit_type> //
 			{
-				return {.guard = std::move(guard), .action = new_action, .sentry_entry = std::move(sentry_entry), .sentry_exit = std::move(sentry_exit)};
+				return {
+						.guard = std::move(guard),
+						.action = new_action,
+						.sentry_entry = std::move(sentry_entry),
+						.sentry_exit = std::move(sentry_exit)
+				};
 			}
 
 			template<typename Action>
-			[[nodiscard]] constexpr auto then(Action&& new_action) && noexcept -> transition<is_entry_point, from, to, event_type, guard_type, std::decay_t<Action>, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto then(Action&& new_action) && noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, std::decay_t<Action>, sentry_entry_type, sentry_exit_type> //
 			{
-				return {.guard = std::move(guard), .action = std::forward<Action>(new_action), .sentry_entry = std::move(sentry_entry), .sentry_exit = std::move(sentry_exit)};
+				return {
+						.guard = std::move(guard),
+						.action = std::forward<Action>(new_action),
+						.sentry_entry = std::move(sentry_entry),
+						.sentry_exit = std::move(sentry_exit)
+				};
 			}
 
 			template<transition_t EndTransition>
-			[[nodiscard]] constexpr auto end() const & noexcept -> transition<is_entry_point, from, EndTransition::from, event_type, guard_type, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto end() const & noexcept
+				-> transition<is_entry_point, from, EndTransition::from, event_type, guard_type, action_type, sentry_entry_type, sentry_exit_type> //
 			{
 				return {.guard = guard, .action = action, .sentry_entry = sentry_entry, .sentry_exit = sentry_exit};
 			}
 
 			template<transition_t EndTransition>
-			[[nodiscard]] constexpr auto end(const EndTransition&) const & noexcept -> transition<is_entry_point, from, EndTransition::from, event_type, guard_type, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto end(const EndTransition&) const & noexcept
+				-> transition<is_entry_point, from, EndTransition::from, event_type, guard_type, action_type, sentry_entry_type, sentry_exit_type> //
 			{
 				return {.guard = guard, .action = action, .sentry_entry = sentry_entry, .sentry_exit = sentry_exit};
 			}
 
 			template<transition_t EndTransition>
-			[[nodiscard]] constexpr auto end() && noexcept -> transition<is_entry_point, from, EndTransition::from, event_type, guard_type, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto end() && noexcept
+				-> transition<is_entry_point, from, EndTransition::from, event_type, guard_type, action_type, sentry_entry_type, sentry_exit_type> //
 			{
-				return {.guard = std::move(guard), .action = std::move(action), .sentry_entry = std::move(sentry_entry), .sentry_exit = std::move(sentry_exit)};
+				return {
+						.guard = std::move(guard),
+						.action = std::move(action),
+						.sentry_entry = std::move(sentry_entry),
+						.sentry_exit = std::move(sentry_exit)
+				};
 			}
 
 			template<transition_t EndTransition>
-			[[nodiscard]] constexpr auto end(const EndTransition&) && noexcept -> transition<is_entry_point, from, EndTransition::from, event_type, guard_type, action_type, sentry_entry_type, sentry_exit_type>//
+			[[nodiscard]] constexpr auto end(const EndTransition&) && noexcept
+				-> transition<is_entry_point, from, EndTransition::from, event_type, guard_type, action_type, sentry_entry_type, sentry_exit_type> //
 			{
-				return {.guard = std::move(guard), .action = std::move(action), .sentry_entry = std::move(sentry_entry), .sentry_exit = std::move(sentry_exit)};
+				return {
+						.guard = std::move(guard),
+						.action = std::move(action),
+						.sentry_entry = std::move(sentry_entry),
+						.sentry_exit = std::move(sentry_exit)
+				};
 			}
 
 			template<typename SentryEntry>
-			[[nodiscard]] constexpr auto on_entry(const SentryEntry& new_entry) const & noexcept -> transition<is_entry_point, from, to, event_type, guard_type, action_type, std::decay_t<SentryEntry>, sentry_exit_type>//
+			[[nodiscard]] constexpr auto on_entry(const SentryEntry& new_entry) const & noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, action_type, std::decay_t<SentryEntry>, sentry_exit_type> //
 			{
 				return {.guard = guard, .action = action, .sentry_entry = new_entry, .sentry_exit = sentry_exit};
 			}
 
 			template<typename SentryEntry>
-			[[nodiscard]] constexpr auto on_entry(SentryEntry&& new_entry) const & noexcept -> transition<is_entry_point, from, to, event_type, guard_type, action_type, std::decay_t<SentryEntry>, sentry_exit_type>//
+			[[nodiscard]] constexpr auto on_entry(SentryEntry&& new_entry) const & noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, action_type, std::decay_t<SentryEntry>, sentry_exit_type> //
 			{
 				return {.guard = guard, .action = action, .sentry_entry = std::forward<SentryEntry>(new_entry), .sentry_exit = sentry_exit};
 			}
 
 			template<typename SentryEntry>
-			[[nodiscard]] constexpr auto on_entry(const SentryEntry& new_entry) && noexcept -> transition<is_entry_point, from, to, event_type, guard_type, action_type, std::decay_t<SentryEntry>, sentry_exit_type>//
+			[[nodiscard]] constexpr auto on_entry(const SentryEntry& new_entry) && noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, action_type, std::decay_t<SentryEntry>, sentry_exit_type> //
 			{
 				return {.guard = std::move(guard), .action = std::move(action), .sentry_entry = new_entry, .sentry_exit = std::move(sentry_exit)};
 			}
 
 			template<typename SentryEntry>
-			[[nodiscard]] constexpr auto on_entry(SentryEntry&& new_entry) && noexcept -> transition<is_entry_point, from, to, event_type, guard_type, action_type, std::decay_t<SentryEntry>, sentry_exit_type>//
+			[[nodiscard]] constexpr auto on_entry(SentryEntry&& new_entry) && noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, action_type, std::decay_t<SentryEntry>, sentry_exit_type> //
 			{
-				return {.guard = std::move(guard), .action = std::move(action), .sentry_entry = std::forward<SentryEntry>(new_entry), .sentry_exit = std::move(sentry_exit)};
+				return {
+						.guard = std::move(guard),
+						.action = std::move(action),
+						.sentry_entry = std::forward<SentryEntry>(new_entry),
+						.sentry_exit = std::move(sentry_exit)
+				};
 			}
 
 			template<typename SentryExit>
-			[[nodiscard]] constexpr auto on_exit(const SentryExit& new_exit) const & noexcept -> transition<is_entry_point, from, to, event_type, guard_type, action_type, sentry_entry_type, std::decay_t<SentryExit>>//
+			[[nodiscard]] constexpr auto on_exit(const SentryExit& new_exit) const & noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, action_type, sentry_entry_type, std::decay_t<SentryExit>> //
 			{
 				return {.guard = guard, .action = action, .sentry_entry = sentry_entry, .sentry_exit = new_exit};
 			}
 
 			template<typename SentryExit>
-			[[nodiscard]] constexpr auto on_exit(SentryExit&& new_exit) const & noexcept -> transition<is_entry_point, from, to, event_type, guard_type, action_type, sentry_entry_type, std::decay_t<SentryExit>>//
+			[[nodiscard]] constexpr auto on_exit(SentryExit&& new_exit) const & noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, action_type, sentry_entry_type, std::decay_t<SentryExit>> //
 			{
 				return {.guard = guard, .action = action, .sentry_entry = sentry_entry, .sentry_exit = std::forward<SentryExit>(new_exit)};
 			}
 
 			template<typename SentryExit>
-			[[nodiscard]] constexpr auto on_exit(const SentryExit& new_exit) && noexcept -> transition<is_entry_point, from, to, event_type, guard_type, action_type, sentry_entry_type, std::decay_t<SentryExit>>//
+			[[nodiscard]] constexpr auto on_exit(const SentryExit& new_exit) && noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, action_type, sentry_entry_type, std::decay_t<SentryExit>> //
 			{
 				return {.guard = std::move(guard), .action = std::move(action), .sentry_entry = std::move(sentry_entry), .sentry_exit = new_exit};
 			}
 
 			template<typename SentryExit>
-			[[nodiscard]] constexpr auto on_exit(SentryExit&& new_exit) && noexcept -> transition<is_entry_point, from, to, event_type, guard_type, action_type, sentry_entry_type, std::decay_t<SentryExit>>//
+			[[nodiscard]] constexpr auto on_exit(SentryExit&& new_exit) && noexcept
+				-> transition<is_entry_point, from, to, event_type, guard_type, action_type, sentry_entry_type, std::decay_t<SentryExit>> //
 			{
-				return {.guard = std::move(guard), .action = std::move(action), .sentry_entry = std::move(sentry_entry), .sentry_exit = std::forward<SentryExit>(new_exit)};
+				return {
+						.guard = std::move(guard),
+						.action = std::move(action),
+						.sentry_entry = std::move(sentry_entry),
+						.sentry_exit = std::forward<SentryExit>(new_exit)
+				};
 			}
 
 			#if not defined(STATE_MACHINE_WORKAROUND_REQUIRED)
@@ -268,7 +395,7 @@ namespace gal::prometheus::infrastructure
 
 					if constexpr (to != state_continue)
 					{
-						if constexpr (not std::is_same_v<sentry_exit_type, ignore_type>)//
+						if constexpr (not std::is_same_v<sentry_exit_type, ignore_type>) //
 						{
 							state_machine_detail::invoke(sentry_exit, event, std::forward<Args>(args)...);
 						}
@@ -280,7 +407,7 @@ namespace gal::prometheus::infrastructure
 							const auto do_invoke = [&]<transition_t T>() noexcept
 							{
 								using to_transition_sentry_entry_type = typename T::sentry_entry_type;
-								if constexpr (not std::is_same_v<to_transition_sentry_entry_type, ignore_type>)//
+								if constexpr (not std::is_same_v<to_transition_sentry_entry_type, ignore_type>) //
 								{
 									auto& to_sentry_entry = state_machine.template get_transition<T>().sentry_entry;
 									state_machine_detail::invoke(to_sentry_entry, event, std::forward<Args>(args)...);
@@ -409,7 +536,7 @@ namespace gal::prometheus::infrastructure
 			using state_index_type = std::array<std::size_t, entry_point_list.size()>;
 
 			List<Transitions...> transitions_;
-			state_index_type     current_state_index_;
+			state_index_type current_state_index_;
 
 			[[nodiscard]] constexpr auto entry_index() noexcept -> state_index_type
 			{
@@ -434,7 +561,7 @@ namespace gal::prometheus::infrastructure
 
 			// friend ==> transition::operator()
 			template<std::size_t EntryIndex, typename State>
-			constexpr auto transform() noexcept -> void//
+			constexpr auto transform() noexcept -> void //
 			{
 				current_state_index_[EntryIndex] = state_list.template index_of<State>();
 			}
@@ -451,7 +578,7 @@ namespace gal::prometheus::infrastructure
 
 		public:
 			template<typename L>
-			constexpr explicit StateMachine(L&& transitions) noexcept// NOLINT(bugprone-forwarding-reference-overload)
+			constexpr explicit StateMachine(L&& transitions) noexcept // NOLINT(bugprone-forwarding-reference-overload)
 				: transitions_{std::forward<L>(transitions)},
 				  current_state_index_{entry_index()} {}
 
@@ -466,7 +593,7 @@ namespace gal::prometheus::infrastructure
 						[[maybe_unused]] constexpr auto state = meta::to_char_array<S>();
 						using state_type = std::decay_t<decltype(state)>;
 
-						if constexpr (not state_list.template any<state_type>())//
+						if constexpr (not state_list.template any<state_type>()) //
 						{
 							return false;
 						}
@@ -487,7 +614,7 @@ namespace gal::prometheus::infrastructure
 					{
 						using state_type = typename Transition::from_type;
 
-						if constexpr (not state_list.template any<state_type>())//
+						if constexpr (not state_list.template any<state_type>()) //
 						{
 							return false;
 						}
@@ -504,19 +631,24 @@ namespace gal::prometheus::infrastructure
 			{
 				return [&]<std::size_t... EntriesIndex>(std::index_sequence<EntriesIndex...>) noexcept
 				{
-					const auto do_check_each_state = [&]<std::size_t EntryIndex, std::size_t... TransitionsIndex>(std::index_sequence<TransitionsIndex...>) noexcept
+					const auto do_check_each_state =
+							[&]<std::size_t EntryIndex, std::size_t... TransitionsIndex>(std::index_sequence<TransitionsIndex...>) noexcept
 					{
 						const auto do_check_each_transition = [&]<std::size_t TransitionIndex>() noexcept
 						{
 							using this_transition_type = typename TransitionsOfEvent::template nth_type<TransitionIndex>;
 							using this_transition_from_type = typename this_transition_type::from_type;
 
-							constexpr auto this_transition_from       = this_transition_type::from;
+							constexpr auto this_transition_from = this_transition_type::from;
 							constexpr auto this_transition_from_index = state_list.template index_of<this_transition_from_type>();
 
-							if ((this_transition_from == state_any) or (this_transition_from_index == current_state_index_[EntryIndex]))//
+							if ((this_transition_from == state_any) or (this_transition_from_index == current_state_index_[EntryIndex])) //
 							{
-								return get_transition<this_transition_type>().template operator()<EntryIndex>(*this, event, std::forward<Args>(args)...);
+								return get_transition<this_transition_type>().template operator()<EntryIndex>(
+										*this,
+										event,
+										std::forward<Args>(args)...
+										);
 							}
 
 							return false;
@@ -526,7 +658,10 @@ namespace gal::prometheus::infrastructure
 					};
 
 					#if not defined(GAL_PROMETHEUS_COMPILER_GNU)
-					return (do_check_each_state.template operator()<EntriesIndex>(std::make_index_sequence<transitions_of_event<EventType>.size()>{}) or ...);
+					return (
+						do_check_each_state.template operator()<EntriesIndex>(std::make_index_sequence<transitions_of_event<EventType>.size()>{})
+						or ...
+					);
 					#else
 					return (do_check_each_state.template operator()<EntriesIndex>(std::make_index_sequence<transitions_type_of_event<EventType>::types_size>{}) or ...);
 					#endif
@@ -535,10 +670,11 @@ namespace gal::prometheus::infrastructure
 		};
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	template<meta::basic_fixed_string State>
-	[[nodiscard]] constexpr auto operator""_s() noexcept -> state_machine_detail::transition<false, meta::to_char_array<State>(), state_machine_detail::state_continue> { return {}; }
+	[[nodiscard]] constexpr auto operator""_s() noexcept
+		-> state_machine_detail::transition<false, meta::to_char_array<State>(), state_machine_detail::state_continue> { return {}; }
 
 	// note: `any_state` will only change the state of the first entry_point when an event is processed.
 	// transition_list{
@@ -571,14 +707,14 @@ namespace gal::prometheus::infrastructure
 		requires std::is_invocable_v<Invocable> and state_machine_detail::is_transition_list_v<decltype(std::declval<Invocable>()())>
 	struct state_machine final : state_machine_detail::StateMachine<decltype(std::declval<Invocable>()())>
 	{
-		constexpr explicit(false) state_machine(Invocable function) noexcept// NOLINT(*-explicit-constructor)
+		constexpr explicit(false) state_machine(Invocable function) noexcept // NOLINT(*-explicit-constructor)
 			: state_machine_detail::StateMachine<decltype(std::declval<Invocable>()())>{function()} {}
 	};
 
 	template<typename Invocable>
 	state_machine(Invocable) -> state_machine<Invocable>;
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
 #undef STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE
