@@ -26,12 +26,13 @@ import :enum_name;
 
 namespace gal::prometheus::meta
 {
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	template<
 		std::ranges::output_range<char> StringType = std::basic_string<char>,
 		bool ContainsTypeName = true,
-		typename T>
+		typename T
+	>
 		requires std::ranges::contiguous_range<StringType>
 	constexpr auto to_string(const T& t, StringType& out) noexcept -> void
 	{
@@ -56,7 +57,7 @@ namespace gal::prometheus::meta
 			else if constexpr (requires { out.emplace_back(StringType{t}); }) { out.emplace_back(StringType{t}); }
 			else if constexpr (requires { out.push_back(StringType{t}); }) { out.push_back(StringType{t}); }
 			else if constexpr (requires { out += StringType{t}; }) { out += StringType{t}; }
-			else { GAL_PROMETHEUS_STATIC_UNREACHABLE("not appendable."); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("not appendable."); }
 		}
 		// member function
 		else if constexpr (requires { t.to_string(); })
@@ -125,12 +126,12 @@ namespace gal::prometheus::meta
 			out.back() = '}';
 		}
 		// enum
-		else if constexpr (std::is_enum_v<type>)//
+		else if constexpr (std::is_enum_v<type>) //
 		{
 			std::format_to(std::back_inserter(out), "{}", meta::name_of(t));
 		}
 		// any
-		else//
+		else //
 		{
 			std::format_to(std::back_inserter(out), "{}(?)", meta::name_of<type>());
 		}
@@ -148,5 +149,5 @@ namespace gal::prometheus::meta
 		return out;
 	}
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
