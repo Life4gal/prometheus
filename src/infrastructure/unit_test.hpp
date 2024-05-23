@@ -1179,14 +1179,17 @@ namespace gal::prometheus::unit_test
 					auto& this_test = current_test_result_->children.emplace_back(std::move(t));
 					current_test_result_ = std::addressof(this_test);
 
-					std::format_to(
-							std::back_inserter(current_suite_result_->report_string),
-							"{:{}}Running nested test {}{}{}...\n",
-							" ",
-							ident_size_of_current_test<IdentType::TEST>(),
-							config_->color.test,
-							fullname_of_current_test(),
-							config_->color.none);
+					if (std::to_underlying(config_->output_level) > std::to_underlying(OutputLevel::NONE))
+					{
+						std::format_to(
+								std::back_inserter(current_suite_result_->report_string),
+								"{:{}}Running nested test {}{}{}...\n",
+								" ",
+								ident_size_of_current_test<IdentType::TEST>(),
+								config_->color.test,
+								fullname_of_current_test(),
+								config_->color.none);
+					}
 				}
 				else
 				{
@@ -1194,14 +1197,17 @@ namespace gal::prometheus::unit_test
 					auto& this_test = current_suite_result_->test_results.emplace_back(std::move(t));
 					current_test_result_ = std::addressof(this_test);
 
-					std::format_to(
-							std::back_inserter(current_suite_result_->report_string),
-							"{:{}}Running test {}{}{}...\n",
-							" ",
-							ident_size_of_current_test<IdentType::TEST>(),
-							config_->color.test,
-							fullname_of_current_test(),
-							config_->color.none);
+					if (std::to_underlying(config_->output_level) > std::to_underlying(OutputLevel::NONE))
+					{
+						std::format_to(
+								std::back_inserter(current_suite_result_->report_string),
+								"{:{}}Running test {}{}{}...\n",
+								" ",
+								ident_size_of_current_test<IdentType::TEST>(),
+								config_->color.test,
+								fullname_of_current_test(),
+								config_->color.none);
+					}
 				}
 			}
 
@@ -1263,43 +1269,49 @@ namespace gal::prometheus::unit_test
 
 				total_fails_exclude_current_test_ += current_test_result_->total_assertions_failed;
 
-				if (const auto status = current_test_result_->status;
-					status == test_result_type::Status::PASSED or status == test_result_type::Status::FAILED)
-				[[likely]]
+				if (std::to_underlying(config_->output_level) > std::to_underlying(OutputLevel::NONE))
 				{
-					std::format_to(
-							std::back_inserter(current_suite_result_->report_string),
-							"{:{}}{}{}{} after {} milliseconds.\n",
-							"",
-							ident_size_of_current_test<IdentType::TEST>(),
-							status == test_result_type::Status::PASSED ? config_->color.pass : config_->color.fail,
-							status == test_result_type::Status::PASSED ? "PASSED" : "FAILED",
-							config_->color.none,
-							ms_duration_of_current_test());
+					if (const auto status = current_test_result_->status;
+						status == test_result_type::Status::PASSED or status == test_result_type::Status::FAILED)
+					[[likely]]
+					{
+						std::format_to(
+								std::back_inserter(current_suite_result_->report_string),
+								"{:{}}{}{}{} after {} milliseconds.\n",
+								"",
+								ident_size_of_current_test<IdentType::TEST>(),
+								status == test_result_type::Status::PASSED ? config_->color.pass : config_->color.fail,
+								status == test_result_type::Status::PASSED ? "PASSED" : "FAILED",
+								config_->color.none,
+								ms_duration_of_current_test()
+								);
+					}
+					else if (status == test_result_type::Status::SKIPPED)
+					[[unlikely]]
+					{
+						std::format_to(
+								std::back_inserter(current_suite_result_->report_string),
+								"{:{}}{}SKIPPED{}\n",
+								"",
+								ident_size_of_current_test<IdentType::TEST>(),
+								config_->color.skip,
+								config_->color.none
+								);
+					}
+					else if (status == test_result_type::Status::FATAL)
+					[[unlikely]]
+					{
+						std::format_to(
+								std::back_inserter(current_suite_result_->report_string),
+								"{:{}}{}INTERRUPTED{}\n",
+								"",
+								ident_size_of_current_test<IdentType::TEST>(),
+								config_->color.skip,
+								config_->color.none
+								);
+					}
+					else { std::unreachable(); }
 				}
-				else if (status == test_result_type::Status::SKIPPED)
-				[[unlikely]]
-				{
-					std::format_to(
-							std::back_inserter(current_suite_result_->report_string),
-							"{:{}}{}SKIPPED{}\n",
-							"",
-							ident_size_of_current_test<IdentType::TEST>(),
-							config_->color.skip,
-							config_->color.none);
-				}
-				else if (status == test_result_type::Status::FATAL)
-				[[unlikely]]
-				{
-					std::format_to(
-							std::back_inserter(current_suite_result_->report_string),
-							"{:{}}{}INTERRUPTED{}\n",
-							"",
-							ident_size_of_current_test<IdentType::TEST>(),
-							config_->color.skip,
-							config_->color.none);
-				}
-				else { std::unreachable(); }
 
 				current_test_result_ = current_test_result_->parent;
 			}
@@ -4359,8 +4371,10 @@ namespace gal::prometheus::unit_test
 		public:
 			template<typename Expression>
 				requires(is_expression_v<Expression> or detail::is_dispatched_expression_v<Expression>)
-			constexpr auto operator()(Expression&& expression,
-			                          const std::source_location& location = std::source_location::current()) const noexcept -> expect_result
+			constexpr auto operator()(
+					Expression&& expression,
+					const std::source_location& location = std::source_location::current()
+					) const noexcept -> expect_result
 			{
 				if constexpr (detail::is_dispatched_expression_v<Expression>)
 				{
