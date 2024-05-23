@@ -26,23 +26,25 @@ import gal.prometheus.functional;
 
 namespace gal::prometheus::memory
 {
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	template<typename T, typename In>
-		requires std::is_arithmetic_v<T> and (functional::type_list<char, const char, signed char, const signed char, unsigned char, const unsigned char, std::byte, const std::byte>.any<In>())
+		requires std::is_arithmetic_v<T> and
+		         (functional::type_list<
+			         char, const char, signed char, const signed char, unsigned char, const unsigned char, std::byte, const std::byte>.any<In>())
 	[[nodiscard]] constexpr auto unaligned_load(const In* source) noexcept -> T
 	{
 		GAL_PROMETHEUS_DEBUG_NOT_NULL(source, "Cannot unaligned_load from null!");
 
 		T result{};
 
-		GAL_PROMETHEUS_IF_NOT_CONSTANT_EVALUATED
+		GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED
 		{
 			std::memcpy(&result, source, sizeof(T));
 			return result;
 		}
 
-		if constexpr (std::endian::native == std::endian::little)// NOLINT
+		if constexpr (std::endian::native == std::endian::little) // NOLINT
 		{
 			for (auto i = sizeof(T); i != 0; --i)
 			{
@@ -67,7 +69,8 @@ namespace gal::prometheus::memory
 	[[nodiscard]] constexpr auto unaligned_load(const void* source) noexcept -> T { return unaligned_load<T>(static_cast<const std::byte*>(source)); }
 
 	template<typename T, typename Out>
-		requires std::is_arithmetic_v<T> and (functional::type_list<char, const char, signed char, const signed char, unsigned char, const unsigned char, std::byte, const std::byte>.any<Out>())
+		requires std::is_arithmetic_v<T> and (functional::type_list<
+			         char, const char, signed char, const signed char, unsigned char, const unsigned char, std::byte, const std::byte>.any<Out>())
 	constexpr auto unaligned_store(const T value, Out* dest) noexcept -> void
 	{
 		GAL_PROMETHEUS_DEBUG_NOT_NULL(dest, "Cannot unaligned_store from null!");
@@ -76,13 +79,13 @@ namespace gal::prometheus::memory
 
 		const auto unsigned_value = static_cast<unsigned_type>(value);
 
-		GAL_PROMETHEUS_IF_NOT_CONSTANT_EVALUATED
+		GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED
 		{
 			std::memcpy(dest, &unsigned_value, sizeof(T));
 			return;
 		}
 
-		if constexpr (std::endian::native == std::endian::little)// NOLINT
+		if constexpr (std::endian::native == std::endian::little) // NOLINT
 		{
 			for (auto i = 0; i != sizeof(T); ++i)
 			{
@@ -104,5 +107,5 @@ namespace gal::prometheus::memory
 		requires std::is_arithmetic_v<T>
 	constexpr auto unaligned_store(const T value, void* dest) noexcept -> void { unaligned_load<T>(value, static_cast<std::byte*>(dest)); }
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
-}// namespace gal::prometheus::memory
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+} // namespace gal::prometheus::memory
