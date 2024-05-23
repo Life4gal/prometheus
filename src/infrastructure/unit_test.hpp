@@ -1028,25 +1028,32 @@ namespace gal::prometheus::unit_test
 
 			std::size_t total_fails_exclude_current_test_;
 
+			enum class IdentType
+			{
+				TEST,
+				ASSERTION,
+			};
+
+			template<IdentType Type>
 			[[nodiscard]] auto nested_level_of_current_test() const noexcept -> std::size_t
 			{
 				GAL_PROMETHEUS_DEBUG_ASSUME(not current_suite_result_->test_results.empty());
 
-				std::size_t result = 0;
-
-				const auto* p = std::addressof(current_suite_result_->test_results.back());
-				while (p != nullptr)
+				if constexpr (Type == IdentType::ASSERTION) { GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_); }
+				else
 				{
-					result += 1;
-
-					p = p->children.empty() ? nullptr : std::addressof(p->children.back());
+					// top level
+					if (current_test_result_ == nullptr) { return 1; }
 				}
 
-				result -= 1;
-				return result;
+				std::size_t result = 0;
+				for (const auto* p = current_test_result_; p != nullptr; p = p->parent) { result += 1; }
+
+				return result + (Type == IdentType::ASSERTION);
 			}
 
-			[[nodiscard]] auto ident_size_of_current_test() const noexcept -> std::size_t { return nested_level_of_current_test() * 4; }
+			template<IdentType Type>
+			[[nodiscard]] auto ident_size_of_current_test() const noexcept -> std::size_t { return nested_level_of_current_test<Type>() * 4; }
 
 			// [suite_name] test1.test2.test3
 			[[nodiscard]] auto fullname_of_current_test() const noexcept -> std::string
@@ -1176,7 +1183,7 @@ namespace gal::prometheus::unit_test
 							std::back_inserter(current_suite_result_->report_string),
 							"{:{}}Running nested test {}{}{}...\n",
 							" ",
-							ident_size_of_current_test(),
+							ident_size_of_current_test<IdentType::TEST>(),
 							config_->color.test,
 							fullname_of_current_test(),
 							config_->color.none);
@@ -1189,7 +1196,9 @@ namespace gal::prometheus::unit_test
 
 					std::format_to(
 							std::back_inserter(current_suite_result_->report_string),
-							"Running test {}{}{}...\n",
+							"{:{}}Running test {}{}{}...\n",
+							" ",
+							ident_size_of_current_test<IdentType::TEST>(),
 							config_->color.test,
 							fullname_of_current_test(),
 							config_->color.none);
@@ -1220,7 +1229,8 @@ namespace gal::prometheus::unit_test
 							std::format(
 									"can not pop test because `{}` differs from `{}`",
 									current_test_result_->name,
-									test_end.name)};
+									test_end.name)
+					};
 				}
 
 				current_test_result_->time_end = clock_type::now();
@@ -1228,15 +1238,26 @@ namespace gal::prometheus::unit_test
 				if (current_test_result_->status == test_result_type::Status::PENDING)
 				[[likely]]
 				{
-					if (current_test_result_->total_assertions_failed != 0) //
+					// the current test is considered SKIPPED only if it does not have any assertions and has no children.
+					if (current_test_result_->total_assertions_failed == 0 and current_test_result_->total_assertions_passed == 0)
 					{
-						current_test_result_->status = test_result_type::Status::FAILED;
+						if (current_test_result_->children.empty()) { current_test_result_->status = test_result_type::Status::SKIPPED; }
+						else
+						{
+							current_test_result_->status =
+									std::ranges::all_of(
+											current_test_result_->children,
+											[](const auto& child_test) noexcept { return child_test.total_assertions_failed == 0; }
+											)
+										? test_result_type::Status::PASSED
+										: test_result_type::Status::FAILED;
+						}
 					}
-					else //
+					else
 					{
-						current_test_result_->status = current_test_result_->total_assertions_passed != 0
+						current_test_result_->status = current_test_result_->total_assertions_failed == 0
 							                               ? test_result_type::Status::PASSED
-							                               : test_result_type::Status::SKIPPED;
+							                               : test_result_type::Status::FAILED;
 					}
 				}
 
@@ -1250,8 +1271,8 @@ namespace gal::prometheus::unit_test
 							std::back_inserter(current_suite_result_->report_string),
 							"{:{}}{}{}{} after {} milliseconds.\n",
 							"",
-							ident_size_of_current_test(),
-							config_->color.pass,
+							ident_size_of_current_test<IdentType::TEST>(),
+							status == test_result_type::Status::PASSED ? config_->color.pass : config_->color.fail,
 							status == test_result_type::Status::PASSED ? "PASSED" : "FAILED",
 							config_->color.none,
 							ms_duration_of_current_test());
@@ -1263,7 +1284,7 @@ namespace gal::prometheus::unit_test
 							std::back_inserter(current_suite_result_->report_string),
 							"{:{}}{}SKIPPED{}\n",
 							"",
-							ident_size_of_current_test(),
+							ident_size_of_current_test<IdentType::TEST>(),
 							config_->color.skip,
 							config_->color.none);
 				}
@@ -1274,7 +1295,7 @@ namespace gal::prometheus::unit_test
 							std::back_inserter(current_suite_result_->report_string),
 							"{:{}}{}INTERRUPTED{}\n",
 							"",
-							ident_size_of_current_test(),
+							ident_size_of_current_test<IdentType::TEST>(),
 							config_->color.skip,
 							config_->color.none);
 				}
@@ -1306,7 +1327,7 @@ namespace gal::prometheus::unit_test
 								std::back_inserter(current_suite_result_->report_string),
 								"{:{}}[{}:{}] {}[{}]{} - {}PASSED{} \n",
 								" ",
-								ident_size_of_current_test(),
+								ident_size_of_current_test<IdentType::ASSERTION>(),
 								assertion_pass.location.file_name(),
 								assertion_pass.location.line(),
 								config_->color.expression,
@@ -1321,7 +1342,7 @@ namespace gal::prometheus::unit_test
 								std::back_inserter(current_suite_result_->report_string),
 								"{:{}} {}[{}]{} - {}PASSED{} \n",
 								" ",
-								ident_size_of_current_test(),
+								ident_size_of_current_test<IdentType::ASSERTION>(),
 								config_->color.expression,
 								meta::to_string<std::string, not prefer_no_type_name>(assertion_pass.expression),
 								config_->color.none,
@@ -1352,7 +1373,7 @@ namespace gal::prometheus::unit_test
 								std::back_inserter(current_suite_result_->report_string),
 								"{:{}}[{}:{}] {}[{}]{} - {}FAILED{} \n",
 								" ",
-								ident_size_of_current_test(),
+								ident_size_of_current_test<IdentType::ASSERTION>(),
 								assertion_fail.location.file_name(),
 								assertion_fail.location.line(),
 								config_->color.expression,
@@ -1367,7 +1388,7 @@ namespace gal::prometheus::unit_test
 								std::back_inserter(current_suite_result_->report_string),
 								"{:{}} {}[{}]{} - {}FAILED{} \n",
 								" ",
-								ident_size_of_current_test(),
+								ident_size_of_current_test<IdentType::ASSERTION>(),
 								config_->color.expression,
 								meta::to_string<std::string, not prefer_no_type_name>(assertion_fail.expression),
 								config_->color.none,
@@ -1394,7 +1415,8 @@ namespace gal::prometheus::unit_test
 							std::back_inserter(current_suite_result_->report_string),
 							"{:{}}^^^ {}FATAL ERROR{}\n",
 							" ",
-							ident_size_of_current_test() + (
+							ident_size_of_current_test<IdentType::ASSERTION>() +
+							(
 								// '['
 								1 +
 								// file_name
@@ -1443,7 +1465,7 @@ namespace gal::prometheus::unit_test
 								std::back_inserter(current_suite_result_->report_string),
 								"{:{}}[{}:{}] {}[{}]{} - {}SKIPPED{} \n",
 								" ",
-								ident_size_of_current_test(),
+								ident_size_of_current_test<IdentType::ASSERTION>(),
 								assertion_fatal_skip.location.file_name(),
 								assertion_fatal_skip.location.line(),
 								config_->color.expression,
@@ -1458,7 +1480,7 @@ namespace gal::prometheus::unit_test
 								std::back_inserter(current_suite_result_->report_string),
 								"{:{}} {}[{}]{} - {}SKIPPED{} \n",
 								" ",
-								ident_size_of_current_test(),
+								ident_size_of_current_test<IdentType::ASSERTION>(),
 								config_->color.expression,
 								meta::to_string<std::string, not prefer_no_type_name>(assertion_fatal_skip.expression),
 								config_->color.none,
