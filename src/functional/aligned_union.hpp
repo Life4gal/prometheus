@@ -27,7 +27,7 @@ import :functor;
 
 namespace gal::prometheus::functional
 {
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	template<typename... Ts>
 	class AlignedUnion final
@@ -35,7 +35,7 @@ namespace gal::prometheus::functional
 	public:
 		constexpr static auto type_list = functional::type_list<Ts...>;
 
-		constexpr static auto max_size      = functor::max(sizeof(Ts)...);
+		constexpr static auto max_size = functor::max(sizeof(Ts)...);
 		constexpr static auto max_alignment = functor::max(alignof(Ts)...);
 
 		template<typename T>
@@ -50,21 +50,24 @@ namespace gal::prometheus::functional
 
 		template<typename T, typename... Args>
 			requires std::is_constructible_v<T, Args...>
-		constexpr explicit AlignedUnion(constructor_tag<T>, Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) { this->template store<T>(std::forward<Args>(args)...); }
+		constexpr explicit AlignedUnion(constructor_tag<T>, Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>)
+		{
+			this->template store<T>(std::forward<Args>(args)...);
+		}
 
-		constexpr AlignedUnion(const AlignedUnion&) noexcept((std::is_nothrow_copy_constructible_v<Ts> && ...))//
+		constexpr AlignedUnion(const AlignedUnion&) noexcept((std::is_nothrow_copy_constructible_v<Ts> && ...)) //
 			requires(std::is_copy_constructible_v<Ts> && ...)
 		= default;
-		constexpr auto operator=(const AlignedUnion&) noexcept((std::is_nothrow_copy_assignable_v<Ts> && ...)) -> AlignedUnion&//
+		constexpr auto operator=(const AlignedUnion&) noexcept((std::is_nothrow_copy_assignable_v<Ts> && ...)) -> AlignedUnion& //
 			requires(std::is_copy_assignable_v<Ts> && ...)
 		= default;
 		// constexpr      AlignedUnion(const AlignedUnion&)               = delete;
 		// constexpr auto operator=(const AlignedUnion&) -> AlignedUnion& = delete;
 
-		constexpr AlignedUnion(AlignedUnion&&) noexcept((std::is_nothrow_move_constructible_v<Ts> && ...))//
+		constexpr AlignedUnion(AlignedUnion&&) noexcept((std::is_nothrow_move_constructible_v<Ts> && ...)) //
 			requires(std::is_move_constructible_v<Ts> && ...)
 		= default;
-		constexpr auto operator=(AlignedUnion&&) noexcept((std::is_nothrow_move_assignable_v<Ts> && ...)) -> AlignedUnion&//
+		constexpr auto operator=(AlignedUnion&&) noexcept((std::is_nothrow_move_assignable_v<Ts> && ...)) -> AlignedUnion& //
 			requires(std::is_move_assignable_v<Ts> && ...)
 		= default;
 		// constexpr      AlignedUnion(AlignedUnion&&)               = delete;
@@ -74,7 +77,10 @@ namespace gal::prometheus::functional
 
 		template<typename T, typename... Args>
 			requires(type_list.template any<T>()) and std::is_constructible_v<T, Args...>
-		constexpr auto store(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) { std::construct_at(reinterpret_cast<T*>(&data_), std::forward<Args>(args)...); }
+		constexpr auto store(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>)
+		{
+			std::construct_at(reinterpret_cast<T*>(&data_), std::forward<Args>(args)...);
+		}
 
 		// Note: If the type saved by AlignedUnion has a non-trivial destructor but no destroy is called, leaving AlignedUnion to destruct or calling store (if it already has a value) will be undefined behavior! (maybe memory or resource leak)
 		template<typename T>
@@ -83,7 +89,8 @@ namespace gal::prometheus::functional
 
 		template<typename New, typename Old, typename... Args>
 			requires(type_list.template any<New>()) and (type_list.template any<Old>()) and std::is_constructible_v<New, Args...>
-		constexpr auto exchange(Args&&... args) noexcept(std::is_nothrow_constructible_v<New, Args...> and std::is_nothrow_move_constructible_v<Old>) -> Old
+		constexpr auto exchange(Args&&... args)
+			noexcept(std::is_nothrow_constructible_v<New, Args...> and std::is_nothrow_move_constructible_v<Old>) -> Old
 		{
 			auto&& old = std::move(this->template load<Old>());
 			this->template store<New>(std::forward<Args>(args)...);
@@ -110,12 +117,12 @@ namespace gal::prometheus::functional
 		// fixme: remove it?
 		[[nodiscard]] constexpr auto operator==(const AlignedUnion& other) const noexcept -> bool
 		{
-			GAL_PROMETHEUS_DISABLE_WARNING_PUSH
-			GAL_PROMETHEUS_DISABLE_WARNING_CLANG(-Wundefined-reinterpret-cast)
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_CLANG(-Wundefined-reinterpret-cast)
 
 			return *reinterpret_cast<const void* const*>(&data_) == *reinterpret_cast<const void* const*>(&other.data_);
 
-			GAL_PROMETHEUS_DISABLE_WARNING_POP
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
 		}
 
 		template<typename T>
@@ -132,12 +139,14 @@ namespace gal::prometheus::functional
 
 		template<typename T>
 			requires(type_list.template any<T>())
-		[[nodiscard]] constexpr auto equal(const AlignedUnion& other) const noexcept(noexcept(std::declval<const T&>() == std::declval<const T&>())) -> bool { return load<T>() == other.template load<T>(); }
+		[[nodiscard]] constexpr auto equal(const AlignedUnion& other) const
+			noexcept(noexcept(std::declval<const T&>() == std::declval<const T&>())) -> bool { return load<T>() == other.template load<T>(); }
 
 		template<typename T>
 			requires(type_list.template any<T>())
-		[[nodiscard]] constexpr auto equal(const T& other) const noexcept(noexcept(std::declval<const T&>() == std::declval<const T&>())) -> bool { return load<T>() == other; }
+		[[nodiscard]] constexpr auto equal(const T& other) const
+			noexcept(noexcept(std::declval<const T&>() == std::declval<const T&>())) -> bool { return load<T>() == other; }
 	};
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
