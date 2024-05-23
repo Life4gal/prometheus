@@ -21,7 +21,6 @@ import gal.prometheus.string;
 import gal.prometheus.meta;
 
 #else
-#include <print>
 #include <iostream>
 #include <chrono>
 #include <source_location>
@@ -34,33 +33,27 @@ import gal.prometheus.meta;
 #include <meta/meta.hpp>
 #endif
 
-#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-#define GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE __declspec(empty_bases)
-#else
-	#define GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE
-#endif
-
 namespace gal::prometheus::unit_test
 {
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	struct color_type
 	{
 		std::string_view none = "\033[0m";
 
-		std::string_view fail  = "\033[31m\033[7m";
-		std::string_view pass  = "\033[32m\033[7m";
-		std::string_view skip  = "\033[33m\033[7m";
+		std::string_view fail = "\033[31m\033[7m";
+		std::string_view pass = "\033[32m\033[7m";
+		std::string_view skip = "\033[33m\033[7m";
 		std::string_view fatal = "\033[35m\033[7m";
 
-		std::string_view suite      = "\033[34m\033[7m";
-		std::string_view test       = "\033[36m\033[7m";
+		std::string_view suite = "\033[34m\033[7m";
+		std::string_view test = "\033[36m\033[7m";
 		std::string_view expression = "\033[38;5;207m\033[7m";
-		std::string_view message    = "\033[38;5;27m\033[7m";
+		std::string_view message = "\033[38;5;27m\033[7m";
 	};
 
-	using clock_type           = std::chrono::high_resolution_clock;
-	using time_point_type      = clock_type::time_point;
+	using clock_type = std::chrono::high_resolution_clock;
+	using time_point_type = clock_type::time_point;
 	using time_difference_type = std::chrono::milliseconds;
 
 	struct test_result_type;
@@ -83,11 +76,11 @@ namespace gal::prometheus::unit_test
 		test_result_type* parent;
 		test_results_type children;
 
-		Status          status;
+		Status status;
 		time_point_type time_start;
 		time_point_type time_end;
-		std::size_t     total_assertions_passed;
-		std::size_t     total_assertions_failed;
+		std::size_t total_assertions_passed;
+		std::size_t total_assertions_failed;
 	};
 
 	constexpr static std::string_view anonymous_suite_name{"anonymous_suite"};
@@ -148,8 +141,8 @@ namespace gal::prometheus::unit_test
 
 	struct config
 	{
-		using name_type       = std::string_view;
-		using category_type   = std::string_view;
+		using name_type = std::string_view;
+		using category_type = std::string_view;
 		using categories_type = std::vector<category_type>;
 
 		color_type color;
@@ -160,13 +153,13 @@ namespace gal::prometheus::unit_test
 		std::size_t abort_after_n_failures = std::numeric_limits<std::size_t>::max();
 
 		OutputLevel output_level = OutputLevel::INCLUDE_EXPRESSION_LOCATION;
-		bool        dry_run      = false;
+		bool dry_run = false;
 
 		// how to terminate the program
 		std::function<void()> terminator =
 				[]() -> void
 		{
-			std::exit(-1);// NOLINT(concurrency-mt-unsafe)
+			std::exit(-1); // NOLINT(concurrency-mt-unsafe)
 		};
 
 		std::function<void(std::string_view)> message_reporter =
@@ -190,7 +183,7 @@ namespace gal::prometheus::unit_test
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(terminator);
 
 			terminator();
-			std::exit(-1);// NOLINT(concurrency-mt-unsafe)
+			std::exit(-1); // NOLINT(concurrency-mt-unsafe)
 		}
 
 		auto report_message(const std::string_view message) const noexcept -> void
@@ -200,18 +193,18 @@ namespace gal::prometheus::unit_test
 			message_reporter(message);
 		}
 
-		[[nodiscard]] auto is_suite_execute_required(const name_type suite_name) const noexcept -> bool//
+		[[nodiscard]] auto is_suite_execute_required(const name_type suite_name) const noexcept -> bool //
 		{
 			return filter_execute_suite_name(suite_name);
 		}
 
-		[[nodiscard]] auto is_test_execute_required(const name_type test_name, const categories_type& categories) const noexcept -> bool//
+		[[nodiscard]] auto is_test_execute_required(const name_type test_name, const categories_type& categories) const noexcept -> bool //
 		{
 			return filter_execute_test_name(test_name) and filter_execute_test_categories(categories);
 		}
 	};
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	template<typename Expression>
 	struct is_expression
@@ -219,7 +212,8 @@ namespace gal::prometheus::unit_test
 				// implicit
 				std::is_convertible_v<Expression, bool> or
 				// explicit
-				std::is_constructible_v<bool, Expression>> {};
+				std::is_constructible_v<bool, Expression>
+			> {};
 
 	template<typename Expression>
 	constexpr auto is_expression_v = is_expression<Expression>::value;
@@ -243,24 +237,24 @@ namespace gal::prometheus::unit_test
 		// SUITE
 		// =========================================
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventSuiteBegin : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventSuiteBegin : public Event
 		{
 		public:
 			name_type name;
 		};
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventSuiteEnd : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventSuiteEnd : public Event
 		{
 		public:
 			name_type name;
 		};
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventSuite : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventSuite : public Event
 		{
 		public:
 			using suite_type = void (*)();
 
-			name_type  name;
+			name_type name;
 			suite_type suite;
 
 			constexpr auto operator()() -> void { std::invoke(suite); }
@@ -281,19 +275,19 @@ namespace gal::prometheus::unit_test
 		// TEST
 		// =========================================
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventTestBegin : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventTestBegin : public Event
 		{
 		public:
 			name_type name;
 		};
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventTestSkip : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventTestSkip : public Event
 		{
 		public:
 			name_type name;
 		};
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventTestEnd : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventTestEnd : public Event
 		{
 		public:
 			name_type name;
@@ -301,26 +295,29 @@ namespace gal::prometheus::unit_test
 
 		template<typename InvocableType, typename Arg = none>
 			requires std::is_invocable_v<InvocableType> or std::is_invocable_v<InvocableType, Arg>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventTest : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventTest : public Event
 		{
 		public:
 			using invocable_type = InvocableType;
-			using arg_type       = Arg;
+			using arg_type = Arg;
 
-			name_type               name;
+			name_type name;
 			config::categories_type categories;
 
 			mutable invocable_type invocable;
-			mutable arg_type       arg;
+			mutable arg_type arg;
 
 			constexpr auto operator()() const -> void
 			{
 				return []<typename I, typename A>(I&& i, A&& a) -> void
 				{
 					if constexpr (requires { std::invoke(std::forward<I>(i)); }) { std::invoke(std::forward<I>(i)); }
-					else if constexpr (requires { std::invoke(std::forward<I>(i), std::forward<A>(a)); }) { std::invoke(std::forward<I>(i), std::forward<A>(a)); }
+					else if constexpr (requires { std::invoke(std::forward<I>(i), std::forward<A>(a)); })
+					{
+						std::invoke(std::forward<I>(i), std::forward<A>(a));
+					}
 					else if constexpr (requires { std::invoke(i.template operator()<A>()); }) { std::invoke(i.template operator()<A>()); }
-					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+					else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 				}(invocable, arg);
 			}
 
@@ -344,58 +341,67 @@ namespace gal::prometheus::unit_test
 		// =========================================
 
 		template<expression_t Expression>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventAssertionPass : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventAssertionPass : public Event
 		{
 		public:
 			using expression_type = Expression;
 
-			expression_type      expression;
+			expression_type expression;
 			std::source_location location;
 		};
 
 		template<expression_t Expression>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventAssertionFail : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventAssertionFail : public Event
 		{
 		public:
 			using expression_type = Expression;
 
-			expression_type      expression;
+			expression_type expression;
 			std::source_location location;
 		};
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventAssertionFatal : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventAssertionFatal : public Event
 		{
 		public:
-			std::source_location location;
-		};
-
-		template<expression_t Expression>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventAssertionFatalSkip : public Event
-		{
-		public:
-			using expression_type = Expression;
-
-			expression_type      expression;
 			std::source_location location;
 		};
 
 		template<expression_t Expression>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventAssertion : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventAssertionFatalSkip : public Event
 		{
 		public:
 			using expression_type = Expression;
 
-			expression_type      expression;
+			expression_type expression;
+			std::source_location location;
+		};
+
+		template<expression_t Expression>
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventAssertion : public Event
+		{
+		public:
+			using expression_type = Expression;
+
+			expression_type expression;
 			std::source_location location;
 
 		private:
-			[[nodiscard]] constexpr explicit operator EventAssertionPass<expression_type>() const noexcept { return {.expression = expression, .location = location}; }
+			[[nodiscard]] constexpr explicit operator EventAssertionPass<expression_type>() const noexcept
+			{
+				return {.expression = expression, .location = location};
+			}
 
-			[[nodiscard]] constexpr explicit operator EventAssertionFail<expression_type>() const noexcept { return {.expression = expression, .location = location}; }
+			[[nodiscard]] constexpr explicit operator EventAssertionFail<expression_type>() const noexcept
+			{
+				return {.expression = expression, .location = location};
+			}
 
 			[[nodiscard]] constexpr explicit operator EventAssertionFatal() const noexcept { return {.location = location}; }
 
-			[[nodiscard]] constexpr explicit operator EventAssertionFatalSkip<expression_type>() const noexcept { return {.expression = expression, .location = location}; }
+			[[nodiscard]] constexpr explicit operator EventAssertionFatalSkip<expression_type>() const noexcept
+			{
+				return {.expression = expression, .location = location};
+			}
 
 		public:
 			[[nodiscard]] constexpr auto pass() const noexcept -> EventAssertionPass<expression_type>
@@ -431,7 +437,7 @@ namespace gal::prometheus::unit_test
 		// EXCEPTION
 		// =========================================
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventException : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventException : public Event
 		{
 		public:
 			std::string_view message;
@@ -444,7 +450,7 @@ namespace gal::prometheus::unit_test
 		// =========================================
 
 		template<typename MessageType>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventLog : public Event
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventLog : public Event
 		{
 		public:
 			using message_type = MessageType;
@@ -472,16 +478,16 @@ namespace gal::prometheus::unit_test
 		// SUMMARY
 		// =========================================
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE EventSummary : public Event {};
-	}// namespace events
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventSummary : public Event {};
+	} // namespace events
 
 	namespace operands
 	{
 		template<typename T>
-		[[nodiscard]] constexpr auto wrap_abs(const T value) noexcept -> T//
+		[[nodiscard]] constexpr auto wrap_abs(const T value) noexcept -> T //
 			requires requires { std::abs(value); }
 		{
-			GAL_PROMETHEUS_IF_CONSTANT_EVALUATED { return value > 0 ? value : -value; }
+			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED { return value > 0 ? value : -value; }
 
 			return std::abs(value);
 		}
@@ -499,7 +505,7 @@ namespace gal::prometheus::unit_test
 		concept operand_t = is_operand_v<O>;
 
 		template<typename T>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE OperandValue : public Operand
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandValue : public Operand
 		{
 		public:
 			using value_type = T;
@@ -508,19 +514,19 @@ namespace gal::prometheus::unit_test
 			value_type value_;
 
 		public:
-			constexpr explicit(false) OperandValue(const value_type value)//
-				noexcept(std::is_nothrow_copy_constructible_v<value_type>)//
+			constexpr explicit(false) OperandValue(const value_type value) //
+				noexcept(std::is_nothrow_copy_constructible_v<value_type>) //
 				requires(std::is_trivially_copy_constructible_v<value_type>)
 				: value_{value} {}
 
-			constexpr explicit(false) OperandValue(const value_type& value)//
+			constexpr explicit(false) OperandValue(const value_type& value) //
 				noexcept(std::is_nothrow_copy_constructible_v<value_type>) //
 				requires(
 					not std::is_trivially_copy_constructible_v<value_type> and
 					std::is_copy_constructible_v<value_type>)
 				: value_{value} {}
 
-			constexpr explicit(false) OperandValue(value_type&& value) noexcept(std::is_nothrow_move_constructible_v<value_type>)//
+			constexpr explicit(false) OperandValue(value_type&& value) noexcept(std::is_nothrow_move_constructible_v<value_type>) //
 				requires(
 					not std::is_trivially_copy_constructible_v<value_type> and
 					std::is_move_constructible_v<value_type>)
@@ -528,29 +534,29 @@ namespace gal::prometheus::unit_test
 
 			template<typename U>
 				requires(std::is_trivially_constructible_v<value_type, U>)
-			constexpr explicit(false) OperandValue(const value_type value)//
-				noexcept(std::is_nothrow_constructible_v<value_type, U>)  //
+			constexpr explicit(false) OperandValue(const value_type value) //
+				noexcept(std::is_nothrow_constructible_v<value_type, U>) //
 				: value_{value} {}
 
 			template<typename U>
 				requires(
 					not std::is_trivially_constructible_v<value_type, const U&> and
 					std::is_constructible_v<value_type, const U&>)
-			constexpr explicit(false) OperandValue(const U& value)             //
-				noexcept(std::is_nothrow_constructible_v<value_type, const U&>)//
+			constexpr explicit(false) OperandValue(const U& value) //
+				noexcept(std::is_nothrow_constructible_v<value_type, const U&>) //
 				: value_{value} {}
 
 			template<typename U>
 				requires(
 					not std::is_trivially_constructible_v<value_type, U&&> and
 					std::is_constructible_v<value_type, U&&>)
-			constexpr explicit(false) OperandValue(U&& value)//
+			constexpr explicit(false) OperandValue(U&& value) //
 				noexcept(std::is_nothrow_constructible_v<value_type, U&&>)
 				: value_{std::forward<U>(value)} {}
 
 			template<typename... Args>
 				requires((sizeof...(Args) != 1) and std::is_constructible_v<value_type, Args...>)
-			constexpr explicit OperandValue(Args&&... args)//
+			constexpr explicit OperandValue(Args&&... args) //
 				noexcept(std::is_nothrow_constructible_v<value_type, Args...>)
 				: value_{std::forward<Args>(args)...} {}
 
@@ -575,7 +581,7 @@ namespace gal::prometheus::unit_test
 		template<typename O>
 		concept operand_value_t = is_operand_value_v<O>;
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE OperandLiteral : public Operand {};
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandLiteral : public Operand {};
 
 		template<typename O>
 		constexpr auto is_operand_literal_v = std::is_base_of_v<OperandLiteral, O>;
@@ -583,7 +589,7 @@ namespace gal::prometheus::unit_test
 		concept operand_literal_t = is_operand_literal_v<O>;
 
 		template<char Value>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE OperandLiteralCharacter : public OperandLiteral
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandLiteralCharacter : public OperandLiteral
 		{
 		public:
 			using value_type = char;
@@ -605,14 +611,17 @@ namespace gal::prometheus::unit_test
 		concept operand_literal_character_t = is_operand_literal_character_v<O>;
 
 		template<std::integral auto Value>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE OperandLiteralIntegral : public OperandLiteral
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandLiteralIntegral : public OperandLiteral
 		{
 		public:
 			using value_type = std::remove_cvref_t<decltype(Value)>;
 
 			constexpr static value_type value = Value;
 
-			[[nodiscard]] constexpr auto operator-() const noexcept -> OperandLiteralIntegral<-static_cast<std::make_signed_t<value_type>>(value)> { return {}; }
+			[[nodiscard]] constexpr auto operator-() const noexcept -> OperandLiteralIntegral<-static_cast<std::make_signed_t<value_type>>(value)>
+			{
+				return {};
+			}
 
 			[[nodiscard]] constexpr static auto to_string() noexcept -> std::string { return meta::to_string(value); }
 		};
@@ -629,14 +638,14 @@ namespace gal::prometheus::unit_test
 		concept operand_literal_integral_t = is_operand_literal_integral_v<O>;
 
 		template<std::floating_point auto Value, std::size_t DenominatorSize>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE OperandLiteralFloatingPoint : public OperandLiteral
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandLiteralFloatingPoint : public OperandLiteral
 		{
 		public:
 			using value_type = std::remove_cvref_t<decltype(Value)>;
 
-			constexpr static value_type  value            = Value;
+			constexpr static value_type value = Value;
 			constexpr static std::size_t denominator_size = DenominatorSize;
-			constexpr static value_type  epsilon          = [](std::size_t n) noexcept -> value_type
+			constexpr static value_type epsilon = [](std::size_t n) noexcept -> value_type
 			{
 				auto epsilon = static_cast<value_type>(1);
 				while (n--) { epsilon /= static_cast<value_type>(10); }
@@ -660,7 +669,7 @@ namespace gal::prometheus::unit_test
 		concept operand_literal_floating_point_t = is_operand_literal_floating_point_v<O>;
 
 		template<char... Cs>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE OperandLiteralAuto : public OperandLiteral
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandLiteralAuto : public OperandLiteral
 		{
 		public:
 			constexpr static auto char_list = functional::char_list<Cs...>;
@@ -683,13 +692,15 @@ namespace gal::prometheus::unit_test
 			template<std::floating_point auto Value, std::size_t DenominatorSize>
 			struct rep<OperandLiteralFloatingPoint<Value, DenominatorSize>>
 			{
-				using type = OperandLiteralFloatingPoint<char_list.template to_floating_point<OperandLiteralFloatingPoint<Value, DenominatorSize>::value_type>, char_list.denominator_length()>;
+				using type = OperandLiteralFloatingPoint<char_list.template to_floating_point<OperandLiteralFloatingPoint<
+					                                         Value, DenominatorSize>::value_type>, char_list.denominator_length()>;
 			};
 
 			template<std::integral T>
 			struct rep<T>
 			{
-				using type = std::conditional_t<std::is_same_v<T, char>, OperandLiteralCharacter<char_list.template nth_value<0>()>, OperandLiteralIntegral<char_list.template to_integral<T>()>>;
+				using type = std::conditional_t<std::is_same_v<T, char>, OperandLiteralCharacter<char_list.template nth_value<0>()>,
+				                                OperandLiteralIntegral<char_list.template to_integral<T>()>>;
 			};
 
 			template<std::floating_point T>
@@ -713,7 +724,7 @@ namespace gal::prometheus::unit_test
 		template<typename O>
 		concept operand_literal_auto_t = is_operand_literal_auto_v<O>;
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE OperandIdentity : public Operand
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandIdentity : public Operand
 		{
 		public:
 			struct boolean
@@ -721,11 +732,11 @@ namespace gal::prometheus::unit_test
 				std::string_view message;
 			};
 
-			using value_type   = bool;
+			using value_type = bool;
 			using message_type = boolean;
 
 		private:
-			value_type   value_;
+			value_type value_;
 			message_type message_;
 
 		public:
@@ -756,7 +767,7 @@ namespace gal::prometheus::unit_test
 
 		template<ExpressionCategory Category, typename Left, typename Right, typename Epsilon = no_epsilon>
 			requires(not(is_operand_literal_auto_v<Left> and is_operand_literal_auto_v<Right>))
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE OperandExpression : public Operand
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandExpression : public Operand
 		{
 		public:
 			constexpr static auto category = Category;
@@ -767,15 +778,15 @@ namespace gal::prometheus::unit_test
 
 			// using left_type = std::conditional_t<is_operand_literal_auto_v<Left>, typename Left::template rebind<Right>, Left>;
 			// using right_type = std::conditional_t<is_operand_literal_auto_v<Right>, typename Right::template rebind<Left>, Right>;
-			using left_type    = Left;
-			using right_type   = Right;
+			using left_type = Left;
+			using right_type = Right;
 			using epsilon_type = Epsilon;
 
 		private:
-			left_type    left_;
-			right_type   right_;
+			left_type left_;
+			right_type right_;
 			epsilon_type epsilon_;
-			bool         result_;
+			bool result_;
 
 			[[nodiscard]] constexpr auto do_check() const noexcept -> bool
 			{
@@ -790,7 +801,7 @@ namespace gal::prometheus::unit_test
 					{
 						using std::operator-;
 						using std::operator<;
-						return operands::wrap_abs(left - right) < e;// NOLINT(clang-diagnostic-implicit-int-float-conversion)
+						return operands::wrap_abs(left - right) < e; // NOLINT(clang-diagnostic-implicit-int-float-conversion)
 					}
 					else if constexpr (category == ExpressionCategory::NOT_EQUAL)
 					{
@@ -825,14 +836,17 @@ namespace gal::prometheus::unit_test
 					}
 					else if constexpr (category == ExpressionCategory::LOGICAL_AND) { return static_cast<bool>(left) and static_cast<bool>(right); }
 					else if constexpr (category == ExpressionCategory::LOGICAL_OR) { return static_cast<bool>(left) or static_cast<bool>(right); }
-					else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+					else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 				};
 
-				if constexpr (requires { do_compare(left_type::value, right_type::value); }) { return do_compare(left_type::value, right_type::value); }
+				if constexpr (requires { do_compare(left_type::value, right_type::value); })
+				{
+					return do_compare(left_type::value, right_type::value);
+				}
 				else if constexpr (requires { do_compare(left_type::value, right_); }) { return do_compare(left_type::value, right_); }
 				else if constexpr (requires { do_compare(left_, right_type::value); }) { return do_compare(left_, right_type::value); }
 				else if constexpr (requires { do_compare(left_, right_); }) { return do_compare(left_, right_); }
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE("can not compare."); }
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("can not compare."); }
 			}
 
 		public:
@@ -859,17 +873,47 @@ namespace gal::prometheus::unit_test
 
 			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
 			{
-				if constexpr (category == ExpressionCategory::EQUAL) { return std::format("{} == {}", meta::to_string(left_), meta::to_string(right_)); }
-				else if constexpr (category == ExpressionCategory::APPROX) { return std::format("{} ≈≈ {} (+/- {})", meta::to_string(left_), meta::to_string(right_), meta::to_string(epsilon_)); }
-				else if constexpr (category == ExpressionCategory::NOT_EQUAL) { return std::format("{} != {}", meta::to_string(left_), meta::to_string(right_)); }
-				else if constexpr (category == ExpressionCategory::NOT_APPROX) { return std::format("{} !≈ {} (+/- {})", meta::to_string(left_), meta::to_string(right_), meta::to_string(epsilon_)); }
-				else if constexpr (category == ExpressionCategory::GREATER_THAN) { return std::format("{} > {}", meta::to_string(left_), meta::to_string(right_)); }
-				else if constexpr (category == ExpressionCategory::GREATER_EQUAL) { return std::format("{} >= {}", meta::to_string(left_), meta::to_string(right_)); }
-				else if constexpr (category == ExpressionCategory::LESS_THAN) { return std::format("{} < {}", meta::to_string(left_), meta::to_string(right_)); }
-				else if constexpr (category == ExpressionCategory::LESS_EQUAL) { return std::format("{} <= {}", meta::to_string(left_), meta::to_string(right_)); }
-				else if constexpr (category == ExpressionCategory::LOGICAL_AND) { return std::format("{} and {}", meta::to_string(left_), meta::to_string(right_)); }
-				else if constexpr (category == ExpressionCategory::LOGICAL_OR) { return std::format("{} or {}", meta::to_string(left_), meta::to_string(right_)); }
-				else { GAL_PROMETHEUS_STATIC_UNREACHABLE(); }
+				if constexpr (category == ExpressionCategory::EQUAL)
+				{
+					return std::format("{} == {}", meta::to_string(left_), meta::to_string(right_));
+				}
+				else if constexpr (category == ExpressionCategory::APPROX)
+				{
+					return std::format("{} ≈≈ {} (+/- {})", meta::to_string(left_), meta::to_string(right_), meta::to_string(epsilon_));
+				}
+				else if constexpr (category == ExpressionCategory::NOT_EQUAL)
+				{
+					return std::format("{} != {}", meta::to_string(left_), meta::to_string(right_));
+				}
+				else if constexpr (category == ExpressionCategory::NOT_APPROX)
+				{
+					return std::format("{} !≈ {} (+/- {})", meta::to_string(left_), meta::to_string(right_), meta::to_string(epsilon_));
+				}
+				else if constexpr (category == ExpressionCategory::GREATER_THAN)
+				{
+					return std::format("{} > {}", meta::to_string(left_), meta::to_string(right_));
+				}
+				else if constexpr (category == ExpressionCategory::GREATER_EQUAL)
+				{
+					return std::format("{} >= {}", meta::to_string(left_), meta::to_string(right_));
+				}
+				else if constexpr (category == ExpressionCategory::LESS_THAN)
+				{
+					return std::format("{} < {}", meta::to_string(left_), meta::to_string(right_));
+				}
+				else if constexpr (category == ExpressionCategory::LESS_EQUAL)
+				{
+					return std::format("{} <= {}", meta::to_string(left_), meta::to_string(right_));
+				}
+				else if constexpr (category == ExpressionCategory::LOGICAL_AND)
+				{
+					return std::format("{} and {}", meta::to_string(left_), meta::to_string(right_));
+				}
+				else if constexpr (category == ExpressionCategory::LOGICAL_OR)
+				{
+					return std::format("{} or {}", meta::to_string(left_), meta::to_string(right_));
+				}
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 			}
 		};
 
@@ -879,7 +923,7 @@ namespace gal::prometheus::unit_test
 		constexpr auto is_operand_expression_v<OperandExpression<Category, Left, Right, Epsilon>> = true;
 
 		template<typename Exception>
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE OperandThrow : public Operand
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandThrow : public Operand
 		{
 		public:
 			using exception_type = Exception;
@@ -931,15 +975,15 @@ namespace gal::prometheus::unit_test
 						meta::name_of<exception_type>(),
 						(not thrown())
 							? "not thrown"
-							://
+							: //
 							(not caught())
 							? "thrown but not caught"
-							://
+							: //
 							"caught");
 			}
 		};
 
-		class GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE OperandNoThrow : public Operand
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandNoThrow : public Operand
 		{
 		public:
 			using exception_type = void;
@@ -960,7 +1004,7 @@ namespace gal::prometheus::unit_test
 
 			[[nodiscard]] /*constexpr*/ auto to_string() const noexcept -> std::string { return std::format("nothrow - {:s}", not thrown_); }
 		};
-	}// namespace operands
+	} // namespace operands
 
 	namespace executor
 	{
@@ -980,7 +1024,7 @@ namespace gal::prometheus::unit_test
 			suite_results_type suite_results_;
 
 			suite_results_iterator_type current_suite_result_;
-			test_results_iterator_type  current_test_result_;
+			test_results_iterator_type current_test_result_;
 
 			std::size_t total_fails_exclude_current_test_;
 
@@ -1063,7 +1107,7 @@ namespace gal::prometheus::unit_test
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
 
 				auto& [name, report_string, test_results] = suite_results_.emplace_back(std::string{suite_begin.name});
-				current_suite_result_                     = std::ranges::prev(suite_results_.end(), 1);
+				current_suite_result_ = std::ranges::prev(suite_results_.end(), 1);
 
 				std::format_to(
 						std::back_inserter(report_string),
@@ -1125,7 +1169,7 @@ namespace gal::prometheus::unit_test
 				if (current_test_result_)
 				{
 					// nested
-					auto& this_test      = current_test_result_->children.emplace_back(std::move(t));
+					auto& this_test = current_test_result_->children.emplace_back(std::move(t));
 					current_test_result_ = std::addressof(this_test);
 
 					std::format_to(
@@ -1140,7 +1184,7 @@ namespace gal::prometheus::unit_test
 				else
 				{
 					// top level
-					auto& this_test      = current_suite_result_->test_results.emplace_back(std::move(t));
+					auto& this_test = current_suite_result_->test_results.emplace_back(std::move(t));
 					current_test_result_ = std::addressof(this_test);
 
 					std::format_to(
@@ -1184,13 +1228,15 @@ namespace gal::prometheus::unit_test
 				if (current_test_result_->status == test_result_type::Status::PENDING)
 				[[likely]]
 				{
-					if (current_test_result_->total_assertions_failed != 0)//
+					if (current_test_result_->total_assertions_failed != 0) //
 					{
 						current_test_result_->status = test_result_type::Status::FAILED;
 					}
-					else//
+					else //
 					{
-						current_test_result_->status = current_test_result_->total_assertions_passed != 0 ? test_result_type::Status::PASSED : test_result_type::Status::SKIPPED;
+						current_test_result_->status = current_test_result_->total_assertions_passed != 0
+							                               ? test_result_type::Status::PASSED
+							                               : test_result_type::Status::SKIPPED;
 					}
 				}
 
@@ -1436,8 +1482,8 @@ namespace gal::prometheus::unit_test
 				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
 
-				auto&       [suite_name, report_string, _] = *current_suite_result_;
-				const auto& test_name                      = current_test_result_->name;
+				auto& [suite_name, report_string, _] = *current_suite_result_;
+				const auto& test_name = current_test_result_->name;
 
 				on(events::EventTestEnd{.name = test_name});
 				on(events::EventSuiteEnd{.name = suite_name});
@@ -1532,11 +1578,19 @@ namespace gal::prometheus::unit_test
 										test_result.children,
 										total_result{
 												.test_passed = (test_result.status == test_result_type::Status::PASSED) ? 1ull : 0,
-												.test_failed = (test_result.status == test_result_type::Status::FAILED or test_result.status == test_result_type::Status::FATAL) ? 1ull : 0,
+												.test_failed = (
+													               test_result.status == test_result_type::Status::FAILED or
+													               test_result.status == test_result_type::Status::FATAL
+												               )
+													               ? 1ull
+													               : 0,
 												.test_skipped = (test_result.status == test_result_type::Status::SKIPPED) ? 1ull : 0,
 												.assertion_passed = test_result.total_assertions_passed,
 												.assertion_failed = test_result.total_assertions_failed},
-										[self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result { return total + self(nested_test_result); });
+										[self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result
+										{
+											return total + self(nested_test_result);
+										});
 							}};
 
 					constexpr auto calc_result_of_suite = [calc_result_of_test](const suite_result_type& suite_result) noexcept -> total_result
@@ -1549,7 +1603,10 @@ namespace gal::prometheus::unit_test
 										.test_skipped = 0,
 										.assertion_passed = 0,
 										.assertion_failed = 0},
-								[calc_result_of_test](const total_result& total, const test_result_type& test_result) noexcept -> total_result { return total + calc_result_of_test(test_result); });
+								[calc_result_of_test](const total_result& total, const test_result_type& test_result) noexcept -> total_result
+								{
+									return total + calc_result_of_test(test_result);
+								});
 					};
 
 					std::ranges::for_each(
@@ -1591,29 +1648,39 @@ namespace gal::prometheus::unit_test
 											// passed
 											result.test_passed,
 											color.pass,
-											static_cast<double>(result.test_passed) / static_cast<double>(result.test_passed + result.test_failed + result.test_skipped) * 100.0,
+											static_cast<double>(result.test_passed) /
+											static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
+											* 100.0,
 											color.none,
 											// failed
 											result.test_failed,
 											color.fail,
-											static_cast<double>(result.test_failed) / static_cast<double>(result.test_passed + result.test_failed + result.test_skipped) * 100.0,
+											static_cast<double>(result.test_failed) /
+											static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
+											* 100.0,
 											color.none,
 											// skipped
 											result.test_skipped,
 											color.skip,
-											static_cast<double>(result.test_skipped) / static_cast<double>(result.test_passed + result.test_failed + result.test_skipped) * 100.0,
+											static_cast<double>(result.test_skipped) /
+											static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
+											* 100.0,
 											color.none,
 											// assertion
 											result.assertion_passed + result.assertion_failed,
 											// passed
 											result.assertion_passed,
 											color.pass,
-											static_cast<double>(result.assertion_passed) / static_cast<double>(result.assertion_passed + result.assertion_failed) * 100.0,
+											static_cast<double>(result.assertion_passed) /
+											static_cast<double>(result.assertion_passed + result.assertion_failed)
+											* 100.0,
 											color.none,
 											// failed
 											result.assertion_failed,
 											color.fail,
-											static_cast<double>(result.assertion_failed) / static_cast<double>(result.assertion_passed + result.assertion_failed) * 100.0,
+											static_cast<double>(result.assertion_failed) /
+											static_cast<double>(result.assertion_passed + result.assertion_failed)
+											* 100.0,
 											color.none);
 								}
 
@@ -1623,10 +1690,10 @@ namespace gal::prometheus::unit_test
 			}
 
 		public:
-			Executor(const Executor&) noexcept                    = delete;
-			Executor(Executor&&) noexcept                         = delete;
+			Executor(const Executor&) noexcept = delete;
+			Executor(Executor&&) noexcept = delete;
 			auto operator=(const Executor&) noexcept -> Executor& = delete;
-			auto operator=(Executor&&) noexcept -> Executor&      = delete;
+			auto operator=(Executor&&) noexcept -> Executor& = delete;
 
 			explicit Executor()
 				: config_{std::make_shared<struct config>()},
@@ -1690,7 +1757,7 @@ namespace gal::prometheus::unit_test
 				{
 					this->on(test.begin());
 
-					try//
+					try //
 					{
 						std::invoke(test);
 					}
@@ -1760,7 +1827,7 @@ namespace gal::prometheus::unit_test
 			static Executor executor{};
 			return executor;
 		}
-	}// namespace executor
+	} // namespace executor
 
 	namespace dispatcher
 	{
@@ -1774,7 +1841,7 @@ namespace gal::prometheus::unit_test
 
 				expression_type expression;
 
-				[[nodiscard]] constexpr explicit operator bool() const noexcept//
+				[[nodiscard]] constexpr explicit operator bool() const noexcept //
 				{
 					return static_cast<bool>(expression);
 				}
@@ -1807,7 +1874,8 @@ namespace gal::prometheus::unit_test
 			struct is_constrain_satisfied_type_or_dispatched_type : std::bool_constant<Constrain<std::remove_cvref_t<T>>::value> {};
 
 			template<typename T, template<typename> typename Constrain, typename Dispatcher>
-			struct is_constrain_satisfied_type_or_dispatched_type<dispatched_expression<T, Dispatcher>, Constrain> : is_constrain_satisfied_type_or_dispatched_type<typename dispatched_expression<T, Dispatcher>::expression_type, Constrain> {};
+			struct is_constrain_satisfied_type_or_dispatched_type<dispatched_expression<T, Dispatcher>, Constrain> :
+					is_constrain_satisfied_type_or_dispatched_type<typename dispatched_expression<T, Dispatcher>::expression_type, Constrain> {};
 
 			template<typename T, template<typename> typename Constrain>
 			constexpr auto is_constrain_satisfied_type_or_dispatched_type_v = is_constrain_satisfied_type_or_dispatched_type<T, Constrain>::value;
@@ -1826,7 +1894,10 @@ namespace gal::prometheus::unit_test
 			};
 
 			template<typename T, template<typename> typename Constrain>
-			constexpr auto is_constrain_against_type_or_dispatched_type_v = is_constrain_satisfied_type_or_dispatched_type_v<T, constrain_against_wrapper<Constrain>::template rebind>;
+			constexpr auto is_constrain_against_type_or_dispatched_type_v = is_constrain_satisfied_type_or_dispatched_type_v<
+				T,
+				constrain_against_wrapper<Constrain>::template rebind
+			>;
 
 			template<typename T, template<typename> typename Constrain>
 			concept constrain_against_type_or_dispatched_type_t = is_constrain_against_type_or_dispatched_type_v<T, Constrain>;
@@ -1834,13 +1905,13 @@ namespace gal::prometheus::unit_test
 			struct type_or_dispatched_type
 			{
 				template<typename T>
-				[[nodiscard]] constexpr static auto get(T&& v) noexcept -> decltype(auto)//
+				[[nodiscard]] constexpr static auto get(T&& v) noexcept -> decltype(auto) //
 				{
-					if constexpr (is_dispatched_expression_v<std::remove_cvref_t<T>>)//
+					if constexpr (is_dispatched_expression_v<std::remove_cvref_t<T>>) //
 					{
 						return std::forward<T>(v).expression;
 					}
-					else//
+					else //
 					{
 						return std::forward<T>(v);
 					}
@@ -1895,16 +1966,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::APPROX, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value(), std::numeric_limits<typename right_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::APPROX,
+						left_expression_type,
+						typename right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value(),
+								std::numeric_limits<typename right_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// value{...} == floating_point
@@ -1913,19 +1996,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs == lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::APPROX, typename left_expression_type::value_type, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs), std::numeric_limits<typename left_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::APPROX,
+						typename left_expression_type::value_type,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs),
+								std::numeric_limits<typename left_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// not(floating_point) == value{...}
@@ -1934,16 +2029,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value()
+						}
+				};
 			}
 
 			// value{...} == not(floating_point)
@@ -1952,19 +2057,29 @@ namespace gal::prometheus::unit_test
 				constrain_against_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs == lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// OperandLiteralXxx
@@ -1975,16 +2090,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_character> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_c == character
@@ -1993,19 +2118,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs == lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// integral == "xxx"_x
@@ -2014,16 +2149,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_x == integral
@@ -2032,19 +2177,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs == lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// floating_point == "xxx"_x
@@ -2053,16 +2208,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::APPROX, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value, right_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::APPROX,
+						left_expression_type,
+						typename right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value,
+								right_expression_type::epsilon
+						}
+				};
 			}
 
 			// "xxx"_x == floating_point
@@ -2071,19 +2238,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs == lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::APPROX, typename left_expression_type::value_type, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs), left_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::APPROX,
+						typename left_expression_type::value_type,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs),
+								left_expression_type::epsilon
+						}
+				};
 			}
 
 			// ? == "xxx"_auto
@@ -2093,12 +2272,17 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<L>, L>>; }
-			[[nodiscard]] constexpr auto operator==(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<L>, L>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator==(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -2113,15 +2297,20 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<R>, R>>; }
-			[[nodiscard]] constexpr auto operator==([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<R>, R>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator==([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs == lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -2137,11 +2326,19 @@ namespace gal::prometheus::unit_test
 				type_or_dispatched_type_t<operands::OperandIdentity::message_type> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				return dispatched_expression<operands::OperandIdentity, dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs)}};
+				return dispatched_expression<
+					operands::OperandIdentity,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// operands::OperandIdentity::message_type{...} == bool
@@ -2150,7 +2347,7 @@ namespace gal::prometheus::unit_test
 				type_or_dispatched_type_t<bool> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				return rhs == lhs;
@@ -2168,16 +2365,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::NOT_APPROX, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value(), std::numeric_limits<typename right_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::NOT_APPROX,
+						left_expression_type,
+						typename right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value(),
+								std::numeric_limits<typename right_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// value{...} != floating_point
@@ -2186,19 +2395,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs != lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::NOT_APPROX, typename left_expression_type::value_type, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs), std::numeric_limits<typename left_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::NOT_APPROX,
+						typename left_expression_type::value_type,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs),
+								std::numeric_limits<typename left_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// not(floating_point) != value{...}
@@ -2207,16 +2428,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::NOT_EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::NOT_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value()
+						}
+				};
 			}
 
 			// value{...} != not(floating_point)
@@ -2225,19 +2456,29 @@ namespace gal::prometheus::unit_test
 				constrain_against_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs != lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::NOT_EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::NOT_EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// OperandLiteralXxx
@@ -2248,16 +2489,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_character> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::NOT_EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::NOT_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_c != character
@@ -2266,19 +2517,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs != lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::NOT_EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::NOT_EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// integral != "xxx"_x
@@ -2287,16 +2548,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::NOT_EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::NOT_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_x != integral
@@ -2305,19 +2576,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs != lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::NOT_EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::NOT_EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// floating_point != "xxx"_x
@@ -2326,16 +2607,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::NOT_APPROX, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value, right_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::NOT_APPROX,
+						left_expression_type,
+						typename right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value,
+								right_expression_type::epsilon
+						}
+				};
 			}
 
 			// "xxx"_x != floating_point
@@ -2344,19 +2637,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs != lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::NOT_APPROX, typename left_expression_type::value_type, right_expression_type, typename left_expression_type::value_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs), left_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::NOT_APPROX,
+						typename left_expression_type::value_type,
+						right_expression_type,
+						typename left_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs),
+								left_expression_type::epsilon
+						}
+				};
 			}
 
 			// ? != "xxx"_auto
@@ -2366,12 +2671,17 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<L>, L>>; }
-			[[nodiscard]] constexpr auto operator!=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<L>, L>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator!=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -2386,15 +2696,20 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<R>, R>>; }
-			[[nodiscard]] constexpr auto operator!=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<R>, R>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator!=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs != lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -2410,11 +2725,13 @@ namespace gal::prometheus::unit_test
 				type_or_dispatched_type_t<operands::OperandIdentity::message_type> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				return dispatched_expression<operands::OperandIdentity, dispatcher_type>{.expression = {not type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs)}};
+				return dispatched_expression<operands::OperandIdentity, dispatcher_type>{
+						.expression = {not type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs)}
+				};
 			}
 
 			// operands::OperandIdentity::message_type{...} != bool
@@ -2423,7 +2740,7 @@ namespace gal::prometheus::unit_test
 				type_or_dispatched_type_t<bool> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator!=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				return rhs != lhs;
@@ -2441,16 +2758,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_THAN, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value(), std::numeric_limits<typename right_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_THAN,
+						left_expression_type,
+						typename right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value(),
+								std::numeric_limits<typename right_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// value{...} > floating_point
@@ -2459,19 +2788,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs > lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_THAN, typename left_expression_type::value_type, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs), std::numeric_limits<typename left_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_THAN,
+						typename left_expression_type::value_type,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs),
+								std::numeric_limits<typename left_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// not(floating_point) > value{...}
@@ -2480,16 +2821,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_THAN, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_THAN,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value()
+						}
+				};
 			}
 
 			// value{...} > not(floating_point)
@@ -2498,19 +2849,29 @@ namespace gal::prometheus::unit_test
 				constrain_against_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs > lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_THAN, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_THAN,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// OperandLiteralXxx
@@ -2521,16 +2882,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_character> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_THAN, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_THAN,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_c > character
@@ -2539,19 +2910,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs > lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_THAN, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_THAN,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// integral > "xxx"_x
@@ -2560,16 +2941,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_THAN, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_THAN,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_x > integral
@@ -2578,19 +2969,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs > lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_THAN, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_THAN,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// floating_point > "xxx"_x
@@ -2599,16 +3000,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_THAN, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value, right_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_THAN,
+						left_expression_type,
+						typename right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value,
+								right_expression_type::epsilon
+						}
+				};
 			}
 
 			// "xxx"_x > floating_point
@@ -2617,19 +3030,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs > lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_THAN, typename left_expression_type::value_type, right_expression_type, typename left_expression_type::value_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs), left_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_THAN,
+						typename left_expression_type::value_type,
+						right_expression_type,
+						typename left_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs),
+								left_expression_type::epsilon
+						}
+				};
 			}
 
 			// ? > "xxx"_auto
@@ -2639,12 +3064,17 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<L>, L>>; }
-			[[nodiscard]] constexpr auto operator>(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<L>, L>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator>(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -2659,15 +3089,20 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<R>, R>>; }
-			[[nodiscard]] constexpr auto operator>([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<R>, R>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator>([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs > lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -2687,16 +3122,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_EQUAL, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value(), std::numeric_limits<typename right_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value(),
+								std::numeric_limits<typename right_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// value{...} >= floating_point
@@ -2705,19 +3152,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs >= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_EQUAL, typename left_expression_type::value_type, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs), std::numeric_limits<typename left_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_EQUAL,
+						typename left_expression_type::value_type,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs),
+								std::numeric_limits<typename left_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// not(floating_point) >= value{...}
@@ -2726,16 +3185,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value()
+						}
+				};
 			}
 
 			// value{...} >= not(floating_point)
@@ -2744,19 +3213,29 @@ namespace gal::prometheus::unit_test
 				constrain_against_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs >= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// OperandLiteralXxx
@@ -2767,16 +3246,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_character> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_c >= character
@@ -2785,19 +3274,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs >= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// integral >= "xxx"_x
@@ -2806,16 +3305,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_x >= integral
@@ -2824,19 +3333,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs >= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// floating_point >= "xxx"_x
@@ -2845,16 +3364,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_EQUAL, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value, right_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_EQUAL,
+						left_expression_type, typename
+						right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value,
+								right_expression_type::epsilon
+						}
+				};
 			}
 
 			// "xxx"_x >= floating_point
@@ -2863,19 +3394,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator>=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator>=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs >= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::GREATER_EQUAL, typename left_expression_type::value_type, right_expression_type, typename left_expression_type::value_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs), left_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::GREATER_EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type,
+						typename left_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs),
+								left_expression_type::epsilon
+						}
+				};
 			}
 
 			// ? >= "xxx"_auto
@@ -2885,12 +3428,17 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<L>, L>>; }
-			[[nodiscard]] constexpr auto operator>=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<L>, L>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator>=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -2905,15 +3453,20 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<R>, R>>; }
-			[[nodiscard]] constexpr auto operator>=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<R>, R>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator>=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs >= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -2933,16 +3486,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_THAN, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value(), std::numeric_limits<typename right_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_THAN,
+						left_expression_type,
+						typename right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value(),
+								std::numeric_limits<typename right_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// value{...} < floating_point
@@ -2951,19 +3516,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs < lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_THAN, typename left_expression_type::value_type, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs), std::numeric_limits<typename left_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_THAN,
+						typename left_expression_type::value_type,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs),
+								std::numeric_limits<typename left_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// not(floating_point) < value{...}
@@ -2972,16 +3549,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_THAN, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_THAN,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value()
+						}
+				};
 			}
 
 			// value{...} < not(floating_point)
@@ -2990,19 +3577,29 @@ namespace gal::prometheus::unit_test
 				constrain_against_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs < lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_THAN, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_THAN,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// OperandLiteralXxx
@@ -3013,16 +3610,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_character> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_THAN, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_THAN,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_c < character
@@ -3031,19 +3638,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs < lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_THAN, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_THAN,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// integral < "xxx"_x
@@ -3052,16 +3669,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_THAN, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_THAN,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_x < integral
@@ -3070,19 +3697,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs < lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_THAN, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_THAN,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// floating_point < "xxx"_x
@@ -3091,16 +3728,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_THAN, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value, right_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_THAN,
+						left_expression_type,
+						typename right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value,
+								right_expression_type::epsilon
+						}
+				};
 			}
 
 			// "xxx"_x < floating_point
@@ -3109,19 +3758,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs < lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_THAN, typename left_expression_type::value_type, right_expression_type, typename left_expression_type::value_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs), left_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_THAN,
+						typename left_expression_type::value_type,
+						right_expression_type,
+						typename left_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs),
+								left_expression_type::epsilon
+						}
+				};
 			}
 
 			// ? < "xxx"_auto
@@ -3131,12 +3792,17 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<L>, L>>; }
-			[[nodiscard]] constexpr auto operator<(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<L>, L>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator<(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -3151,15 +3817,20 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<R>, R>>; }
-			[[nodiscard]] constexpr auto operator<([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<R>, R>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator<([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs < lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -3179,16 +3850,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_EQUAL, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value(), std::numeric_limits<typename right_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value(),
+								std::numeric_limits<typename right_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// value{...} <= floating_point
@@ -3197,19 +3880,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs <= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_EQUAL, typename left_expression_type::value_type, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs), std::numeric_limits<typename left_expression_type::value_type>::epsilon()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_EQUAL,
+						typename left_expression_type::value_type,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs),
+								std::numeric_limits<typename left_expression_type::value_type>::epsilon()
+						}
+				};
 			}
 
 			// not(floating_point) <= value{...}
@@ -3218,16 +3913,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_value> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs).value()}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs).value()
+						}
+				};
 			}
 
 			// value{...} <= not(floating_point)
@@ -3236,19 +3941,29 @@ namespace gal::prometheus::unit_test
 				constrain_against_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<=(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<=(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs <= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs).value(), type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs).value(),
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// OperandLiteralXxx
@@ -3259,16 +3974,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_character> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_c <= character
@@ -3277,19 +4002,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs <= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// integral <= "xxx"_x
@@ -3298,16 +4033,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_EQUAL, left_expression_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value
+						}
+				};
 			}
 
 			// "xxx"_x <= integral
@@ -3316,19 +4061,29 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_integral> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs <= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_EQUAL, typename left_expression_type::value_type, right_expression_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// floating_point <= "xxx"_x
@@ -3337,16 +4092,28 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<operands::is_operand_literal_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_EQUAL, left_expression_type, typename right_expression_type::value_type, typename right_expression_type::value_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), right_expression_type::value, right_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_EQUAL,
+						left_expression_type,
+						typename right_expression_type::value_type,
+						typename right_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								right_expression_type::value,
+								right_expression_type::epsilon
+						}
+				};
 			}
 
 			// "xxx"_x <= floating_point
@@ -3355,19 +4122,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<std::is_floating_point> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator<=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator<=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs <= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LESS_EQUAL, typename left_expression_type::value_type, right_expression_type, typename left_expression_type::value_type>,
-					dispatcher_type>{.expression = {left_expression_type::value, type_or_dispatched_type::get(rhs), left_expression_type::epsilon}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LESS_EQUAL,
+						typename left_expression_type::value_type,
+						right_expression_type,
+						typename left_expression_type::value_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								left_expression_type::value,
+								type_or_dispatched_type::get(rhs),
+								left_expression_type::epsilon
+						}
+				};
 			}
 
 			// ? <= "xxx"_auto
@@ -3377,12 +4156,17 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<L>, L>>; }
-			[[nodiscard]] constexpr auto operator<=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<R>, R>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<L>, L>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator<=(const L& lhs, [[maybe_unused]] const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -3397,15 +4181,20 @@ namespace gal::prometheus::unit_test
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 				        // rebind-able type
-				        and requires { typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<lazy_expression_type_t<is_dispatched_expression_v<R>, R>>; }
-			[[nodiscard]] constexpr auto operator<=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto//
+				        and requires
+				        {
+					        typename lazy_expression_type_t<is_dispatched_expression_v<L>, L>::template rebind<
+						        lazy_expression_type_t<is_dispatched_expression_v<R>, R>
+					        >;
+				        }
+			[[nodiscard]] constexpr auto operator<=([[maybe_unused]] const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				// forward
 				// return rhs <= lhs;
 
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				// forward
@@ -3423,16 +4212,26 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<is_expression> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator and(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator and(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LOGICAL_AND, left_expression_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LOGICAL_AND,
+						left_expression_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
 
 			// ? or ?
@@ -3441,21 +4240,31 @@ namespace gal::prometheus::unit_test
 				constrain_satisfied_type_or_dispatched_type_t<is_expression> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
-			[[nodiscard]] constexpr auto operator or(const L& lhs, const R& rhs) noexcept -> auto//
+			[[nodiscard]] constexpr auto operator or(const L& lhs, const R& rhs) noexcept -> auto //
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				using left_expression_type  = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
+				using left_expression_type = lazy_expression_type_t<is_dispatched_expression_v<L>, L>;
 				using right_expression_type = lazy_expression_type_t<is_dispatched_expression_v<R>, R>;
 
 				return dispatched_expression<
-					operands::OperandExpression<operands::ExpressionCategory::LOGICAL_OR, left_expression_type, right_expression_type>,
-					dispatcher_type>{.expression = {type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs)}};
+					operands::OperandExpression<
+						operands::ExpressionCategory::LOGICAL_OR,
+						left_expression_type,
+						right_expression_type
+					>,
+					dispatcher_type
+				>{
+						.expression = {
+								type_or_dispatched_type::get(lhs),
+								type_or_dispatched_type::get(rhs)
+						}
+				};
 			}
-		}// namespace detail
+		} // namespace detail
 
 		template<events::event_t EventType>
-		auto register_event(EventType&& event) noexcept -> decltype(auto)//
+		auto register_event(EventType&& event) noexcept -> decltype(auto) //
 		{
 			return executor::executor().on(std::forward<EventType>(event));
 		}
@@ -3481,10 +4290,10 @@ namespace gal::prometheus::unit_test
 				: value{v} {}
 
 			template<typename MessageType>
-			constexpr auto operator<<(MessageType&& message) noexcept -> expect_result&//
+			constexpr auto operator<<(MessageType&& message) noexcept -> expect_result& //
 				requires requires { events::EventLog{.message = std::forward<MessageType>(message)}; }
 			{
-				if (not value)//
+				if (not value) //
 				{
 					register_event(events::EventLog{.message = std::forward<MessageType>(message)});
 				}
@@ -3494,7 +4303,7 @@ namespace gal::prometheus::unit_test
 
 			constexpr auto operator<<(const fatal_location<fatal>& location) noexcept -> expect_result&
 			{
-				if (not value)//
+				if (not value) //
 				{
 					register_event(events::EventAssertionFatal{.location = location.location});
 				}
@@ -3508,7 +4317,7 @@ namespace gal::prometheus::unit_test
 		{
 		public:
 			template<typename Lhs>
-			[[nodiscard]] constexpr auto operator%(Lhs&& lhs) const noexcept -> detail::dispatched_expression<Lhs, Dispatcher>//
+			[[nodiscard]] constexpr auto operator%(Lhs&& lhs) const noexcept -> detail::dispatched_expression<Lhs, Dispatcher> //
 			{
 				return {.expression = std::forward<Lhs>(lhs)};
 			}
@@ -3528,7 +4337,8 @@ namespace gal::prometheus::unit_test
 		public:
 			template<typename Expression>
 				requires(is_expression_v<Expression> or detail::is_dispatched_expression_v<Expression>)
-			constexpr auto operator()(Expression&& expression, const std::source_location& location = std::source_location::current()) const noexcept -> expect_result
+			constexpr auto operator()(Expression&& expression,
+			                          const std::source_location& location = std::source_location::current()) const noexcept -> expect_result
 			{
 				if constexpr (detail::is_dispatched_expression_v<Expression>)
 				{
@@ -3542,9 +4352,11 @@ namespace gal::prometheus::unit_test
 
 					return expect_result{result};
 				}
-				else//
+				else //
 				{
-					return expect_result{register_event(events::EventAssertion<Expression>{.expression = std::forward<Expression>(expression), .location = location})};
+					return expect_result{
+							register_event(
+									events::EventAssertion<Expression>{.expression = std::forward<Expression>(expression), .location = location})};
 				}
 			}
 		};
@@ -3600,7 +4412,7 @@ namespace gal::prometheus::unit_test
 					if constexpr (requires { type::value; }) { categories_.emplace_back(type::value); }
 					else if constexpr (std::is_same_v<type, categories_type::value_type>) { categories_.emplace_back(std::forward<T>(t)); }
 					else if constexpr (std::is_same_v<type, categories_type>) { categories_.append_range(std::forward<T>(t)); }
-					else { GAL_PROMETHEUS_STATIC_UNREACHABLE("unknown type"); }
+					else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("unknown type"); }
 				};
 
 				(process(std::forward<Args>(args)), ...);
@@ -3636,9 +4448,9 @@ namespace gal::prometheus::unit_test
 
 			[[nodiscard]] constexpr auto name() const noexcept -> auto { return name_; }
 		};
-	}// namespace dispatcher
+	} // namespace dispatcher
 
-	GAL_PROMETHEUS_MODULE_EXPORT_BEGIN
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	// =========================================
 	// OPERANDS
@@ -3659,7 +4471,7 @@ namespace gal::prometheus::unit_test
 
 	constexpr dispatcher::expect_result::fatal fatal{};
 
-	constexpr dispatcher::DispatcherThat   that{};
+	constexpr dispatcher::DispatcherThat that{};
 	constexpr dispatcher::DispatcherExpect expect{};
 
 	// =========================================
@@ -3678,7 +4490,7 @@ namespace gal::prometheus::unit_test
 	struct suite
 	{
 		template<std::invocable InvocableType>
-		constexpr explicit(false) suite(InvocableType invocable) noexcept//
+		constexpr explicit(false) suite(InvocableType invocable) noexcept //
 			requires requires { +invocable; }
 		{
 			dispatcher::register_event(events::EventSuite{
@@ -3697,56 +4509,77 @@ namespace gal::prometheus::unit_test
 		{
 			template<typename DispatchedExpression>
 			// ReSharper disable once CppFunctionIsNotImplemented
-			constexpr auto is_valid_dispatched_expression(DispatchedExpression&& expression) noexcept -> void requires requires { static_cast<bool>(expression.expression); };
+			constexpr auto is_valid_dispatched_expression(DispatchedExpression&& expression) noexcept -> void requires requires
+			{
+				static_cast<bool>(expression.expression);
+			};
 
 			template<typename Lhs, typename Rhs>
 			concept dispatchable_t = not(dispatcher::detail::is_dispatched_expression_v<Lhs> or dispatcher::detail::is_dispatched_expression_v<Rhs>);
-		}// namespace detail
+		} // namespace detail
 
 		// a == b
 		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator==(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)                                                                       //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs)); }//
+		[[nodiscard]] constexpr auto operator==(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			{
+				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs));
+			} //
 		{
 			return that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs);
 		}
 
 		// a != b
 		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator!=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)                                                                       //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs)); }//
+		[[nodiscard]] constexpr auto operator!=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			{
+				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs));
+			} //
 		{
 			return that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs);
 		}
 
 		// a > b
 		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator>(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)                                                                       //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs)); }//
+		[[nodiscard]] constexpr auto operator>(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			{
+				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs));
+			} //
 		{
 			return that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs);
 		}
 
 		// a >= b
 		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator>=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)                                                                       //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs)); }//
+		[[nodiscard]] constexpr auto operator>=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			{
+				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs));
+			} //
 		{
 			return that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs);
 		}
 
 		// a < b
 		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator<(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)                                                                       //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs)); }//
+		[[nodiscard]] constexpr auto operator<(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			{
+				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs));
+			} //
 		{
 			return that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs);
 		}
 
 		// a <= b
 		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator<=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)                                                                       //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs)); }//
+		[[nodiscard]] constexpr auto operator<=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			{
+				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs));
+			} //
 		{
 			return that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs);
 		}
@@ -3755,20 +4588,26 @@ namespace gal::prometheus::unit_test
 
 		// a and b
 		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator and(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)                                                                      //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs)); }//
+		[[nodiscard]] constexpr auto operator and(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			{
+				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs));
+			} //
 		{
 			return that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs);
 		}
 
 		// a or b
 		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator or(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto)                                                                      //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs)); }//
+		[[nodiscard]] constexpr auto operator or(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			{
+				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs));
+			} //
 		{
 			return that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs);
 		}
-	}// namespace operators
+	} // namespace operators
 
 	// =========================================
 	// LITERALS
@@ -3777,117 +4616,131 @@ namespace gal::prometheus::unit_test
 	namespace literals
 	{
 		template<meta::basic_fixed_string StringLiteral>
-		constexpr auto operator""_test() noexcept -> dispatcher::DispatcherTestLiteral<StringLiteral>//
+		constexpr auto operator""_test() noexcept -> dispatcher::DispatcherTestLiteral<StringLiteral> //
 		{
 			return dispatcher::DispatcherTestLiteral<StringLiteral>{};
 		}
 
 		template<char... Cs>
-		[[nodiscard]] constexpr auto operator""_auto() noexcept -> operands::OperandLiteralAuto<Cs...>//
+		[[nodiscard]] constexpr auto operator""_auto() noexcept -> operands::OperandLiteralAuto<Cs...> //
 		{
 			return {};
 		}
 
 		template<meta::basic_fixed_string StringLiteral>
-		[[nodiscard]] constexpr auto operator""_c() noexcept -> operands::OperandLiteralCharacter<StringLiteral.value[0]>//
+		[[nodiscard]] constexpr auto operator""_c() noexcept -> operands::OperandLiteralCharacter<StringLiteral.value[0]> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<int>(); }
-		[[nodiscard]] constexpr auto operator""_i() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<int>()>//
+		[[nodiscard]] constexpr auto operator
+		""_i() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<int>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<unsigned>(); }
-		[[nodiscard]] constexpr auto operator""_u() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned>()>//
+		[[nodiscard]] constexpr auto operator
+		""_u() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<long>(); }
-		[[nodiscard]] constexpr auto operator""_l() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long>()>//
+		[[nodiscard]] constexpr auto operator
+		""_l() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<unsigned long>(); }
-		[[nodiscard]] constexpr auto operator""_ul() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long>()>//
+		[[nodiscard]] constexpr auto operator""_ul() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
+			unsigned long>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<long long>(); }
-		[[nodiscard]] constexpr auto operator""_ll() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long long>()>//
+		[[nodiscard]] constexpr auto operator
+		""_ll() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long long>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<unsigned long long>(); }
-		[[nodiscard]] constexpr auto operator""_ull() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long long>()>//
+		[[nodiscard]] constexpr auto operator""_ull() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
+			unsigned long long>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::int8_t>(); }
-		[[nodiscard]] constexpr auto operator""_i8() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int8_t>()>//
+		[[nodiscard]] constexpr auto operator""_i8() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
+			std::int8_t>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::uint8_t>(); }
-		[[nodiscard]] constexpr auto operator""_u8() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint8_t>()>//
+		[[nodiscard]] constexpr auto operator""_u8() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
+			std::uint8_t>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::int16_t>(); }
-		[[nodiscard]] constexpr auto operator""_i16() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int16_t>()>//
+		[[nodiscard]] constexpr auto operator""_i16() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
+			std::int16_t>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::uint16_t>(); }
-		[[nodiscard]] constexpr auto operator""_u16() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint16_t>()>//
+		[[nodiscard]] constexpr auto operator""_u16() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
+			std::uint16_t>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::int32_t>(); }
-		[[nodiscard]] constexpr auto operator""_i32() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int32_t>()>//
+		[[nodiscard]] constexpr auto operator""_i32() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
+			std::int32_t>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::uint32_t>(); }
-		[[nodiscard]] constexpr auto operator""_u32() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint32_t>()>//
+		[[nodiscard]] constexpr auto operator""_u32() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
+			std::uint32_t>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::int64_t>(); }
-		[[nodiscard]] constexpr auto operator""_i64() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int64_t>()>//
+		[[nodiscard]] constexpr auto operator""_i64() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
+			std::int64_t>()> //
 		{
 			return {};
 		}
 
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::uint64_t>(); }
-		[[nodiscard]] constexpr auto operator""_u64() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint64_t>()>//
+		[[nodiscard]] constexpr auto operator""_u64() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
+			std::uint64_t>()> //
 		{
 			return {};
 		}
@@ -3910,15 +4763,13 @@ namespace gal::prometheus::unit_test
 			functional::char_list<Cs...>.template to_floating_point<long double>(),
 			functional::char_list<Cs...>.denominator_length()> { return {}; }
 
-		[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> operands::OperandIdentity::message_type//
+		[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> operands::OperandIdentity::message_type //
 		{
 			return {operands::OperandIdentity::boolean{.message = {name, size}}};
 		}
 
 		[[nodiscard]] constexpr auto operator""_s(const char* name, std::size_t size) noexcept -> std::string_view { return {name, size}; }
-	}// namespace literals
+	} // namespace literals
 
-	GAL_PROMETHEUS_MODULE_EXPORT_END
-}// namespace gal::prometheus::unit_test
-
-#undef GAL_PROMETHEUS_PRIVATE_UNIT_TEST_EMPTY_BASE
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+} // namespace gal::prometheus::unit_test
