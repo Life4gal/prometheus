@@ -6,18 +6,16 @@
 #pragma once
 
 #if GAL_PROMETHEUS_USE_MODULE
-module;
-
-#include <prometheus/macro.hpp>
-
 export module gal.prometheus.error;
 
 export import :debug;
 import :debug.impl;
 export import :exception;
+export import :platform;
 
 #else
 #include <error/debug.hpp>
 #include <error/debug_win.hpp>
 #include <error/exception.hpp>
+#include <error/platform.hpp>
 #endif

@@ -112,7 +112,7 @@ namespace gal::prometheus::error
 	[[noreturn]] constexpr auto panic(
 			StringType&& message,
 			DataType&& data,
-			std::source_location location = std::source_location::current(),
+			const std::source_location& location = std::source_location::current(),
 			std::stacktrace stacktrace = std::stacktrace::current()) noexcept(false) -> ExceptionType //
 	{
 		throw ExceptionType{
@@ -127,7 +127,7 @@ namespace gal::prometheus::error
 		requires std::derived_from<ExceptionType, Exception<void>>
 	[[noreturn]] constexpr auto panic(
 			StringType&& message,
-			std::source_location location = std::source_location::current(),
+			const std::source_location& location = std::source_location::current(),
 			std::stacktrace stacktrace = std::stacktrace::current()
 			) noexcept(false) -> ExceptionType //
 	{
