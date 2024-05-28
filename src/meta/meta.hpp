@@ -6,10 +6,6 @@
 #pragma once
 
 #if GAL_PROMETHEUS_USE_MODULE
-module;
-
-#include <prometheus/macro.hpp>
-
 export module gal.prometheus.meta;
 
 export import :string;

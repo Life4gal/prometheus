@@ -8,7 +8,7 @@
 #if GAL_PROMETHEUS_USE_MODULE
 module;
 
-	#include <prometheus/macro.hpp>
+#include <prometheus/macro.hpp>
 
 export module gal.prometheus.error:platform;
 
@@ -34,7 +34,7 @@ namespace gal::prometheus::error
 	{
 		return std::system_category().message(
 				#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
-				GetLastError()
+				static_cast<int>(GetLastError())
 				#else
 				errno
 				#endif
@@ -46,12 +46,12 @@ namespace gal::prometheus::error
 	public:
 		using Exception::Exception;
 
-		[[noreturn]] constexpr static auto panic(
+		[[noreturn]] static auto panic(
 				const std::source_location& location = std::source_location::current(),
 				std::stacktrace stacktrace = std::stacktrace::current()
-				) noexcept(false) -> OsError //
+				) noexcept(false) -> void //
 		{
-			return error::panic<OsError>(get_error_message(), location, std::move(stacktrace));
+			error::panic<OsError>(get_error_message(), location, std::move(stacktrace));
 		}
 	};
 

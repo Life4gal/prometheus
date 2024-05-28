@@ -6,13 +6,8 @@
 #pragma once
 
 #if GAL_PROMETHEUS_USE_MODULE
-module;
-
-#include <prometheus/macro.hpp>
-
 export module gal.prometheus.functional;
 
-import std;
 export import :type_list;
 export import :value_list;
 export import :functor;

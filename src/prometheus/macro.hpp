@@ -106,12 +106,14 @@
 	#define GAL_PROMETHEUS_COMPILER_MODULE_INLINE
 	#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN export {
 	#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END }
-	#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN export namespace std
+	#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN export namespace std {
+	#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_END }
 #else
 #define GAL_PROMETHEUS_COMPILER_MODULE_INLINE inline
 #define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 #define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN namespace std
+#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN namespace std {
+#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_END }
 #endif
 
 // =========================================================
@@ -317,31 +319,21 @@
 			}                                                                                                                                               \
 		} while (false)
 
-#if GAL_PROMETHEUS_COMPILER_DEBUG
 #define GAL_PROMETHEUS_DEBUG_ASSUME(expression, ...) GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("ASSUME-CHECK", expression __VA_OPT__(, ) __VA_ARGS__)
-#else
-#define GAL_PROMETHEUS_DEBUG_ASSUME(expression, ...) [[assume(expression)]]
-#endif
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
+	#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) GAL_PROMETHEUS_DEBUG_ASSUME(expression __VA_OPT__(, ) __VA_ARGS__)
+#else
+	#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) [[assume(expression)]]
+#endif
+
 #define GAL_PROMETHEUS_DEBUG_NOT_NULL(pointer, ...) GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("NOT-NULL-CHECK", pointer != nullptr __VA_OPT__(, ) __VA_ARGS__)
-#else
-	#define GAL_PROMETHEUS_DEBUG_NOT_NULL(pointer, ...) [[assume(pointer != nullptr)]]
-#endif
 
-#if GAL_PROMETHEUS_COMPILER_DEBUG
 #define GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED(...) GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("NOT-IMPLEMENTED", false __VA_OPT__(, )__VA_ARGS__)
-#else
-	#define GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED(...) std::unrechable()
-#endif
 
-#if GAL_PROMETHEUS_COMPILER_DEBUG
 #define GAL_PROMETHEUS_DEBUG_UNREACHABLE(...) \
 		GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("UNRECHABLE-CHECK", false __VA_OPT__(, ) __VA_ARGS__); \
 		std::unrechable()
-#else
-	#define GAL_PROMETHEUS_DEBUG_UNREACHABLE(...) std::unrechable()
-#endif
 
 #define GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW(error_type, expression, message, ...) \
 	do \

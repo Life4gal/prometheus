@@ -6,13 +6,8 @@
 #pragma once
 
 #if GAL_PROMETHEUS_USE_MODULE
-module;
-
-#include <prometheus/macro.hpp>
-
 export module gal.prometheus.memory;
 
-import std;
 export import :read_write;
 
 #else
