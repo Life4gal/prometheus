@@ -26,9 +26,7 @@ import :name;
 
 namespace gal::prometheus::meta
 {
-	using enum_range_size_type = std::int16_t;
-	constexpr static enum_range_size_type enum_range_default_min = -128;
-	constexpr static enum_range_size_type enum_range_default_max = 127;
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	namespace user_defined
 	{
@@ -44,8 +42,16 @@ namespace gal::prometheus::meta
 			requires std::is_enum_v<EnumType>
 		struct enum_range
 		{
-			constexpr static enum_range_size_type min = enum_range_default_min;
-			constexpr static enum_range_size_type max = enum_range_default_max;
+			using value_type = std::underlying_type_t<EnumType>;
+
+			constexpr static auto min_max = []() noexcept
+			{
+				if constexpr (std::is_signed_v<value_type>) { return std::pair<value_type, value_type>{-128, 127}; }
+				else { return std::pair<value_type, value_type>{0, 255}; }
+			}();
+
+			constexpr static value_type min = min_max.first;
+			constexpr static value_type max = min_max.second;
 		};
 
 		/**
@@ -78,8 +84,6 @@ namespace gal::prometheus::meta
 		struct enum_value_name {};
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	template<typename EnumType>
 		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto name_of() noexcept -> std::string_view
@@ -104,7 +108,7 @@ namespace gal::prometheus::meta
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
-	namespace enum_name
+	namespace enum_name_detail
 	{
 		// template<std::unsigned_integral auto Value, std::size_t CurrentShift = 0, typename ValueType = std::decay_t<decltype(Value)>>
 		// 	requires(Value > 0) // 1 << 0 => 1
@@ -156,6 +160,18 @@ namespace gal::prometheus::meta
 			FLAG,
 		};
 
+		template<typename EnumType, EnumCategory Category, std::integral auto Min, std::integral auto Max>
+		struct maybe_valid_flag;
+
+		template<typename EnumType, std::integral auto Min, std::integral auto Max>
+		struct maybe_valid_flag<EnumType, EnumCategory::ENUM, Min, Max> : std::true_type {};
+
+		template<typename EnumType, std::integral auto Min, std::integral auto Max>
+		struct maybe_valid_flag<EnumType, EnumCategory::FLAG, Min, Max> : std::bool_constant< //
+					(std::is_unsigned_v<std::decay_t<decltype(Min)>> and std::is_unsigned_v<std::decay_t<decltype(Max)>>) and // valid flag
+					(Max <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits - 1) // valid Max
+				> {};
+
 		/**
 		 * @brief Starting at Min and ending at Max, all values in between are tested to see if they are valid enumeration values (this always assumes that the enumeration values are consecutive).
 		 * @tparam EnumType the type of the enumeration.
@@ -174,8 +190,7 @@ namespace gal::prometheus::meta
 			std::is_enum_v<EnumType> and // enum
 			std::is_same_v<MinType, MaxType> and // same type
 			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) and // valid value
-			((Category == EnumCategory::FLAG) == (std::is_unsigned_v<MinType> and std::is_unsigned_v<MaxType>)) and // valid flag
-			((Category == EnumCategory::FLAG) == (Max <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits - 1)) // valid Max
+			maybe_valid_flag<EnumType, Category, Min, Max>::value
 		[[nodiscard]] constexpr auto is_valid_enum() noexcept -> bool //
 		{
 			using underlying_type = std::underlying_type_t<MinType>;
@@ -263,7 +278,7 @@ namespace gal::prometheus::meta
 			std::is_enum_v<EnumType> and // enum
 			std::is_same_v<MinType, MaxType> and // same type
 			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) and // valid value
-			((Category == EnumCategory::FLAG) == (std::is_unsigned_v<MinType> and std::is_unsigned_v<MaxType>)) // valid flag
+			maybe_valid_flag<EnumType, Category, Min, Max>::value
 		[[nodiscard]] constexpr auto begin_enum_value_from_value() noexcept -> std::underlying_type_t<EnumType> //
 		{
 			using underlying_type = std::underlying_type_t<EnumType>;
@@ -326,7 +341,7 @@ namespace gal::prometheus::meta
 			std::is_enum_v<EnumType> and // enum
 			std::is_same_v<MinType, MaxType> and // same type
 			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) and // valid value
-			((Category == EnumCategory::FLAG) == (std::is_unsigned_v<MinType> and std::is_unsigned_v<MaxType>)) // valid flag
+			maybe_valid_flag<EnumType, Category, Min, Max>::value
 		[[nodiscard]] constexpr auto end_enum_value_from_value() noexcept -> std::underlying_type_t<EnumType> //
 		{
 			using underlying_type = std::underlying_type_t<EnumType>;
@@ -534,30 +549,12 @@ namespace gal::prometheus::meta
 		// traits
 		// ================================
 
-		template<typename>
-		struct range_min : std::integral_constant<enum_range_size_type, enum_range_default_min> {};
-
 		template<typename EnumType>
-			requires requires
-			{
-				{
-					user_defined::enum_range<EnumType>::min
-				} -> std::convertible_to<enum_range_size_type>;
-			}
-		struct range_min<EnumType> :
+		struct range_min :
 				std::integral_constant<decltype(user_defined::enum_range<EnumType>::min), user_defined::enum_range<EnumType>::min> {};
 
-		template<typename>
-		struct range_max : std::integral_constant<enum_range_size_type, enum_range_default_max> {};
-
 		template<typename EnumType>
-			requires requires
-			{
-				{
-					user_defined::enum_range<EnumType>::max
-				} -> std::convertible_to<enum_range_size_type>;
-			}
-		struct range_max<EnumType> :
+		struct range_max :
 				std::integral_constant<decltype(user_defined::enum_range<EnumType>::max), user_defined::enum_range<EnumType>::max> {};
 
 		template<typename T>
@@ -603,32 +600,32 @@ namespace gal::prometheus::meta
 	[[nodiscard]] constexpr auto names_of() noexcept -> auto
 	{
 		// fixme: auto deducting category
-		constexpr auto is_flag = enum_name::range_is_flag<EnumType>::value;
-		constexpr auto category = is_flag ? enum_name::EnumCategory::FLAG : enum_name::EnumCategory::ENUM;
+		constexpr auto is_flag = enum_name_detail::range_is_flag<EnumType>::value;
+		constexpr auto category = is_flag ? enum_name_detail::EnumCategory::FLAG : enum_name_detail::EnumCategory::ENUM;
 
-		constexpr auto min = enum_name::get_range_min<EnumType, category>();
-		constexpr auto max = enum_name::get_range_max<EnumType, category>();
+		constexpr auto min = enum_name_detail::get_range_min<EnumType, category>();
+		constexpr auto max = enum_name_detail::get_range_max<EnumType, category>();
 		static_assert(max > min);
 
 		if constexpr (is_flag)
 		{
-			constexpr auto begin_shift = enum_name::begin_enum_shift_from_value<EnumType, min, max>();
-			constexpr auto end_shift = enum_name::begin_enum_shift_from_value<EnumType, (static_cast<decltype(max)>(1) << begin_shift), max>();
+			constexpr auto begin_shift = enum_name_detail::begin_enum_shift_from_value<EnumType, min, max>();
+			constexpr auto end_shift = enum_name_detail::begin_enum_shift_from_value<EnumType, (static_cast<decltype(max)>(1) << begin_shift), max>();
 
-			return enum_name::names_from_shift<EnumType, begin_shift, end_shift>;
+			return enum_name_detail::names_from_shift<EnumType, begin_shift, end_shift>;
 		}
 		else
 		{
-			constexpr auto begin_value = enum_name::begin_enum_value_from_value<EnumType, min, max, enum_name::EnumCategory::ENUM>();
+			constexpr auto begin_value = enum_name_detail::begin_enum_value_from_value<EnumType, min, max, enum_name_detail::EnumCategory::ENUM>();
 			constexpr auto end_value =
-					enum_name::end_enum_value_from_value<
+					enum_name_detail::end_enum_value_from_value<
 						EnumType,
 						static_cast<decltype(min)>(begin_value),
 						max,
-						enum_name::EnumCategory::ENUM
+						category
 					>();
 
-			return enum_name::names_from_value<EnumType, begin_value, end_value>;
+			return enum_name_detail::names_from_value<EnumType, begin_value, end_value>;
 		}
 	}
 
