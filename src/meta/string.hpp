@@ -800,7 +800,6 @@ namespace gal::prometheus::meta
 } // namespace gal::prometheus::meta
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
-{
 	// for `std::totally_ordered_with`
 	template<gal::prometheus::meta::basic_char_array_t FixedString, typename String, template<typename> typename Q1, template<typename> typename Q2>
 		requires std::is_constructible_v<gal::prometheus::meta::basic_char_array_view<typename FixedString::value_type>, String>
@@ -830,4 +829,5 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
 	{
 		using type = gal::prometheus::meta::basic_fixed_string_view<typename FixedString::value_type>;
 	};
-} // namespace std
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_END
