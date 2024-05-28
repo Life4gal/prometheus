@@ -67,15 +67,18 @@ namespace gal::prometheus::meta
 			if constexpr (ContainsTypeName) { out.push_back(')'); }
 		}
 		// pointer
-		else if constexpr (std::is_null_pointer_v<type> or std::is_pointer_v<type>)
+		// note: std::nullptr_t satisfies std::formattable<type, char>
+		// else if constexpr (std::is_null_pointer_v<type> or std::is_pointer_v<type>)
+		else if constexpr (std::is_pointer_v<type>)
 		{
-			if constexpr (std::is_null_pointer_v<type>) { meta::to_string<StringType, false>("nullptr", out); }
-			else
-			{
+			// if constexpr (std::is_null_pointer_v<type>) { meta::to_string<StringType, false>("nullptr", out); }
+			// else
+			// {
 				if (t == nullptr)
 				{
 					if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(0x00000000)", meta::name_of<type>()); }
 					else { meta::to_string<StringType, false>(nullptr, out); }
+					return;
 				}
 
 				if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(", meta::name_of<type>()); }
@@ -84,7 +87,7 @@ namespace gal::prometheus::meta
 				// sub-element does not contains type name.
 				meta::to_string<StringType, false>(*t, out);
 				if constexpr (ContainsTypeName) { out.push_back(')'); }
-			}
+			// }
 		}
 		// container
 		else if constexpr (std::ranges::range<type>)
@@ -145,7 +148,7 @@ namespace gal::prometheus::meta
 	[[nodiscard]] constexpr auto to_string(const T& t) noexcept -> StringType
 	{
 		StringType out;
-		meta::to_string<StringType, ContainsTypeName>(t, out);
+		meta::to_string<StringType, ContainsTypeName, T>(t, out);
 		return out;
 	}
 
