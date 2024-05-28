@@ -28,8 +28,34 @@ namespace gal::prometheus::meta
 {
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
+	enum class NamePolicy
+	{
+		// namespace_A::namespace_B::namespace_C::enum_name::Value // scoped enum
+		// namespace_A::namespace_B::namespace_C::Value
+		FULL,
+		// this has the same effect as ENUM_VALUE_ONLY if it is an un-scoped enumeration
+		// enum_name::Value
+		WITH_ENUM_NAME,
+		// Value
+		ENUM_VALUE_ONLY,
+	};
+
 	namespace user_defined
 	{
+		/**
+		 * template<>
+		 * struct enum_name_policy<MyEnum>
+		 * {
+		 *		constexpr static auto value = NamePolicy::ENUM_VALUE_ONLY;
+		 * };
+		 */
+		template<typename EnumType>
+			requires std::is_enum_v<EnumType>
+		struct enum_name_policy
+		{
+			constexpr static auto value = NamePolicy::FULL;
+		};
+
 		/**
 		 * template<>
 		 * struct enum_range<MyEnum>
@@ -482,12 +508,60 @@ namespace gal::prometheus::meta
 			return end_enum_shift_from_shift<EnumType, lower, upper>();
 		}
 
+		template<typename EnumType, NamePolicy Policy>
+		[[nodiscard]] constexpr auto to_name(const std::string_view name) noexcept -> std::string_view
+		{
+			if constexpr (Policy == NamePolicy::FULL) { return name; }
+			else if constexpr (Policy == NamePolicy::WITH_ENUM_NAME)
+			{
+				if constexpr (std::is_scoped_enum_v<EnumType>)
+				{
+					const auto last_double_colon = name.rfind("::");
+					const auto optional_extra_double_colon = name.rfind("::", last_double_colon - 1);
+
+					if (optional_extra_double_colon == std::string_view::npos)
+					[[unlikely]]
+					{
+						// global namespace
+						return name;
+					}
+
+					// namespace_A::namespace_B::...
+					return name.substr(optional_extra_double_colon + 2);
+				}
+				else { return to_name<EnumType, NamePolicy::ENUM_VALUE_ONLY>(name); }
+			}
+			else if constexpr (Policy == NamePolicy::ENUM_VALUE_ONLY)
+			{
+				const auto last_double_colon = name.rfind("::");
+
+				if constexpr (std::is_scoped_enum_v<EnumType>)
+				{
+					[[assume(last_double_colon != std::string_view::npos)]];
+
+					return name.substr(last_double_colon + 2);
+				}
+				else
+				{
+					if (last_double_colon == std::string_view::npos)
+					{
+						// global namespace
+						return name;
+					}
+
+					return name.substr(last_double_colon + 2);
+				}
+			}
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+		}
+
 		// ================================
 		// list
 		// ================================
 
 		template<
 			typename EnumType,
+			NamePolicy Policy,
 			std::integral auto Min,
 			std::integral auto Max,
 			typename MinType = std::decay_t<decltype(Min)>,
@@ -505,7 +579,7 @@ namespace gal::prometheus::meta
 						{
 								//
 								static_cast<EnumType>(Min + Index),
-								meta::name_of<static_cast<EnumType>(Min + Index)>()
+								to_name<EnumType, Policy>(meta::name_of<static_cast<EnumType>(Min + Index)>())
 						}... //
 				}};
 			}(std::make_index_sequence<Max - Min + 1>{});
@@ -513,6 +587,7 @@ namespace gal::prometheus::meta
 
 		template<
 			typename EnumType,
+			NamePolicy Policy,
 			std::integral auto Min,
 			std::integral auto Max,
 			typename MinType = std::decay_t<decltype(Min)>,
@@ -521,9 +596,9 @@ namespace gal::prometheus::meta
 			std::is_enum_v<EnumType> and // enum
 			std::is_same_v<MinType, MaxType> and // same type
 			(std::numeric_limits<MinType>::digits <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits) // valid value
-		constexpr auto names_from_value = generate_names_from_value<EnumType, Min, Max>();
+		constexpr auto names_from_value = generate_names_from_value<EnumType, Policy, Min, Max>();
 
-		template<typename EnumType, std::size_t MinShift, std::size_t MaxShift>
+		template<typename EnumType, NamePolicy Policy, std::size_t MinShift, std::size_t MaxShift>
 			requires std::is_enum_v<EnumType> and (MaxShift <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits - 1)
 		[[nodiscard]] constexpr auto generate_names_from_shift()
 			noexcept -> std::array<std::pair<EnumType, std::string_view>, MaxShift - MinShift + 1>
@@ -535,15 +610,17 @@ namespace gal::prometheus::meta
 						{
 								//
 								static_cast<EnumType>(static_cast<std::underlying_type_t<EnumType>>(1) << (MinShift + Index)),
-								meta::name_of<static_cast<EnumType>(static_cast<std::underlying_type_t<EnumType>>(1) << (MinShift + Index))>()
+								to_name<EnumType, Policy>(
+										meta::name_of<static_cast<EnumType>(
+											static_cast<std::underlying_type_t<EnumType>>(1) << (MinShift + Index))>())
 						}... //
 				}};
 			}(std::make_index_sequence<MaxShift - MinShift + 1>{});
 		}
 
-		template<typename EnumType, std::size_t MinShift, std::size_t MaxShift>
+		template<typename EnumType, NamePolicy Policy, std::size_t MinShift, std::size_t MaxShift>
 			requires std::is_enum_v<EnumType> and (MaxShift <= std::numeric_limits<std::underlying_type_t<EnumType>>::digits - 1)
-		constexpr auto names_from_shift = generate_names_from_shift<EnumType, MinShift, MaxShift>();
+		constexpr auto names_from_shift = generate_names_from_shift<EnumType, Policy, MinShift, MaxShift>();
 
 		// ================================
 		// traits
@@ -595,7 +672,7 @@ namespace gal::prometheus::meta
 
 	constexpr std::string_view enum_name_not_found{"?"};
 
-	template<typename EnumType>
+	template<typename EnumType, NamePolicy Policy>
 		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto names_of() noexcept -> auto
 	{
@@ -612,7 +689,7 @@ namespace gal::prometheus::meta
 			constexpr auto begin_shift = enum_name_detail::begin_enum_shift_from_value<EnumType, min, max>();
 			constexpr auto end_shift = enum_name_detail::begin_enum_shift_from_value<EnumType, (static_cast<decltype(max)>(1) << begin_shift), max>();
 
-			return enum_name_detail::names_from_shift<EnumType, begin_shift, end_shift>;
+			return enum_name_detail::names_from_shift<EnumType, Policy, begin_shift, end_shift>;
 		}
 		else
 		{
@@ -625,15 +702,22 @@ namespace gal::prometheus::meta
 						category
 					>();
 
-			return enum_name_detail::names_from_value<EnumType, begin_value, end_value>;
+			return enum_name_detail::names_from_value<EnumType, Policy, begin_value, end_value>;
 		}
 	}
 
 	template<typename EnumType>
 		requires std::is_enum_v<EnumType>
+	[[nodiscard]] constexpr auto names_of() noexcept -> auto //
+	{
+		return names_of<EnumType, user_defined::enum_name_policy<EnumType>::value>();
+	}
+
+	template<NamePolicy Policy, typename EnumType>
+		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto name_of(const EnumType enum_value) noexcept -> std::string_view
 	{
-		constexpr auto list = names_of<EnumType>();
+		constexpr static auto list = names_of<EnumType, Policy>();
 
 		if (const auto it = std::ranges::find(list, enum_value, [](const auto& pair) noexcept -> EnumType { return pair.first; });
 			it != std::ranges::end(list)) { return it->second; }
@@ -642,9 +726,16 @@ namespace gal::prometheus::meta
 
 	template<typename EnumType>
 		requires std::is_enum_v<EnumType>
+	[[nodiscard]] constexpr auto name_of(const EnumType enum_value) noexcept -> std::string_view //
+	{
+		return name_of<user_defined::enum_name_policy<EnumType>::value, EnumType>(enum_value);
+	}
+
+	template<typename EnumType, NamePolicy Policy>
+		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto name_of(const std::integral auto enum_value) noexcept -> std::string_view
 	{
-		constexpr auto list = names_of<EnumType>();
+		constexpr static auto list = names_of<EnumType, Policy>();
 
 		if (const auto it = std::ranges::find(list, enum_value, [](const auto& pair) noexcept -> auto { return std::to_underlying(pair.first); });
 			it != std::ranges::end(list)) { return it->second; }
@@ -653,13 +744,27 @@ namespace gal::prometheus::meta
 
 	template<typename EnumType>
 		requires std::is_enum_v<EnumType>
+	[[nodiscard]] constexpr auto name_of(const std::integral auto enum_value) noexcept -> std::string_view //
+	{
+		return name_of<EnumType, user_defined::enum_name_policy<EnumType>::value>(enum_value);
+	}
+
+	template<typename EnumType, NamePolicy Policy>
+		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto value_of(const std::string_view enum_name) noexcept -> std::optional<EnumType>
 	{
-		constexpr auto list = names_of<EnumType>();
+		constexpr static auto list = names_of<EnumType, Policy>();
 
 		if (const auto it = std::ranges::find(list, enum_name, [](const auto& pair) noexcept -> std::string_view { return pair.second; });
 			it != std::ranges::end(list)) { return it->first; }
 		return std::nullopt;
+	}
+
+	template<typename EnumType>
+		requires std::is_enum_v<EnumType>
+	[[nodiscard]] constexpr auto value_of(const std::string_view enum_name) noexcept -> std::optional<EnumType> //
+	{
+		return value_of<EnumType, user_defined::enum_name_policy<EnumType>::value>(enum_name);
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
