@@ -137,6 +137,7 @@ namespace gal::prometheus::meta
 			#define MEMBER_NAME_VISIT_DO_FORWARD(...) static_cast<decltype(__VA_ARGS__)&&>(__VA_ARGS__) // std::forward
 			#define MEMBER_NAME_VISIT_DO_FORWARD_LIKE(...) static_cast<std::conditional_t<std::is_lvalue_reference_v<T>, std::add_lvalue_reference_t<std::remove_reference_t<decltype(__VA_ARGS__)>>, std::add_rvalue_reference_t<std::remove_reference_t<decltype(__VA_ARGS__)>>>>(__VA_ARGS__)// forward like
 
+
 			#if __cpp_structured_bindings >= 202401L
 			auto&& [... vs] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
 			return std::invoke(MEMBER_NAME_VISIT_DO_FORWARD(function), MEMBER_NAME_VISIT_DO_FORWARD_LIKE(vs)...);
@@ -3217,6 +3218,179 @@ namespace gal::prometheus::meta
 							meta::member_of_index<Index>(std::forward<T3T>(t3)),
 							meta::member_of_index<Index>(std::forward<T4T>(t4))
 							), ...);
+				}(
+						std::make_index_sequence<member_size<T0>()>{},
+						std::forward<T0>(value_0),
+						std::forward<T1>(value_1),
+						std::forward<T2>(value_2),
+						std::forward<T3>(value_3),
+						std::forward<T4>(value_4)
+						);
+	}
+
+	template<typename Function, typename T>
+		requires member_gettable_t<std::remove_cvref_t<T>>
+	constexpr auto member_for_each_until(
+			Function function,
+			T&& value
+			) noexcept -> void
+	{
+		[function]<std::size_t... Index, typename U>(
+				std::index_sequence<Index...>,
+				U&& u
+				) mutable noexcept -> void //
+				{
+					(void)(function.template operator()<Index>(
+							meta::member_of_index<Index>(std::forward<U>(u))
+							) and ...);
+				}(
+						std::make_index_sequence<member_size<T>()>{},
+						std::forward<T>(value)
+						);
+	}
+
+	template<typename Function, typename T0, typename T1>
+		requires(
+			member_gettable_t<std::remove_cvref_t<T0>> and
+			member_gettable_t<std::remove_cvref_t<T1>> and
+			(member_size<T0>() == member_size<T1>())
+		)
+	constexpr auto member_for_each_until(
+			Function function,
+			T0&& value_0,
+			T1&& value_1
+			) noexcept -> void
+	{
+		[function]<std::size_t... Index, typename T0T, typename T1T>(
+				std::index_sequence<Index...>,
+				T0T&& t0,
+				T1T&& t1
+				) mutable noexcept -> void //
+				{
+					(void)(function.template operator()<Index>(
+							meta::member_of_index<Index>(std::forward<T0T>(t0)),
+							meta::member_of_index<Index>(std::forward<T1T>(t1))
+							) and ...);
+				}(
+						std::make_index_sequence<member_size<T0>()>{},
+						std::forward<T0>(value_0),
+						std::forward<T1>(value_1)
+						);
+	}
+
+	template<typename Function, typename T0, typename T1, typename T2>
+		requires(
+			member_gettable_t<std::remove_cvref_t<T0>> and
+			member_gettable_t<std::remove_cvref_t<T1>> and
+			member_gettable_t<std::remove_cvref_t<T2>> and
+			(member_size<T0>() == member_size<T1>()) and
+			(member_size<T1>() == member_size<T2>())
+		)
+	constexpr auto member_for_each_until(
+			Function function,
+			T0&& value_0,
+			T1&& value_1,
+			T2&& value_2
+			) noexcept -> void
+	{
+		[function]<std::size_t... Index, typename T0T, typename T1T, typename T2T>(
+				std::index_sequence<Index...>,
+				T0T&& t0,
+				T1T&& t1,
+				T2T&& t2
+				) mutable noexcept -> void //
+				{
+					(void)(function.template operator()<Index>(
+							meta::member_of_index<Index>(std::forward<T0T>(t0)),
+							meta::member_of_index<Index>(std::forward<T1T>(t1)),
+							meta::member_of_index<Index>(std::forward<T2T>(t2))
+							) and ...);
+				}(
+						std::make_index_sequence<member_size<T0>()>{},
+						std::forward<T0>(value_0),
+						std::forward<T1>(value_1),
+						std::forward<T2>(value_2)
+						);
+	}
+
+	template<typename Function, typename T0, typename T1, typename T2, typename T3>
+		requires(
+			member_gettable_t<std::remove_cvref_t<T0>> and
+			member_gettable_t<std::remove_cvref_t<T1>> and
+			member_gettable_t<std::remove_cvref_t<T2>> and
+			member_gettable_t<std::remove_cvref_t<T3>> and
+			(member_size<T0>() == member_size<T1>()) and
+			(member_size<T1>() == member_size<T2>()) and
+			(member_size<T2>() == member_size<T3>())
+		)
+	constexpr auto member_for_each_until(
+			Function function,
+			T0&& value_0,
+			T1&& value_1,
+			T2&& value_2,
+			T3&& value_3
+			) noexcept -> void
+	{
+		[function]<std::size_t... Index, typename T0T, typename T1T, typename T2T, typename T3T>(
+				std::index_sequence<Index...>,
+				T0T&& t0,
+				T1T&& t1,
+				T2T&& t2,
+				T3T&& t3
+				) mutable noexcept -> void //
+				{
+					(void)(function.template operator()<Index>(
+							meta::member_of_index<Index>(std::forward<T0T>(t0)),
+							meta::member_of_index<Index>(std::forward<T1T>(t1)),
+							meta::member_of_index<Index>(std::forward<T2T>(t2)),
+							meta::member_of_index<Index>(std::forward<T3T>(t3))
+							) and ...);
+				}(
+						std::make_index_sequence<member_size<T0>()>{},
+						std::forward<T0>(value_0),
+						std::forward<T1>(value_1),
+						std::forward<T2>(value_2),
+						std::forward<T3>(value_3)
+						);
+	}
+
+	template<typename Function, typename T0, typename T1, typename T2, typename T3, typename T4>
+		requires(
+			member_gettable_t<std::remove_cvref_t<T0>> and
+			member_gettable_t<std::remove_cvref_t<T1>> and
+			member_gettable_t<std::remove_cvref_t<T2>> and
+			member_gettable_t<std::remove_cvref_t<T3>> and
+			member_gettable_t<std::remove_cvref_t<T4>> and
+			(member_size<T0>() == member_size<T1>()) and
+			(member_size<T1>() == member_size<T2>()) and
+			(member_size<T2>() == member_size<T3>()) and
+			(member_size<T3>() == member_size<T4>())
+		)
+	constexpr auto member_for_each_until(
+			Function function,
+			T0&& value_0,
+			T1&& value_1,
+			T2&& value_2,
+			T3&& value_3,
+			T4&& value_4
+			) noexcept -> void
+	{
+		[function]<std::size_t... Index, typename T0T, typename T1T, typename T2T, typename T3T, typename T4T>(
+				std::index_sequence<Index...>,
+				T0T&& t0,
+				T1T&& t1,
+				T2T&& t2,
+				T3T&& t3,
+				T4T&& t4
+				) mutable noexcept -> void //
+				{
+					(void)(function.template operator()<Index>(
+							meta::member_of_index<Index>(std::forward<T0T>(t0)),
+							meta::member_of_index<Index>(std::forward<T1T>(t1)),
+							meta::member_of_index<Index>(std::forward<T2T>(t2)),
+							meta::member_of_index<Index>(std::forward<T3T>(t3)),
+							meta::member_of_index<Index>(std::forward<T4T>(t4))
+							) and ...);
 				}(
 						std::make_index_sequence<member_size<T0>()>{},
 						std::forward<T0>(value_0),
