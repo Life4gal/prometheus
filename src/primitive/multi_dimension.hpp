@@ -158,7 +158,7 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<value_type> U, typename OtherDerived>
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
 			requires(
 				std::is_same_v<OtherDerived, derived_type> or
 				(
@@ -180,7 +180,7 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<value_type> U, typename OtherDerived>
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
 			requires(
 				std::is_same_v<OtherDerived, derived_type> or
 				(
@@ -222,7 +222,7 @@ namespace gal::prometheus::primitive
 			return rep();
 		}
 
-		template<std::convertible_to<value_type> U, typename OtherDerived>
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
 			requires(
 				std::is_same_v<OtherDerived, derived_type> or
 				(
@@ -244,7 +244,7 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<value_type> U, typename OtherDerived>
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
 			requires(
 				std::is_same_v<OtherDerived, derived_type> or
 				(
@@ -286,7 +286,7 @@ namespace gal::prometheus::primitive
 			return rep();
 		}
 
-		template<std::convertible_to<value_type> U, typename OtherDerived>
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
 			requires(
 				std::is_same_v<OtherDerived, derived_type> or
 				(
@@ -308,7 +308,7 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<value_type> U, typename OtherDerived>
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
 			requires(
 				std::is_same_v<OtherDerived, derived_type> or
 				(
@@ -350,7 +350,7 @@ namespace gal::prometheus::primitive
 			return rep();
 		}
 
-		template<std::convertible_to<value_type> U, typename OtherDerived>
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
 			requires(
 				std::is_same_v<OtherDerived, derived_type> or
 				(
@@ -372,7 +372,7 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<value_type> U, typename OtherDerived>
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
 			requires(
 				std::is_same_v<OtherDerived, derived_type> or
 				(
@@ -414,7 +414,7 @@ namespace gal::prometheus::primitive
 			return rep();
 		}
 
-		template<Dimension D, std::convertible_to<value_type> U, typename OtherDerived>
+		template<Dimension D, std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
 			requires(
 				        std::is_same_v<OtherDerived, derived_type> or
 				        (
@@ -430,6 +430,131 @@ namespace gal::prometheus::primitive
 			const auto other_v = meta::member_of_index<static_cast<std::size_t>(D)>(other.rep());
 
 			return v <=> other_v;
+		}
+
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
+			requires(
+				std::is_same_v<OtherDerived, derived_type> or
+				(
+					multi_dimension_detail::always_equal_t<OtherDerived> and
+					multi_dimension_detail::always_equal_t<derived_type> and
+					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
+				)
+			)
+		[[nodiscard]] constexpr auto exact_equal(const multi_dimension<U, OtherDerived>& other) noexcept -> bool
+		{
+			std::size_t index = 0;
+			meta::member_for_each_until(
+					[&index]<std::size_t Index>(const auto lhs, const auto rhs) noexcept -> bool
+					{
+						const auto r = lhs == rhs;
+						index = Index + 1;
+						return r;
+					},
+					rep(),
+					other.rep()
+					);
+			return index == meta::member_size<derived_type>();
+		}
+
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
+			requires(
+				std::is_same_v<OtherDerived, derived_type> or
+				(
+					multi_dimension_detail::always_equal_t<OtherDerived> and
+					multi_dimension_detail::always_equal_t<derived_type> and
+					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
+				)
+			)
+		[[nodiscard]] constexpr auto exact_greater_than(const multi_dimension<U, OtherDerived>& other) noexcept -> bool
+		{
+			std::size_t index = 0;
+			meta::member_for_each_until(
+					[&index]<std::size_t Index>(const auto lhs, const auto rhs) noexcept -> bool
+					{
+						const auto r = lhs > rhs;
+						index = Index + 1;
+						return r;
+					},
+					rep(),
+					other.rep()
+					);
+			return index == meta::member_size<derived_type>();
+		}
+
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
+			requires(
+				std::is_same_v<OtherDerived, derived_type> or
+				(
+					multi_dimension_detail::always_equal_t<OtherDerived> and
+					multi_dimension_detail::always_equal_t<derived_type> and
+					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
+				)
+			)
+		[[nodiscard]] constexpr auto exact_greater_equal(const multi_dimension<U, OtherDerived>& other) noexcept -> bool
+		{
+			std::size_t index = 0;
+			meta::member_for_each_until(
+					[&index]<std::size_t Index>(const auto lhs, const auto rhs) noexcept -> bool
+					{
+						const auto r = lhs >= rhs;
+						index = Index + 1;
+						return r;
+					},
+					rep(),
+					other.rep()
+					);
+			return index == meta::member_size<derived_type>();
+		}
+
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
+			requires(
+				std::is_same_v<OtherDerived, derived_type> or
+				(
+					multi_dimension_detail::always_equal_t<OtherDerived> and
+					multi_dimension_detail::always_equal_t<derived_type> and
+					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
+				)
+			)
+		[[nodiscard]] constexpr auto exact_less_than(const multi_dimension<U, OtherDerived>& other) noexcept -> bool
+		{
+			std::size_t index = 0;
+			meta::member_for_each_until(
+					[&index]<std::size_t Index>(const auto lhs, const auto rhs) noexcept -> bool
+					{
+						const auto r = lhs < rhs;
+						index = Index + 1;
+						return r;
+					},
+					rep(),
+					other.rep()
+					);
+			return index == meta::member_size<derived_type>();
+		}
+
+		template<std::convertible_to<value_type> U = value_type, typename OtherDerived = derived_type>
+			requires(
+				std::is_same_v<OtherDerived, derived_type> or
+				(
+					multi_dimension_detail::always_equal_t<OtherDerived> and
+					multi_dimension_detail::always_equal_t<derived_type> and
+					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
+				)
+			)
+		[[nodiscard]] constexpr auto exact_less_equal(const multi_dimension<U, OtherDerived>& other) noexcept -> bool
+		{
+			std::size_t index = 0;
+			meta::member_for_each_until(
+					[&index]<std::size_t Index>(const auto lhs, const auto rhs) noexcept -> bool
+					{
+						const auto r = lhs <= rhs;
+						index = Index + 1;
+						return r;
+					},
+					rep(),
+					other.rep()
+					);
+			return index == meta::member_size<derived_type>();
 		}
 	};
 }
