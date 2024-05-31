@@ -24,12 +24,12 @@ set(
 
 set(
 		${PROJECT_NAME_PREFIX}MINOR_VERSION
-		2
+		3
 )
 
 set(
 		${PROJECT_NAME_PREFIX}PATCH_VERSION
-		1
+		0
 )
 
 set(${PROJECT_NAME_PREFIX}VERSION ${${PROJECT_NAME_PREFIX}MAJOR_VERSION}.${${PROJECT_NAME_PREFIX}MINOR_VERSION}.${${PROJECT_NAME_PREFIX}PATCH_VERSION})
@@ -417,55 +417,6 @@ target_sources(
 		PUBLIC
 		
 		# =========================
-		# META
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/meta/string.hpp
-		${PROJECT_SOURCE_DIR}/src/meta/name.hpp
-		${PROJECT_SOURCE_DIR}/src/meta/enum_name.hpp
-		${PROJECT_SOURCE_DIR}/src/meta/member_name.hpp
-
-		${PROJECT_SOURCE_DIR}/src/meta/meta.hpp
-
-		# =========================
-		# ERROR
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/error/debug.hpp
-		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/error/debug_win.hpp>
-		${PROJECT_SOURCE_DIR}/src/error/exception.hpp
-
-		${PROJECT_SOURCE_DIR}/src/error/error.hpp
-
-		# =========================
-		# FUNCTIONAL
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/functional/type_list.hpp
-		${PROJECT_SOURCE_DIR}/src/functional/value_list.hpp
-		${PROJECT_SOURCE_DIR}/src/functional/functor.hpp
-		${PROJECT_SOURCE_DIR}/src/functional/aligned_union.hpp
-		${PROJECT_SOURCE_DIR}/src/functional/function_ref.hpp
-
-		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
-
-		# =========================
-		# MEMORY
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/memory/read_write.hpp
-
-		${PROJECT_SOURCE_DIR}/src/memory/memory.hpp
-
-		# =========================
-		# STRING
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.hpp
-
-		${PROJECT_SOURCE_DIR}/src/string/string.hpp
-
-		# =========================
 		# CHARS
 		# =========================
 
@@ -484,6 +435,38 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/chars/chars.hpp
 
 		# =========================
+		# CONCURRENCY
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/concurrency/thread.hpp
+		${PROJECT_SOURCE_DIR}/src/concurrency/unfair_mutex.hpp
+
+		${PROJECT_SOURCE_DIR}/src/concurrency/concurrency.hpp
+
+		# =========================
+		# ERROR
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/error/debug.hpp
+		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/error/debug_win.hpp>
+		${PROJECT_SOURCE_DIR}/src/error/exception.hpp
+		${PROJECT_SOURCE_DIR}/src/error/platform.hpp
+
+		${PROJECT_SOURCE_DIR}/src/error/error.hpp
+
+		# =========================
+		# FUNCTIONAL
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/functional/type_list.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/value_list.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/functor.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/aligned_union.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/function_ref.hpp
+
+		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
+
+		# =========================
 		# INFRASTRUCTURE
 		# =========================
 
@@ -491,6 +474,56 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/infrastructure/unit_test.hpp
 
 		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.hpp
+
+		# =========================
+		# MEMORY
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/memory/read_write.hpp
+
+		${PROJECT_SOURCE_DIR}/src/memory/memory.hpp
+
+		# =========================
+		# META
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/meta/string.hpp
+		${PROJECT_SOURCE_DIR}/src/meta/name.hpp
+		${PROJECT_SOURCE_DIR}/src/meta/enum_name.hpp
+		${PROJECT_SOURCE_DIR}/src/meta/member_name.hpp
+		${PROJECT_SOURCE_DIR}/src/meta/to_string.hpp
+
+		${PROJECT_SOURCE_DIR}/src/meta/meta.hpp
+
+		# =========================
+		# NUMERIC
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/numeric/random_engine.hpp
+		${PROJECT_SOURCE_DIR}/src/numeric/random.hpp
+
+		${PROJECT_SOURCE_DIR}/src/numeric/numeric.hpp
+
+		# =========================
+		# PRIMITIVE
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/primitive/multi_dimension.hpp
+		${PROJECT_SOURCE_DIR}/src/primitive/point.hpp
+		${PROJECT_SOURCE_DIR}/src/primitive/extent.hpp
+		${PROJECT_SOURCE_DIR}/src/primitive/rect.hpp
+		${PROJECT_SOURCE_DIR}/src/primitive/circle.hpp
+		${PROJECT_SOURCE_DIR}/src/primitive/color.hpp
+
+		${PROJECT_SOURCE_DIR}/src/primitive/primitive.hpp
+
+		# =========================
+		# STRING
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.hpp
+
+		${PROJECT_SOURCE_DIR}/src/string/string.hpp
 )
 
 target_sources(
