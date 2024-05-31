@@ -100,6 +100,9 @@ namespace gal::prometheus::meta
 	template<typename T>
 	[[nodiscard]] constexpr auto name_of() noexcept -> std::string_view { return name_of_type<T>(); }
 
+	template<typename T>
+	[[nodiscard]] constexpr auto name_of(T&&) noexcept -> std::string_view { return name_of<std::remove_cvref_t<T>>(); }
+
 	template<auto EnumValue, typename EnumType = std::decay_t<decltype(EnumValue)>>
 		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto name_of_enum_value() noexcept -> std::string_view
