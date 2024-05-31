@@ -11,9 +11,15 @@ export module gal.prometheus.primitive;
 export import :multi_dimension;
 export import :point;
 export import :extent;
+export import :rect;
+export import :circle;
+export import :color;
 
 #else
 #include <primitive/multi_dimension.hpp>
 #include <primitive/point.hpp>
 #include <primitive/extent.hpp>
+#include <primitive/rect.hpp>
+#include <primitive/circle.hpp>
+#include <primitive/color.hpp>
 #endif
