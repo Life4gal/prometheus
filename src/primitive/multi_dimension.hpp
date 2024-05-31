@@ -54,6 +54,10 @@ namespace gal::prometheus::primitive
 		requires std::is_arithmetic_v<T>
 	struct [[nodiscard]] multi_dimension
 	{
+		template<typename U, typename D>
+			requires std::is_arithmetic_v<U>
+		friend struct multi_dimension;
+
 		using value_type = T;
 
 		using derived_type = Derived;

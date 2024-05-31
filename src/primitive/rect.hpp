@@ -99,16 +99,25 @@ namespace gal::prometheus::primitive
 
 		[[nodiscard]] constexpr auto right_bottom() const noexcept -> point_type { return {right, bottom}; }
 
+		[[nodiscard]] constexpr auto center() const noexcept -> point_type { return {left + width() / 2, top + height() / 2}; }
+
 		[[nodiscard]] constexpr auto empty() const noexcept -> bool { return left == right or top == bottom; }
 
 		[[nodiscard]] constexpr auto valid() const noexcept -> bool { return left <= right and top <= bottom; }
 
-		[[nodiscard]] constexpr auto size() const noexcept -> extent_type
+		[[nodiscard]] constexpr auto width() const noexcept -> value_type
 		{
 			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
-
-			return {right - left, bottom - top};
+			return right - left;
 		}
+
+		[[nodiscard]] constexpr auto height() const noexcept -> value_type
+		{
+			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
+			return bottom - top;
+		}
+
+		[[nodiscard]] constexpr auto size() const noexcept -> extent_type { return {width(), height()}; }
 
 		[[nodiscard]] constexpr auto includes(const point_type& point) const noexcept -> bool
 		{
