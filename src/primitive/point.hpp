@@ -63,49 +63,96 @@ namespace gal::prometheus::primitive
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
-		template<std::convertible_to<value_type> U>
+		template<std::convertible_to<value_type> U = value_type>
 		[[nodiscard]] constexpr auto distance(const basic_point<U>& other) const noexcept -> value_type
 		{
-			return std::sqrt(
-					std::pow(x - static_cast<value_type>(other.x), 2),
-					std::pow(y - static_cast<value_type>(other.y), 2)
-					);
+			// fixme
+			#if __cpp_lib_hypot >= 202601L
+			return std::hypot(x - static_cast<value_type>(other.x), y - static_cast<value_type>(other.y));
+			#else
+			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+			{
+				constexpr auto sqrt = [](const value_type value) noexcept
+				{
+					GAL_PROMETHEUS_DEBUG_AXIOM(value >= 0);
+
+					if (value == 0) // NOLINT(clang-diagnostic-float-equal)
+					{
+						return value;
+					}
+
+					value_type prev = 0;
+					value_type current = value / 2;
+
+					while (current != prev) // NOLINT(clang-diagnostic-float-equal)
+					{
+						prev = current;
+						current = (current + value / current) / 2;
+					}
+
+					return current;
+				};
+
+				return sqrt((x - other.x) * (x - other.x) + (y - other.y) * (y - other.y));
+			}
+
+			return std::hypot(x - static_cast<value_type>(other.x), y - static_cast<value_type>(other.y));
+			#endif
 		}
 
-		template<std::convertible_to<value_type> U>
-		[[nodiscard]] constexpr auto clamp_upper(const basic_point<U>& other) noexcept -> basic_point&
+		template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
+		[[nodiscard]] constexpr auto clamp(const basic_point<Low>& low, const basic_point<High>& high) noexcept -> basic_point&
 		{
-			x = (x >= static_cast<value_type>(other.x)) ? static_cast<value_type>(other.x) : x;
-			y = (y >= static_cast<value_type>(other.y)) ? static_cast<value_type>(other.y) : y;
+			GAL_PROMETHEUS_DEBUG_ASSUME(low.x < high.x);
+			GAL_PROMETHEUS_DEBUG_ASSUME(low.y < high.y);
+
+			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+			{
+				x = std::ranges::min(std::ranges::max(x, static_cast<value_type>(low.x)), static_cast<value_type>(high.x));
+				y = std::ranges::min(std::ranges::max(y, static_cast<value_type>(low.y)), static_cast<value_type>(high.y));
+			}
+			else
+			{
+				x = std::ranges::clamp(x, low.x, high.x);
+				y = std::ranges::clamp(y, low.y, high.y);
+			}
 
 			return *this;
 		}
 
-		template<std::convertible_to<value_type> U>
-		[[nodiscard]] constexpr auto clamp_lower(const basic_point<U>& other) noexcept -> basic_point&
+		template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
+		[[nodiscard]] friend constexpr auto clamp(
+				const basic_point& point,
+				const basic_point<Low>& low,
+				const basic_point<High>& high
+				) noexcept -> basic_point
 		{
-			x = (x < static_cast<value_type>(other.x)) ? static_cast<value_type>(other.x) : x;
-			y = (y < static_cast<value_type>(other.y)) ? static_cast<value_type>(other.y) : y;
+			auto result{point};
 
-			return *this;
+			result.clamp(low, high);
+			return result;
 		}
 
-		template<std::convertible_to<value_type> T1, std::convertible_to<value_type> T2>
-		[[nodiscard]] constexpr auto between_horizontal(const basic_point<T1>& p1, const basic_point<T2>& p2) const noexcept -> bool
+		template<std::convertible_to<value_type> T1 = value_type, std::convertible_to<value_type> T2 = value_type>
+		[[nodiscard]] constexpr auto between_horizontal(const basic_point<T1>& left_top, const basic_point<T2>& right_bottom) const noexcept -> bool
 		{
-			return x >= static_cast<value_type>(p1.x) and x < static_cast<value_type>(p2.x);
+			GAL_PROMETHEUS_DEBUG_ASSUME(static_cast<value_type>(left_top.x) < static_cast<value_type>(right_bottom.x));
+
+			return x >= static_cast<value_type>(left_top.x) and x < static_cast<value_type>(right_bottom.x);
 		}
 
-		template<std::convertible_to<value_type> T1, std::convertible_to<value_type> T2>
-		[[nodiscard]] constexpr auto between_vertical(const basic_point<T1>& p1, const basic_point<T2>& p2) const noexcept -> bool
+		template<std::convertible_to<value_type> T1 = value_type, std::convertible_to<value_type> T2 = value_type>
+		[[nodiscard]] constexpr auto between_vertical(const basic_point<T1>& left_top, const basic_point<T2>& right_bottom) const noexcept -> bool
 		{
-			return y >= static_cast<value_type>(p1.y) and y < static_cast<value_type>(p2.y);
+			GAL_PROMETHEUS_DEBUG_ASSUME(static_cast<value_type>(left_top.y) < static_cast<value_type>(right_bottom.y));
+
+			return y >= static_cast<value_type>(left_top.y) and y < static_cast<value_type>(right_bottom.y);
 		}
 
-		template<std::convertible_to<value_type> T1, std::convertible_to<value_type> T2>
-		[[nodiscard]] constexpr auto between(const basic_point<T1>& p1, const basic_point<T2>& p2) const noexcept -> bool
+		template<std::convertible_to<value_type> T1 = value_type, std::convertible_to<value_type> T2 = value_type>
+		[[nodiscard]] constexpr auto between(const basic_point<T1>& left_top, const basic_point<T2>& right_bottom) const noexcept -> bool
 		{
-			return between_horizontal(p1, p2) and between_vertical(p1, p2);
+			return between_horizontal(left_top, right_bottom) and between_vertical(left_top, right_bottom);
 		}
 	};
 }
