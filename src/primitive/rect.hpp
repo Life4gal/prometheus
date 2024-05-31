@@ -110,17 +110,20 @@ namespace gal::prometheus::primitive
 			return {right - left, bottom - top};
 		}
 
-		[[nodiscard]] constexpr auto includes(const point_type& point) const noexcept -> bool { return point.between(left_top(), right_bottom()); }
+		[[nodiscard]] constexpr auto includes(const point_type& point) const noexcept -> bool
+		{
+			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
+
+			return point.between(left_top(), right_bottom());
+		}
 
 		[[nodiscard]] constexpr auto includes(const basic_rect& rect) const noexcept -> bool
 		{
 			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
 			GAL_PROMETHEUS_DEBUG_ASSUME(not rect.empty() and rect.valid());
+			GAL_PROMETHEUS_DEBUG_ASSUME(size().exact_greater_than(rect.size()));
 
-			return (rect.left >= left) and (rect.left < right) and
-			       (rect.top >= top) and (rect.top < bottom) and
-			       (rect.right >= left) and (rect.right < right) and
-			       (rect.bottom >= top) and (rect.bottom < bottom);
+			return rect.left >= left and rect.right < right and rect.top >= top and rect.bottom < bottom;
 		}
 
 		[[nodiscard]] constexpr auto intersects(const basic_rect& rect) const noexcept -> bool
@@ -134,8 +137,8 @@ namespace gal::prometheus::primitive
 		[[nodiscard]] constexpr auto combine_max(const basic_rect& rect) const noexcept -> basic_rect
 		{
 			return {
-					std::ranges::max(left, rect.left),
-					std::ranges::max(top, rect.top),
+					std::ranges::min(left, rect.left),
+					std::ranges::min(top, rect.top),
 					std::ranges::max(right, rect.right),
 					std::ranges::max(bottom, rect.bottom)
 			};
@@ -144,8 +147,8 @@ namespace gal::prometheus::primitive
 		[[nodiscard]] constexpr auto combine_min(const basic_rect& rect) const noexcept -> basic_rect
 		{
 			return {
-					std::ranges::min(left, rect.left),
-					std::ranges::min(top, rect.top),
+					std::ranges::max(left, rect.left),
+					std::ranges::max(top, rect.top),
 					std::ranges::min(right, rect.right),
 					std::ranges::min(bottom, rect.bottom)
 			};
