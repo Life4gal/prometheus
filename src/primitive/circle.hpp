@@ -13,7 +13,7 @@ module;
 export module gal.prometheus.primitive:circle;
 
 import std;
-import :multi_dimension;
+import :multidimensional;
 import :point;
 import :extent;
 import :rect;
@@ -25,7 +25,7 @@ import :rect;
 #include <numbers>
 
 #include <prometheus/macro.hpp>
-#include <primitive/multi_dimension.hpp>
+#include <primitive/multidimensional.hpp>
 #include <primitive/point.hpp>
 #include <primitive/extent.hpp>
 #include <primitive/rect.hpp>
@@ -35,7 +35,7 @@ namespace gal::prometheus::primitive
 {
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_circle final : multi_dimension<T, basic_circle<T>>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_circle final : multidimensional<T, basic_circle<T>>
 	{
 		using value_type = T;
 		using point_type = basic_point<value_type>;

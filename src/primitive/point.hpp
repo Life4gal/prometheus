@@ -13,7 +13,7 @@ module;
 export module gal.prometheus.primitive:point;
 
 import std;
-import :multi_dimension;
+import :multidimensional;
 
 #else
 
@@ -21,14 +21,14 @@ import :multi_dimension;
 #include <format>
 
 #include <prometheus/macro.hpp>
-#include <primitive/multi_dimension.hpp>
+#include <primitive/multidimensional.hpp>
 #endif
 
 namespace gal::prometheus::primitive
 {
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point final : multi_dimension<T, basic_point<T>>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point final : multidimensional<T, basic_point<T>>
 	{
 		using value_type = T;
 

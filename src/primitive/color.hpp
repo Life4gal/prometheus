@@ -13,14 +13,14 @@ module;
 export module gal.prometheus.primitive:color;
 
 import std;
-import :multi_dimension;
+import :multidimensional;
 
 #else
 
 #include <format>
 #include <type_traits>
 
-#include <primitive/multi_dimension.hpp>
+#include <primitive/multidimensional.hpp>
 #include <prometheus/macro.hpp>
 #endif
 
@@ -30,7 +30,7 @@ namespace gal::prometheus::primitive
 
 	template<typename T>
 		requires std::is_unsigned_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_color final : multi_dimension<T, basic_color<T>>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_color final : multidimensional<T, basic_color<T>>
 	{
 		using value_type = T;
 

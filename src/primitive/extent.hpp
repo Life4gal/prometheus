@@ -13,7 +13,7 @@ module;
 export module gal.prometheus.primitive:extent;
 
 import std;
-import :multi_dimension;
+import :multidimensional;
 
 #else
 
@@ -21,14 +21,14 @@ import :multi_dimension;
 #include <format>
 
 #include <prometheus/macro.hpp>
-#include <primitive/multi_dimension.hpp>
+#include <primitive/multidimensional.hpp>
 #endif
 
 namespace gal::prometheus::primitive
 {
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent final : multi_dimension<T, basic_extent<T>>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent final : multidimensional<T, basic_extent<T>>
 	{
 		using value_type = T;
 
