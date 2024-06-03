@@ -77,6 +77,18 @@ namespace gal::prometheus::primitive
 	}
 
 	template<typename T>
+	[[nodiscard]] constexpr auto make_color_from_argb(const universal_32_bit_color_type argb) noexcept -> basic_color<T>
+	{
+		return
+		{
+				static_cast<T>((argb >> 16) & 0xff),
+				static_cast<T>((argb >> 8) & 0xff),
+				static_cast<T>((argb >> 0) & 0xff),
+				static_cast<T>((argb >> 24) & 0xff)
+		};
+	}
+
+	template<typename T>
 	[[nodiscard]] constexpr auto make_rgb_from_color(const basic_color<T>& color) noexcept -> universal_32_bit_color_type //
 	{
 		return ((color.red & 0xff) << 16) | ((color.green & 0xff) << 8) | ((color.blue & 0xff) << 0);
@@ -86,6 +98,12 @@ namespace gal::prometheus::primitive
 	[[nodiscard]] constexpr auto make_rgba_from_color(const basic_color<T>& color) noexcept -> universal_32_bit_color_type //
 	{
 		return ((color.red & 0xff) << 24) | ((color.green & 0xff) << 16) | ((color.blue & 0xff) << 8) | ((color.alpha & 0xff) << 0);
+	}
+
+	template<typename T>
+	[[nodiscard]] constexpr auto make_argb_from_color(const basic_color<T>& color) noexcept -> universal_32_bit_color_type //
+	{
+		return ((color.red & 0xff) << 16) | ((color.green & 0xff) << 8) | ((color.blue & 0xff) << 0) | ((color.alpha & 0xff) << 24);
 	}
 
 	namespace colors
