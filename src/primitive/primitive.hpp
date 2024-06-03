@@ -14,6 +14,7 @@ export import :extent;
 export import :rect;
 export import :circle;
 export import :color;
+export import :vertex;
 
 #else
 #include <primitive/multidimensional.hpp>
@@ -22,4 +23,5 @@ export import :color;
 #include <primitive/rect.hpp>
 #include <primitive/circle.hpp>
 #include <primitive/color.hpp>
+#include <primitive/vertex.hpp>
 #endif
