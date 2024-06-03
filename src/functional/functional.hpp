@@ -13,6 +13,7 @@ export import :value_list;
 export import :functor;
 export import :aligned_union;
 export import :function_ref;
+export import :math;
 
 #else
 #include <prometheus/macro.hpp>
@@ -21,4 +22,5 @@ export import :function_ref;
 #include <functional/functor.hpp>
 #include <functional/aligned_union.hpp>
 #include <functional/function_ref.hpp>
+#include <functional/math.hpp>
 #endif

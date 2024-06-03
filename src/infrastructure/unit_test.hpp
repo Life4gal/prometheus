@@ -483,15 +483,6 @@ namespace gal::prometheus::unit_test
 
 	namespace operands
 	{
-		template<typename T>
-		[[nodiscard]] constexpr auto wrap_abs(const T value) noexcept -> T //
-			requires requires { std::abs(value); }
-		{
-			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED { return value > 0 ? value : -value; }
-
-			return std::abs(value);
-		}
-
 		class Operand
 		{
 		public:
@@ -801,7 +792,7 @@ namespace gal::prometheus::unit_test
 					{
 						using std::operator-;
 						using std::operator<;
-						return operands::wrap_abs(left - right) < e; // NOLINT(clang-diagnostic-implicit-int-float-conversion)
+						return functional::abs(left - right) < e; // NOLINT(clang-diagnostic-implicit-int-float-conversion)
 					}
 					else if constexpr (category == ExpressionCategory::NOT_EQUAL)
 					{
@@ -812,7 +803,7 @@ namespace gal::prometheus::unit_test
 					{
 						using std::operator-;
 						using std::operator<;
-						return e < operands::wrap_abs(left - right);
+						return e < functional::abs(left - right);
 					}
 					else if constexpr (category == ExpressionCategory::GREATER_THAN)
 					{

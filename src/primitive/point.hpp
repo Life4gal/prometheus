@@ -14,6 +14,7 @@ export module gal.prometheus.primitive:point;
 
 import std;
 import :multidimensional;
+import gal.prometheus.functional;
 
 #else
 
@@ -22,6 +23,7 @@ import :multidimensional;
 
 #include <prometheus/macro.hpp>
 #include <primitive/multidimensional.hpp>
+#include <functional/functional.hpp>
 #endif
 
 namespace gal::prometheus::primitive
@@ -64,40 +66,9 @@ namespace gal::prometheus::primitive
 		}
 
 		template<std::convertible_to<value_type> U = value_type>
-		[[nodiscard]] constexpr auto distance(const basic_point<U>& other) const noexcept -> value_type
+		[[nodiscard]] constexpr auto distance(const basic_point<U>& other) const noexcept -> value_type//
 		{
-			// fixme
-			#if __cpp_lib_hypot >= 202601L
-			return std::hypot(x - static_cast<value_type>(other.x), y - static_cast<value_type>(other.y));
-			#else
-			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
-			{
-				constexpr auto sqrt = [](const value_type value) noexcept
-				{
-					GAL_PROMETHEUS_DEBUG_AXIOM(value >= 0);
-
-					if (value == 0) // NOLINT(clang-diagnostic-float-equal)
-					{
-						return value;
-					}
-
-					value_type prev = 0;
-					value_type current = value / 2;
-
-					while (current != prev) // NOLINT(clang-diagnostic-float-equal)
-					{
-						prev = current;
-						current = (current + value / current) / 2;
-					}
-
-					return current;
-				};
-
-				return sqrt((x - other.x) * (x - other.x) + (y - other.y) * (y - other.y));
-			}
-
-			return std::hypot(x - static_cast<value_type>(other.x), y - static_cast<value_type>(other.y));
-			#endif
+			return functional::hypot(x - static_cast<value_type>(other.x), y - static_cast<value_type>(other.y));
 		}
 
 		template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
