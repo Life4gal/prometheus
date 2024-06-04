@@ -13,20 +13,32 @@ module;
 export module gal.prometheus.functional:math;
 
 import std;
-import :functor;
 
 #else
 
 #include <type_traits>
 #include <cmath>
+#include <numbers>
 
 #include <prometheus/macro.hpp>
-#include <functional/functor.hpp>
 #endif
 
 namespace gal::prometheus::functional
 {
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto is_nan(const T value) noexcept -> bool
+	{
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+		{
+			//
+			return value != value;
+		}
+
+		return std::isnan(value);
+	}
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
@@ -39,6 +51,27 @@ namespace gal::prometheus::functional
 		}
 
 		return std::abs(value);
+	}
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto floor(const T value) noexcept -> T
+	{
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+		{
+			if constexpr (std::is_integral_v<T>) { return value; }
+			else
+			{
+				if (value >= 0 or static_cast<T>(static_cast<unsigned long long>(value)) == value)
+				{
+					return static_cast<T>(static_cast<unsigned long long>(value));
+				}
+
+				return static_cast<T>(static_cast<unsigned long long>(value) - 1);
+			}
+		}
+
+		return std::floor(value);
 	}
 
 	template<typename T>
@@ -70,8 +103,9 @@ namespace gal::prometheus::functional
 
 		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{
-			//
-			return (exp == 0) ? static_cast<T>(1) : static_cast<T>(base * pow(base, exp - 1));
+			if (exp == 0) { return static_cast<T>(1); }
+
+			return static_cast<T>(base * functional::pow(base, exp - 1));
 		}
 
 		return static_cast<T>(std::pow(base, exp));
@@ -118,30 +152,98 @@ namespace gal::prometheus::functional
 		return static_cast<T>(std::hypot(x, y));
 	}
 
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+
+	namespace math_detail
+	{
+		template<typename T>
+		[[nodiscard]] constexpr auto tan_series_exp(const T value) noexcept -> T
+		{
+			const auto z = value - std::numbers::pi_v<T> / 2;
+
+			if (std::numeric_limits<T>::min() > functional::abs(z)) { return std::numbers::pi_v<T> / 2; }
+
+			// this is based on a fourth-order expansion of tan(z) using Bernoulli numbers
+			return -1 / z + (z / 3 + (functional::pow(z, 3) / 45 + (2 * functional::pow(z, 5) / 945 + functional::pow(z, 7) / 4725)));
+		}
+
+		template<typename T>
+		[[nodiscard]] constexpr auto tan_cf_recurse(const T value, const int current, const int max) noexcept -> T
+		{
+			const auto z = static_cast<T>(2 * current - 1);
+
+			if (current < max) { return z - value / tan_cf_recurse(value, current + 1, max); }
+
+			return z;
+		}
+
+		template<typename T>
+		[[nodiscard]] constexpr auto tan_cf_main(const T value) noexcept -> T
+		{
+			if (value > static_cast<T>(1.55) and value < static_cast<T>(1.6))
+			{
+				// deals with a singularity at tan(pi/2)
+				return tan_series_exp(value);
+			}
+
+			if (value > static_cast<T>(1.4)) { return value / tan_cf_recurse(value * value, 1, 45); }
+
+			if (value > static_cast<T>(1)) { return value / tan_cf_recurse(value * value, 1, 35); }
+
+			return value / tan_cf_recurse(value * value, 1, 25);
+		}
+
+		template<typename T>
+		[[nodiscard]] constexpr auto tan_begin(const T value, const int count = 0) noexcept -> T
+		{
+			if (value > std::numbers::pi_v<T>)
+			{
+				if (count > 1) { return std::numeric_limits<T>::quiet_NaN(); }
+
+				return tan_begin(value - std::numbers::pi_v<T> * functional::floor(value - std::numbers::pi_v<T>), count + 1);
+			}
+
+			return tan_cf_main(value);
+		}
+	} // namespace math_detail
+
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto tan(const T value) noexcept -> T
+	{
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+		{
+			if (functional::is_nan(value)) { return std::numeric_limits<T>::quiet_NaN(); }
+
+			if (value < static_cast<T>(0)) { return -math_detail::tan_begin(-value); }
+
+			return math_detail::tan_begin(value);
+		}
+
+		return std::tan(value);
+	}
+
 	template<typename T>
 		requires std::is_arithmetic_v<T>
 	[[nodiscard]] constexpr auto sin(const T value) noexcept -> T
 	{
 		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{
-			constexpr auto taylor_series = functional::y_combinator{
-					[](auto self, const T v, const int n) noexcept -> T //
-					{
-						return
-								(n == 0)
-									? v
-									: (
-										  functional::pow(-1, n) *
-										  functional::pow(v, 2 * n + 1) /
-										  functional::factorial(2 * n + 1)
-									  ) +
-									  self(v, n - 1);
-					}
-			};
+			if (functional::is_nan(value)) { return std::numeric_limits<T>::quiet_NaN(); }
 
-			// todo
-			constexpr auto n = 10;
-			return taylor_series(value, n);
+			if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T> / 2)) { return 1; }
+
+			if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T> / 2)) { return -1; }
+
+			if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T>)) { return 0; }
+
+			if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T>)) { return -0; }
+
+			// sin(x) = 2tan(x/2) / (1 + tan²(x/2))
+			const auto z = functional::tan(value / static_cast<T>(2));
+			return (static_cast<T>(2) * z) / (static_cast<T>(1) + z * z);
 		}
 
 		return static_cast<T>(std::sin(value));
@@ -153,23 +255,19 @@ namespace gal::prometheus::functional
 	{
 		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{
-			constexpr auto taylor_series = functional::y_combinator
-			{[](auto self, const T v, const int n) noexcept -> T //
-					{
-						return
-								(n == 0)
-									? 1
-									: (
-										  functional::pow(-1, n) *
-										  functional::pow(v, 2 * n) /
-										  functional::factorial(2 * n)
-									  ) + self(v, n - 1);
-					}
-			};
+			if (functional::is_nan(value)) { return std::numeric_limits<T>::quiet_NaN(); }
 
-			// todo
-			constexpr auto n = 10;
-			return taylor_series(value, n);
+			if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T> / 2)) { return 0; }
+
+			if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T> / 2)) { return -0; }
+
+			if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T>)) { return -1; }
+
+			if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T>)) { return -1; }
+
+			// cos(x) = (1 - tan²(x/2)) / (1 + tan²(x/2))
+			const auto z = functional::tan(value / static_cast<T>(2));
+			return (static_cast<T>(1) - z * z) / (static_cast<T>(1) + z * z);
 		}
 
 		return static_cast<T>(std::cos(value));
