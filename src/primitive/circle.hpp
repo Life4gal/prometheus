@@ -33,12 +33,31 @@ import :rect;
 
 namespace gal::prometheus::primitive
 {
-	template<typename T>
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+
+	template<typename T, std::size_t N>
 		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_circle final : multidimensional<T, basic_circle<T>>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_circle;
+
+	template<typename>
+	struct is_basic_circle : std::false_type {};
+
+	template<typename T, std::size_t N>
+	struct is_basic_circle<basic_circle<T, N>> : std::true_type {};
+
+	template<typename T>
+	constexpr auto is_basic_circle_v = is_basic_circle<T>::value;
+
+	template<typename T>
+	concept basic_circle_t = is_basic_circle_v<T>;
+
+	template<typename T, std::size_t N>
+		requires std::is_arithmetic_v<T>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_circle final : multidimensional<T, basic_circle<T, N>>
 	{
 		using value_type = T;
-		using point_type = basic_point<value_type>;
+
+		using point_type = basic_point<value_type, N>;
 
 		constexpr static auto is_always_equal = true;
 
@@ -86,8 +105,8 @@ namespace gal::prometheus::primitive
 		}
 	};
 
-	template<typename T>
-	[[nodiscard]] constexpr auto inscribed_rect(const basic_circle<T>& circle) noexcept -> basic_rect<T>
+	template<typename T, std::size_t N>
+	[[nodiscard]] constexpr auto inscribed_rect(const basic_circle<T, N>& circle) noexcept -> basic_rect<T, N>
 	{
 		const auto size = [r = circle.radius]
 		{
@@ -96,63 +115,119 @@ namespace gal::prometheus::primitive
 			else { return static_cast<T>(static_cast<double>(r) * std::numbers::sqrt2_v<double>); }
 		}();
 
-		const auto extent = typename basic_rect<T>::extent_type{size, size};
-		const auto offset = extent / 2;
-		const auto top_left = circle.center - offset;
-
-		return {top_left, extent};
-	}
-
-	template<typename T>
-	[[nodiscard]] constexpr auto circumscribed_rect(const basic_circle<T>& circle) noexcept -> basic_rect<T>
-	{
-		return
+		if constexpr (N == 2)
 		{
-				// left
-				circle.center.x - circle.radius,
-				// top
-				circle.center.y - circle.radius,
-				// right
-				circle.center.x + circle.radius,
-				// bottom
-				circle.center.y + circle.radius
-		};
+			const auto extent = typename basic_rect<T, N>::extent_type{size, size};
+			const auto offset = extent / 2;
+			const auto left_top = circle.center - offset;
+
+			return {left_top, extent};
+		}
+		else if constexpr (N == 3)
+		{
+			const auto extent = typename basic_rect<T, N>::extent_type{size, size, size};
+			const auto offset = extent / 2;
+			const auto left_top_near = circle.center - offset;
+
+			return {left_top_near, extent};
+		}
+		else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 	}
 
-	template<typename T>
-	[[nodiscard]] constexpr auto inscribed_circle(const basic_rect<T>& rect) noexcept -> basic_circle<T>
+	template<typename T, std::size_t N>
+	[[nodiscard]] constexpr auto circumscribed_rect(const basic_circle<T, N>& circle) noexcept -> basic_rect<T, N>
 	{
-		const auto radius = std::ranges::min(rect.width(), rect.height()) / 2;
-		const auto center = rect.center();
-		return {center, radius};
+		if constexpr (N == 2)
+		{
+			return
+			{
+					// left
+					circle.center.x - circle.radius,
+					// top
+					circle.center.y - circle.radius,
+					// right
+					circle.center.x + circle.radius,
+					// bottom
+					circle.center.y + circle.radius
+			};
+		}
+		else if constexpr (N == 3)
+		{
+			return
+			{
+					// left
+					circle.center.x - circle.radius,
+					// top
+					circle.center.y - circle.radius,
+					// near
+					circle.center.z - circle.radius,
+					// right
+					circle.center.x + circle.radius,
+					// bottom
+					circle.center.y + circle.radius,
+					// far
+					circle.center.z + circle.radius
+			};
+		}
+		else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 	}
 
-	template<typename T>
-	[[nodiscard]] constexpr auto circumscribed_circle(const basic_rect<T>& rect) noexcept -> basic_circle<T>
+	template<typename T, std::size_t N>
+	[[nodiscard]] constexpr auto inscribed_circle(const basic_rect<T, N>& rect) noexcept -> basic_circle<T, N>
 	{
-		const auto radius = rect.size().template to<typename basic_rect<T>::point_type>().distance({0, 0}) / 2;
-		const auto center = rect.center();
-		return {center, radius};
+		if constexpr (N == 2)
+		{
+			const auto radius = std::ranges::min(rect.width(), rect.height()) / 2;
+			const auto center = rect.center();
+			return {center, radius};
+		}
+		else if constexpr (N == 3)
+		{
+			const auto radius = std::ranges::min(rect.width(), rect.height(), rect.depth()) / 2;
+			const auto center = rect.center();
+			return {center, radius};
+		}
+		else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 	}
+
+	template<typename T, std::size_t N>
+	[[nodiscard]] constexpr auto circumscribed_circle(const basic_rect<T, N>& rect) noexcept -> basic_circle<T, N>
+	{
+		if constexpr (N == 2)
+		{
+			const auto radius = rect.size().template to<typename basic_rect<T, N>::point_type>().distance({0, 0}) / 2;
+			const auto center = rect.center();
+			return {center, radius};
+		}
+		else if constexpr (N == 3)
+		{
+			const auto radius = rect.size().template to<typename basic_rect<T, N>::point_type>().distance({0, 0, 0}) / 2;
+			const auto center = rect.center();
+			return {center, radius};
+		}
+		else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+	}
+
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 }
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
-	template<std::size_t Index, typename T>
+	template<std::size_t Index, typename T, std::size_t N>
 	struct
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 			[[msvc::known_semantics]]
 			#endif
-			tuple_element<Index, gal::prometheus::primitive::basic_circle<T>> // NOLINT(cert-dcl58-cpp)
+			tuple_element<Index, gal::prometheus::primitive::basic_circle<T, N>> // NOLINT(cert-dcl58-cpp)
 	{
-		using type = std::conditional_t<Index == 0, typename gal::prometheus::primitive::basic_circle<T>::point_type, T>;
+		using type = std::conditional_t<Index == 0, typename gal::prometheus::primitive::basic_circle<T, N>::point_type, T>;
 	};
 
-	template<typename T>
-	struct tuple_size<gal::prometheus::primitive::basic_circle<T>> // NOLINT(cert-dcl58-cpp)
+	template<typename T, std::size_t N>
+	struct tuple_size<gal::prometheus::primitive::basic_circle<T, N>> // NOLINT(cert-dcl58-cpp)
 			: std::integral_constant<std::size_t, 2> {};
 
-	template<typename T>
-	struct formatter<gal::prometheus::primitive::basic_circle<T>> // NOLINT(cert-dcl58-cpp)
+	template<typename T, std::size_t N>
+	struct formatter<gal::prometheus::primitive::basic_circle<T, N>> // NOLINT(cert-dcl58-cpp)
 	{
 		template<typename ParseContext>
 		constexpr auto parse(ParseContext& context) const noexcept -> auto
@@ -162,7 +237,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
 		}
 
 		template<typename FormatContext>
-		auto format(const gal::prometheus::primitive::basic_circle<T>& circle, FormatContext& context) const noexcept -> auto
+		auto format(const gal::prometheus::primitive::basic_circle<T, N>& circle, FormatContext& context) const noexcept -> auto
 		{
 			return std::format_to(
 					context.out(),
