@@ -28,24 +28,29 @@ import :color;
 
 namespace gal::prometheus::primitive
 {
-	template<typename PointValueType, typename ColorValueType>
-		requires std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<ColorValueType>
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+
+	template<
+		basic_point_t PointType,
+		typename UvType = basic_point<typename PointType::value_type, 2>,
+		typename ColorValueType = std::uint8_t>
+		requires std::is_arithmetic_v<ColorValueType>
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_vertex final
 	{
-		using point_value_type = PointValueType;
-		using color_value_type = ColorValueType;
+		using point_type = PointType;
+		using point_value_type = typename point_type::value_type;
 
-		using point_type = basic_point<point_value_type>;
-		using color_type = basic_color<color_value_type>;
+		using uv_type = UvType;
+		using color_type = basic_color<ColorValueType>;
 
 		constexpr static auto is_always_equal = true;
-		constexpr static auto default_uv = point_type{0, 0};
+		constexpr static auto default_uv = uv_type{0, 0};
 
 		point_type position;
-		point_type uv;
+		uv_type uv;
 		color_type color;
 
-		constexpr basic_vertex(const point_type& position, const point_type uv, const color_type color) noexcept
+		constexpr basic_vertex(const point_type position, const uv_type uv, const color_type color) noexcept
 			: position{position},
 			  uv{uv},
 			  color{color} {}
@@ -54,14 +59,14 @@ namespace gal::prometheus::primitive
 			: basic_vertex{position, default_uv, color} {}
 
 		template<std::size_t Index>
-			requires(Index < 2)
+			requires(Index < 3)
 		[[nodiscard]] constexpr auto get() const noexcept
 			-> std::conditional_t<
 				Index == 0,
 				point_type,
 				std::conditional_t<
 					Index == 1,
-					point_type,
+					uv_type,
 					color_type
 				>
 			>
@@ -73,14 +78,14 @@ namespace gal::prometheus::primitive
 		}
 
 		template<std::size_t Index>
-			requires(Index < 2)
+			requires(Index < 3)
 		[[nodiscard]] constexpr auto get() noexcept
 			-> std::conditional_t<
 				Index == 0,
 				point_type,
 				std::conditional_t<
 					Index == 1,
-					point_type,
+					uv_type,
 					color_type
 				>
 			>
@@ -91,33 +96,50 @@ namespace gal::prometheus::primitive
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 	};
+
+	template<typename>
+	struct is_basic_vertex : std::false_type {};
+
+	template<
+		basic_point_t PointType,
+		typename UvType,
+		typename ColorValueType>
+	struct is_basic_vertex<basic_vertex<PointType, UvType, ColorValueType>> : std::true_type {};
+
+	template<typename T>
+	constexpr auto is_basic_vertex_v = is_basic_vertex<T>::value;
+
+	template<typename T>
+	concept basic_vertex_t = is_basic_vertex_v<T>;
+
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
-	template<std::size_t Index, typename PointValueType, typename ColorValueType>
+	template<std::size_t Index, typename PointType, typename UvType, typename ColorValueType>
 	struct
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 			[[msvc::known_semantics]]
 			#endif
-			tuple_element<Index, gal::prometheus::primitive::basic_vertex<PointValueType, ColorValueType>> // NOLINT(cert-dcl58-cpp)
+			tuple_element<Index, gal::prometheus::primitive::basic_vertex<PointType, UvType, ColorValueType>> // NOLINT(cert-dcl58-cpp)
 	{
 		using type = std::conditional_t<
 			Index == 0,
-			typename gal::prometheus::primitive::basic_vertex<PointValueType, ColorValueType>::point_type,
+			typename gal::prometheus::primitive::basic_vertex<PointType, UvType, ColorValueType>::point_type,
 			std::conditional_t<
 				Index == 1,
-				typename gal::prometheus::primitive::basic_vertex<PointValueType, ColorValueType>::point_type,
-				typename gal::prometheus::primitive::basic_vertex<PointValueType, ColorValueType>::color_type
+				typename gal::prometheus::primitive::basic_vertex<PointType, UvType, ColorValueType>::uv_type,
+				typename gal::prometheus::primitive::basic_vertex<PointType, UvType, ColorValueType>::color_type
 			>
 		>;
 	};
 
-	template<typename PointValueType, typename ColorValueType>
-	struct tuple_size<gal::prometheus::primitive::basic_vertex<PointValueType, ColorValueType>> // NOLINT(cert-dcl58-cpp)
+	template<typename PointType, typename UvType, typename ColorValueType>
+	struct tuple_size<gal::prometheus::primitive::basic_vertex<PointType, UvType, ColorValueType>> // NOLINT(cert-dcl58-cpp)
 			: std::integral_constant<std::size_t, 3> {};
 
-	template<typename PointValueType, typename ColorValueType>
-	struct formatter<gal::prometheus::primitive::basic_vertex<PointValueType, ColorValueType>> // NOLINT(cert-dcl58-cpp)
+	template<typename PointType, typename UvType, typename ColorValueType>
+	struct formatter<gal::prometheus::primitive::basic_vertex<PointType, UvType, ColorValueType>> // NOLINT(cert-dcl58-cpp)
 	{
 		template<typename ParseContext>
 		constexpr auto parse(ParseContext& context) const noexcept -> auto
@@ -128,7 +150,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
 
 		template<typename FormatContext>
 		auto format(
-				const gal::prometheus::primitive::basic_vertex<PointValueType, ColorValueType>& vertex,
+				const gal::prometheus::primitive::basic_vertex<PointType, UvType, ColorValueType>& vertex,
 				FormatContext& context
 				) const noexcept -> auto
 		{
