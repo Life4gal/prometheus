@@ -152,6 +152,19 @@ namespace gal::prometheus::functional
 		return static_cast<T>(std::hypot(x, y));
 	}
 
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto hypot(const T x, const std::type_identity_t<T> y, const std::type_identity_t<T> z) noexcept -> T
+	{
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+		{
+			//
+			return functional::sqrt(functional::pow(x, 2) + functional::pow(y, 2) + functional::pow(z, 2));
+		}
+
+		return static_cast<T>(std::hypot(x, y, z));
+	}
+
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace math_detail
