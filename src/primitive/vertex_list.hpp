@@ -65,48 +65,78 @@ namespace gal::prometheus::primitive
 		ALL = Q1 | Q2 | Q3 | Q4,
 	};
 
-	template<typename PointValueType, typename ColorValueType, template<typename> typename Container = std::vector>
-		requires std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<ColorValueType>
+	// todo: 2-dimensional vertices are supported only now
+	template<basic_vertex_t Vertex, template<typename> typename Container = std::vector>
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_vertex_list final
 	{
-		using vertex_type = basic_vertex<PointValueType, ColorValueType>;
-		using vertexes_type = Container<vertex_type>;
-
-		using point_value_type = typename vertex_type::point_value_type;
+		using vertex_type = Vertex;
+		using vertices_type = Container<vertex_type>;
 
 		using point_type = typename vertex_type::point_type;
+		using point_value_type = typename vertex_type::point_value_type;
+
+		using uv_type = typename vertex_type::uv_type;
 		using color_type = typename vertex_type::color_type;
 
-		using extent_type = basic_extent<point_value_type>;
-		using rect_type = basic_rect<point_value_type>;
-		using circle_type = basic_circle<point_value_type>;
+		using extent_type = basic_extent<point_value_type, std::tuple_size_v<point_type>>;
+		using rect_type = basic_rect<point_value_type, std::tuple_size_v<point_type>>;
+		using circle_type = basic_circle<point_value_type, std::tuple_size_v<point_type>>;
 
-		vertexes_type vertexes;
+		constexpr static auto circle_vertex = []
+		{
+			constexpr std::size_t circle_vertex_count = 12;
+			constexpr auto make_circle_vertex_point = [](const std::size_t i) noexcept -> point_type
+			{
+				const auto a = static_cast<float>(i) / static_cast<float>(circle_vertex_count) * 2 * std::numbers::pi_v<float>;
+				return {functional::cos(a), -functional::sin(a)};
+			};
+
+			std::array<point_type, circle_vertex_count> result{};
+			for (decltype(result.size()) i = 0; i < circle_vertex_count; ++i) { result[i] = make_circle_vertex_point(i); }
+			return result;
+		}();
 
 	private:
-		constexpr auto emplace_back(const point_type& position, const color_type& color) noexcept -> void //
-		{
-			vertexes.emplace_back(position, color);
-		}
-
-		constexpr auto emplace_back(const point_type& position, const point_type& uv, const color_type& color) noexcept -> void //
-		{
-			vertexes.emplace_back(position, uv, color);
-		}
-
-		constexpr auto push_back(const vertex_type& vertex) noexcept -> void //
-		{
-			vertexes.push_back(vertex);
-		}
+		vertices_type vertices_;
 
 	public:
+		[[nodiscard]] constexpr auto vertices() const noexcept -> auto { return vertices_ | std::views::all; }
+
+		[[nodiscard]] constexpr auto size() const noexcept -> typename vertices_type::size_type { return vertices_.size(); }
+
+		constexpr auto clear() noexcept -> void { vertices_.clear(); }
+
+		constexpr auto point(const point_type& position, const color_type& color) noexcept -> void //
+		{
+			vertices_.emplace_back(position, color);
+		}
+
+		constexpr auto point(const point_type& position, const point_type& uv, const color_type& color) noexcept -> void //
+		{
+			vertices_.emplace_back(position, uv, color);
+		}
+
+		constexpr auto point(const vertex_type& vertex) noexcept -> void //
+		{
+			vertices_.push_back(vertex);
+		}
+
 		constexpr auto triangle(const point_type& a, const point_type& b, const point_type& c, const color_type color) noexcept -> void
 		{
 			if (color.alpha == 0) { return; }
 
-			emplace_back(a, color);
-			emplace_back(b, color);
-			emplace_back(c, color);
+			point(a, color);
+			point(b, color);
+			point(c, color);
+		}
+
+		constexpr auto triangle(const vertex_type& a, const vertex_type& b, const vertex_type& c) noexcept -> void
+		{
+			if (a.color.alpha == 0 or b.color.alpha == 0 or c.color.alpha == 0) { return; }
+
+			point(a);
+			point(b);
+			point(c);
 		}
 
 		constexpr auto line(const point_type& from, const point_type& to, const color_type& color) noexcept -> void
@@ -127,20 +157,6 @@ namespace gal::prometheus::primitive
 		constexpr auto arc(const circle_type& circle, const color_type& color) noexcept -> void
 		{
 			if (color.alpha == 0) { return; }
-
-			constexpr static auto circle_vertex = []
-			{
-				constexpr std::size_t circle_vertex_count = 12;
-				constexpr auto make_circle_vertex_point = [](const std::size_t i) noexcept -> point_type
-				{
-					const auto a = static_cast<float>(i) / static_cast<float>(circle_vertex_count) * 2 * std::numbers::pi_v<float>;
-					return {functional::cos(a), -functional::sin(a)};
-				};
-
-				std::array<point_type, circle_vertex_count> result{};
-				for (decltype(result.size()) i = 0; i < circle_vertex_count; ++i) { result[i] = make_circle_vertex_point(i); }
-				return result;
-			}();
 
 			constexpr auto min_max = []
 			{
