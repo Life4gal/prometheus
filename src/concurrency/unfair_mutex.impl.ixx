@@ -246,7 +246,7 @@ namespace gal::prometheus::concurrency
 		GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
 	}
 
-	constexpr UnfairRecursiveMutex::UnfairRecursiveMutex() noexcept
+	UnfairRecursiveMutex::UnfairRecursiveMutex() noexcept
 		: owner_{invalid_thread_id},
 		  count_{0} {}
 

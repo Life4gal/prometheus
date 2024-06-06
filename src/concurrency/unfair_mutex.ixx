@@ -80,7 +80,7 @@ export namespace gal::prometheus::concurrency
 		constexpr auto operator=(const UnfairRecursiveMutex&) noexcept -> UnfairRecursiveMutex& = delete;
 		constexpr auto operator=(UnfairRecursiveMutex&&) noexcept -> UnfairRecursiveMutex& = delete;
 
-		constexpr UnfairRecursiveMutex() noexcept;
+		UnfairRecursiveMutex() noexcept;
 
 		constexpr ~UnfairRecursiveMutex() noexcept = default;
 
