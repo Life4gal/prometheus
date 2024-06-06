@@ -3,29 +3,18 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.meta:string;
+export module gal.prometheus.meta:member;
 
 import std;
-import :name;
-
-#else
-#include <type_traits>
-#include <limits>
-
-#include <prometheus/macro.hpp>
-#include <meta/name.hpp>
-#endif
+import :string;
 
 namespace gal::prometheus::meta
 {
-	namespace member_name
+	namespace member_detail
 	{
 		template<typename T>
 		extern const T extern_any{};
@@ -113,9 +102,9 @@ namespace gal::prometheus::meta
 		}
 
 		template<typename T>
-		[[nodiscard]] constexpr auto member_size(const T&) noexcept -> std::size_t //
+		[[nodiscard]] constexpr auto member_size(T&&) noexcept -> std::size_t //
 		{
-			return member_size<T>();
+			return member_size<std::remove_cvref_t<T>>();
 		}
 
 		template<typename T>
@@ -136,6 +125,7 @@ namespace gal::prometheus::meta
 		{
 			#define MEMBER_NAME_VISIT_DO_FORWARD(...) static_cast<decltype(__VA_ARGS__)&&>(__VA_ARGS__) // std::forward
 			#define MEMBER_NAME_VISIT_DO_FORWARD_LIKE(...) static_cast<std::conditional_t<std::is_lvalue_reference_v<T>, std::add_lvalue_reference_t<std::remove_reference_t<decltype(__VA_ARGS__)>>, std::add_rvalue_reference_t<std::remove_reference_t<decltype(__VA_ARGS__)>>>>(__VA_ARGS__)// forward like
+
 
 
 			#if __cpp_structured_bindings >= 202401L
@@ -3028,452 +3018,192 @@ namespace gal::prometheus::meta
 		{
 			return nth_element_impl<N>(std::forward<Args>(args)...);
 		}
+
+		template<std::size_t Index, typename Function, typename... Args>
+		constexpr auto invoke(Function&& function, Args&&... args) noexcept -> void
+		{
+			if constexpr (requires { std::forward<Function>(function).template operator()<Index>(std::forward<Args>(args)...); }) //
+			{
+				std::forward<Function>(function).template operator()<Index>(std::forward<Args>(args)...);
+			}
+			else if constexpr (requires { std::forward<Function>(function)(std::forward<Args>(args)...); }) //
+			{
+				std::forward<Function>(function)(std::forward<Args>(args)...);
+			}
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+		}
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	template<typename T>
-	constexpr auto is_member_gettable_v = member_name::is_member_gettable_v<T>;
-	template<typename T>
-	concept member_gettable_t = member_name::member_gettable_t<T>;
-
-	template<member_name::member_size_gettable_t T>
-	[[nodiscard]] constexpr auto member_size() noexcept -> std::size_t //
+	export
 	{
-		return member_name::member_size<T>();
-	}
+		template<typename T>
+		constexpr auto is_member_gettable_v = member_detail::is_member_gettable_v<T>;
+		template<typename T>
+		concept member_gettable_t = member_detail::member_gettable_t<T>;
 
-	template<std::size_t N, typename T>
-		requires member_gettable_t<std::remove_cvref_t<T>>
-	[[nodicard]] constexpr auto member_of_index(T&& value) noexcept -> decltype(auto) //
-	{
-		return member_name::visit(
-				[]<typename... Ts>(Ts&&... args) noexcept -> decltype(auto) //
-				{
-					return member_name::nth_element<N>(std::forward<Ts>(args)...);
-				},
-				std::forward<T>(value));
-	}
+		template<member_detail::member_size_gettable_t T>
+		[[nodiscard]] constexpr auto member_size() noexcept -> std::size_t //
+		{
+			return member_detail::member_size<T>();
+		}
 
-	template<typename Function, typename T>
-		requires member_gettable_t<std::remove_cvref_t<T>>
-	constexpr auto member_for_each(
-			Function function,
-			T&& value
-			) noexcept -> void
-	{
-		[function]<std::size_t... Index, typename U>(
-				std::index_sequence<Index...>,
-				U&& u
-				) mutable noexcept -> void //
-				{
-					(function.template operator()<Index>(
-							meta::member_of_index<Index>(std::forward<U>(u))
-							), ...);
-				}(
-						std::make_index_sequence<member_size<T>()>{},
-						std::forward<T>(value)
-						);
-	}
-
-	template<typename Function, typename T0, typename T1>
-		requires(
-			member_gettable_t<std::remove_cvref_t<T0>> and
-			member_gettable_t<std::remove_cvref_t<T1>> and
-			(member_size<T0>() == member_size<T1>())
-		)
-	constexpr auto member_for_each(
-			Function function,
-			T0&& value_0,
-			T1&& value_1
-			) noexcept -> void
-	{
-		[function]<std::size_t... Index, typename T0T, typename T1T>(
-				std::index_sequence<Index...>,
-				T0T&& t0,
-				T1T&& t1
-				) mutable noexcept -> void //
-				{
-					(function.template operator()<Index>(
-							meta::member_of_index<Index>(std::forward<T0T>(t0)),
-							meta::member_of_index<Index>(std::forward<T1T>(t1))
-							), ...);
-				}(
-						std::make_index_sequence<member_size<T0>()>{},
-						std::forward<T0>(value_0),
-						std::forward<T1>(value_1)
-						);
-	}
-
-	template<typename Function, typename T0, typename T1, typename T2>
-		requires(
-			member_gettable_t<std::remove_cvref_t<T0>> and
-			member_gettable_t<std::remove_cvref_t<T1>> and
-			member_gettable_t<std::remove_cvref_t<T2>> and
-			(member_size<T0>() == member_size<T1>()) and
-			(member_size<T1>() == member_size<T2>())
-		)
-	constexpr auto member_for_each(
-			Function function,
-			T0&& value_0,
-			T1&& value_1,
-			T2&& value_2
-			) noexcept -> void
-	{
-		[function]<std::size_t... Index, typename T0T, typename T1T, typename T2T>(
-				std::index_sequence<Index...>,
-				T0T&& t0,
-				T1T&& t1,
-				T2T&& t2
-				) mutable noexcept -> void //
-				{
-					(function.template operator()<Index>(
-							meta::member_of_index<Index>(std::forward<T0T>(t0)),
-							meta::member_of_index<Index>(std::forward<T1T>(t1)),
-							meta::member_of_index<Index>(std::forward<T2T>(t2))
-							), ...);
-				}(
-						std::make_index_sequence<member_size<T0>()>{},
-						std::forward<T0>(value_0),
-						std::forward<T1>(value_1),
-						std::forward<T2>(value_2)
-						);
-	}
-
-	template<typename Function, typename T0, typename T1, typename T2, typename T3>
-		requires(
-			member_gettable_t<std::remove_cvref_t<T0>> and
-			member_gettable_t<std::remove_cvref_t<T1>> and
-			member_gettable_t<std::remove_cvref_t<T2>> and
-			member_gettable_t<std::remove_cvref_t<T3>> and
-			(member_size<T0>() == member_size<T1>()) and
-			(member_size<T1>() == member_size<T2>()) and
-			(member_size<T2>() == member_size<T3>())
-		)
-	constexpr auto member_for_each(
-			Function function,
-			T0&& value_0,
-			T1&& value_1,
-			T2&& value_2,
-			T3&& value_3
-			) noexcept -> void
-	{
-		[function]<std::size_t... Index, typename T0T, typename T1T, typename T2T, typename T3T>(
-				std::index_sequence<Index...>,
-				T0T&& t0,
-				T1T&& t1,
-				T2T&& t2,
-				T3T&& t3
-				) mutable noexcept -> void //
-				{
-					(function.template operator()<Index>(
-							meta::member_of_index<Index>(std::forward<T0T>(t0)),
-							meta::member_of_index<Index>(std::forward<T1T>(t1)),
-							meta::member_of_index<Index>(std::forward<T2T>(t2)),
-							meta::member_of_index<Index>(std::forward<T3T>(t3))
-							), ...);
-				}(
-						std::make_index_sequence<member_size<T0>()>{},
-						std::forward<T0>(value_0),
-						std::forward<T1>(value_1),
-						std::forward<T2>(value_2),
-						std::forward<T3>(value_3)
-						);
-	}
-
-	template<typename Function, typename T0, typename T1, typename T2, typename T3, typename T4>
-		requires(
-			member_gettable_t<std::remove_cvref_t<T0>> and
-			member_gettable_t<std::remove_cvref_t<T1>> and
-			member_gettable_t<std::remove_cvref_t<T2>> and
-			member_gettable_t<std::remove_cvref_t<T3>> and
-			member_gettable_t<std::remove_cvref_t<T4>> and
-			(member_size<T0>() == member_size<T1>()) and
-			(member_size<T1>() == member_size<T2>()) and
-			(member_size<T2>() == member_size<T3>()) and
-			(member_size<T3>() == member_size<T4>())
-		)
-	constexpr auto member_for_each(
-			Function function,
-			T0&& value_0,
-			T1&& value_1,
-			T2&& value_2,
-			T3&& value_3,
-			T4&& value_4
-			) noexcept -> void
-	{
-		[function]<std::size_t... Index, typename T0T, typename T1T, typename T2T, typename T3T, typename T4T>(
-				std::index_sequence<Index...>,
-				T0T&& t0,
-				T1T&& t1,
-				T2T&& t2,
-				T3T&& t3,
-				T4T&& t4
-				) mutable noexcept -> void //
-				{
-					(function.template operator()<Index>(
-							meta::member_of_index<Index>(std::forward<T0T>(t0)),
-							meta::member_of_index<Index>(std::forward<T1T>(t1)),
-							meta::member_of_index<Index>(std::forward<T2T>(t2)),
-							meta::member_of_index<Index>(std::forward<T3T>(t3)),
-							meta::member_of_index<Index>(std::forward<T4T>(t4))
-							), ...);
-				}(
-						std::make_index_sequence<member_size<T0>()>{},
-						std::forward<T0>(value_0),
-						std::forward<T1>(value_1),
-						std::forward<T2>(value_2),
-						std::forward<T3>(value_3),
-						std::forward<T4>(value_4)
-						);
-	}
-
-	template<typename Function, typename T>
-		requires member_gettable_t<std::remove_cvref_t<T>>
-	constexpr auto member_for_each_until(
-			Function function,
-			T&& value
-			) noexcept -> void
-	{
-		[function]<std::size_t... Index, typename U>(
-				std::index_sequence<Index...>,
-				U&& u
-				) mutable noexcept -> void //
-				{
-					(void)(function.template operator()<Index>(
-							meta::member_of_index<Index>(std::forward<U>(u))
-							) and ...);
-				}(
-						std::make_index_sequence<member_size<T>()>{},
-						std::forward<T>(value)
-						);
-	}
-
-	template<typename Function, typename T0, typename T1>
-		requires(
-			member_gettable_t<std::remove_cvref_t<T0>> and
-			member_gettable_t<std::remove_cvref_t<T1>> and
-			(member_size<T0>() == member_size<T1>())
-		)
-	constexpr auto member_for_each_until(
-			Function function,
-			T0&& value_0,
-			T1&& value_1
-			) noexcept -> void
-	{
-		[function]<std::size_t... Index, typename T0T, typename T1T>(
-				std::index_sequence<Index...>,
-				T0T&& t0,
-				T1T&& t1
-				) mutable noexcept -> void //
-				{
-					(void)(function.template operator()<Index>(
-							meta::member_of_index<Index>(std::forward<T0T>(t0)),
-							meta::member_of_index<Index>(std::forward<T1T>(t1))
-							) and ...);
-				}(
-						std::make_index_sequence<member_size<T0>()>{},
-						std::forward<T0>(value_0),
-						std::forward<T1>(value_1)
-						);
-	}
-
-	template<typename Function, typename T0, typename T1, typename T2>
-		requires(
-			member_gettable_t<std::remove_cvref_t<T0>> and
-			member_gettable_t<std::remove_cvref_t<T1>> and
-			member_gettable_t<std::remove_cvref_t<T2>> and
-			(member_size<T0>() == member_size<T1>()) and
-			(member_size<T1>() == member_size<T2>())
-		)
-	constexpr auto member_for_each_until(
-			Function function,
-			T0&& value_0,
-			T1&& value_1,
-			T2&& value_2
-			) noexcept -> void
-	{
-		[function]<std::size_t... Index, typename T0T, typename T1T, typename T2T>(
-				std::index_sequence<Index...>,
-				T0T&& t0,
-				T1T&& t1,
-				T2T&& t2
-				) mutable noexcept -> void //
-				{
-					(void)(function.template operator()<Index>(
-							meta::member_of_index<Index>(std::forward<T0T>(t0)),
-							meta::member_of_index<Index>(std::forward<T1T>(t1)),
-							meta::member_of_index<Index>(std::forward<T2T>(t2))
-							) and ...);
-				}(
-						std::make_index_sequence<member_size<T0>()>{},
-						std::forward<T0>(value_0),
-						std::forward<T1>(value_1),
-						std::forward<T2>(value_2)
-						);
-	}
-
-	template<typename Function, typename T0, typename T1, typename T2, typename T3>
-		requires(
-			member_gettable_t<std::remove_cvref_t<T0>> and
-			member_gettable_t<std::remove_cvref_t<T1>> and
-			member_gettable_t<std::remove_cvref_t<T2>> and
-			member_gettable_t<std::remove_cvref_t<T3>> and
-			(member_size<T0>() == member_size<T1>()) and
-			(member_size<T1>() == member_size<T2>()) and
-			(member_size<T2>() == member_size<T3>())
-		)
-	constexpr auto member_for_each_until(
-			Function function,
-			T0&& value_0,
-			T1&& value_1,
-			T2&& value_2,
-			T3&& value_3
-			) noexcept -> void
-	{
-		[function]<std::size_t... Index, typename T0T, typename T1T, typename T2T, typename T3T>(
-				std::index_sequence<Index...>,
-				T0T&& t0,
-				T1T&& t1,
-				T2T&& t2,
-				T3T&& t3
-				) mutable noexcept -> void //
-				{
-					(void)(function.template operator()<Index>(
-							meta::member_of_index<Index>(std::forward<T0T>(t0)),
-							meta::member_of_index<Index>(std::forward<T1T>(t1)),
-							meta::member_of_index<Index>(std::forward<T2T>(t2)),
-							meta::member_of_index<Index>(std::forward<T3T>(t3))
-							) and ...);
-				}(
-						std::make_index_sequence<member_size<T0>()>{},
-						std::forward<T0>(value_0),
-						std::forward<T1>(value_1),
-						std::forward<T2>(value_2),
-						std::forward<T3>(value_3)
-						);
-	}
-
-	template<typename Function, typename T0, typename T1, typename T2, typename T3, typename T4>
-		requires(
-			member_gettable_t<std::remove_cvref_t<T0>> and
-			member_gettable_t<std::remove_cvref_t<T1>> and
-			member_gettable_t<std::remove_cvref_t<T2>> and
-			member_gettable_t<std::remove_cvref_t<T3>> and
-			member_gettable_t<std::remove_cvref_t<T4>> and
-			(member_size<T0>() == member_size<T1>()) and
-			(member_size<T1>() == member_size<T2>()) and
-			(member_size<T2>() == member_size<T3>()) and
-			(member_size<T3>() == member_size<T4>())
-		)
-	constexpr auto member_for_each_until(
-			Function function,
-			T0&& value_0,
-			T1&& value_1,
-			T2&& value_2,
-			T3&& value_3,
-			T4&& value_4
-			) noexcept -> void
-	{
-		[function]<std::size_t... Index, typename T0T, typename T1T, typename T2T, typename T3T, typename T4T>(
-				std::index_sequence<Index...>,
-				T0T&& t0,
-				T1T&& t1,
-				T2T&& t2,
-				T3T&& t3,
-				T4T&& t4
-				) mutable noexcept -> void //
-				{
-					(void)(function.template operator()<Index>(
-							meta::member_of_index<Index>(std::forward<T0T>(t0)),
-							meta::member_of_index<Index>(std::forward<T1T>(t1)),
-							meta::member_of_index<Index>(std::forward<T2T>(t2)),
-							meta::member_of_index<Index>(std::forward<T3T>(t3)),
-							meta::member_of_index<Index>(std::forward<T4T>(t4))
-							) and ...);
-				}(
-						std::make_index_sequence<member_size<T0>()>{},
-						std::forward<T0>(value_0),
-						std::forward<T1>(value_1),
-						std::forward<T2>(value_2),
-						std::forward<T3>(value_3),
-						std::forward<T4>(value_4)
-						);
-	}
-
-	template<typename T, std::size_t N>
-		requires member_gettable_t<std::remove_cvref_t<T>>
-	[[nodiscard]] constexpr auto name_of_member() noexcept -> std::string_view
-	{
-		constexpr auto full_function_name = name::get_full_function_name<
-			member_name::visit(
-					[]<typename... Ts>(Ts&&... args) noexcept -> auto //
+		template<std::size_t N, typename T>
+			requires member_gettable_t<std::remove_cvref_t<T>>
+		[[nodicard]] constexpr auto member_of_index(T&& value) noexcept -> decltype(auto) //
+		{
+			return member_detail::visit(
+					[]<typename... Ts>(Ts&&... args) noexcept -> decltype(auto) //
 					{
-						return member_name::wrapper{member_name::nth_element<N>(std::forward<Ts>(args)...)};
+						return member_detail::nth_element<N>(std::forward<Ts>(args)...);
 					},
-					member_name::extern_any<std::remove_cvref_t<T>>) //
-		>();
+					std::forward<T>(value));
+		}
 
-		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-		// MSVC
-		// class std::basic_string_view<char,struct std::char_traits<char> > `__calling_convention` `namespace`::get_full_function_name<struct `namespace`::member_name::wrapper<`member_type` const >{const `member_type`&:`namespace`::member_name::extern_any<struct `my_struct`>->`member_name`}>(void) noexcept
-		constexpr auto full_function_name_size = full_function_name.size();
+		template<typename Function, typename T>
+			requires member_gettable_t<std::remove_cvref_t<T>>
+		constexpr auto member_view_all(Function function, T&& value) noexcept -> void
+		{
+			[function]<std::size_t... Index, typename U>(
+					std::index_sequence<Index...>,
+					U&& u
+					) mutable noexcept -> void //
+					{
+						function(member_of_index<Index>(std::forward<U>(u)...));
+					}(std::make_index_sequence<member_size<T>()>{}, std::forward<T>(value));
+		}
 
-		constexpr std::string_view splitter{">->"};
-		constexpr auto splitter_size = splitter.size();
+		template<typename Function, typename T, typename... Ts>
+			requires
+			(
+				// type
+				member_gettable_t<std::remove_cvref_t<T>> and
+				(sizeof...(Ts) == 0 or ((member_gettable_t<std::remove_cvref_t<Ts>>) and ...)) and
+				// size
+				(sizeof...(Ts) == 0 or ((member_size<T>() == member_size<Ts>()) and ...))
+			)
+		constexpr auto member_for_each(
+				Function function,
+				T&& value,
+				Ts&&... optional_extra_values
+				) noexcept -> void
+		{
+			[function] <std::size_t... Index, typename... Us>(
+					std::index_sequence<Index...>,
+					Us&&... us
+					) mutable noexcept -> void //
+					{
+						(
+							member_detail::invoke<Index>( //
+									function,
+									member_of_index<Index>(std::forward<Us>(us))...
+									), //
+							... //
+						);
+					}(std::make_index_sequence<member_size<T>()>{}, std::forward<T>(value), std::forward<Ts>(optional_extra_values)...);
+		}
 
-		// class std::basic_string_view<char,struct std::char_traits<char> > `__calling_convention` `namespace`::get_full_function_name<struct `namespace`::member_name::wrapper<`member_type` const >{const `member_type`&:`namespace`::member_name::extern_any<struct `my_struct`>->
-		static_assert(full_function_name.find(splitter) != std::string_view::npos);
-		constexpr auto full_function_name_prefix_size = full_function_name.find(splitter) + splitter_size;
+		template<typename Function, typename T, typename... Ts>
+			requires
+			(
+				// type
+				member_gettable_t<std::remove_cvref_t<T>> and
+				(sizeof...(Ts) == 0 or ((member_gettable_t<std::remove_cvref_t<Ts>>) and ...)) and
+				// size
+				(sizeof...(Ts) == 0 or ((member_size<T>() == member_size<Ts>()) and ...))
+			)
+		constexpr auto member_for_each_until(
+				Function function,
+				T&& value,
+				Ts&&... optional_extra_values
+				) noexcept -> void
+		{
+			[function] <std::size_t... Index, typename... Us>(
+					std::index_sequence<Index...>,
+					Us&&... us
+					) mutable noexcept -> void //
+					{
+						(
+							member_detail::invoke<Index>( //
+									function,
+									member_of_index<Index>(std::forward<Us>(us))...
+									) and //
+							... //
+						);
+					}(std::make_index_sequence<member_size<T>()>{}, std::forward<T>(value), std::forward<Ts>(optional_extra_values)...);
+		}
 
-		// }>(void) noexcept
-		constexpr std::string_view suffix{"}>(void) noexcept"};
-		constexpr auto full_function_name_suffix_size = suffix.size();
-		#elif defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
-		// CLANG/CLANG-CL
-		// std::string_view `namespace`::get_full_function_name() [Vs = <decltype(_Invoker1<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &, const `member_type` &>::_Call(static_cast<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &>(_Obj), static_cast<const `member_type` &>(_Arg1))){extern_any.`member_name`}>]
-		constexpr auto full_function_name_size = full_function_name.size();
+		template<typename T, std::size_t N>
+			requires member_gettable_t<std::remove_cvref_t<T>>
+		[[nodiscard]] constexpr auto name_of_member() noexcept -> std::string_view
+		{
+			constexpr auto full_function_name = name::get_full_function_name<
+				member_name::visit(
+						[]<typename... Ts>(Ts&&... args) noexcept -> auto //
+						{
+							return member_name::wrapper{member_name::nth_element<N>(std::forward<Ts>(args)...)};
+						},
+						member_name::extern_any<std::remove_cvref_t<T>>) //
+			>();
 
-		constexpr std::string_view splitter{"extern_any."};
-		constexpr auto             splitter_size = splitter.size();
+			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+			// MSVC
+			// class std::basic_string_view<char,struct std::char_traits<char> > `__calling_convention` `namespace`::get_full_function_name<struct `namespace`::member_name::wrapper<`member_type` const >{const `member_type`&:`namespace`::member_name::extern_any<struct `my_struct`>->`member_name`}>(void) noexcept
+			constexpr auto full_function_name_size = full_function_name.size();
 
-		// std::string_view `namespace`::get_full_function_name() [Vs = <decltype(_Invoker1<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &, const `member_type` &>::_Call(static_cast<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &>(_Obj), static_cast<const `member_type` &>(_Arg1))){extern_any.
-		static_assert(full_function_name.find(splitter) != std::string_view::npos);
-		constexpr auto full_function_name_prefix_size = full_function_name.find(splitter) + splitter_size;
+			constexpr std::string_view splitter{">->"};
+			constexpr auto splitter_size = splitter.size();
 
-		// }>]
-		constexpr std::string_view suffix{"}>]"};
-		constexpr auto             full_function_name_suffix_size = suffix.size();
-		#else
-		// GCC
-		// constexpr std::string_view `namespace`::get_full_function_name() [with auto ...<anonymous> = {`namespace`::member_name::wrapper<const bool>{`namespace`::member_name::extern_any<`my_struct`>.`my_struct`::`member_name`}}; std::string_view = std::basic_string_view<char>]
-		constexpr auto full_function_name_size = full_function_name.size();
+			// class std::basic_string_view<char,struct std::char_traits<char> > `__calling_convention` `namespace`::get_full_function_name<struct `namespace`::member_name::wrapper<`member_type` const >{const `member_type`&:`namespace`::member_name::extern_any<struct `my_struct`>->
+			static_assert(full_function_name.find(splitter) != std::string_view::npos);
+			constexpr auto full_function_name_prefix_size = full_function_name.find(splitter) + splitter_size;
 
-		// fixme: find a suitable splitter.
-		// extern_any<`my_struct`>.`my_struct`::`member_name`
-		constexpr std::string_view type_name = name_of<BareType>();
-		constexpr auto             type_name_size = type_name.size() + 2; // 2 == `::`
-		constexpr std::string_view splitter{">."};
-		constexpr auto             splitter_size = splitter.size();
+			// }>(void) noexcept
+			constexpr std::string_view suffix{"}>(void) noexcept"};
+			constexpr auto full_function_name_suffix_size = suffix.size();
+			#elif defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
+			// CLANG/CLANG-CL
+			// std::string_view `namespace`::get_full_function_name() [Vs = <decltype(_Invoker1<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &, const `member_type` &>::_Call(static_cast<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &>(_Obj), static_cast<const `member_type` &>(_Arg1))){extern_any.`member_name`}>]
+			constexpr auto full_function_name_size = full_function_name.size();
 
-		// constexpr std::string_view `namespace`::get_full_function_name() [with auto ...<anonymous> = {`namespace`::member_name::wrapper<const bool>{`namespace`::member_name::extern_any<`my_struct`>.`my_struct`::
-		static_assert(full_function_name.find(splitter) != std::string_view::npos);
-		constexpr auto full_function_name_prefix_size = full_function_name.find(splitter) + splitter_size + type_name_size;
+			constexpr std::string_view splitter{"extern_any."};
+			constexpr auto             splitter_size = splitter.size();
 
-		// }}; std::string_view = std::basic_string_view<char>]
-		constexpr std::string_view suffix{"}}; std::string_view = std::basic_string_view<char>]"};
-		constexpr auto             full_function_name_suffix_size = suffix.size();
-		#endif
+			// std::string_view `namespace`::get_full_function_name() [Vs = <decltype(_Invoker1<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &, const `member_type` &>::_Call(static_cast<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &>(_Obj), static_cast<const `member_type` &>(_Arg1))){extern_any.
+			static_assert(full_function_name.find(splitter) != std::string_view::npos);
+			constexpr auto full_function_name_prefix_size = full_function_name.find(splitter) + splitter_size;
 
-		auto name = full_function_name;
-		name.remove_prefix(full_function_name_prefix_size);
-		name.remove_suffix(full_function_name_suffix_size);
-		return name;
+			// }>]
+			constexpr std::string_view suffix{"}>]"};
+			constexpr auto             full_function_name_suffix_size = suffix.size();
+			#else
+			// GCC
+			// constexpr std::string_view `namespace`::get_full_function_name() [with auto ...<anonymous> = {`namespace`::member_name::wrapper<const bool>{`namespace`::member_name::extern_any<`my_struct`>.`my_struct`::`member_name`}}; std::string_view = std::basic_string_view<char>]
+			constexpr auto full_function_name_size = full_function_name.size();
+
+			// fixme: find a suitable splitter.
+			// extern_any<`my_struct`>.`my_struct`::`member_name`
+			constexpr std::string_view type_name = name_of<BareType>();
+			constexpr auto             type_name_size = type_name.size() + 2; // 2 == `::`
+			constexpr std::string_view splitter{">."};
+			constexpr auto             splitter_size = splitter.size();
+
+			// constexpr std::string_view `namespace`::get_full_function_name() [with auto ...<anonymous> = {`namespace`::member_name::wrapper<const bool>{`namespace`::member_name::extern_any<`my_struct`>.`my_struct`::
+			static_assert(full_function_name.find(splitter) != std::string_view::npos);
+			constexpr auto full_function_name_prefix_size = full_function_name.find(splitter) + splitter_size + type_name_size;
+
+			// }}; std::string_view = std::basic_string_view<char>]
+			constexpr std::string_view suffix{"}}; std::string_view = std::basic_string_view<char>]"};
+			constexpr auto             full_function_name_suffix_size = suffix.size();
+			#endif
+
+			auto name = full_function_name;
+			name.remove_prefix(full_function_name_prefix_size);
+			name.remove_suffix(full_function_name_suffix_size);
+			return name;
+		}
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-
-	namespace member_name
+	namespace member_detail
 	{
 		constexpr auto index_not_found = static_cast<std::size_t>(-1);
 
@@ -3484,7 +3214,11 @@ namespace gal::prometheus::meta
 			{
 				std::size_t index = index_not_found;
 
-				([&index]<std::size_t I>() noexcept { if constexpr (name_of_member<T, I>() == Name) { index = I; } }.
+				(
+					[&index]<std::size_t I>() noexcept //
+					{
+						if constexpr (name_of_member<T, I>() == Name) { index = I; }
+					}.
 					template operator()<Index>(),
 					...);
 
@@ -3499,7 +3233,7 @@ namespace gal::prometheus::meta
 			{
 				std::size_t index = index_not_found;
 
-				([&index, name]<std::size_t I>() noexcept
+				([&index, name]<std::size_t I>() noexcept //
 					{
 						if constexpr (name_of_member<T, I>() == name) { index = I; }
 					}.template operator()<Index>(),
@@ -3510,38 +3244,37 @@ namespace gal::prometheus::meta
 		}
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	template<typename T, basic_fixed_string Name>
-		requires member_gettable_t<std::remove_cvref_t<T>>
-	[[nodiscard]] constexpr auto has_member_of_name() noexcept -> bool //
+	export
 	{
-		return member_name::index_of_member_name<std::remove_cvref_t<T>, Name>() != member_name::index_not_found;
+		template<typename T, basic_fixed_string Name>
+			requires member_gettable_t<std::remove_cvref_t<T>>
+		[[nodiscard]] constexpr auto has_member_of_name() noexcept -> bool //
+		{
+			return member_name::index_of_member_name<std::remove_cvref_t<T>, Name>() != member_name::index_not_found;
+		}
+
+		template<typename T>
+			requires member_gettable_t<std::remove_cvref_t<T>>
+		[[nodiscard]] constexpr auto has_member_of_name(const std::string_view name) noexcept -> bool //
+		{
+			return member_name::index_of_member_name<std::remove_cvref_t<T>>(name) != member_name::index_not_found;
+		}
+
+		template<basic_fixed_string Name, typename T>
+		concept has_member_of_name_t = has_member_of_name<T, Name>();
+
+		template<basic_fixed_string Name, typename T>
+			requires has_member_of_name_t<Name, T>
+		[[nodiscard]] constexpr auto member_of_name(T&& value) noexcept -> decltype(auto)
+		{
+			return member_name::visit(
+					[]<typename... Ts>(Ts&&... args) noexcept -> decltype(auto)
+					{
+						constexpr auto index = member_name::index_of_member_name<T, Name>();
+
+						return member_name::nth_element<index>(std::forward<Ts>(args)...);
+					},
+					std::forward<T>(value));
+		}
 	}
-
-	template<typename T>
-		requires member_gettable_t<std::remove_cvref_t<T>>
-	[[nodiscard]] constexpr auto has_member_of_name(const std::string_view name) noexcept -> bool //
-	{
-		return member_name::index_of_member_name<std::remove_cvref_t<T>>(name) != member_name::index_not_found;
-	}
-
-	template<basic_fixed_string Name, typename T>
-	concept has_member_of_name_t = has_member_of_name<T, Name>();
-
-	template<basic_fixed_string Name, typename T>
-		requires has_member_of_name_t<Name, T>
-	[[nodiscard]] constexpr auto member_of_name(T&& value) noexcept -> decltype(auto)
-	{
-		return member_name::visit(
-				[]<typename... Ts>(Ts&&... args) noexcept -> decltype(auto)
-				{
-					constexpr auto index = member_name::index_of_member_name<T, Name>();
-
-					return member_name::nth_element<index>(std::forward<Ts>(args)...);
-				},
-				std::forward<T>(value));
-	}
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

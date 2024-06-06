@@ -3,164 +3,204 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.meta:enum_name;
+export module gal.prometheus.meta:enumeration;
 
 import std;
-import :name;
 
-#else
-#include <optional>
-#include <concepts>
-#include <limits>
-
-#include <prometheus/macro.hpp>
-#include <meta/name.hpp>
-#endif
+enum class DummyEnumDoNotPutIntoAnyNamespace
+{
+	DO_NOT_USE
+};
 
 namespace gal::prometheus::meta
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	enum class NamePolicy
+	namespace enumeration_detail
 	{
-		// namespace_A::namespace_B::namespace_C::enum_name::Value // scoped enum
-		// namespace_A::namespace_B::namespace_C::Value
-		FULL,
-		// this has the same effect as ENUM_VALUE_ONLY if it is an un-scoped enumeration
-		// enum_name::Value
-		WITH_ENUM_NAME,
-		// Value
-		ENUM_VALUE_ONLY,
-	};
+		// ReSharper disable once CppTemplateParameterNeverUsed
+		template<auto... Vs> // DO NOT REMOVE `Vs`
+		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return std::source_location::current().function_name(); }
 
-	namespace user_defined
-	{
-		/**
-		 * template<>
-		 * struct enum_name_policy<MyEnum>
-		 * {
-		 *		constexpr static auto value = NamePolicy::ENUM_VALUE_ONLY;
-		 * };
-		 */
-		template<typename EnumType>
-			requires std::is_enum_v<EnumType>
-		struct enum_name_policy
+		template<auto EnumValue>
+			requires std::is_enum_v<std::decay_t<decltype(EnumValue)>>
+		[[nodiscard]] constexpr auto name_of() noexcept -> std::string_view
 		{
-			constexpr static auto value = NamePolicy::FULL;
+			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+			// MSVC
+			// class std::basic_string_view<char,struct std::char_traits<char> > `__calling_convention` `namespace`::get_full_function_name<`DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE`>(void) noexcept
+			constexpr std::string_view full_function_name = get_full_function_name<DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE>();
+			constexpr auto full_function_name_size = full_function_name.size();
+
+			constexpr std::string_view dummy_enum_value_name = "DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE";
+			constexpr auto dummy_enum_value_name_size = std::ranges::size(dummy_enum_value_name);
+
+			// class std::basic_string_view<char,struct std::char_traits<char> > `__calling_convention` `namespace`::get_full_function_name<
+			constexpr auto full_function_name_prefix_size = full_function_name.find(dummy_enum_value_name);
+			static_assert(full_function_name_prefix_size != std::string_view::npos);
+
+			// >(void) noexcept
+			constexpr auto full_function_name_suffix_size = full_function_name_size - full_function_name_prefix_size - dummy_enum_value_name_size;
+			#elif defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
+			// CLANG/CLANG-CL
+			// std::string_view `namespace`::get_full_function_name() [V = `DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE`]
+			constexpr std::string_view full_function_name = name_detail::get_full_function_name<DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE>();
+			constexpr auto full_function_name_size = full_function_name.size();
+
+			constexpr std::string_view dummy_struct_name{"DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE"};
+			constexpr auto dummy_struct_name_size = std::ranges::size(dummy_struct_name);
+
+			// std::string_view `namespace`::get_full_function_name() [V =
+			constexpr auto full_function_name_prefix_size = full_function_name.find(dummy_struct_name);
+			static_assert(full_function_name_prefix_size != std::string_view::npos);
+
+			// ]
+			constexpr auto full_function_name_suffix_size = full_function_name_size - full_function_name_prefix_size - dummy_struct_name_size;
+			#else
+			// GCC
+			// constexpr std::string_view `namespace`::get_full_function_name() [with auto <anonymous> = `DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE`; std::string_view = std::basic_string_view<char>]
+			constexpr std::string_view full_function_name = name_detail::get_full_function_name<DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE>();
+			constexpr auto full_function_name_size = full_function_name.size();
+
+			constexpr std::string_view dummy_struct_name{"DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE"};
+			constexpr auto dummy_struct_name_size = std::ranges::size(dummy_struct_name);
+
+			// std::string_view `namespace`::get_full_function_name() [V =
+			constexpr auto full_function_name_prefix_size = full_function_name.find(dummy_struct_name);
+			static_assert(full_function_name_prefix_size != std::string_view::npos);
+
+			// ; std::string_view = std::basic_string_view<char>]
+			constexpr auto full_function_name_suffix_size = full_function_name_size - full_function_name_prefix_size - dummy_struct_name_size;
+			#endif
+
+			auto full_name = get_full_function_name<EnumValue>();
+			full_name.remove_prefix(full_function_name_prefix_size);
+			full_name.remove_suffix(full_function_name_suffix_size);
+			return full_name;
+		}
+	} // namespace name_detail
+
+	export
+	{
+		enum class NamePolicy
+		{
+			// namespace_A::namespace_B::namespace_C::enum_name::Value // scoped enum
+			// namespace_A::namespace_B::namespace_C::Value
+			FULL,
+			// this has the same effect as ENUM_VALUE_ONLY if it is an un-scoped enumeration
+			// enum_name::Value
+			WITH_ENUM_NAME,
+			// Value
+			ENUM_VALUE_ONLY,
 		};
 
-		/**
-		 * template<>
-		 * struct enum_range<MyEnum>
-		 * {
-		 *		constexpr static enum_range_size_type min = 0;
-		 *		constexpr static enum_range_size_type max = 65535;
-		 * };
-		 */
-		template<typename EnumType>
-			requires std::is_enum_v<EnumType>
-		struct enum_range
+		namespace user_defined
 		{
-			using value_type = std::underlying_type_t<EnumType>;
-
-			constexpr static auto min_max = []() noexcept
+			/**
+			 * template<>
+			 * struct enum_name_policy<MyEnum>
+			 * {
+			 *		constexpr static auto value = NamePolicy::ENUM_VALUE_ONLY;
+			 * };
+			 */
+			template<typename EnumType>
+				requires std::is_enum_v<EnumType>
+			struct enum_name_policy
 			{
-				if constexpr (std::is_signed_v<value_type>) { return std::pair<value_type, value_type>{-128, 127}; }
-				else { return std::pair<value_type, value_type>{0, 255}; }
-			}();
+				constexpr static auto value = NamePolicy::FULL;
+			};
 
-			constexpr static value_type min = min_max.first;
-			constexpr static value_type max = min_max.second;
-		};
+			/**
+			 * template<>
+			 * struct enum_range<MyEnum>
+			 * {
+			 *		constexpr static enum_range_size_type min = 0;
+			 *		constexpr static enum_range_size_type max = 65535;
+			 * };
+			 */
+			template<typename EnumType>
+				requires std::is_enum_v<EnumType>
+			struct enum_range
+			{
+				using value_type = std::underlying_type_t<EnumType>;
 
-		/**
-		 * template<>
-		 * struct enum_range<MyEnum> : std::true_type
-		 * {
-		 * };
-		 */
-		template<typename>
-		struct enum_is_flag : std::false_type {};
+				constexpr static auto min_max = []() noexcept
+				{
+					if constexpr (std::is_signed_v<value_type>) { return std::pair<value_type, value_type>{-128, 127}; }
+					else { return std::pair<value_type, value_type>{0, 255}; }
+				}();
 
-		/**
-		 * template<>
-		 * struct enum_name<MyEnum>
-		 * {
-		 *		constexpr static std::string_view value{"MY-ENUM"};
-		 * };
-		 */
-		template<typename>
-		struct enum_name {};
+				constexpr static value_type min = min_max.first;
+				constexpr static value_type max = min_max.second;
+			};
 
-		/**
-		 * template<>
-		 * struct enum_name<MyEnum::VALUE>
-		 * {
-		 *		constexpr static std::string_view value{"MY-ENUM-VALUE"};
-		 * };
-		 */
-		template<auto>
-		struct enum_value_name {};
-	}
+			/**
+			 * template<>
+			 * struct enum_range<MyEnum> : std::true_type
+			 * {
+			 * };
+			 */
+			template<typename>
+			struct enum_is_flag : std::false_type {};
 
-	template<typename EnumType>
-		requires std::is_enum_v<EnumType>
-	[[nodiscard]] constexpr auto name_of() noexcept -> std::string_view
-	{
-		if constexpr (requires { { user_defined::enum_name<EnumType>::value } -> std::convertible_to<std::string_view>; })
-		{
-			return user_defined::enum_name<EnumType>::value;
+			/**
+			 * template<>
+			 * struct enum_name<MyEnum>
+			 * {
+			 *		constexpr static std::string_view value{"MY-ENUM"};
+			 * };
+			 */
+			template<typename>
+			struct enum_name {};
+
+			/**
+			 * template<>
+			 * struct enum_name<MyEnum::VALUE>
+			 * {
+			 *		constexpr static std::string_view value{"MY-ENUM-VALUE"};
+			 * };
+			 */
+			template<auto>
+			struct enum_value_name {};
 		}
-		else { return meta::name_of_type<EnumType>(); }
-	}
 
-	template<auto EnumValue, typename EnumType = std::decay_t<decltype(EnumValue)>>
-		requires std::is_enum_v<EnumType>
-	[[nodiscard]] constexpr auto name_of() noexcept -> std::string_view
-	{
-		if constexpr (requires { { user_defined::enum_value_name<EnumValue>::value } -> std::convertible_to<std::string_view>; })
+		template<typename EnumType>
+			requires std::is_enum_v<EnumType>
+		[[nodiscard]] constexpr auto name_of() noexcept -> std::string_view
 		{
-			return user_defined::enum_name<EnumType>::value;
+			if constexpr (requires { { user_defined::enum_name<EnumType>::value } -> std::convertible_to<std::string_view>; })
+			{
+				return user_defined::enum_name<EnumType>::value;
+			}
+			else { return meta::name_of<EnumType>(); }
 		}
-		else { return meta::name_of_enum_value<EnumValue>(); }
+
+		template<auto EnumValue>
+			requires std::is_enum_v<std::decay_t<decltype(EnumValue)>>
+		[[nodiscard]] constexpr auto name_of() noexcept -> std::string_view
+		{
+			if constexpr (requires { { user_defined::enum_value_name<EnumValue>::value } -> std::convertible_to<std::string_view>; })
+			{
+				return user_defined::enum_name<std::decay_t<decltype(EnumValue)>>::value;
+			}
+			else { return enumeration_detail::name_of<EnumValue>(); }
+		}
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-
-	namespace enum_name_detail
+	namespace enumeration_detail
 	{
-		// template<std::unsigned_integral auto Value, std::size_t CurrentShift = 0, typename ValueType = std::decay_t<decltype(Value)>>
-		// 	requires(Value > 0) // 1 << 0 => 1
-		// [[nodiscard]] constexpr auto lower_bound_shift() noexcept -> std::size_t
-		// {
-		// 	if constexpr ((static_cast<ValueType>(1) << CurrentShift) >= Value) { return CurrentShift; }
-		// 	else { return lower_bound_shift<Value, CurrentShift + 1>(); }
-		// }
 		template<std::unsigned_integral auto Value>
 			requires(Value > 0) // 1 << 0 => 1
 		[[nodiscard]] constexpr auto lower_bound_shift() noexcept -> std::size_t { return std::bit_width(Value) - 1; }
 
-		// template<std::unsigned_integral auto Value, std::size_t CurrentShift = std::numeric_limits<std::decay_t<decltype(Value)>>::digits - 1>
-		// 	requires(Value > 0) // 1 << 0 => 1
-		// [[nodiscard]] constexpr auto upper_bound_shift() noexcept -> std::size_t
-		// {
-		// 	// if constexpr (Value == 0) { return 0; }
-		// 	if constexpr ((Value >> CurrentShift) == 0) { return upper_bound_shift<Value, CurrentShift - 1>(); }
-		// 	else { return CurrentShift + 1; }
-		// }
 		template<std::unsigned_integral auto Value>
 			requires(Value > 0) // 1 << 0 => 1
 		[[nodiscard]] constexpr auto upper_bound_shift() noexcept -> std::size_t { return std::bit_width(Value); }
 
-		template<auto EnumValue, typename EnumType = std::decay_t<decltype(EnumValue)>>
-			requires std::is_enum_v<EnumType>
+		template<auto EnumValue>
+			requires std::is_enum_v<std::decay_t<decltype(EnumValue)>>
 		[[nodiscard]] constexpr auto is_valid_enum() noexcept -> bool
 		{
 			// fixme: check it
@@ -668,104 +708,106 @@ namespace gal::prometheus::meta
 		}
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	constexpr std::string_view enum_name_not_found{"?"};
-
-	template<typename EnumType, NamePolicy Policy>
-		requires std::is_enum_v<EnumType>
-	[[nodiscard]] constexpr auto names_of() noexcept -> auto
+	export
 	{
-		// fixme: auto deducting category
-		constexpr auto is_flag = enum_name_detail::range_is_flag<EnumType>::value;
-		constexpr auto category = is_flag ? enum_name_detail::EnumCategory::FLAG : enum_name_detail::EnumCategory::ENUM;
+		constexpr std::string_view enum_name_not_found{"?"};
 
-		constexpr auto min = enum_name_detail::get_range_min<EnumType, category>();
-		constexpr auto max = enum_name_detail::get_range_max<EnumType, category>();
-		static_assert(max > min);
-
-		if constexpr (is_flag)
+		template<typename EnumType, NamePolicy Policy>
+			requires std::is_enum_v<EnumType>
+		[[nodiscard]] constexpr auto names_of() noexcept -> auto
 		{
-			constexpr auto begin_shift = enum_name_detail::begin_enum_shift_from_value<EnumType, min, max>();
-			constexpr auto end_shift = enum_name_detail::begin_enum_shift_from_value<EnumType, (static_cast<decltype(max)>(1) << begin_shift), max>();
+			// fixme: auto deducting category
+			constexpr auto is_flag = enumeration_detail::range_is_flag<EnumType>::value;
+			constexpr auto category = is_flag ? enumeration_detail::EnumCategory::FLAG : enumeration_detail::EnumCategory::ENUM;
 
-			return enum_name_detail::names_from_shift<EnumType, Policy, begin_shift, end_shift>;
+			constexpr auto min = enumeration_detail::get_range_min<EnumType, category>();
+			constexpr auto max = enumeration_detail::get_range_max<EnumType, category>();
+			static_assert(max > min);
+
+			if constexpr (is_flag)
+			{
+				constexpr auto begin_shift =
+						enumeration_detail::begin_enum_shift_from_value<EnumType, min, max>();
+				constexpr auto end_shift =
+						enumeration_detail::begin_enum_shift_from_value<EnumType, (static_cast<decltype(max)>(1) << begin_shift), max>();
+
+				return enumeration_detail::names_from_shift<EnumType, Policy, begin_shift, end_shift>;
+			}
+			else
+			{
+				constexpr auto begin_value =
+						enumeration_detail::begin_enum_value_from_value<EnumType, min, max, enumeration_detail::EnumCategory::ENUM>();
+				constexpr auto end_value =
+						enumeration_detail::end_enum_value_from_value<
+							EnumType,
+							static_cast<decltype(min)>(begin_value),
+							max,
+							category
+						>();
+
+				return enumeration_detail::names_from_value<EnumType, Policy, begin_value, end_value>;
+			}
 		}
-		else
+
+		template<typename EnumType>
+			requires std::is_enum_v<EnumType>
+		[[nodiscard]] constexpr auto names_of() noexcept -> auto //
 		{
-			constexpr auto begin_value = enum_name_detail::begin_enum_value_from_value<EnumType, min, max, enum_name_detail::EnumCategory::ENUM>();
-			constexpr auto end_value =
-					enum_name_detail::end_enum_value_from_value<
-						EnumType,
-						static_cast<decltype(min)>(begin_value),
-						max,
-						category
-					>();
+			return names_of<EnumType, user_defined::enum_name_policy<EnumType>::value>();
+		}
 
-			return enum_name_detail::names_from_value<EnumType, Policy, begin_value, end_value>;
+		template<NamePolicy Policy, typename EnumType>
+			requires std::is_enum_v<EnumType>
+		[[nodiscard]] constexpr auto name_of(const EnumType enum_value) noexcept -> std::string_view
+		{
+			constexpr static auto list = names_of<EnumType, Policy>();
+
+			if (const auto it = std::ranges::find(list, enum_value, [](const auto& pair) noexcept -> EnumType { return pair.first; });
+				it != std::ranges::end(list)) { return it->second; }
+			return enum_name_not_found;
+		}
+
+		template<typename EnumType>
+			requires std::is_enum_v<EnumType>
+		[[nodiscard]] constexpr auto name_of(const EnumType enum_value) noexcept -> std::string_view //
+		{
+			return name_of<user_defined::enum_name_policy<EnumType>::value, EnumType>(enum_value);
+		}
+
+		template<typename EnumType, NamePolicy Policy>
+			requires std::is_enum_v<EnumType>
+		[[nodiscard]] constexpr auto name_of(const std::integral auto enum_value) noexcept -> std::string_view
+		{
+			constexpr static auto list = names_of<EnumType, Policy>();
+
+			if (const auto it = std::ranges::find(list, enum_value, [](const auto& pair) noexcept -> auto { return std::to_underlying(pair.first); });
+				it != std::ranges::end(list)) { return it->second; }
+			return enum_name_not_found;
+		}
+
+		template<typename EnumType>
+			requires std::is_enum_v<EnumType>
+		[[nodiscard]] constexpr auto name_of(const std::integral auto enum_value) noexcept -> std::string_view //
+		{
+			return name_of<EnumType, user_defined::enum_name_policy<EnumType>::value>(enum_value);
+		}
+
+		template<typename EnumType, NamePolicy Policy>
+			requires std::is_enum_v<EnumType>
+		[[nodiscard]] constexpr auto value_of(const std::string_view enum_name) noexcept -> std::optional<EnumType>
+		{
+			constexpr static auto list = names_of<EnumType, Policy>();
+
+			if (const auto it = std::ranges::find(list, enum_name, [](const auto& pair) noexcept -> std::string_view { return pair.second; });
+				it != std::ranges::end(list)) { return it->first; }
+			return std::nullopt;
+		}
+
+		template<typename EnumType>
+			requires std::is_enum_v<EnumType>
+		[[nodiscard]] constexpr auto value_of(const std::string_view enum_name) noexcept -> std::optional<EnumType> //
+		{
+			return value_of<EnumType, user_defined::enum_name_policy<EnumType>::value>(enum_name);
 		}
 	}
-
-	template<typename EnumType>
-		requires std::is_enum_v<EnumType>
-	[[nodiscard]] constexpr auto names_of() noexcept -> auto //
-	{
-		return names_of<EnumType, user_defined::enum_name_policy<EnumType>::value>();
-	}
-
-	template<NamePolicy Policy, typename EnumType>
-		requires std::is_enum_v<EnumType>
-	[[nodiscard]] constexpr auto name_of(const EnumType enum_value) noexcept -> std::string_view
-	{
-		constexpr static auto list = names_of<EnumType, Policy>();
-
-		if (const auto it = std::ranges::find(list, enum_value, [](const auto& pair) noexcept -> EnumType { return pair.first; });
-			it != std::ranges::end(list)) { return it->second; }
-		return enum_name_not_found;
-	}
-
-	template<typename EnumType>
-		requires std::is_enum_v<EnumType>
-	[[nodiscard]] constexpr auto name_of(const EnumType enum_value) noexcept -> std::string_view //
-	{
-		return name_of<user_defined::enum_name_policy<EnumType>::value, EnumType>(enum_value);
-	}
-
-	template<typename EnumType, NamePolicy Policy>
-		requires std::is_enum_v<EnumType>
-	[[nodiscard]] constexpr auto name_of(const std::integral auto enum_value) noexcept -> std::string_view
-	{
-		constexpr static auto list = names_of<EnumType, Policy>();
-
-		if (const auto it = std::ranges::find(list, enum_value, [](const auto& pair) noexcept -> auto { return std::to_underlying(pair.first); });
-			it != std::ranges::end(list)) { return it->second; }
-		return enum_name_not_found;
-	}
-
-	template<typename EnumType>
-		requires std::is_enum_v<EnumType>
-	[[nodiscard]] constexpr auto name_of(const std::integral auto enum_value) noexcept -> std::string_view //
-	{
-		return name_of<EnumType, user_defined::enum_name_policy<EnumType>::value>(enum_value);
-	}
-
-	template<typename EnumType, NamePolicy Policy>
-		requires std::is_enum_v<EnumType>
-	[[nodiscard]] constexpr auto value_of(const std::string_view enum_name) noexcept -> std::optional<EnumType>
-	{
-		constexpr static auto list = names_of<EnumType, Policy>();
-
-		if (const auto it = std::ranges::find(list, enum_name, [](const auto& pair) noexcept -> std::string_view { return pair.second; });
-			it != std::ranges::end(list)) { return it->first; }
-		return std::nullopt;
-	}
-
-	template<typename EnumType>
-		requires std::is_enum_v<EnumType>
-	[[nodiscard]] constexpr auto value_of(const std::string_view enum_name) noexcept -> std::optional<EnumType> //
-	{
-		return value_of<EnumType, user_defined::enum_name_policy<EnumType>::value>(enum_name);
-	}
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

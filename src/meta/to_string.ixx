@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -13,21 +10,11 @@ module;
 export module gal.prometheus.meta:to_string;
 
 import std;
-import :member_name;
-import :enum_name;
+import :member;
+import :enumeration;
 
-#else
-#include <format>
-
-#include <prometheus/macro.hpp>
-#include <meta/member_name.hpp>
-#include <meta/enum_name.hpp>
-#endif
-
-namespace gal::prometheus::meta
+export namespace gal::prometheus::meta
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	template<
 		std::ranges::output_range<char> StringType = std::basic_string<char>,
 		bool ContainsTypeName = true,
@@ -74,19 +61,19 @@ namespace gal::prometheus::meta
 			// if constexpr (std::is_null_pointer_v<type>) { meta::to_string<StringType, false>("nullptr", out); }
 			// else
 			// {
-				if (t == nullptr)
-				{
-					if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(0x00000000)", meta::name_of<type>()); }
-					else { meta::to_string<StringType, false>(nullptr, out); }
-					return;
-				}
+			if (t == nullptr)
+			{
+				if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(0x00000000)", meta::name_of<type>()); }
+				else { meta::to_string<StringType, false>(nullptr, out); }
+				return;
+			}
 
-				if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(", meta::name_of<type>()); }
-				// address
-				std::format_to(std::back_inserter(out), "0x{:x} => ", reinterpret_cast<std::uintptr_t>(t));
-				// sub-element does not contains type name.
-				meta::to_string<StringType, false>(*t, out);
-				if constexpr (ContainsTypeName) { out.push_back(')'); }
+			if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(", meta::name_of<type>()); }
+			// address
+			std::format_to(std::back_inserter(out), "0x{:x} => ", reinterpret_cast<std::uintptr_t>(t));
+			// sub-element does not contains type name.
+			meta::to_string<StringType, false>(*t, out);
+			if constexpr (ContainsTypeName) { out.push_back(')'); }
 			// }
 		}
 		// container
@@ -151,6 +138,4 @@ namespace gal::prometheus::meta
 		meta::to_string<StringType, ContainsTypeName, T>(t, out);
 		return out;
 	}
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

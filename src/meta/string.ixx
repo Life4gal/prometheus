@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -14,19 +11,9 @@ export module gal.prometheus.meta:string;
 
 import std;
 
-#else
-#include <algorithm>
-#include <functional>
-#include <ranges>
-#include <string>
-#include <type_traits>
-
-#include <prometheus/macro.hpp>
-#endif
-
 namespace gal::prometheus::meta
 {
-	namespace string
+	namespace string_detail
 	{
 		template<typename Container, typename Getter, typename SizeType = typename Container::size_type>
 		concept getter_t = requires(const Container& container, Getter&& getter)
@@ -490,8 +477,10 @@ namespace gal::prometheus::meta
 				requires getter_t<Container, Getter, size_type>
 			[[nodiscard]] constexpr auto match(
 					const Container& container //
-					) const noexcept(noexcept(default_comparator<Container, value_type>{}(default_getter<Container, size_type>{}(container, 0),
-					                                                                      rep_value()[0]))) -> bool //
+					) const noexcept(noexcept(default_comparator<Container, value_type>{}(
+					default_getter<Container, size_type>{}(container, 0),
+					rep_value()[0]
+					))) -> bool //
 				requires(not lazy_is_static<derived_type>())
 			{
 				//
@@ -506,8 +495,10 @@ namespace gal::prometheus::meta
 				requires getter_t<Container, Getter, size_type>
 			[[nodiscard]] constexpr static auto match(
 					const Container& container //
-					) noexcept(noexcept(default_comparator<Container, value_type>{}(default_getter<Container, size_type>{}(container, 0),
-					                                                                rep_value()[0]))) -> bool //
+					) noexcept(noexcept(default_comparator<Container, value_type>{}(
+					default_getter<Container, size_type>{}(container, 0),
+					rep_value()[0]
+					))) -> bool //
 				requires(lazy_is_static<derived_type>())
 			{
 				//
@@ -517,40 +508,35 @@ namespace gal::prometheus::meta
 						default_comparator<Container, value_type>{});
 			}
 		};
-	} // namespace string
 
-	// =====================================
-	// export
-	// vvv
+		template<typename T, T This, T... Cs>
+		[[nodiscard]] consteval auto contains_zero() noexcept -> bool
+		{
+			if constexpr (sizeof...(Cs) == 0) { return This == static_cast<T>(0); }
+			else { return contains_zero<T, Cs...>(); }
+		}
+	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	/**
-	 * @brief An immutable array of fixed-length characters.
-	 */
-	template<typename T, T... Cs>
-	struct basic_char_array;
-
-	template<typename T>
-	using basic_char_array_view = string::default_view<T>;
-
-	/**
-	 * @brief A mutable array of fixed-length characters.
-	 */
-	template<typename T, std::size_t N>
-	struct basic_fixed_string;
-
-	template<typename T>
-	using basic_fixed_string_view = string::default_view<T>;
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-
-	// ^^^
-	// export
-	// =====================================
-
-	namespace string
+	export
 	{
+		/**
+		 * @brief An immutable array of fixed-length characters.
+		 */
+		template<typename T, T... Cs>
+		struct basic_char_array;
+
+		template<typename T>
+		using basic_char_array_view = string_detail::default_view<T>;
+
+		/**
+		 * @brief A mutable array of fixed-length characters.
+		 */
+		template<typename T, std::size_t N>
+		struct basic_fixed_string;
+
+		template<typename T>
+		using basic_fixed_string_view = string_detail::default_view<T>;
+
 		template<typename>
 		struct is_basic_char_array : std::false_type {};
 
@@ -568,238 +554,214 @@ namespace gal::prometheus::meta
 
 		template<typename S>
 		constexpr static auto is_basic_fixed_string_v = is_basic_fixed_string<S>::value;
-	} // namespace string
 
-	// =====================================
-	// export
-	// vvv
+		template<typename S>
+		concept basic_char_array_t = is_basic_char_array_v<S>;
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+		template<typename S>
+		concept basic_fixed_string_t = is_basic_fixed_string_v<S>;
 
-	template<typename S>
-	concept basic_char_array_t = string::is_basic_char_array_v<S>;
-
-	template<typename S>
-	concept basic_fixed_string_t = string::is_basic_fixed_string_v<S>;
-
-	template<typename T, T... Cs>
-	struct basic_char_array : string::meta_string_base<basic_char_array<T, Cs...>, T, std::size_t>
-	{
-		using base_type = string::meta_string_base<basic_char_array, T, std::size_t>;
-
-		using value_type = T;
-		using size_type = std::size_t;
-
-		using const_pointer = const value_type*;
-
-		constexpr static size_type max_size = sizeof...(Cs);
-		constexpr static value_type value[max_size]{Cs...};
-		constexpr static size_type size = max_size - (value[max_size - 1] == '\0');
-
-		[[nodiscard]] constexpr static const_pointer begin() noexcept { return std::ranges::begin(value); }
-
-		[[nodiscard]] constexpr static const_pointer end() noexcept { return std::ranges::end(value); }
-
-		template<std::size_t N = max_size>
-			requires(N <= max_size)
-		[[nodiscard]] constexpr static auto as_fixed_string() noexcept
+		template<typename T, T... Cs>
+		struct basic_char_array : string_detail::meta_string_base<basic_char_array<T, Cs...>, T, std::size_t>
 		{
-			return basic_fixed_string<value_type, N>{basic_fixed_string_view<value_type>{value, N}};
+			using base_type = string_detail::meta_string_base<basic_char_array, T, std::size_t>;
+
+			using value_type = T;
+			using size_type = std::size_t;
+
+			using const_pointer = const value_type*;
+
+			constexpr static size_type max_size = sizeof...(Cs);
+			constexpr static value_type value[max_size]{Cs...};
+			constexpr static size_type size = max_size - (value[max_size - 1] == '\0');
+
+			[[nodiscard]] constexpr static const_pointer begin() noexcept { return std::ranges::begin(value); }
+
+			[[nodiscard]] constexpr static const_pointer end() noexcept { return std::ranges::end(value); }
+
+			template<std::size_t N = max_size>
+				requires(N <= max_size)
+			[[nodiscard]] constexpr static auto as_fixed_string() noexcept
+			{
+				return basic_fixed_string<value_type, N>{basic_fixed_string_view<value_type>{value, N}};
+			}
+
+			// // basic_char_array <=> basic_char_array
+			// template<value_type... U>
+			// [[nodiscard]] constexpr auto operator<=>(const basic_char_array<value_type, U...>& rhs) const noexcept -> auto
+			// {
+			// 	//
+			// 	return this->template as<basic_char_array_view<value_type>>() <=> rhs.template as<basic_char_array_view<value_type>>();
+			// }
+			//
+			// // basic_char_array <=> string
+			// template<typename String>
+			// 	requires(not basic_char_array_t<String>) and std::is_constructible_v<basic_char_array_view<value_type>, String>
+			// [[nodiscard]] constexpr auto operator<=>(const String& rhs) const noexcept(std::is_nothrow_constructible_v<basic_char_array_view<value_type>, String>) -> auto
+			// {
+			// 	//
+			// 	return this->template as<basic_char_array_view<value_type>>() <=> basic_char_array_view<value_type>{rhs};
+			// }
+			//
+			// // string <=> basic_char_array
+			// template<typename String>
+			// 	requires(not basic_char_array_t<String>) and std::is_constructible_v<basic_char_array_view<value_type>, String>
+			// [[nodiscard]] friend constexpr auto operator<=>(const String& lhs, const basic_char_array& rhs) noexcept(std::is_nothrow_constructible_v<basic_char_array_view<value_type>, String>) -> auto
+			// {
+			// 	//
+			// 	return basic_char_array_view<value_type>{lhs} <=> rhs.template as<basic_char_array_view<value_type>>();
+			// }
+		};
+
+		template<basic_fixed_string FixedString>
+		[[nodiscard]] constexpr auto to_char_array() noexcept -> auto
+		{
+			using fixed_string_type = decltype(FixedString);
+
+			return []<std::size_t... Index>(const std::index_sequence<Index...>) noexcept
+			{
+				return basic_char_array<typename fixed_string_type::value_type, FixedString.value[Index]...>{};
+			}(std::make_index_sequence<FixedString.max_size>{});
 		}
 
-		// // basic_char_array <=> basic_char_array
-		// template<value_type... U>
-		// [[nodiscard]] constexpr auto operator<=>(const basic_char_array<value_type, U...>& rhs) const noexcept -> auto
-		// {
-		// 	//
-		// 	return this->template as<basic_char_array_view<value_type>>() <=> rhs.template as<basic_char_array_view<value_type>>();
-		// }
-		//
-		// // basic_char_array <=> string
-		// template<typename String>
-		// 	requires(not basic_char_array_t<String>) and std::is_constructible_v<basic_char_array_view<value_type>, String>
-		// [[nodiscard]] constexpr auto operator<=>(const String& rhs) const noexcept(std::is_nothrow_constructible_v<basic_char_array_view<value_type>, String>) -> auto
-		// {
-		// 	//
-		// 	return this->template as<basic_char_array_view<value_type>>() <=> basic_char_array_view<value_type>{rhs};
-		// }
-		//
-		// // string <=> basic_char_array
-		// template<typename String>
-		// 	requires(not basic_char_array_t<String>) and std::is_constructible_v<basic_char_array_view<value_type>, String>
-		// [[nodiscard]] friend constexpr auto operator<=>(const String& lhs, const basic_char_array& rhs) noexcept(std::is_nothrow_constructible_v<basic_char_array_view<value_type>, String>) -> auto
-		// {
-		// 	//
-		// 	return basic_char_array_view<value_type>{lhs} <=> rhs.template as<basic_char_array_view<value_type>>();
-		// }
-	};
+		template<char... Chars>
+		using char_array = basic_char_array<char, Chars...>;
+		template<wchar_t... Chars>
+		using wchar_array = basic_char_array<wchar_t, Chars...>;
+		template<char8_t... Chars>
+		// ReSharper disable once CppInconsistentNaming
+		using u8char_array = basic_char_array<char8_t, Chars...>;
+		template<char16_t... Chars>
+		// ReSharper disable once CppInconsistentNaming
+		using u16char_array = basic_char_array<char16_t, Chars...>;
+		template<char32_t... Chars>
+		// ReSharper disable once CppInconsistentNaming
+		using u32char_array = basic_char_array<char32_t, Chars...>;
 
-	template<basic_fixed_string FixedString>
-	[[nodiscard]] constexpr auto to_char_array() noexcept -> auto
-	{
-		using fixed_string_type = decltype(FixedString);
-
-		return []<std::size_t... Index>(const std::index_sequence<Index...>) noexcept
+		template<typename T, std::size_t N>
+		struct basic_fixed_string : string_detail::meta_string_base<basic_fixed_string<T, N>, T, std::size_t>
 		{
-			return basic_char_array<typename fixed_string_type::value_type, FixedString.value[Index]...>{};
-		}(std::make_index_sequence<FixedString.max_size>{});
+			using base_type = string_detail::meta_string_base<basic_fixed_string, T, std::size_t>;
+
+			using value_type = T;
+			using size_type = std::size_t;
+
+			using pointer = value_type*;
+			using const_pointer = const value_type*;
+
+			constexpr static size_type max_size{N};
+			constexpr static size_type size{max_size - 1};
+			value_type value[max_size]{};
+
+			constexpr basic_fixed_string() noexcept = default;
+
+			template<std::size_t M>
+				requires(M >= N)
+			constexpr explicit(false) basic_fixed_string(const value_type (&string)[M]) noexcept
+			{
+				std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + size, value);
+			}
+
+			template<value_type... Cs>
+				requires(
+					// DO NOT USE `basic_char_array<T, Cs...>::size`!
+					sizeof...(Cs) - ((Cs == 0) or ...) >= N)
+			constexpr explicit(false) basic_fixed_string(const basic_char_array<value_type, Cs...>& char_array) noexcept
+			{
+				std::ranges::copy(std::ranges::begin(char_array), std::ranges::begin(char_array) + N, value);
+			}
+
+			template<std::ranges::range String>
+				requires std::is_same_v<std::ranges::range_value_t<String>, value_type>
+			constexpr explicit basic_fixed_string(const String& string) noexcept
+			{
+				std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + N, value);
+			}
+
+			[[nodiscard]] constexpr auto begin() noexcept -> pointer { return value; }
+
+			[[nodiscard]] constexpr auto begin() const noexcept -> const_pointer { return value; }
+
+			[[nodiscard]] constexpr auto end() noexcept -> pointer { return value + size; }
+
+			[[nodiscard]] constexpr auto end() const noexcept -> const_pointer { return value + size; }
+
+			// // basic_fixed_string <=> basic_fixed_string
+			// template<size_type R>
+			// [[nodiscard]] constexpr auto operator<=>(const basic_fixed_string<value_type, R>& rhs) const noexcept -> auto
+			// {
+			// 	//
+			// 	return this->template as<basic_fixed_string_view<value_type>>() <=> rhs.template as<basic_fixed_string_view<value_type>>();
+			// }
+			//
+			// // basic_fixed_string <=> string
+			// template<typename String>
+			// 	requires(not basic_fixed_string_t<String>) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
+			// [[nodiscard]] constexpr auto operator<=>(const String& rhs) const noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> auto
+			// {
+			// 	//
+			// 	return this->template as<basic_fixed_string_view<value_type>>() <=> basic_fixed_string_view<value_type>{rhs};
+			// }
+			//
+			// // string <=> basic_fixed_string
+			// template<typename String>
+			// 	requires(not basic_fixed_string_t<String>) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
+			// [[nodiscard]] friend constexpr auto operator<=>(const String& lhs, const basic_fixed_string& rhs) noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> auto
+			// {
+			// 	//
+			// 	return basic_fixed_string_view<value_type>{lhs} <=> rhs.template as<basic_fixed_string_view<value_type>>();
+			// }
+		};
+
+		template<typename T, std::size_t N>
+		basic_fixed_string(const T (&string)[N]) -> basic_fixed_string<T, N>;
+
+		template<typename T, T... Cs>
+		basic_fixed_string(basic_char_array<T, Cs...> char_array) -> basic_fixed_string<
+			T,
+			// DO NOT USE `basic_char_array<T, Cs...>::size`!
+			sizeof...(Cs) - string_detail::contains_zero<T, Cs...>()
+		>;
+
+		template<typename T, std::size_t N>
+		basic_fixed_string(const T (&string)[N]) -> basic_fixed_string<T, N>;
+
+		template<typename T, T... Cs>
+		basic_fixed_string(basic_char_array<T, Cs...> char_array) -> basic_fixed_string<
+			T,
+			// DO NOT USE `basic_char_array<T, Cs...>::size`!
+			sizeof...(Cs) - string_detail::contains_zero<T, Cs...>()
+		>;
+
+		template<std::size_t N>
+		using fixed_string = basic_fixed_string<char, N>;
+		template<std::size_t N>
+		// ReSharper disable once IdentifierTypo
+		using fixed_wstring = basic_fixed_string<wchar_t, N>;
+		template<std::size_t N>
+		// ReSharper disable once CppInconsistentNaming
+		using fixed_u8string = basic_fixed_string<char8_t, N>;
+		template<std::size_t N>
+		// ReSharper disable once CppInconsistentNaming
+		using fixed_u16string = basic_fixed_string<char16_t, N>;
+		template<std::size_t N>
+		// ReSharper disable once CppInconsistentNaming
+		using fixed_u32string = basic_fixed_string<char32_t, N>;
+
+		using fixed_string_view = basic_fixed_string_view<char>;
+		// ReSharper disable once IdentifierTypo
+		using fixed_wstring_view = basic_fixed_string_view<wchar_t>;
+		// ReSharper disable once CppInconsistentNaming
+		using fixed_u8string_view = basic_fixed_string_view<char8_t>;
+		// ReSharper disable once CppInconsistentNaming
+		using fixed_u16string_view = basic_fixed_string_view<char16_t>;
+		// ReSharper disable once CppInconsistentNaming
+		using fixed_u32string_view = basic_fixed_string_view<char32_t>;
 	}
+}
 
-	template<char... Chars>
-	using char_array = basic_char_array<char, Chars...>;
-	template<wchar_t... Chars>
-	using wchar_array = basic_char_array<wchar_t, Chars...>;
-	template<char8_t... Chars>
-	// ReSharper disable once CppInconsistentNaming
-	using u8char_array = basic_char_array<char8_t, Chars...>;
-	template<char16_t... Chars>
-	// ReSharper disable once CppInconsistentNaming
-	using u16char_array = basic_char_array<char16_t, Chars...>;
-	template<char32_t... Chars>
-	// ReSharper disable once CppInconsistentNaming
-	using u32char_array = basic_char_array<char32_t, Chars...>;
-
-	template<typename T, std::size_t N>
-	struct basic_fixed_string : string::meta_string_base<basic_fixed_string<T, N>, T, std::size_t>
-	{
-		using base_type = string::meta_string_base<basic_fixed_string, T, std::size_t>;
-
-		using value_type = T;
-		using size_type = std::size_t;
-
-		using pointer = value_type*;
-		using const_pointer = const value_type*;
-
-		constexpr static size_type max_size{N};
-		constexpr static size_type size{max_size - 1};
-		value_type value[max_size]{};
-
-		constexpr basic_fixed_string() noexcept = default;
-
-		template<std::size_t M>
-			requires(M >= N)
-		constexpr explicit(false) basic_fixed_string(const value_type (&string)[M]) noexcept
-		{
-			std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + size, value);
-		}
-
-		template<value_type... Cs>
-			requires(
-				// DO NOT USE `basic_char_array<T, Cs...>::size`!
-				sizeof...(Cs) - ((Cs == 0) or ...) >= N)
-		constexpr explicit(false) basic_fixed_string(const basic_char_array<value_type, Cs...>& char_array) noexcept
-		{
-			std::ranges::copy(std::ranges::begin(char_array), std::ranges::begin(char_array) + N, value);
-		}
-
-		template<std::ranges::range String>
-			requires std::is_same_v<std::ranges::range_value_t<String>, value_type>
-		constexpr explicit basic_fixed_string(const String& string) noexcept
-		{
-			std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + N, value);
-		}
-
-		[[nodiscard]] constexpr auto begin() noexcept -> pointer { return value; }
-
-		[[nodiscard]] constexpr auto begin() const noexcept -> const_pointer { return value; }
-
-		[[nodiscard]] constexpr auto end() noexcept -> pointer { return value + size; }
-
-		[[nodiscard]] constexpr auto end() const noexcept -> const_pointer { return value + size; }
-
-		// // basic_fixed_string <=> basic_fixed_string
-		// template<size_type R>
-		// [[nodiscard]] constexpr auto operator<=>(const basic_fixed_string<value_type, R>& rhs) const noexcept -> auto
-		// {
-		// 	//
-		// 	return this->template as<basic_fixed_string_view<value_type>>() <=> rhs.template as<basic_fixed_string_view<value_type>>();
-		// }
-		//
-		// // basic_fixed_string <=> string
-		// template<typename String>
-		// 	requires(not basic_fixed_string_t<String>) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
-		// [[nodiscard]] constexpr auto operator<=>(const String& rhs) const noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> auto
-		// {
-		// 	//
-		// 	return this->template as<basic_fixed_string_view<value_type>>() <=> basic_fixed_string_view<value_type>{rhs};
-		// }
-		//
-		// // string <=> basic_fixed_string
-		// template<typename String>
-		// 	requires(not basic_fixed_string_t<String>) and std::is_constructible_v<basic_fixed_string_view<value_type>, String>
-		// [[nodiscard]] friend constexpr auto operator<=>(const String& lhs, const basic_fixed_string& rhs) noexcept(std::is_nothrow_constructible_v<basic_fixed_string_view<value_type>, String>) -> auto
-		// {
-		// 	//
-		// 	return basic_fixed_string_view<value_type>{lhs} <=> rhs.template as<basic_fixed_string_view<value_type>>();
-		// }
-	};
-
-	#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-
-	namespace string
-	{
-		template<typename T, T This, T... Cs>
-		[[nodiscard]] consteval auto contains_zero() noexcept -> bool
-		{
-			if constexpr (sizeof...(Cs) == 0) { return This == static_cast<T>(0); }
-			else { return contains_zero<T, Cs...>(); }
-		}
-	}
-
-	template<typename T, std::size_t N>
-	basic_fixed_string(const T (&string)[N]) -> basic_fixed_string<T, N>;
-
-	template<typename T, T... Cs>
-	basic_fixed_string(basic_char_array<T, Cs...> char_array) -> basic_fixed_string<
-		T,
-		// DO NOT USE `basic_char_array<T, Cs...>::size`!
-		sizeof...(Cs) - string::contains_zero<T, Cs...>()>;
-	#else
-
-	template<typename T, std::size_t N>
-	basic_fixed_string(const T (&string)[N]) -> basic_fixed_string<T, N>;
-
-	template<typename T, T... Cs>
-	basic_fixed_string(basic_char_array<T, Cs...> char_array) -> basic_fixed_string<
-		T,
-		// DO NOT USE `basic_char_array<T, Cs...>::size`!
-		sizeof...(Cs) - ((Cs == 0) or ...)>;
-
-	#endif
-
-	template<std::size_t N>
-	using fixed_string = basic_fixed_string<char, N>;
-	template<std::size_t N>
-	// ReSharper disable once IdentifierTypo
-	using fixed_wstring = basic_fixed_string<wchar_t, N>;
-	template<std::size_t N>
-	// ReSharper disable once CppInconsistentNaming
-	using fixed_u8string = basic_fixed_string<char8_t, N>;
-	template<std::size_t N>
-	// ReSharper disable once CppInconsistentNaming
-	using fixed_u16string = basic_fixed_string<char16_t, N>;
-	template<std::size_t N>
-	// ReSharper disable once CppInconsistentNaming
-	using fixed_u32string = basic_fixed_string<char32_t, N>;
-
-	using fixed_string_view = basic_fixed_string_view<char>;
-	// ReSharper disable once IdentifierTypo
-	using fixed_wstring_view = basic_fixed_string_view<wchar_t>;
-	// ReSharper disable once CppInconsistentNaming
-	using fixed_u8string_view = basic_fixed_string_view<char8_t>;
-	// ReSharper disable once CppInconsistentNaming
-	using fixed_u16string_view = basic_fixed_string_view<char16_t>;
-	// ReSharper disable once CppInconsistentNaming
-	using fixed_u32string_view = basic_fixed_string_view<char32_t>;
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-
-	// ^^^
-	// export
-	// =====================================
-} // namespace gal::prometheus::meta
-
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
+export namespace std
+{
 	// for `std::totally_ordered_with`
 	template<gal::prometheus::meta::basic_char_array_t FixedString, typename String, template<typename> typename Q1, template<typename> typename Q2>
 		requires std::is_constructible_v<gal::prometheus::meta::basic_char_array_view<typename FixedString::value_type>, String>
@@ -829,5 +791,4 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
 	{
 		using type = gal::prometheus::meta::basic_fixed_string_view<typename FixedString::value_type>;
 	};
-
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_END
+}
