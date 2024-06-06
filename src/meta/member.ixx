@@ -16,6 +16,11 @@ namespace gal::prometheus::meta
 {
 	namespace member_detail
 	{
+		// fixme: dup
+		// ReSharper disable once CppTemplateParameterNeverUsed
+		template<auto... Vs> // DO NOT REMOVE `Vs`
+		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return std::source_location::current().function_name(); }
+
 		template<typename T>
 		extern const T extern_any{};
 
@@ -3049,7 +3054,7 @@ namespace gal::prometheus::meta
 
 		template<std::size_t N, typename T>
 			requires member_gettable_t<std::remove_cvref_t<T>>
-		[[nodicard]] constexpr auto member_of_index(T&& value) noexcept -> decltype(auto) //
+		[[nodiscard]] constexpr auto member_of_index(T&& value) noexcept -> decltype(auto) //
 		{
 			return member_detail::visit(
 					[]<typename... Ts>(Ts&&... args) noexcept -> decltype(auto) //
@@ -3136,13 +3141,13 @@ namespace gal::prometheus::meta
 			requires member_gettable_t<std::remove_cvref_t<T>>
 		[[nodiscard]] constexpr auto name_of_member() noexcept -> std::string_view
 		{
-			constexpr auto full_function_name = name::get_full_function_name<
-				member_name::visit(
+			constexpr auto full_function_name = member_detail::get_full_function_name<
+				member_detail::visit(
 						[]<typename... Ts>(Ts&&... args) noexcept -> auto //
 						{
-							return member_name::wrapper{member_name::nth_element<N>(std::forward<Ts>(args)...)};
+							return member_detail::wrapper{member_detail::nth_element<N>(std::forward<Ts>(args)...)};
 						},
-						member_name::extern_any<std::remove_cvref_t<T>>) //
+						member_detail::extern_any<std::remove_cvref_t<T>>) //
 			>();
 
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
@@ -3250,14 +3255,14 @@ namespace gal::prometheus::meta
 			requires member_gettable_t<std::remove_cvref_t<T>>
 		[[nodiscard]] constexpr auto has_member_of_name() noexcept -> bool //
 		{
-			return member_name::index_of_member_name<std::remove_cvref_t<T>, Name>() != member_name::index_not_found;
+			return member_detail::index_of_member_name<std::remove_cvref_t<T>, Name>() != member_detail::index_not_found;
 		}
 
 		template<typename T>
 			requires member_gettable_t<std::remove_cvref_t<T>>
 		[[nodiscard]] constexpr auto has_member_of_name(const std::string_view name) noexcept -> bool //
 		{
-			return member_name::index_of_member_name<std::remove_cvref_t<T>>(name) != member_name::index_not_found;
+			return member_detail::index_of_member_name<std::remove_cvref_t<T>>(name) != member_detail::index_not_found;
 		}
 
 		template<basic_fixed_string Name, typename T>
@@ -3267,12 +3272,12 @@ namespace gal::prometheus::meta
 			requires has_member_of_name_t<Name, T>
 		[[nodiscard]] constexpr auto member_of_name(T&& value) noexcept -> decltype(auto)
 		{
-			return member_name::visit(
+			return member_detail::visit(
 					[]<typename... Ts>(Ts&&... args) noexcept -> decltype(auto)
 					{
-						constexpr auto index = member_name::index_of_member_name<T, Name>();
+						constexpr auto index = member_detail::index_of_member_name<T, Name>();
 
-						return member_name::nth_element<index>(std::forward<Ts>(args)...);
+						return member_detail::nth_element<index>(std::forward<Ts>(args)...);
 					},
 					std::forward<T>(value));
 		}
