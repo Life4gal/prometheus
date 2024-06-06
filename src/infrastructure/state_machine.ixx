@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -14,16 +11,7 @@ export module gal.prometheus.infrastructure:state_machine;
 
 import std;
 import gal.prometheus.functional;
-
-#else
-#include <functional>
-#include <type_traits>
-
-#include <prometheus/macro.hpp>
-#include <meta/string.hpp>
-#include <functional/functional.hpp>
-#include <functional/type_list.hpp>
-#endif
+import gal.prometheus.meta;
 
 #if defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_GNU)
 	#define STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE auto
@@ -670,51 +658,50 @@ namespace gal::prometheus::infrastructure
 		};
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	template<meta::basic_fixed_string State>
-	[[nodiscard]] constexpr auto operator""_s() noexcept
-		-> state_machine_detail::transition<false, meta::to_char_array<State>(), state_machine_detail::state_continue> { return {}; }
-
-	// note: `any_state` will only change the state of the first entry_point when an event is processed.
-	// transition_list{
-	//	s1.start_from_here()...,
-	//	s2.start_from_here()...,
-	//	s3...,
-	//	s4...,
-	//	any_state.when<e>().end(s4)...,
-	// }
-	// state_machine.is(s1, s2);
-	// state_machine.process(e{});
-	// state_machine.is(s4, s2); // <== only the first entry_point changes state.
-	constexpr auto any_state = state_machine_detail::transition<false, state_machine_detail::state_any, state_machine_detail::state_continue>{};
-
-	template<state_machine_detail::transition_t... Transitions>
-		requires((Transitions::is_entry_point + ...) >= 1)
-	#if defined(STATE_MACHINE_WORKAROUND_REQUIRED)
-	struct transition_list : state_machine_detail::transition_list_type<Transitions...>
+	export
 	{
-		using state_machine_detail::transition_list_type<Transitions...>::transition_list_type;
-	};
+		template<meta::basic_fixed_string State>
+		[[nodiscard]] constexpr auto operator""_s() noexcept
+			-> state_machine_detail::transition<false, meta::to_char_array<State>(), state_machine_detail::state_continue> { return {}; }
 
-	template<state_machine_detail::transition_t... Transitions>
-	transition_list(Transitions&&...) -> transition_list<Transitions...>;
-	#else
-	using transition_list = state_machine_detail::transition_list_type<Transitions...>;
-	#endif
+		// note: `any_state` will only change the state of the first entry_point when an event is processed.
+		// transition_list{
+		//	s1.start_from_here()...,
+		//	s2.start_from_here()...,
+		//	s3...,
+		//	s4...,
+		//	any_state.when<e>().end(s4)...,
+		// }
+		// state_machine.is(s1, s2);
+		// state_machine.process(e{});
+		// state_machine.is(s4, s2); // <== only the first entry_point changes state.
+		constexpr auto any_state = state_machine_detail::transition<false, state_machine_detail::state_any, state_machine_detail::state_continue>{};
 
-	template<typename Invocable>
-		requires std::is_invocable_v<Invocable> and state_machine_detail::is_transition_list_v<decltype(std::declval<Invocable>()())>
-	struct state_machine final : state_machine_detail::StateMachine<decltype(std::declval<Invocable>()())>
-	{
-		constexpr explicit(false) state_machine(Invocable function) noexcept // NOLINT(*-explicit-constructor)
-			: state_machine_detail::StateMachine<decltype(std::declval<Invocable>()())>{function()} {}
-	};
+		template<state_machine_detail::transition_t... Transitions>
+			requires((Transitions::is_entry_point + ...) >= 1)
+		#if defined(STATE_MACHINE_WORKAROUND_REQUIRED)
+		struct transition_list : state_machine_detail::transition_list_type<Transitions...>
+		{
+			using state_machine_detail::transition_list_type<Transitions...>::transition_list_type;
+		};
 
-	template<typename Invocable>
-	state_machine(Invocable) -> state_machine<Invocable>;
+		template<state_machine_detail::transition_t... Transitions>
+		transition_list(Transitions && ...) -> transition_list<Transitions...>;
+		#else
+		using transition_list = state_machine_detail::transition_list_type<Transitions...>;
+		#endif
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+		template<typename Invocable>
+			requires std::is_invocable_v<Invocable> and state_machine_detail::is_transition_list_v<decltype(std::declval<Invocable>()())>
+		struct state_machine final : state_machine_detail::StateMachine<decltype(std::declval<Invocable>()())>
+		{
+			constexpr explicit(false) state_machine(Invocable function) noexcept // NOLINT(*-explicit-constructor)
+				: state_machine_detail::StateMachine<decltype(std::declval<Invocable>()())>{function()} {}
+		};
+
+		template<typename Invocable>
+		state_machine(Invocable) -> state_machine<Invocable>;
+	}
 }
 
 #undef STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE

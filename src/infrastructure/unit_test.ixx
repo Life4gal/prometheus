@@ -5,9 +5,6 @@
 
 // The code below is based on boost-ext/ut(https://github.com/boost-ext/ut)(http://www.boost.org/LICENSE_1_0.txt)
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -20,191 +17,182 @@ import gal.prometheus.error;
 import gal.prometheus.string;
 import gal.prometheus.meta;
 
-#else
-#include <iostream>
-#include <chrono>
-#include <source_location>
-#include <vector>
-
-#include <prometheus/macro.hpp>
-#include <functional/functional.hpp>
-#include <error/error.hpp>
-#include <string/string.hpp>
-#include <meta/meta.hpp>
-#endif
 
 namespace gal::prometheus::unit_test
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	struct color_type
+	export
 	{
-		std::string_view none = "\033[0m";
-
-		std::string_view fail = "\033[31m\033[7m";
-		std::string_view pass = "\033[32m\033[7m";
-		std::string_view skip = "\033[33m\033[7m";
-		std::string_view fatal = "\033[35m\033[7m";
-
-		std::string_view suite = "\033[34m\033[7m";
-		std::string_view test = "\033[36m\033[7m";
-		std::string_view expression = "\033[38;5;207m\033[7m";
-		std::string_view message = "\033[38;5;27m\033[7m";
-	};
-
-	using clock_type = std::chrono::high_resolution_clock;
-	using time_point_type = clock_type::time_point;
-	using time_difference_type = std::chrono::milliseconds;
-
-	struct test_result_type;
-	using test_results_type = std::vector<test_result_type>;
-
-	struct test_result_type
-	{
-		enum class Status
+		struct color_type
 		{
-			PENDING,
+			std::string_view none = "\033[0m";
 
-			PASSED,
-			FAILED,
-			SKIPPED,
-			FATAL,
+			std::string_view fail = "\033[31m\033[7m";
+			std::string_view pass = "\033[32m\033[7m";
+			std::string_view skip = "\033[33m\033[7m";
+			std::string_view fatal = "\033[35m\033[7m";
+
+			std::string_view suite = "\033[34m\033[7m";
+			std::string_view test = "\033[36m\033[7m";
+			std::string_view expression = "\033[38;5;207m\033[7m";
+			std::string_view message = "\033[38;5;27m\033[7m";
 		};
 
-		std::string name;
+		using clock_type = std::chrono::high_resolution_clock;
+		using time_point_type = clock_type::time_point;
+		using time_difference_type = std::chrono::milliseconds;
 
-		test_result_type* parent;
-		test_results_type children;
+		struct test_result_type;
+		using test_results_type = std::vector<test_result_type>;
 
-		Status status;
-		time_point_type time_start;
-		time_point_type time_end;
-		std::size_t total_assertions_passed;
-		std::size_t total_assertions_failed;
-	};
-
-	constexpr static std::string_view anonymous_suite_name{"anonymous_suite"};
-
-	struct suite_result_type
-	{
-		std::string name;
-
-		std::string report_string;
-
-		test_results_type test_results;
-	};
-
-	/**
-	 * result: std::vector<suite> {																			 
-	 * anonymous_suite: suite																						 
-	 * user_suite_0: suite																								
-	 * user_suite_1: suite																								
-	 * user_suite_2: suite																								
-	 * user_suite_3: suite																								
-	 * user_suite_n: suite																								 
-	 * }																														
-	 *																															
-	 * *_suite_*: suite {																									 
-	 * name: std::string																								
-	 * user_test_0: test																									 
-	 * user_test_1: test																									 
-	 * user_test_2: test																									 
-	 * user_test_3: test																									 
-	 * user_test_n: test																									 
-	 * }																														
-	 *																															
-	 * *_test_*: test {																									
-	 * name: std::string																								
-	 * parent: test*																										 
-	 * children(nested test): std::vector<test>																
-	 *																															
-	 * status: Status																										 
-	 * time_start: time_point_type																				
-	 * time_end: time_point_type																				
-	 * total_assertions_passed: std::size_t																		
-	 * total_assertions_failed: std::size_t																		
-	 * }
-	 */
-	// assume suite_results.front() == anonymous_suite
-	using suite_results_type = std::vector<suite_result_type>;
-
-	enum class OutputLevel
-	{
-		NONE = 0,
-		// Only the results of each suite execution are output.
-		RESULT_ONLY = 1,
-		// RESULT_ONLY + the expression of each test.
-		INCLUDE_EXPRESSION = 2,
-		// INCLUDE_EXPRESSION + the source location of each expression.
-		INCLUDE_EXPRESSION_LOCATION = 3,
-	};
-
-	struct config
-	{
-		using name_type = std::string_view;
-		using category_type = std::string_view;
-		using categories_type = std::vector<category_type>;
-
-		color_type color;
-
-		// terminate the program after n failed assertions (per suite).
-		// if abort_after_n_failures == 0:
-		//	terminate the program immediately if the assertion fails
-		std::size_t abort_after_n_failures = std::numeric_limits<std::size_t>::max();
-
-		OutputLevel output_level = OutputLevel::INCLUDE_EXPRESSION_LOCATION;
-		bool dry_run = false;
-
-		// how to terminate the program
-		std::function<void()> terminator =
-				[]() -> void
+		struct test_result_type
 		{
-			std::exit(-1); // NOLINT(concurrency-mt-unsafe)
+			enum class Status
+			{
+				PENDING,
+
+				PASSED,
+				FAILED,
+				SKIPPED,
+				FATAL,
+			};
+
+			std::string name;
+
+			test_result_type* parent;
+			test_results_type children;
+
+			Status status;
+			time_point_type time_start;
+			time_point_type time_end;
+			std::size_t total_assertions_passed;
+			std::size_t total_assertions_failed;
 		};
 
-		std::function<void(std::string_view)> message_reporter =
-				[](const std::string_view report_message) -> void { std::cout << report_message; };
+		constexpr static std::string_view anonymous_suite_name{"anonymous_suite"};
 
-		// Used to filter the suite/test cases that need to be executed.
-		std::function<bool(name_type)> filter_execute_suite_name =
-				[]([[maybe_unused]] const name_type suite_name) noexcept -> bool { return true; };
-		std::function<bool(name_type)> filter_execute_test_name =
-				[]([[maybe_unused]] const name_type test_name) noexcept -> bool { return true; };
-		std::function<bool(const categories_type&)> filter_execute_test_categories =
-				[](const categories_type& categories) noexcept -> bool
+		struct suite_result_type
 		{
-			if (std::ranges::contains(categories, "skip")) { return false; }
+			std::string name;
 
-			return true;
+			std::string report_string;
+
+			test_results_type test_results;
 		};
 
-		[[noreturn]] auto terminate() const noexcept -> void
+		/**
+		 * result: std::vector<suite> {																			 
+		 * anonymous_suite: suite																						 
+		 * user_suite_0: suite																								
+		 * user_suite_1: suite																								
+		 * user_suite_2: suite																								
+		 * user_suite_3: suite																								
+		 * user_suite_n: suite																								 
+		 * }																														
+		 *																															
+		 * *_suite_*: suite {																									 
+		 * name: std::string																								
+		 * user_test_0: test																									 
+		 * user_test_1: test																									 
+		 * user_test_2: test																									 
+		 * user_test_3: test																									 
+		 * user_test_n: test																									 
+		 * }																														
+		 *																															
+		 * *_test_*: test {																									
+		 * name: std::string																								
+		 * parent: test*																										 
+		 * children(nested test): std::vector<test>																
+		 *																															
+		 * status: Status																										 
+		 * time_start: time_point_type																				
+		 * time_end: time_point_type																				
+		 * total_assertions_passed: std::size_t																		
+		 * total_assertions_failed: std::size_t																		
+		 * }
+		 */
+		// assume suite_results.front() == anonymous_suite
+		using suite_results_type = std::vector<suite_result_type>;
+
+		enum class OutputLevel
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(terminator);
+			NONE = 0,
+			// Only the results of each suite execution are output.
+			RESULT_ONLY = 1,
+			// RESULT_ONLY + the expression of each test.
+			INCLUDE_EXPRESSION = 2,
+			// INCLUDE_EXPRESSION + the source location of each expression.
+			INCLUDE_EXPRESSION_LOCATION = 3,
+		};
 
-			terminator();
-			std::exit(-1); // NOLINT(concurrency-mt-unsafe)
-		}
-
-		auto report_message(const std::string_view message) const noexcept -> void
+		struct config
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(message_reporter);
+			using name_type = std::string_view;
+			using category_type = std::string_view;
+			using categories_type = std::vector<category_type>;
 
-			message_reporter(message);
-		}
+			color_type color;
 
-		[[nodiscard]] auto is_suite_execute_required(const name_type suite_name) const noexcept -> bool //
-		{
-			return filter_execute_suite_name(suite_name);
-		}
+			// terminate the program after n failed assertions (per suite).
+			// if abort_after_n_failures == 0:
+			//	terminate the program immediately if the assertion fails
+			std::size_t abort_after_n_failures = std::numeric_limits<std::size_t>::max();
 
-		[[nodiscard]] auto is_test_execute_required(const name_type test_name, const categories_type& categories) const noexcept -> bool //
-		{
-			return filter_execute_test_name(test_name) and filter_execute_test_categories(categories);
-		}
-	};
+			OutputLevel output_level = OutputLevel::INCLUDE_EXPRESSION_LOCATION;
+			bool dry_run = false;
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+			// how to terminate the program
+			std::function<void()> terminator = []() -> void
+			{
+				std::exit(-1); // NOLINT(concurrency-mt-unsafe)
+			};
+
+			std::function<void(std::string_view)> message_reporter = [](const std::string_view report_message) -> void
+			{
+				std::cout << report_message;
+			};
+
+			// Used to filter the suite/test cases that need to be executed.
+			std::function<bool(name_type)> filter_execute_suite_name = []([[maybe_unused]] const name_type suite_name) noexcept -> bool
+			{
+				return true;
+			};
+			std::function<bool(name_type)> filter_execute_test_name = []([[maybe_unused]] const name_type test_name) noexcept -> bool
+			{
+				return true;
+			};
+			std::function<bool(const categories_type&)> filter_execute_test_categories = [](const categories_type& categories) noexcept -> bool
+			{
+				if (std::ranges::contains(categories, "skip")) { return false; }
+
+				return true;
+			};
+
+			[[noreturn]] auto terminate() const noexcept -> void
+			{
+				GAL_PROMETHEUS_DEBUG_NOT_NULL(terminator);
+
+				terminator();
+				std::exit(-1); // NOLINT(concurrency-mt-unsafe)
+			}
+
+			auto report_message(const std::string_view message) const noexcept -> void
+			{
+				GAL_PROMETHEUS_DEBUG_NOT_NULL(message_reporter);
+
+				message_reporter(message);
+			}
+
+			[[nodiscard]] auto is_suite_execute_required(const name_type suite_name) const noexcept -> bool //
+			{
+				return filter_execute_suite_name(suite_name);
+			}
+
+			[[nodiscard]] auto is_test_execute_required(const name_type test_name, const categories_type& categories) const noexcept -> bool //
+			{
+				return filter_execute_test_name(test_name) and filter_execute_test_categories(categories);
+			}
+		};
+	}
 
 	template<typename Expression>
 	struct is_expression
@@ -4477,326 +4465,314 @@ namespace gal::prometheus::unit_test
 		};
 	} // namespace dispatcher
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	// =========================================
-	// OPERANDS
-	// =========================================
-
-	template<typename T>
-	using value = operands::OperandValue<T>;
-
-	template<typename ExceptionType = void, std::invocable InvocableType>
-	[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> operands::OperandThrow<ExceptionType> { return {invocable}; }
-
-	template<std::invocable InvocableType>
-	[[nodiscard]] constexpr auto nothrow(const InvocableType& invocable) noexcept -> operands::OperandNoThrow { return {invocable}; }
-
-	// =========================================
-	// DISPATCHER
-	// =========================================
-
-	constexpr dispatcher::expect_result::fatal fatal{};
-
-	constexpr dispatcher::DispatcherThat that{};
-	constexpr dispatcher::DispatcherExpect expect{};
-
-	// =========================================
-	// CONFIG
-	// =========================================
-
-	[[nodiscard]] inline auto config() noexcept -> auto& { return executor::executor().config(); }
-
-	// =========================================
-	// TEST & SUITE
-	// =========================================
-
-	using test = dispatcher::DispatcherTest;
-
-	template<meta::basic_fixed_string SuiteName>
-	struct suite
+	export
 	{
+		// =========================================
+		// OPERANDS
+		// =========================================
+
+		template<typename T>
+		using value = operands::OperandValue<T>;
+
+		template<typename ExceptionType = void, std::invocable InvocableType>
+		[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> operands::OperandThrow<ExceptionType> { return {invocable}; }
+
 		template<std::invocable InvocableType>
-		constexpr explicit(false) suite(InvocableType invocable) noexcept //
-			requires requires { +invocable; }
-		{
-			dispatcher::register_event(events::EventSuite{
-					.name = SuiteName.operator std::string_view(),
-					.suite = +invocable});
-		}
-	};
+		[[nodiscard]] constexpr auto nothrow(const InvocableType& invocable) noexcept -> operands::OperandNoThrow { return {invocable}; }
 
-	// =========================================
-	// OPERATORS
-	// =========================================
+		// =========================================
+		// DISPATCHER
+		// =========================================
 
-	namespace operators
-	{
-		namespace detail
+		constexpr dispatcher::expect_result::fatal fatal{};
+
+		constexpr dispatcher::DispatcherThat that{};
+		constexpr dispatcher::DispatcherExpect expect{};
+
+		// =========================================
+		// CONFIG
+		// =========================================
+
+		[[nodiscard]] inline auto config() noexcept -> auto& { return executor::executor().config(); }
+
+		// =========================================
+		// TEST & SUITE
+		// =========================================
+
+		using test = dispatcher::DispatcherTest;
+
+		template<meta::basic_fixed_string SuiteName>
+		struct suite
 		{
-			template<typename DispatchedExpression>
-			// ReSharper disable once CppFunctionIsNotImplemented
-			constexpr auto is_valid_dispatched_expression(DispatchedExpression&& expression) noexcept -> void requires requires
+			template<std::invocable InvocableType>
+			constexpr explicit(false) suite(InvocableType invocable) noexcept //
+				requires requires { +invocable; }
 			{
-				static_cast<bool>(expression.expression);
-			};
+				dispatcher::register_event(events::EventSuite{.name = SuiteName.operator std::string_view(), .suite = +invocable});
+			}
+		};
 
+		// =========================================
+		// OPERATORS
+		// =========================================
+
+		namespace operators
+		{
+			namespace detail
+			{
+				template<typename DispatchedExpression>
+				// ReSharper disable once CppFunctionIsNotImplemented
+				constexpr auto is_valid_dispatched_expression(DispatchedExpression&& expression) noexcept -> void requires requires
+				{
+					static_cast<bool>(expression.expression);
+				};
+
+				template<typename Lhs, typename Rhs>
+				concept dispatchable_t =
+						not(dispatcher::detail::is_dispatched_expression_v<Lhs> or dispatcher::detail::is_dispatched_expression_v<Rhs>);
+			} // namespace detail
+
+			// a == b
 			template<typename Lhs, typename Rhs>
-			concept dispatchable_t = not(dispatcher::detail::is_dispatched_expression_v<Lhs> or dispatcher::detail::is_dispatched_expression_v<Rhs>);
-		} // namespace detail
-
-		// a == b
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator==(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			[[nodiscard]] constexpr auto operator==(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+				requires detail::dispatchable_t<Lhs, Rhs> and
+				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs)); } //
 			{
-				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs));
-			} //
-		{
-			return that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs);
-		}
+				return that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs);
+			}
 
-		// a != b
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator!=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			// a != b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator!=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+				requires detail::dispatchable_t<Lhs, Rhs> and
+				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs)); } //
 			{
-				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs));
-			} //
-		{
-			return that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs);
-		}
+				return that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs);
+			}
 
-		// a > b
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator>(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			// a > b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator>(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+				requires detail::dispatchable_t<Lhs, Rhs> and
+				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs)); } //
 			{
-				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs));
-			} //
-		{
-			return that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs);
-		}
+				return that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs);
+			}
 
-		// a >= b
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator>=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			// a >= b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator>=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+				requires detail::dispatchable_t<Lhs, Rhs> and
+				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs)); } //
 			{
-				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs));
-			} //
-		{
-			return that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs);
-		}
+				return that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs);
+			}
 
-		// a < b
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator<(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			// a < b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator<(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+				requires detail::dispatchable_t<Lhs, Rhs> and
+				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs)); } //
 			{
-				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs));
-			} //
-		{
-			return that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs);
-		}
+				return that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs);
+			}
 
-		// a <= b
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator<=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			// a <= b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator<=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+				requires detail::dispatchable_t<Lhs, Rhs> and
+				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs)); } //
 			{
-				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs));
-			} //
-		{
-			return that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs);
-		}
+				return that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs);
+			}
 
-		// todo: It doesn't look like we can take over [operator and] and [operator or] :(
+			// todo: It doesn't look like we can take over [operator and] and [operator or] :(
 
-		// a and b
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator and(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			// a and b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator and(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+				requires detail::dispatchable_t<Lhs, Rhs> and
+				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs)); } //
 			{
-				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs));
-			} //
-		{
-			return that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs);
-		}
+				return that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs);
+			}
 
-		// a or b
-		template<typename Lhs, typename Rhs>
-		[[nodiscard]] constexpr auto operator or(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-			requires detail::dispatchable_t<Lhs, Rhs> and requires
+			// a or b
+			template<typename Lhs, typename Rhs>
+			[[nodiscard]] constexpr auto operator or(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+				requires detail::dispatchable_t<Lhs, Rhs> and
+				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs)); } //
 			{
-				detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs));
-			} //
+				return that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs);
+			}
+		} // namespace operators
+
+		// =========================================
+		// LITERALS
+		// =========================================
+
+		namespace literals
 		{
-			return that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs);
-		}
-	} // namespace operators
+			template<meta::basic_fixed_string StringLiteral>
+			constexpr auto operator""_test() noexcept -> dispatcher::DispatcherTestLiteral<StringLiteral> //
+			{
+				return dispatcher::DispatcherTestLiteral<StringLiteral>{};
+			}
 
-	// =========================================
-	// LITERALS
-	// =========================================
+			template<char... Cs>
+			[[nodiscard]] constexpr auto operator""_auto() noexcept -> operands::OperandLiteralAuto<Cs...> //
+			{
+				return {};
+			}
 
-	namespace literals
-	{
-		template<meta::basic_fixed_string StringLiteral>
-		constexpr auto operator""_test() noexcept -> dispatcher::DispatcherTestLiteral<StringLiteral> //
-		{
-			return dispatcher::DispatcherTestLiteral<StringLiteral>{};
-		}
+			template<meta::basic_fixed_string StringLiteral>
+			[[nodiscard]] constexpr auto operator""_c() noexcept -> operands::OperandLiteralCharacter<StringLiteral.value[0]> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-		[[nodiscard]] constexpr auto operator""_auto() noexcept -> operands::OperandLiteralAuto<Cs...> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<int>(); }
+			[[nodiscard]] constexpr auto operator""_i() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<int>()> //
+			{
+				return {};
+			}
 
-		template<meta::basic_fixed_string StringLiteral>
-		[[nodiscard]] constexpr auto operator""_c() noexcept -> operands::OperandLiteralCharacter<StringLiteral.value[0]> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<unsigned>(); }
+			[[nodiscard]] constexpr auto operator""_u() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<int>(); }
-		[[nodiscard]] constexpr auto operator
-		""_i() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<int>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<long>(); }
+			[[nodiscard]] constexpr auto operator""_l() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<unsigned>(); }
-		[[nodiscard]] constexpr auto operator
-		""_u() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<unsigned long>(); }
+			[[nodiscard]] constexpr auto operator""_ul() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<long>(); }
-		[[nodiscard]] constexpr auto operator
-		""_l() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<long long>(); }
+			[[nodiscard]] constexpr auto operator""_ll() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long long>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<unsigned long>(); }
-		[[nodiscard]] constexpr auto operator""_ul() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
-			unsigned long>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<unsigned long long>(); }
+			[[nodiscard]] constexpr auto operator""_ull() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long long>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<long long>(); }
-		[[nodiscard]] constexpr auto operator
-		""_ll() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long long>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<std::int8_t>(); }
+			[[nodiscard]] constexpr auto operator""_i8() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int8_t>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<unsigned long long>(); }
-		[[nodiscard]] constexpr auto operator""_ull() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
-			unsigned long long>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<std::uint8_t>(); }
+			[[nodiscard]] constexpr auto operator""_u8() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint8_t>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<std::int8_t>(); }
-		[[nodiscard]] constexpr auto operator""_i8() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
-			std::int8_t>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<std::int16_t>(); }
+			[[nodiscard]] constexpr auto operator""_i16() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int16_t>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<std::uint8_t>(); }
-		[[nodiscard]] constexpr auto operator""_u8() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
-			std::uint8_t>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<std::uint16_t>(); }
+			[[nodiscard]] constexpr auto operator""_u16() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint16_t>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<std::int16_t>(); }
-		[[nodiscard]] constexpr auto operator""_i16() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
-			std::int16_t>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<std::int32_t>(); }
+			[[nodiscard]] constexpr auto operator""_i32() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int32_t>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<std::uint16_t>(); }
-		[[nodiscard]] constexpr auto operator""_u16() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
-			std::uint16_t>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<std::uint32_t>(); }
+			[[nodiscard]] constexpr auto operator""_u32() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint32_t>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<std::int32_t>(); }
-		[[nodiscard]] constexpr auto operator""_i32() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
-			std::int32_t>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<std::int64_t>(); }
+			[[nodiscard]] constexpr auto operator""_i64() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int64_t>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<std::uint32_t>(); }
-		[[nodiscard]] constexpr auto operator""_u32() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
-			std::uint32_t>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_integral<std::uint64_t>(); }
+			[[nodiscard]] constexpr auto operator""_u64() noexcept
+				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint64_t>()> //
+			{
+				return {};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<std::int64_t>(); }
-		[[nodiscard]] constexpr auto operator""_i64() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
-			std::int64_t>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_floating_point<float>(); }
+			[[nodiscard]] constexpr auto operator""_f() noexcept
+				-> operands::OperandLiteralFloatingPoint<
+					functional::char_list<Cs...>.template to_floating_point<float>(),
+					functional::char_list<Cs...>.denominator_length()
+				> { return {}; }
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_integral<std::uint64_t>(); }
-		[[nodiscard]] constexpr auto operator""_u64() noexcept -> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<
-			std::uint64_t>()> //
-		{
-			return {};
-		}
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_floating_point<double>(); }
+			[[nodiscard]] constexpr auto operator""_d() noexcept
+				-> operands::OperandLiteralFloatingPoint<
+					functional::char_list<Cs...>.template to_floating_point<double>(),
+					functional::char_list<Cs...>.denominator_length()
+				> { return {}; }
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_floating_point<float>(); }
-		[[nodiscard]] constexpr auto operator""_f() noexcept -> operands::OperandLiteralFloatingPoint<
-			functional::char_list<Cs...>.template to_floating_point<float>(),
-			functional::char_list<Cs...>.denominator_length()> { return {}; }
+			template<char... Cs>
+				requires requires { functional::char_list<Cs...>.template to_floating_point<long double>(); }
+			[[nodiscard]] constexpr auto operator""_ld() noexcept
+				-> operands::OperandLiteralFloatingPoint<
+					functional::char_list<Cs...>.template to_floating_point<long double>(),
+					functional::char_list<Cs...>.denominator_length()
+				> { return {}; }
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_floating_point<double>(); }
-		[[nodiscard]] constexpr auto operator""_d() noexcept -> operands::OperandLiteralFloatingPoint<
-			functional::char_list<Cs...>.template to_floating_point<double>(),
-			functional::char_list<Cs...>.denominator_length()> { return {}; }
+			[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> operands::OperandIdentity::message_type //
+			{
+				return {operands::OperandIdentity::boolean{.message = {name, size}}};
+			}
 
-		template<char... Cs>
-			requires requires { functional::char_list<Cs...>.template to_floating_point<long double>(); }
-		[[nodiscard]] constexpr auto operator""_ld() noexcept -> operands::OperandLiteralFloatingPoint<
-			functional::char_list<Cs...>.template to_floating_point<long double>(),
-			functional::char_list<Cs...>.denominator_length()> { return {}; }
-
-		[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> operands::OperandIdentity::message_type //
-		{
-			return {operands::OperandIdentity::boolean{.message = {name, size}}};
-		}
-
-		[[nodiscard]] constexpr auto operator""_s(const char* name, std::size_t size) noexcept -> std::string_view { return {name, size}; }
-	} // namespace literals
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+			[[nodiscard]] constexpr auto operator""_s(const char* name, std::size_t size) noexcept -> std::string_view { return {name, size}; }
+		} // namespace literals
+	}
 } // namespace gal::prometheus::unit_test
