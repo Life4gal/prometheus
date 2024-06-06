@@ -14,6 +14,7 @@ import gal.prometheus.functional;
 
 import :vertex;
 import :rect;
+import :circle;
 
 export namespace gal::prometheus::primitive
 {

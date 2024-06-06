@@ -11,6 +11,7 @@ export module gal.prometheus.primitive:point;
 
 import std;
 import gal.prometheus.functional;
+import gal.prometheus.error;
 
 import :multidimensional;
 
