@@ -5,9 +5,6 @@
 
 export module gal.prometheus.error;
 
+export import :exception;
 export import :debug;
 export import :platform;
-export import :exception;
-
-import :debug.impl;
-import :platform.impl;

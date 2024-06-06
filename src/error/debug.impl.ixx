@@ -5,35 +5,42 @@
 
 module;
 
-#include <prometheus/windows.hpp>
+#include <prometheus/macro.hpp>
+#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
+#include <Windows.h>
+#else
+
+#endif
 
 export module gal.prometheus.error:debug.impl;
 
 import std;
+import :debug;
 
-namespace gal::prometheus::error
+namespace
 {
-	auto try_wakeup_debugger() noexcept -> bool
+	auto call_debugger() noexcept -> bool
 	{
+		#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
 		if (IsDebuggerPresent())
 		{
 			// When running under the debugger, __debugbreak() after returning.
 			return true;
 		}
 
-		__try
+		__try // NOLINT(clang-diagnostic-language-extension-token)
 		{
-			__try
+			__try // NOLINT(clang-diagnostic-language-extension-token)
 			{
 				// Attempt to break, causing an exception.
 				DebugBreak();
 
 				// The UnhandledExceptionFilter() will be called to attempt to attach a debugger.
-				//  * If the jit-debugger is not configured the user gets a error dialogue-box that
+				//  * If the jit-debugger is not configured the user gets an error dialogue-box that
 				//    with "Abort", "Retry (Debug)", "Ignore". The "Retry" option will only work
 				//    when the application is already being debugged.
 				//  * When the jit-debugger is configured the user gets a dialogue window which allows
-				//    a selection of debuggers and a "OK (Debug)", "Cancel (aborts application)".
+				//    a selection of debuggers and an "OK (Debug)", "Cancel (aborts application)".
 			}
 			__except (UnhandledExceptionFilter(GetExceptionInformation()))
 			{
@@ -47,7 +54,29 @@ namespace gal::prometheus::error
 			return true;
 		}
 
-		// The jit-debugger was configured, but the use pressed Cancel.
+		// The jit-debugger was configured, but the user pressed Cancel.
 		return false;
+		#else
+		#error "fixme"
+		#endif
 	}
-}// namespace gal::prometheus::error
+
+	thread_local std::atomic<const char*> terminate_reason{nullptr};
+}
+
+namespace gal::prometheus::error
+{
+	auto debug_break(const char* message) noexcept -> void
+	{
+		if (not call_debugger())
+		{
+			std::println(
+					std::cerr,
+					"Unexpected behavior occurred but did not run under the debugger, terminate the program. \nReason. {}\n",
+					message
+					);
+			terminate_reason.store(message, std::memory_order_relaxed);
+			std::terminate();
+		}
+	}
+}

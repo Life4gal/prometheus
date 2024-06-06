@@ -6,27 +6,27 @@
 export module gal.prometheus.error:platform;
 
 import std;
+import :exception;
 
 export namespace gal::prometheus::error
 {
 	/**
-	 * @brief Get the OS error code from the last error received on this thread.
-	 * @return The error code.
-	 */
-	[[nodiscard]] auto get_last_error_code() noexcept -> std::uint32_t;
-
-	/**
-	 * @brief Get the error message from an error code.
-	 * @param error_code The error code returned by an os call.
-	 * @return A formatted message.
-	 * @throws OSError When the error message was empty.
-	 */
-	[[nodiscard]] auto get_error_message(std::uint32_t error_code) -> std::string;
-
-	/**
 	 * @brief Get the OS error message from the last error received on this thread.
 	 * @return A formatted message.
-	 * @throws OSError When the error message was empty.
 	 */
-	[[nodiscard]] auto get_last_error_message() -> std::string;
-}// namespace gal::prometheus::error
+	[[nodiscard]] auto get_error_message() -> std::string;
+
+	class OsError final : public Exception<void>
+	{
+	public:
+		using Exception::Exception;
+
+		[[noreturn]] static auto panic(
+				const std::source_location& location = std::source_location::current(),
+				std::stacktrace stacktrace = std::stacktrace::current()
+				) noexcept(false) -> void //
+		{
+			error::panic<OsError>(get_error_message(), location, std::move(stacktrace));
+		}
+	};
+} // namespace gal::prometheus::error
