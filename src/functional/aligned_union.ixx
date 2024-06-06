@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -13,22 +10,12 @@ module;
 export module gal.prometheus.functional:aligned_union;
 
 import std;
+
 import :type_list;
 import :functor;
 
-#else
-#include <new>
-#include <type_traits>
-
-#include <prometheus/macro.hpp>
-#include <functional/type_list.hpp>
-#include <functional/functor.hpp>
-#endif
-
-namespace gal::prometheus::functional
+export namespace gal::prometheus::functional
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	template<typename... Ts>
 	class AlignedUnion final
 	{
@@ -147,6 +134,4 @@ namespace gal::prometheus::functional
 		[[nodiscard]] constexpr auto equal(const T& other) const
 			noexcept(noexcept(std::declval<const T&>() == std::declval<const T&>())) -> bool { return load<T>() == other; }
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

@@ -3,23 +3,13 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
-	#include <prometheus/macro.hpp>
+#include <prometheus/macro.hpp>
 
 export module gal.prometheus.functional:value_list;
 
 import std;
-
-#else
-#include <type_traits>
-#include <concepts>
-
-#include <prometheus/macro.hpp>
-#endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_GNU)
 	#define VALUE_LIST_WORKAROUND_BINDER(Value, Prediction) binder<Value, Prediction>::template rebind
@@ -501,27 +491,26 @@ namespace gal::prometheus::functional
 		};
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+	export
+	{
+		template<auto... Values>
+		constexpr auto value_list = value_list_detail::list<Values...>{};
 
-	template<auto... Values>
-	constexpr auto value_list = value_list_detail::list<Values...>{};
+		template<value_list_detail::list_t auto List>
+		using value_list_type = std::decay_t<decltype(List)>;
 
-	template<value_list_detail::list_t auto List>
-	using value_list_type = std::decay_t<decltype(List)>;
+		template<typename T>
+		concept value_list_t = value_list_detail::list_t<T>;
 
-	template<typename T>
-	concept value_list_t = value_list_detail::list_t<T>;
+		template<char... Cs>
+		constexpr auto char_list = value_list_detail::char_list<Cs...>{};
 
-	template<char... Cs>
-	constexpr auto char_list = value_list_detail::char_list<Cs...>{};
+		template<value_list_detail::char_list_t auto List>
+		using char_list_type = std::decay_t<decltype(List)>;
 
-	template<value_list_detail::char_list_t auto List>
-	using char_list_type = std::decay_t<decltype(List)>;
-
-	template<typename T>
-	concept char_list_t = value_list_detail::char_list_t<T>;
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+		template<typename T>
+		concept char_list_t = value_list_detail::char_list_t<T>;
+	}
 }
 
 #undef VALUE_LIST_WORKAROUND_BINDER

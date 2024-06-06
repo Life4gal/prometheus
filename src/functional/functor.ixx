@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -14,44 +11,35 @@ export module gal.prometheus.functional:functor;
 
 import std;
 
-#else
-
-#include <functional>
-#include <type_traits>
-
-#include <prometheus/macro.hpp>
-#endif
-
 namespace gal::prometheus::functional
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	template<typename FunctionType>
-	struct y_combinator
+	export
 	{
-		using function_type = FunctionType;
-
-		function_type function;
-
-		template<typename... Args>
-		constexpr auto operator()(Args&&... args) const
-			noexcept(std::is_nothrow_invocable_v<function_type, decltype(*this), Args...>) -> decltype(auto) //
+		template<typename FunctionType>
+		struct y_combinator
 		{
-			// we pass ourselves to function, the lambda should take the first argument as `auto&& self` or similar.
-			return std::invoke(function, *this, std::forward<Args>(args)...);
-		}
-	};
+			using function_type = FunctionType;
 
-	template<typename... Ts>
-	struct overloaded : Ts...
-	{
-		constexpr explicit overloaded(Ts&&... ts) noexcept((std::is_nothrow_constructible_v<Ts, decltype(ts)> and ...))
-			: Ts{std::forward<Ts>(ts)}... {}
-	};
+			function_type function;
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+			template<typename... Args>
+			constexpr auto operator()(Args&&... args) const
+				noexcept(std::is_nothrow_invocable_v<function_type, decltype(*this), Args...>) -> decltype(auto) //
+			{
+				// we pass ourselves to function, the lambda should take the first argument as `auto&& self` or similar.
+				return std::invoke(function, *this, std::forward<Args>(args)...);
+			}
+		};
 
-	namespace functional_detail
+		template<typename... Ts>
+		struct overloaded : Ts...
+		{
+			constexpr explicit overloaded(Ts&&... ts) noexcept((std::is_nothrow_constructible_v<Ts, decltype(ts)> and ...))
+				: Ts{std::forward<Ts>(ts)}... {}
+		};
+	}
+
+	namespace functor_detail
 	{
 		enum class InvokeFoldType
 		{
@@ -64,7 +52,7 @@ namespace gal::prometheus::functional
 		struct unary_invoker
 		{
 			template<typename... Args>
-			[[nodiscard]] constexpr auto operator()(const Args&... args) const
+			[[nodiscard]] constexpr static auto operator()(const Args&... args)
 				noexcept((std::is_nothrow_invocable_r_v<bool, decltype(DefaultFunctor), Args> and ...)) -> bool //
 				requires(std::is_invocable_r_v<bool, decltype(DefaultFunctor), Args> and ...)
 			{
@@ -77,10 +65,10 @@ namespace gal::prometheus::functional
 			}
 
 			template<typename Function, typename... Args>
-			[[nodiscard]] constexpr auto operator()(
+			[[nodiscard]] constexpr static auto operator()(
 					Function function,
 					const Args&... args
-					) const noexcept((std::is_nothrow_invocable_r_v<bool, Function, Args> and ...)) -> bool //
+					) noexcept((std::is_nothrow_invocable_r_v<bool, Function, Args> and ...)) -> bool //
 				requires(std::is_invocable_r_v<bool, Function, Args> and ...)
 			{
 				if constexpr (sizeof...(Args) == 0) { return true; }
@@ -96,11 +84,11 @@ namespace gal::prometheus::functional
 		struct binary_invoker
 		{
 			template<typename Lhs, typename Rhs, typename... Reset>
-			[[nodiscard]] constexpr auto operator()(
+			[[nodiscard]] constexpr static auto operator()(
 					const Lhs& lhs,
 					const Rhs& rhs,
 					const Reset&... reset //
-					) const
+					)
 				noexcept(
 					noexcept(DefaultFunctor(lhs, rhs)) and //
 					noexcept((DefaultFunctor(lhs, reset) and ...)) and //
@@ -108,17 +96,17 @@ namespace gal::prometheus::functional
 				) -> const auto&
 			{
 				if constexpr (sizeof...(reset) == 0) { return DefaultFunctor(lhs, rhs) ? lhs : rhs; }
-				else { return this->operator()(this->operator()(lhs, rhs), reset...); }
+				else { return binary_invoker::operator()(binary_invoker::operator()(lhs, rhs), reset...); }
 			}
 
 			template<typename Function, typename Lhs, typename Rhs, typename... Reset>
 				requires std::is_invocable_r_v<bool, Function, Lhs, Rhs>
-			[[nodiscard]] constexpr auto operator()(
+			[[nodiscard]] constexpr static auto operator()(
 					Function function,
 					const Lhs& lhs,
 					const Rhs& rhs,
 					const Reset&... reset //
-					) const
+					)
 				noexcept(
 					noexcept(function(lhs, rhs)) and //
 					noexcept((function(lhs, reset) and ...)) and //
@@ -126,7 +114,7 @@ namespace gal::prometheus::functional
 				) -> const auto&
 			{
 				if constexpr (sizeof...(reset) == 0) { return function(lhs, rhs) ? lhs : rhs; }
-				else { return this->operator()(this->operator()(lhs, rhs), reset...); }
+				else { return binary_invoker::operator()(binary_invoker::operator()(lhs, rhs), reset...); }
 			}
 		};
 
@@ -155,19 +143,15 @@ namespace gal::prometheus::functional
 		{
 			return lhs != rhs;
 		};
-	} // namespace functional_detail
+	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	namespace functor
+	export namespace functor
 	{
-		constexpr functional_detail::unary_invoker<functional_detail::as_boolean, functional_detail::InvokeFoldType::ALL> all;
-		constexpr functional_detail::unary_invoker<functional_detail::as_boolean, functional_detail::InvokeFoldType::ANY> any;
-		constexpr functional_detail::unary_invoker<functional_detail::as_boolean, functional_detail::InvokeFoldType::NONE> none;
+		constexpr functor_detail::unary_invoker<functor_detail::as_boolean, functor_detail::InvokeFoldType::ALL> all;
+		constexpr functor_detail::unary_invoker<functor_detail::as_boolean, functor_detail::InvokeFoldType::ANY> any;
+		constexpr functor_detail::unary_invoker<functor_detail::as_boolean, functor_detail::InvokeFoldType::NONE> none;
 
-		constexpr functional_detail::binary_invoker<functional_detail::compare_greater_than> max;
-		constexpr functional_detail::binary_invoker<functional_detail::compare_less_than> min;
-	} // namespace functor
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+		constexpr functor_detail::binary_invoker<functor_detail::compare_greater_than> max;
+		constexpr functor_detail::binary_invoker<functor_detail::compare_less_than> min;
+	}
 }
