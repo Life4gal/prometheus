@@ -14,6 +14,16 @@ import gal.prometheus.error;
 
 import :random_engine;
 
+#if __cpp_static_call_operator >= 202207L
+#define RANDOM_WORKAROUND_OPERATOR_STATIC static
+#define RANDOM_WORKAROUND_OPERATOR_CONST
+#define RANDOM_WORKAROUND_OPERATOR_THIS(type) type::
+#else
+#define RANDOM_WORKAROUND_OPERATOR_STATIC
+#define RANDOM_WORKAROUND_OPERATOR_CONST const
+#define RANDOM_WORKAROUND_OPERATOR_THIS(type) this->
+#endif
+
 namespace gal::prometheus::numeric
 {
 	template<typename T>
@@ -267,11 +277,12 @@ namespace gal::prometheus::numeric
 
 			template<typename T>
 				requires distribution_compatible_t<integer_distribution_type, T> or distribution_compatible_t<floating_point_distribution_type, T>
-			constexpr static auto operator()(
+			constexpr RANDOM_WORKAROUND_OPERATOR_STATIC auto
+			operator()(
 					const T from = std::numeric_limits<T>::min(),
 					const std::type_identity_t<T> to = std::numeric_limits<T>::max()
-					) noexcept(noexcept(Random::get<T>(from, to))) -> T //
-				requires(is_shared_category) { return Random::get<T>(from, to); }
+					)RANDOM_WORKAROUND_OPERATOR_CONST noexcept(noexcept(Random::get<T>(from, to))) -> T //
+				requires(is_shared_category) { return RANDOM_WORKAROUND_OPERATOR_THIS(Random)get<T>(from, to); }
 
 			/**
 			 * @brief Generate a random number in a [from, to] range by *_distribution_type.
@@ -326,8 +337,10 @@ namespace gal::prometheus::numeric
 			}
 
 			template<std::same_as<bool>>
-			constexpr static auto operator()(const double probability = .5) noexcept(noexcept(Random::get(probability))) -> bool //
-				requires(is_shared_category) { return Random::get(probability); }
+			constexpr RANDOM_WORKAROUND_OPERATOR_STATIC auto operator()(
+					const double probability = .5
+					) RANDOM_WORKAROUND_OPERATOR_CONST noexcept(noexcept(RANDOM_WORKAROUND_OPERATOR_THIS(Random)get(probability))) -> bool //
+				requires(is_shared_category) { return RANDOM_WORKAROUND_OPERATOR_THIS(Random)get(probability); }
 
 			/**
 			 * @brief Generate a bool value with specific probability by boolean_distribution_type.
@@ -371,8 +384,11 @@ namespace gal::prometheus::numeric
 
 			template<typename Iterator>
 				requires requires { typename std::iterator_traits<Iterator>::iterator_category; }
-			constexpr static auto operator()(Iterator from, Iterator to) noexcept(noexcept(Random::get<Iterator>(from, to))) -> Iterator //
-				requires(is_shared_category) { return Random::get<Iterator>(from, to); }
+			constexpr RANDOM_WORKAROUND_OPERATOR_STATIC auto operator()(
+					Iterator from,
+					Iterator to
+					) RANDOM_WORKAROUND_OPERATOR_CONST noexcept(noexcept(Random::get<Iterator>(from, to))) -> Iterator //
+				requires(is_shared_category) { return RANDOM_WORKAROUND_OPERATOR_THIS(Random)get<Iterator>(from, to); }
 
 			/**
 			 * @brief Return random iterator from iterator range.
@@ -416,8 +432,9 @@ namespace gal::prometheus::numeric
 				requires(is_shared_category) { return Random::get(std::ranges::begin(range), std::ranges::end(range)); }
 
 			template<std::ranges::range Range>
-			constexpr static auto operator()(Range& range) noexcept(noexcept(Random::get<Range>(range))) -> auto //
-				requires(is_shared_category) { return Random::get<Range>(range); }
+			constexpr RANDOM_WORKAROUND_OPERATOR_STATIC auto operator()(Range& range) RANDOM_WORKAROUND_OPERATOR_CONST
+				noexcept(noexcept(RANDOM_WORKAROUND_OPERATOR_THIS(Random)get<Range>(range))) -> auto //
+				requires(is_shared_category) { return RANDOM_WORKAROUND_OPERATOR_THIS(Random)get<Range>(range); }
 
 			/**
 			 * @brief Return random iterator from range.
@@ -465,13 +482,21 @@ namespace gal::prometheus::numeric
 			}
 
 			template<typename Container, typename T>
-			constexpr static auto operator()(
+			constexpr RANDOM_WORKAROUND_OPERATOR_STATIC auto
+			operator()(
 					Container& container,
 					const T from,
 					const std::type_identity_t<T> to,
 					const std::size_t count
-					) noexcept(noexcept(Random::get<Container, T>(container, from, to, count))) -> void //
-				requires(is_shared_category) { return Random::get<Container, T>(container, from, to, count); }
+					) RANDOM_WORKAROUND_OPERATOR_CONST
+				noexcept(noexcept(
+					RANDOM_WORKAROUND_OPERATOR_THIS(Random)get<Container, T>(
+							container,
+							from,
+							to,
+							count)
+				)) -> void //
+				requires(is_shared_category) { return RANDOM_WORKAROUND_OPERATOR_THIS(Random)get<Container, T>(container, from, to, count); }
 
 			/**
 			 * @brief Fill a container with random values.
@@ -537,12 +562,15 @@ namespace gal::prometheus::numeric
 			}
 
 			template<typename Container, typename T>
-			constexpr static auto operator()(
+			constexpr RANDOM_WORKAROUND_OPERATOR_STATIC auto operator()(
 					const T from,
 					const std::type_identity_t<T> to,
 					const std::size_t count
-					) noexcept(noexcept(Random::get<Container, T>(from, to, count))) -> Container //
-				requires(is_shared_category) { return Random::get<Container, T>(from, to, count); }
+					) RANDOM_WORKAROUND_OPERATOR_CONST
+				noexcept(noexcept(
+					RANDOM_WORKAROUND_OPERATOR_THIS(Random)get<Container, T>(from, to, count)
+				)) -> Container //
+				requires(is_shared_category) { return RANDOM_WORKAROUND_OPERATOR_THIS(Random)get<Container, T>(from, to, count); }
 
 			template<typename Container, typename T>
 			constexpr auto get(
@@ -576,9 +604,14 @@ namespace gal::prometheus::numeric
 				requires(is_shared_category) { return Distribution{std::forward<Args>(args)...}(engine()); }
 
 			template<typename Distribution, typename... Args>
-			constexpr static auto operator()(Args&&... args)
-				noexcept(noexcept(Random::get<Distribution, Args...>(std::forward<Args>(args)...))) -> typename Distribution::result_type //
-				requires(is_shared_category) { return Random::get<Distribution, Args...>(std::forward<Args>(args)...); }
+			constexpr RANDOM_WORKAROUND_OPERATOR_STATIC auto operator()(Args&&... args) RANDOM_WORKAROUND_OPERATOR_CONST
+				noexcept(noexcept(
+					RANDOM_WORKAROUND_OPERATOR_THIS(Random)get<Distribution, Args...>(std::forward<Args>(args)...)
+				)) -> typename Distribution::result_type //
+				requires(is_shared_category)
+			{
+				return RANDOM_WORKAROUND_OPERATOR_THIS(Random)get<Distribution, Args...>(std::forward<Args>(args)...);
+			}
 
 			template<typename Distribution, typename... Args>
 			constexpr auto get(Args&&... args)
@@ -595,3 +628,7 @@ namespace gal::prometheus::numeric
 		};
 	}
 }
+
+#undef RANDOM_WORKAROUND_OPERATOR_STATIC
+#undef RANDOM_WORKAROUND_OPERATOR_CONST
+#undef RANDOM_WORKAROUND_OPERATOR_THIS

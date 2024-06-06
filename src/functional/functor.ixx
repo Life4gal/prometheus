@@ -11,6 +11,16 @@ export module gal.prometheus.functional:functor;
 
 import std;
 
+#if __cpp_static_call_operator >= 202207L
+#define FUNCTOR_WORKAROUND_OPERATOR_STATIC static
+#define FUNCTOR_WORKAROUND_OPERATOR_CONST
+#define FUNCTOR_WORKAROUND_OPERATOR_THIS(type) type::
+#else
+#define FUNCTOR_WORKAROUND_OPERATOR_STATIC
+#define FUNCTOR_WORKAROUND_OPERATOR_CONST const
+#define FUNCTOR_WORKAROUND_OPERATOR_THIS(type) this->
+#endif
+
 namespace gal::prometheus::functional
 {
 	export
@@ -52,7 +62,7 @@ namespace gal::prometheus::functional
 		struct unary_invoker
 		{
 			template<typename... Args>
-			[[nodiscard]] constexpr static auto operator()(const Args&... args)
+			[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto operator()(const Args&... args) FUNCTOR_WORKAROUND_OPERATOR_CONST
 				noexcept((std::is_nothrow_invocable_r_v<bool, decltype(DefaultFunctor), Args> and ...)) -> bool //
 				requires(std::is_invocable_r_v<bool, decltype(DefaultFunctor), Args> and ...)
 			{
@@ -65,10 +75,11 @@ namespace gal::prometheus::functional
 			}
 
 			template<typename Function, typename... Args>
-			[[nodiscard]] constexpr static auto operator()(
+			[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto
+			operator()(
 					Function function,
 					const Args&... args
-					) noexcept((std::is_nothrow_invocable_r_v<bool, Function, Args> and ...)) -> bool //
+					) FUNCTOR_WORKAROUND_OPERATOR_CONST noexcept((std::is_nothrow_invocable_r_v<bool, Function, Args> and ...)) -> bool //
 				requires(std::is_invocable_r_v<bool, Function, Args> and ...)
 			{
 				if constexpr (sizeof...(Args) == 0) { return true; }
@@ -84,11 +95,12 @@ namespace gal::prometheus::functional
 		struct binary_invoker
 		{
 			template<typename Lhs, typename Rhs, typename... Reset>
-			[[nodiscard]] constexpr static auto operator()(
+			[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto
+			operator()(
 					const Lhs& lhs,
 					const Rhs& rhs,
 					const Reset&... reset //
-					)
+					) FUNCTOR_WORKAROUND_OPERATOR_CONST
 				noexcept(
 					noexcept(DefaultFunctor(lhs, rhs)) and //
 					noexcept((DefaultFunctor(lhs, reset) and ...)) and //
@@ -96,17 +108,24 @@ namespace gal::prometheus::functional
 				) -> const auto&
 			{
 				if constexpr (sizeof...(reset) == 0) { return DefaultFunctor(lhs, rhs) ? lhs : rhs; }
-				else { return binary_invoker::operator()(binary_invoker::operator()(lhs, rhs), reset...); }
+				else
+				{
+					return
+							FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(
+									FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(lhs, rhs),
+									reset...
+									);
+				}
 			}
 
 			template<typename Function, typename Lhs, typename Rhs, typename... Reset>
 				requires std::is_invocable_r_v<bool, Function, Lhs, Rhs>
-			[[nodiscard]] constexpr static auto operator()(
+			[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto operator()(
 					Function function,
 					const Lhs& lhs,
 					const Rhs& rhs,
 					const Reset&... reset //
-					)
+					) FUNCTOR_WORKAROUND_OPERATOR_CONST
 				noexcept(
 					noexcept(function(lhs, rhs)) and //
 					noexcept((function(lhs, reset) and ...)) and //
@@ -114,7 +133,14 @@ namespace gal::prometheus::functional
 				) -> const auto&
 			{
 				if constexpr (sizeof...(reset) == 0) { return function(lhs, rhs) ? lhs : rhs; }
-				else { return binary_invoker::operator()(binary_invoker::operator()(lhs, rhs), reset...); }
+				else
+				{
+					return
+							FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(
+									FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(lhs, rhs),
+									reset...
+									);
+				}
 			}
 		};
 
@@ -155,3 +181,7 @@ namespace gal::prometheus::functional
 		constexpr functor_detail::binary_invoker<functor_detail::compare_less_than> min;
 	}
 }
+
+#undef FUNCTOR_WORKAROUND_OPERATOR_STATIC
+#undef FUNCTOR_WORKAROUND_OPERATOR_CONST
+#undef FUNCTOR_WORKAROUND_OPERATOR_THIS
