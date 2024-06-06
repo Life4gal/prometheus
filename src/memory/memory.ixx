@@ -3,13 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 export module gal.prometheus.memory;
 
 export import :read_write;
-
-#else
-#include <memory/read_write.hpp>
-#endif

@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -16,22 +13,15 @@ import std;
 import gal.prometheus.error;
 import gal.prometheus.functional;
 
-#else
-#include <type_traits>
-
-#include <prometheus/macro.hpp>
-#include <error/error.hpp>
-#include <functional/functional.hpp>
-#endif
-
-namespace gal::prometheus::memory
+export namespace gal::prometheus::memory
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	template<typename T, typename In>
 		requires std::is_arithmetic_v<T> and
-		         (functional::type_list<
-			         char, const char, signed char, const signed char, unsigned char, const unsigned char, std::byte, const std::byte>.any<In>())
+		         (
+			         functional::type_list<
+				         char, const char, signed char, const signed char, unsigned char, const unsigned char, std::byte, const std::byte //
+			         >.any<In>()
+		         )
 	[[nodiscard]] constexpr auto unaligned_load(const In* source) noexcept -> T
 	{
 		GAL_PROMETHEUS_DEBUG_NOT_NULL(source, "Cannot unaligned_load from null!");
@@ -69,8 +59,12 @@ namespace gal::prometheus::memory
 	[[nodiscard]] constexpr auto unaligned_load(const void* source) noexcept -> T { return unaligned_load<T>(static_cast<const std::byte*>(source)); }
 
 	template<typename T, typename Out>
-		requires std::is_arithmetic_v<T> and (functional::type_list<
-			         char, const char, signed char, const signed char, unsigned char, const unsigned char, std::byte, const std::byte>.any<Out>())
+		requires std::is_arithmetic_v<T> and
+		         (
+			         functional::type_list<
+				         char, const char, signed char, const signed char, unsigned char, const unsigned char, std::byte, const std::byte //
+			         >.any<Out>()
+		         )
 	constexpr auto unaligned_store(const T value, Out* dest) noexcept -> void
 	{
 		GAL_PROMETHEUS_DEBUG_NOT_NULL(dest, "Cannot unaligned_store from null!");
@@ -105,7 +99,5 @@ namespace gal::prometheus::memory
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	constexpr auto unaligned_store(const T value, void* dest) noexcept -> void { unaligned_load<T>(value, static_cast<std::byte*>(dest)); }
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-} // namespace gal::prometheus::memory
+	constexpr auto unaligned_store(const T value, void* dest) noexcept -> void { unaligned_store<T>(value, static_cast<std::byte*>(dest)); }
+}
