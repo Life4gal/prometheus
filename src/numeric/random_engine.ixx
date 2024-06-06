@@ -110,7 +110,12 @@ namespace gal::prometheus::numeric
 			constexpr RandomEngineBase(RandomEngineBase&&) noexcept = default;
 			constexpr auto operator=(const RandomEngineBase&) noexcept -> RandomEngineBase& = delete;
 			constexpr auto operator=(RandomEngineBase&&) noexcept -> RandomEngineBase& = default;
-			constexpr ~RandomEngineBase() noexcept = default;
+
+			// todo: MSVC ICE here
+			#if not defined(GAL_PROMETHEUS_COMPILER_MSVC)
+			constexpr
+			#endif
+			~RandomEngineBase() noexcept = default;
 
 			[[nodiscard]] constexpr static auto min() noexcept -> result_type { return std::numeric_limits<result_type>::lowest(); }
 
