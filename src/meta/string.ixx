@@ -544,7 +544,7 @@ namespace gal::prometheus::meta
 		struct is_basic_char_array<basic_char_array<T, Cs...>> : std::true_type {};
 
 		template<typename S>
-		constexpr static auto is_basic_char_array_v = is_basic_char_array<S>::value;
+		constexpr auto is_basic_char_array_v = is_basic_char_array<S>::value;
 
 		template<typename>
 		struct is_basic_fixed_string : std::false_type {};
@@ -553,7 +553,7 @@ namespace gal::prometheus::meta
 		struct is_basic_fixed_string<basic_fixed_string<T, N>> : std::true_type {};
 
 		template<typename S>
-		constexpr static auto is_basic_fixed_string_v = is_basic_fixed_string<S>::value;
+		constexpr auto is_basic_fixed_string_v = is_basic_fixed_string<S>::value;
 
 		template<typename S>
 		concept basic_char_array_t = is_basic_char_array_v<S>;
@@ -712,16 +712,6 @@ namespace gal::prometheus::meta
 			// 	return basic_fixed_string_view<value_type>{lhs} <=> rhs.template as<basic_fixed_string_view<value_type>>();
 			// }
 		};
-
-		template<typename T, std::size_t N>
-		basic_fixed_string(const T (&string)[N]) -> basic_fixed_string<T, N>;
-
-		template<typename T, T... Cs>
-		basic_fixed_string(basic_char_array<T, Cs...> char_array) -> basic_fixed_string<
-			T,
-			// DO NOT USE `basic_char_array<T, Cs...>::size`!
-			sizeof...(Cs) - string_detail::contains_zero<T, Cs...>()
-		>;
 
 		template<typename T, std::size_t N>
 		basic_fixed_string(const T (&string)[N]) -> basic_fixed_string<T, N>;
