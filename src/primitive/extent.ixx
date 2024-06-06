@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -15,19 +12,8 @@ export module gal.prometheus.primitive:extent;
 import std;
 import :multidimensional;
 
-#else
-
-#include <type_traits>
-#include <format>
-
-#include <prometheus/macro.hpp>
-#include <primitive/multidimensional.hpp>
-#endif
-
-namespace gal::prometheus::primitive
+export namespace gal::prometheus::primitive
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	template<typename T, std::size_t N>
 		requires std::is_arithmetic_v<T>
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent;
@@ -126,11 +112,10 @@ namespace gal::prometheus::primitive
 
 		[[nodiscard]] constexpr explicit(false) operator basic_extent<value_type, 2>() const noexcept { return {width, height}; }
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
+export namespace std
+{
 	template<std::size_t Index, typename T, std::size_t N>
 	struct
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
@@ -180,5 +165,4 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 	};
-
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_END
+}

@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 export module gal.prometheus.primitive;
 
 export import :multidimensional;
@@ -16,14 +13,3 @@ export import :circle;
 export import :color;
 export import :vertex;
 export import :vertex_list;
-
-#else
-#include <primitive/multidimensional.hpp>
-#include <primitive/point.hpp>
-#include <primitive/extent.hpp>
-#include <primitive/rect.hpp>
-#include <primitive/circle.hpp>
-#include <primitive/color.hpp>
-#include <primitive/vertex.hpp>
-#include <primitive/vertex_list.hpp>
-#endif

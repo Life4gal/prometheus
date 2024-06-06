@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -13,23 +10,12 @@ module;
 export module gal.prometheus.primitive:point;
 
 import std;
-import :multidimensional;
 import gal.prometheus.functional;
 
-#else
+import :multidimensional;
 
-#include <type_traits>
-#include <format>
-
-#include <prometheus/macro.hpp>
-#include <primitive/multidimensional.hpp>
-#include <functional/functional.hpp>
-#endif
-
-namespace gal::prometheus::primitive
+export namespace gal::prometheus::primitive
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	enum class DirectionCategory
 	{
 		X,
@@ -277,11 +263,10 @@ namespace gal::prometheus::primitive
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
+export namespace std
+{
 	template<std::size_t Index, typename T, std::size_t N>
 	struct
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
@@ -309,27 +294,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
 		template<typename FormatContext>
 		auto format(const gal::prometheus::primitive::basic_point<T, N>& point, FormatContext& context) const noexcept -> auto
 		{
-			if constexpr (N == 2)
-			{
-				return std::format_to(
-						context.out(),
-						"({},{})",
-						point.x,
-						point.y
-						);
-			}
-			else if constexpr (N == 3)
-			{
-				return std::format_to(
-						context.out(),
-						"({},{},{})",
-						point.x,
-						point.y,
-						point.z
-						);
-			}
+			if constexpr (N == 2) { return std::format_to(context.out(), "({},{})", point.x, point.y); }
+			else if constexpr (N == 3) { return std::format_to(context.out(), "({},{},{})", point.x, point.y, point.z); }
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 	};
-
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_END
+} // namespace std

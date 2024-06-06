@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -13,24 +10,12 @@ module;
 export module gal.prometheus.primitive:vertex_list;
 
 import std;
-import :vertex;
-import :rect;
 import gal.prometheus.functional;
 
-#else
+import :vertex;
+import :rect;
 
-#include <type_traits>
-#include <vector>
-#include <array>
-#include <numbers>
-
-#include <prometheus/macro.hpp>
-#include <primitive/vertex.hpp>
-#include <primitive/rect.hpp>
-#include <functional/functional.hpp>
-#endif
-
-namespace gal::prometheus::primitive
+export namespace gal::prometheus::primitive
 {
 	namespace vertex_list_detail
 	{
@@ -40,8 +25,6 @@ namespace gal::prometheus::primitive
 			TRIANGLE,
 		};
 	}
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	enum class ArcQuadrant : unsigned
 	{
@@ -536,6 +519,4 @@ namespace gal::prometheus::primitive
 			return circle_filled({center, radius}, color, segments);
 		}
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 } // namespace gal::prometheus::primitive

@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -13,25 +10,13 @@ module;
 export module gal.prometheus.primitive:rect;
 
 import std;
+
 import :multidimensional;
 import :point;
 import :extent;
 
-#else
-
-#include <type_traits>
-#include <format>
-
-#include <prometheus/macro.hpp>
-#include <primitive/multidimensional.hpp>
-#include <primitive/point.hpp>
-#include <primitive/extent.hpp>
-#endif
-
-namespace gal::prometheus::primitive
+export namespace gal::prometheus::primitive
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	template<typename T, std::size_t N>
 		requires std::is_arithmetic_v<T>
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_rect;
@@ -378,11 +363,10 @@ namespace gal::prometheus::primitive
 			};
 		}
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
+export namespace std
+{
 	template<std::size_t Index, typename T, std::size_t N>
 	struct
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
@@ -418,5 +402,4 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
 					);
 		}
 	};
-
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_END
+}

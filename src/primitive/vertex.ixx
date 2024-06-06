@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -16,20 +13,8 @@ import std;
 import :point;
 import :color;
 
-#else
-
-#include <type_traits>
-#include <format>
-
-#include <prometheus/macro.hpp>
-#include <primitive/point.hpp>
-#include <primitive/color.hpp>
-#endif
-
-namespace gal::prometheus::primitive
+export namespace gal::prometheus::primitive
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	template<
 		basic_point_t PointType,
 		typename UvType = basic_point<typename PointType::value_type, 2>,
@@ -111,11 +96,10 @@ namespace gal::prometheus::primitive
 
 	template<typename T>
 	concept basic_vertex_t = is_basic_vertex_v<T>;
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
+export namespace std
+{
 	template<std::size_t Index, typename PointType, typename UvType, typename ColorValueType>
 	struct
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
@@ -163,5 +147,4 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
 					);
 		}
 	};
-
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_END
+}

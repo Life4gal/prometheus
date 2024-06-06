@@ -3,9 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -15,16 +12,7 @@ export module gal.prometheus.primitive:color;
 import std;
 import :multidimensional;
 
-#else
-
-#include <format>
-#include <type_traits>
-
-#include <primitive/multidimensional.hpp>
-#include <prometheus/macro.hpp>
-#endif
-
-namespace gal::prometheus::primitive
+export namespace gal::prometheus::primitive
 {
 	using universal_32_bit_color_type = std::uint32_t;
 
@@ -470,7 +458,8 @@ namespace gal::prometheus::primitive
 	}
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
+export namespace std
+{
 	template<std::size_t Index, typename T>
 	struct
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
@@ -498,8 +487,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_BEGIN
 		template<typename FormatContext>
 		auto format(const gal::prometheus::primitive::basic_color<T>& color, FormatContext& context) const noexcept -> auto
 		{
-			return std::format_to(context.out(), "#{:x}", gal::prometheus::primitive::make_color<gal::prometheus::primitive::ColorFormat::A_R_G_B>(color));
+			return std::format_to(
+					context.out(),
+					"#{:x}",
+					gal::prometheus::primitive::make_color<gal::prometheus::primitive::ColorFormat::A_R_G_B>(color)
+					);
 		}
 	};
-
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_STD_END
+}
