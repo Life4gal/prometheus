@@ -17,7 +17,6 @@ import gal.prometheus.error;
 import gal.prometheus.string;
 import gal.prometheus.meta;
 
-
 namespace gal::prometheus::unit_test
 {
 	export
@@ -68,7 +67,7 @@ namespace gal::prometheus::unit_test
 			std::size_t total_assertions_failed;
 		};
 
-		constexpr static std::string_view anonymous_suite_name{"anonymous_suite"};
+		constexpr std::string_view anonymous_suite_name{"anonymous_suite"};
 
 		struct suite_result_type
 		{
@@ -4470,37 +4469,37 @@ namespace gal::prometheus::unit_test
 		// =========================================
 		// OPERANDS
 		// =========================================
-
+	
 		template<typename T>
 		using value = operands::OperandValue<T>;
-
+		
 		template<typename ExceptionType = void, std::invocable InvocableType>
 		[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> operands::OperandThrow<ExceptionType> { return {invocable}; }
-
+		
 		template<std::invocable InvocableType>
 		[[nodiscard]] constexpr auto nothrow(const InvocableType& invocable) noexcept -> operands::OperandNoThrow { return {invocable}; }
-
+		
 		// =========================================
 		// DISPATCHER
 		// =========================================
-
+		
 		constexpr dispatcher::expect_result::fatal fatal{};
-
+		
 		constexpr dispatcher::DispatcherThat that{};
 		constexpr dispatcher::DispatcherExpect expect{};
-
+		
 		// =========================================
 		// CONFIG
 		// =========================================
-
+		
 		[[nodiscard]] inline auto config() noexcept -> auto& { return executor::executor().config(); }
-
+	
 		// =========================================
 		// TEST & SUITE
 		// =========================================
-
+	
 		using test = dispatcher::DispatcherTest;
-
+	
 		template<meta::basic_fixed_string SuiteName>
 		struct suite
 		{
@@ -4511,11 +4510,11 @@ namespace gal::prometheus::unit_test
 				dispatcher::register_event(events::EventSuite{.name = SuiteName.operator std::string_view(), .suite = +invocable});
 			}
 		};
-
+	
 		// =========================================
 		// OPERATORS
 		// =========================================
-
+	
 		namespace operators
 		{
 			namespace detail
@@ -4526,12 +4525,12 @@ namespace gal::prometheus::unit_test
 				{
 					static_cast<bool>(expression.expression);
 				};
-
+	
 				template<typename Lhs, typename Rhs>
 				concept dispatchable_t =
 						not(dispatcher::detail::is_dispatched_expression_v<Lhs> or dispatcher::detail::is_dispatched_expression_v<Rhs>);
 			} // namespace detail
-
+	
 			// a == b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator==(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
@@ -4540,7 +4539,7 @@ namespace gal::prometheus::unit_test
 			{
 				return that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs);
 			}
-
+	
 			// a != b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator!=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
@@ -4549,7 +4548,7 @@ namespace gal::prometheus::unit_test
 			{
 				return that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs);
 			}
-
+	
 			// a > b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator>(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
@@ -4558,7 +4557,7 @@ namespace gal::prometheus::unit_test
 			{
 				return that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs);
 			}
-
+	
 			// a >= b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator>=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
@@ -4567,7 +4566,7 @@ namespace gal::prometheus::unit_test
 			{
 				return that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs);
 			}
-
+	
 			// a < b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator<(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
@@ -4576,7 +4575,7 @@ namespace gal::prometheus::unit_test
 			{
 				return that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs);
 			}
-
+	
 			// a <= b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator<=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
@@ -4585,9 +4584,9 @@ namespace gal::prometheus::unit_test
 			{
 				return that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs);
 			}
-
+	
 			// todo: It doesn't look like we can take over [operator and] and [operator or] :(
-
+	
 			// a and b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator and(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
@@ -4596,7 +4595,7 @@ namespace gal::prometheus::unit_test
 			{
 				return that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs);
 			}
-
+	
 			// a or b
 			template<typename Lhs, typename Rhs>
 			[[nodiscard]] constexpr auto operator or(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
@@ -4606,11 +4605,11 @@ namespace gal::prometheus::unit_test
 				return that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs);
 			}
 		} // namespace operators
-
+	
 		// =========================================
 		// LITERALS
 		// =========================================
-
+	
 		namespace literals
 		{
 			template<meta::basic_fixed_string StringLiteral>
@@ -4618,19 +4617,19 @@ namespace gal::prometheus::unit_test
 			{
 				return dispatcher::DispatcherTestLiteral<StringLiteral>{};
 			}
-
+	
 			template<char... Cs>
 			[[nodiscard]] constexpr auto operator""_auto() noexcept -> operands::OperandLiteralAuto<Cs...> //
 			{
 				return {};
 			}
-
+	
 			template<meta::basic_fixed_string StringLiteral>
 			[[nodiscard]] constexpr auto operator""_c() noexcept -> operands::OperandLiteralCharacter<StringLiteral.value[0]> //
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<int>(); }
 			[[nodiscard]] constexpr auto operator""_i() noexcept
@@ -4638,7 +4637,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<unsigned>(); }
 			[[nodiscard]] constexpr auto operator""_u() noexcept
@@ -4646,7 +4645,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<long>(); }
 			[[nodiscard]] constexpr auto operator""_l() noexcept
@@ -4654,7 +4653,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<unsigned long>(); }
 			[[nodiscard]] constexpr auto operator""_ul() noexcept
@@ -4662,7 +4661,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<long long>(); }
 			[[nodiscard]] constexpr auto operator""_ll() noexcept
@@ -4670,7 +4669,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<unsigned long long>(); }
 			[[nodiscard]] constexpr auto operator""_ull() noexcept
@@ -4678,7 +4677,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<std::int8_t>(); }
 			[[nodiscard]] constexpr auto operator""_i8() noexcept
@@ -4686,7 +4685,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<std::uint8_t>(); }
 			[[nodiscard]] constexpr auto operator""_u8() noexcept
@@ -4694,7 +4693,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<std::int16_t>(); }
 			[[nodiscard]] constexpr auto operator""_i16() noexcept
@@ -4702,7 +4701,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<std::uint16_t>(); }
 			[[nodiscard]] constexpr auto operator""_u16() noexcept
@@ -4710,7 +4709,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<std::int32_t>(); }
 			[[nodiscard]] constexpr auto operator""_i32() noexcept
@@ -4718,7 +4717,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<std::uint32_t>(); }
 			[[nodiscard]] constexpr auto operator""_u32() noexcept
@@ -4726,7 +4725,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<std::int64_t>(); }
 			[[nodiscard]] constexpr auto operator""_i64() noexcept
@@ -4734,7 +4733,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_integral<std::uint64_t>(); }
 			[[nodiscard]] constexpr auto operator""_u64() noexcept
@@ -4742,7 +4741,7 @@ namespace gal::prometheus::unit_test
 			{
 				return {};
 			}
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_floating_point<float>(); }
 			[[nodiscard]] constexpr auto operator""_f() noexcept
@@ -4750,7 +4749,7 @@ namespace gal::prometheus::unit_test
 					functional::char_list<Cs...>.template to_floating_point<float>(),
 					functional::char_list<Cs...>.denominator_length()
 				> { return {}; }
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_floating_point<double>(); }
 			[[nodiscard]] constexpr auto operator""_d() noexcept
@@ -4758,7 +4757,7 @@ namespace gal::prometheus::unit_test
 					functional::char_list<Cs...>.template to_floating_point<double>(),
 					functional::char_list<Cs...>.denominator_length()
 				> { return {}; }
-
+	
 			template<char... Cs>
 				requires requires { functional::char_list<Cs...>.template to_floating_point<long double>(); }
 			[[nodiscard]] constexpr auto operator""_ld() noexcept
@@ -4766,12 +4765,12 @@ namespace gal::prometheus::unit_test
 					functional::char_list<Cs...>.template to_floating_point<long double>(),
 					functional::char_list<Cs...>.denominator_length()
 				> { return {}; }
-
+	
 			[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> operands::OperandIdentity::message_type //
 			{
 				return {operands::OperandIdentity::boolean{.message = {name, size}}};
 			}
-
+	
 			[[nodiscard]] constexpr auto operator""_s(const char* name, std::size_t size) noexcept -> std::string_view { return {name, size}; }
 		} // namespace literals
 	}
