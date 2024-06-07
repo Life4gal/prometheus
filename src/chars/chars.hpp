@@ -12,7 +12,6 @@ module;
 
 export module gal.prometheus.chars;
 
-import std;
 export import :encoding;
 export import :scalar;
 export import :icelake;
