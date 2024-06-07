@@ -7,3 +7,4 @@ export module gal.prometheus.infrastructure;
 
 export import :state_machine;
 export import :unit_test;
+export import :command_line_parser;
