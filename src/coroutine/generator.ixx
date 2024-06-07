@@ -1,5 +1,5 @@
 // This file is part of prometheus
-// Copyright (C) 2022-2023 Life4gal <life4gal@gmail.com>
+// Copyright (C) 2022-2024 Life4gal <life4gal@gmail.com>
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
@@ -29,7 +29,7 @@ namespace gal::prometheus::coroutine
 		using coroutine_handle = std::coroutine_handle<promise_type>;
 
 	private:
-		pointer            value_{nullptr};
+		pointer value_{nullptr};
 		std::exception_ptr exception_{nullptr};
 
 	public:
@@ -85,7 +85,7 @@ namespace gal::prometheus::coroutine
 		}
 	};
 
-	struct iterator_sentinel { };
+	struct iterator_sentinel {};
 
 	template<typename Generator>
 	class Iterator
@@ -111,7 +111,10 @@ namespace gal::prometheus::coroutine
 		constexpr explicit Iterator(coroutine_handle coroutine = coroutine_handle{}) noexcept
 			: coroutine_{coroutine} {}
 
-		[[nodiscard]] friend constexpr auto operator==(const Iterator& lhs, iterator_sentinel) noexcept -> bool { return lhs.coroutine_ == nullptr or lhs.coroutine_.done(); }
+		[[nodiscard]] friend constexpr auto operator==(const Iterator& lhs, iterator_sentinel) noexcept -> bool
+		{
+			return lhs.coroutine_ == nullptr or lhs.coroutine_.done();
+		}
 
 		[[nodiscard]] friend constexpr auto operator==(iterator_sentinel, const Iterator& rhs) noexcept -> bool { return rhs == iterator_sentinel{}; }
 
@@ -162,7 +165,7 @@ namespace gal::prometheus::coroutine
 			constexpr Generator() noexcept
 				: coroutine_{nullptr} {}
 
-			constexpr      Generator(const Generator&) noexcept               = delete;
+			constexpr Generator(const Generator&) noexcept = delete;
 			constexpr auto operator=(const Generator&) noexcept -> Generator& = delete;
 
 			constexpr Generator(Generator&& other) noexcept
@@ -194,4 +197,4 @@ namespace gal::prometheus::coroutine
 			}
 		};
 	}
-}// namespace gal::prometheus::coroutine
+} // namespace gal::prometheus::coroutine
