@@ -5,6 +5,7 @@
 
 export module gal.prometheus.meta;
 
+export import :name;
 export import :string;
 export import :enumeration;
 export import :member;
