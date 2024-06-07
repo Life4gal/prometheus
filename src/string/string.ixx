@@ -6,3 +6,5 @@
 export module gal.prometheus.string;
 
 export import :wildcard_match;
+export import :charconv;
+export import :string_pool;
