@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -10,12 +11,31 @@ module;
 export module gal.prometheus.primitive:rect;
 
 import std;
+import gal.prometheus.error;
+import gal.prometheus.meta;
 
 import :multidimensional;
 import :point;
 import :extent;
 
-export namespace gal::prometheus::primitive
+#else
+#pragma once
+
+#include <type_traits>
+#include <tuple>
+#include <utility>
+#include <format>
+
+#include <prometheus/macro.hpp>
+#include <error/error.ixx>
+#include <meta/meta.ixx>
+#include <primitive/multidimensional.ixx>
+#include <primitive/point.ixx>
+#include <primitive/extent.ixx>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 {
 	template<typename T, std::size_t N>
 		requires std::is_arithmetic_v<T>
@@ -32,6 +52,44 @@ export namespace gal::prometheus::primitive
 
 	template<typename T>
 	concept basic_rect_t = is_basic_rect_v<T>;
+
+	template<typename, typename>
+	struct is_rect_compatible : std::false_type {};
+
+	// point + extent
+	template<typename ValueType, member_gettable_but_not_same_t<basic_rect<ValueType, 2>> OtherType>
+		requires (meta::member_size<OtherType>() == 2)
+	struct is_rect_compatible<OtherType, basic_rect<ValueType, 2>> :
+			std::bool_constant<
+				point_compatible_t<meta::member_type_of_index_t<0, OtherType>, basic_point<ValueType, 2>> and
+				extent_compatible_t<meta::member_type_of_index_t<1, OtherType>, basic_extent<ValueType, 2>>
+			> {};
+
+	// point + extent
+	template<typename ValueType, member_gettable_but_not_same_t<basic_rect<ValueType, 3>> OtherType>
+		requires(meta::member_size<OtherType>() == 2)
+	struct is_rect_compatible<OtherType, basic_rect<ValueType, 3>> :
+			std::bool_constant<
+				point_compatible_t<meta::member_type_of_index_t<0, OtherType>, basic_point<ValueType, 3>> and
+				extent_compatible_t<meta::member_type_of_index_t<1, OtherType>, basic_extent<ValueType, 3>>
+			> {};
+
+	// left + top + right + bottom
+	template<typename ValueType, member_gettable_but_not_same_t<basic_rect<ValueType, 2>> OtherType>
+		requires(meta::member_size<OtherType>() == 4)
+	struct is_rect_compatible<OtherType, basic_rect<ValueType, 2>> :
+			std::bool_constant<
+				std::convertible_to<meta::member_type_of_index_t<0, OtherType>, ValueType> and
+				std::convertible_to<meta::member_type_of_index_t<1, OtherType>, ValueType> and
+				std::convertible_to<meta::member_type_of_index_t<2, OtherType>, ValueType> and
+				std::convertible_to<meta::member_type_of_index_t<3, OtherType>, ValueType>
+			> {};
+
+	template<typename T, typename U>
+	constexpr auto is_rect_compatible_v = is_rect_compatible<T, U>::value;
+
+	template<typename T, typename U>
+	concept rect_compatible_t = is_rect_compatible_v<T, U>;
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
@@ -62,9 +120,46 @@ export namespace gal::prometheus::primitive
 			: point{left_top},
 			  extent{extent} {}
 
+		template<rect_compatible_t<basic_rect> U>
+		constexpr explicit basic_rect(const U& value) noexcept
+			: basic_rect{}
+		{
+			*this = value;
+		}
+
+		constexpr basic_rect(const basic_rect&) noexcept = default;
+		constexpr basic_rect(basic_rect&&) noexcept = default;
+		constexpr auto operator=(const basic_rect&) noexcept -> basic_rect& = default;
+		constexpr auto operator=(basic_rect&&) noexcept -> basic_rect& = default;
+		constexpr ~basic_rect() noexcept = default;
+
+		template<rect_compatible_t<basic_rect> U>
+		constexpr auto operator=(const U& value) noexcept -> basic_rect&
+		{
+			if constexpr (meta::member_size<U>() == 2)
+			{
+				const auto [_point, _extent] = value;
+				point = _point;
+				extent = _extent;
+			}
+			else if constexpr (meta::member_size<U>() == 4)
+			{
+				const auto [_left, _top, _right, _bottom] = value;
+				*this = basic_rect{
+						static_cast<value_type>(_left),
+						static_cast<value_type>(_top),
+						static_cast<value_type>(_right),
+						static_cast<value_type>(_bottom)
+				};
+			}
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+
+			return *this;
+		}
+
 		template<std::size_t Index>
 			requires(Index < 2)
-		[[nodiscard]] constexpr auto get() const noexcept -> value_type
+		[[nodiscard]] constexpr auto get() const noexcept -> std::conditional_t<Index == 0, point_type, extent_type>
 		{
 			if constexpr (Index == 0) { return point; }
 			else if constexpr (Index == 1) { return extent; }
@@ -73,7 +168,7 @@ export namespace gal::prometheus::primitive
 
 		template<std::size_t Index>
 			requires(Index < 2)
-		[[nodiscard]] constexpr auto get() noexcept -> value_type&
+		[[nodiscard]] constexpr auto get() noexcept -> std::conditional_t<Index == 0, point_type&, extent_type&>
 		{
 			if constexpr (Index == 0) { return point; }
 			else if constexpr (Index == 1) { return extent; }
@@ -191,13 +286,13 @@ export namespace gal::prometheus::primitive
 		#endif
 
 		constexpr basic_rect(
-				const value_type left,
-				const value_type top,
-				const value_type near,
-				const value_type right,
-				const value_type bottom,
-				const value_type far
-				) noexcept
+			const value_type left,
+			const value_type top,
+			const value_type near,
+			const value_type right,
+			const value_type bottom,
+			const value_type far
+		) noexcept
 			: point{left, top, near},
 			  extent{right - left, bottom - top, far - near} {}
 
@@ -365,7 +460,7 @@ export namespace gal::prometheus::primitive
 	};
 }
 
-export namespace std
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 {
 	template<std::size_t Index, typename T, std::size_t N>
 	struct
@@ -374,12 +469,16 @@ export namespace std
 			#endif
 			tuple_element<Index, gal::prometheus::primitive::basic_rect<T, N>> // NOLINT(cert-dcl58-cpp)
 	{
-		using type = T;
+		using type = std::conditional_t<
+			N == 0,
+			typename gal::prometheus::primitive::basic_rect<T, N>::point_type,
+			typename gal::prometheus::primitive::basic_rect<T, N>::extent_type
+		>;
 	};
 
 	template<typename T, std::size_t N>
 	struct tuple_size<gal::prometheus::primitive::basic_rect<T, N>> // NOLINT(cert-dcl58-cpp)
-			: std::integral_constant<std::size_t, N> {};
+			: std::integral_constant<std::size_t, 2> {};
 
 	template<typename T, std::size_t N>
 	struct formatter<gal::prometheus::primitive::basic_rect<T, N>> // NOLINT(cert-dcl58-cpp)
@@ -395,11 +494,11 @@ export namespace std
 		auto format(const gal::prometheus::primitive::basic_rect<T, N>& rect, FormatContext& context) const noexcept -> auto
 		{
 			return std::format_to(
-					context.out(),
-					"[{}-{}]",
-					rect.point,
-					rect.extent
-					);
+				context.out(),
+				"[{}-{}]",
+				rect.point,
+				rect.extent
+			);
 		}
 	};
 }
