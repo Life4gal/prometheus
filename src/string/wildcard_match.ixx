@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -12,10 +13,22 @@ export module gal.prometheus.string:wildcard_match;
 import std;
 import gal.prometheus.error;
 
+#else
+#pragma once
+
+#include <string>
+#include <iterator>
+#include <ranges>
+#include <algorithm>
+
+#include <prometheus/macro.hpp>
+#include <error/error.ixx>
+
+#endif
+
 namespace gal::prometheus::string
 {
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		// https://en.cppreference.com/w/cpp/language/string_literal
 		/**
 		* default wildcard:
@@ -162,7 +175,7 @@ namespace gal::prometheus::string
 			value_type alt_close{U')'};
 			value_type alt_or{U'|'};
 		};
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace wildcard_match_detail
 	{
@@ -953,8 +966,7 @@ namespace gal::prometheus::string
 		}
 	} // namespace wildcard_match_detail
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator = std::equal_to<>>
 		constexpr auto match(SequenceIterator sequence_begin,
 		                     SequenceIterator sequence_end,
@@ -1168,5 +1180,5 @@ namespace gal::prometheus::string
 				return make_wildcard_matcher(std::basic_string_view{str, size + 1});
 			}
 		} // namespace literals
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

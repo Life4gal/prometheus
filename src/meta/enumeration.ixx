@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -10,6 +11,18 @@ module;
 export module gal.prometheus.meta:enumeration;
 
 import std;
+
+#else
+#pragma once
+
+#include <string_view>
+#include <source_location>
+#include <bit>
+#include <optional>
+
+#include <prometheus/macro.hpp>
+
+#endif
 
 enum class DummyEnumDoNotPutIntoAnyNamespace
 {
@@ -82,8 +95,7 @@ namespace gal::prometheus::meta
 		}
 	} // namespace name_detail
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		enum class NamePolicy
 		{
 			// namespace_A::namespace_B::namespace_C::enum_name::Value // scoped enum
@@ -187,7 +199,7 @@ namespace gal::prometheus::meta
 			}
 			else { return enumeration_detail::name_of<EnumValue>(); }
 		}
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace enumeration_detail
 	{
@@ -708,8 +720,7 @@ namespace gal::prometheus::meta
 		}
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		constexpr std::string_view enum_name_not_found{"?"};
 
 		template<typename EnumType, NamePolicy Policy>
@@ -809,5 +820,5 @@ namespace gal::prometheus::meta
 		{
 			return value_of<EnumType, user_defined::enum_name_policy<EnumType>::value>(enum_name);
 		}
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

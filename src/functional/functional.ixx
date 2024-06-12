@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 export module gal.prometheus.functional;
 
 export import :type_list;
@@ -11,3 +12,15 @@ export import :functor;
 export import :aligned_union;
 export import :function_ref;
 export import :math;
+
+#else
+#pragma once
+
+#include <functional/type_list.ixx>
+#include <functional/value_list.ixx>
+#include <functional/functor.ixx>
+#include <functional/aligned_union.ixx>
+#include <functional/function_ref.ixx>
+#include <functional/math.ixx>
+
+#endif

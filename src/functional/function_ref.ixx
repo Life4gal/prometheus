@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -13,6 +14,18 @@ import std;
 import gal.prometheus.error;
 
 import :aligned_union;
+
+#else
+#pragma once
+
+#include <type_traits>
+#include <tuple>
+
+#include <prometheus/macro.hpp>
+#include <functional/aligned_union.ixx>
+#include <error/error.ixx>
+
+#endif
 
 namespace gal::prometheus::functional
 {
@@ -40,8 +53,7 @@ namespace gal::prometheus::functional
 		};
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename Signature>
 		class FunctionRef;
 
@@ -172,5 +184,5 @@ namespace gal::prometheus::functional
 				return std::invoke(invoker_, data_, static_cast<Args>(args)...);
 			}
 		};
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

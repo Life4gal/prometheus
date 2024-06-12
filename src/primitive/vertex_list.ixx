@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -16,7 +17,22 @@ import :vertex;
 import :rect;
 import :circle;
 
-export namespace gal::prometheus::primitive
+#else
+#pragma once
+
+#include <vector>
+#include <type_traits>
+#include <utility>
+
+#include <prometheus/macro.hpp>
+#include <primitive/vertex.ixx>
+#include <primitive/rect.ixx>
+#include <primitive/circle.ixx>
+#include <functional/functional.ixx>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 {
 	namespace vertex_list_detail
 	{

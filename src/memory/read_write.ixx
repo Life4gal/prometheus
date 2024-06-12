@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -13,7 +14,19 @@ import std;
 import gal.prometheus.error;
 import gal.prometheus.functional;
 
-export namespace gal::prometheus::memory
+#else
+#pragma once
+
+#include <type_traits>
+#include <memory>
+
+#include <prometheus/macro.hpp>
+#include <error/error.ixx>
+#include <functional/functional.ixx>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::memory)
 {
 	template<typename T, typename In>
 		requires std::is_arithmetic_v<T> and

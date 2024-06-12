@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -12,7 +13,18 @@ export module gal.prometheus.string:charconv;
 import std;
 import gal.prometheus.error;
 
-export namespace gal::prometheus::string
+#else
+#pragma once
+
+#include <string>
+#include <algorithm>
+
+#include <prometheus/macro.hpp>
+#include <error/error.ixx>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::string)
 {
 	[[nodiscard]] constexpr auto is_upper(const char c) noexcept -> bool
 	{
@@ -261,8 +273,7 @@ export namespace gal::prometheus::string
 
 	template<std::integral T, typename Exception = void>
 		requires(std::is_same_v<Exception, void> or std::is_base_of_v<error::AbstractException, Exception>)
-	[[nodiscard]] constexpr auto from_string(const std::basic_string_view<char> string,
-	                                         int base = 10)
+	[[nodiscard]] constexpr auto from_string(const std::basic_string_view<char> string, int base = 10)
 		noexcept(std::is_same_v<Exception, void>) -> std::conditional_t<std::is_same_v<Exception, void>, std::optional<T>, T>
 	{
 		const auto begin = string.data();

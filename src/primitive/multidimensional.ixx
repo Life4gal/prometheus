@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -11,6 +12,16 @@ export module gal.prometheus.primitive:multidimensional;
 
 import std;
 import gal.prometheus.meta;
+
+#else
+#pragma once
+
+#include <type_traits>
+
+#include <prometheus/macro.hpp>
+#include <meta/meta.ixx>
+
+#endif
 
 namespace gal::prometheus::primitive
 {
@@ -30,8 +41,7 @@ namespace gal::prometheus::primitive
 		concept always_equal_t = is_always_equal_v<T>;
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		enum class Dimension
 		{
 			_0 = 0,
@@ -481,5 +491,5 @@ namespace gal::prometheus::primitive
 				return index == meta::member_size<derived_type>();
 			}
 		};
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

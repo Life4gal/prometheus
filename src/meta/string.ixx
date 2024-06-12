@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -10,6 +11,19 @@ module;
 export module gal.prometheus.meta:string;
 
 import std;
+
+#else
+#pragma once
+
+#include <utility>
+#include <type_traits>
+#include <algorithm>
+#include <string>
+#include <ranges>
+
+#include <prometheus/macro.hpp>
+
+#endif
 
 namespace gal::prometheus::meta
 {
@@ -517,8 +531,7 @@ namespace gal::prometheus::meta
 		}
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		/**
 		 * @brief An immutable array of fixed-length characters.
 		 */
@@ -747,10 +760,10 @@ namespace gal::prometheus::meta
 		using fixed_u16string_view = basic_fixed_string_view<char16_t>;
 		// ReSharper disable once CppInconsistentNaming
 		using fixed_u32string_view = basic_fixed_string_view<char32_t>;
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
-export namespace std
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 {
 	// for `std::totally_ordered_with`
 	template<gal::prometheus::meta::basic_char_array_t FixedString, typename String, template<typename> typename Q1, template<typename> typename Q2>

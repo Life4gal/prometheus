@@ -3,12 +3,26 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
+
+#include <prometheus/macro.hpp>
+
 export module gal.prometheus.error:platform;
 
 import std;
 import :exception;
 
-export namespace gal::prometheus::error
+#else
+#pragma once
+
+#include <stacktrace>
+
+#include <prometheus/macro.hpp>
+#include <error/exception.ixx>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 {
 	/**
 	 * @brief Get the OS error message from the last error received on this thread.

@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -18,6 +19,24 @@ import gal.prometheus.error;
 import gal.prometheus.meta;
 import gal.prometheus.functional;
 import gal.prometheus.string;
+
+#else
+#pragma once
+
+#include <type_traits>
+#include <regex>
+#include <ranges>
+#include <expected>
+#include <iostream>
+#include <unordered_map>
+
+#include <prometheus/macro.hpp>
+#include <error/error.ixx>
+#include <meta/meta.ixx>
+#include <functional/functional.ixx>
+#include <string/string.ixx>
+
+#endif
 
 namespace gal::prometheus::infrastructure
 {
@@ -76,8 +95,7 @@ namespace gal::prometheus::infrastructure
 	#define GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED 1
 	#endif
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		class CommandLineOptionNameFormatError final : public error::Exception<void>
 		{
 		public:
@@ -172,7 +190,7 @@ namespace gal::prometheus::infrastructure
 						);
 			}
 		};
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	using descriptor_boolean = bool;
 
@@ -541,8 +559,7 @@ namespace gal::prometheus::infrastructure
 	}
 	#endif
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<regex_string_type StringType, regex_string_type StringViewType>
 		class CommandLineOption;
 		template<regex_string_type StringType = std::basic_string<regex_char_type>>
@@ -878,7 +895,7 @@ namespace gal::prometheus::infrastructure
 				return *it->second;
 			}
 		};
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
 #if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)

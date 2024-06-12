@@ -5,6 +5,7 @@
 
 // The code below is based on boost-ext/ut(https://github.com/boost-ext/ut)(http://www.boost.org/LICENSE_1_0.txt)
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -14,13 +15,30 @@ export module gal.prometheus.infrastructure:unit_test;
 import std;
 import gal.prometheus.functional;
 import gal.prometheus.error;
-import gal.prometheus.string;
 import gal.prometheus.meta;
+
+#else
+#pragma once
+
+#include <string>
+#include <chrono>
+#include <vector>
+#include <functional>
+#include <iostream>
+#include <print>
+#include <ranges>
+#include <algorithm>
+
+#include <prometheus/macro.hpp>
+#include <functional/functional.ixx>
+#include <error/error.ixx>
+#include <meta/meta.ixx>
+
+#endif
 
 namespace gal::prometheus::unit_test
 {
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		struct color_type
 		{
 			std::string_view none = "\033[0m";
@@ -191,7 +209,7 @@ namespace gal::prometheus::unit_test
 				return filter_execute_test_name(test_name) and filter_execute_test_categories(categories);
 			}
 		};
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	template<typename Expression>
 	struct is_expression
@@ -4464,8 +4482,7 @@ namespace gal::prometheus::unit_test
 		};
 	} // namespace dispatcher
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		// =========================================
 		// OPERANDS
 		// =========================================
@@ -4773,5 +4790,5 @@ namespace gal::prometheus::unit_test
 	
 			[[nodiscard]] constexpr auto operator""_s(const char* name, std::size_t size) noexcept -> std::string_view { return {name, size}; }
 		} // namespace literals
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 } // namespace gal::prometheus::unit_test

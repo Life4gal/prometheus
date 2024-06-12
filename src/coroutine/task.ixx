@@ -3,17 +3,29 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 export module gal.prometheus.coroutine:task;
 
 import std;
 
+#else
+#pragma once
+
+#include <type_traits>
+#include <coroutine>
+#include <exception>
+#include <utility>
+
+#include <prometheus/macro.hpp>
+
+#endif
+
 namespace gal::prometheus::coroutine
 {
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename ReturnType>
 		class Task;
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	template<typename ReturnType>
 	class P
@@ -128,8 +140,7 @@ namespace gal::prometheus::coroutine
 			self.exception_) { std::rethrow_exception(self.exception_); }
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename ReturnType>
 		class [[nodiscard]] Task final
 		{
@@ -223,5 +234,5 @@ namespace gal::prometheus::coroutine
 
 			constexpr auto operator co_await() && noexcept -> awaitable { return {.coroutine = coroutine_}; }
 		};
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 } // namespace gal::prometheus::coroutine

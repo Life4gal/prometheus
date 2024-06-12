@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -16,6 +17,20 @@ export module gal.prometheus.error:platform.impl;
 
 import std;
 import :platform;
+
+#else
+#pragma once
+
+#include <system_error>
+
+#include <prometheus/macro.hpp>
+#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
+#include <Windows.h>
+#else
+#error "fixme"
+#endif
+
+#endif
 
 namespace gal::prometheus::error
 {

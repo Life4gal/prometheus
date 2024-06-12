@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -14,6 +15,19 @@ import gal.prometheus.error;
 
 import :random_engine;
 
+#else
+#pragma once
+
+#include <random>
+#include <type_traits>
+#include <chrono>
+
+#include <prometheus/macro.hpp>
+#include <error/error.ixx>
+#include <numeric/random_engine.ixx>
+
+#endif
+
 #if __cpp_static_call_operator >= 202207L
 #define RANDOM_WORKAROUND_OPERATOR_STATIC static
 #define RANDOM_WORKAROUND_OPERATOR_CONST
@@ -21,7 +35,7 @@ import :random_engine;
 #else
 #define RANDOM_WORKAROUND_OPERATOR_STATIC
 #define RANDOM_WORKAROUND_OPERATOR_CONST const
-#define RANDOM_WORKAROUND_OPERATOR_THIS(type) this->
+#define RANDOM_WORKAROUND_OPERATOR_THIS(type) this->template
 #endif
 
 namespace gal::prometheus::numeric
@@ -61,8 +75,7 @@ namespace gal::prometheus::numeric
 		constexpr auto is_user_defined_distribution_v = is_user_defined_distribution<Distribution, T>::value;
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<template<typename> typename, typename>
 		struct is_distribution_compatible : std::false_type {};
 
@@ -626,7 +639,7 @@ namespace gal::prometheus::numeric
 				)) -> typename Distribution::result_type //
 				requires(not is_shared_category) { return this->template get<Distribution, Args...>(std::forward<Args>(args)...); }
 		};
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
 #undef RANDOM_WORKAROUND_OPERATOR_STATIC

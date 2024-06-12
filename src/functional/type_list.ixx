@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -10,6 +11,16 @@ module;
 export module gal.prometheus.functional:type_list;
 
 import std;
+
+#else
+#pragma once
+
+#include <type_traits>
+#include <tuple>
+
+#include <prometheus/macro.hpp>
+
+#endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_GNU)
 	#define TYPE_LIST_WORKAROUND_BINDER(T, Prediction) binder<T, Prediction>::template rebind
@@ -356,8 +367,7 @@ namespace gal::prometheus::functional
 		};
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename... Ts>
 		constexpr auto type_list = type_list_detail::list<Ts...>{};
 
@@ -366,7 +376,7 @@ namespace gal::prometheus::functional
 
 		template<typename T>
 		concept type_list_t = type_list_detail::list_t<T>;
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 } // namespace gal::prometheus::functional
 
 #undef TYPE_LIST_WORKAROUND_BINDER

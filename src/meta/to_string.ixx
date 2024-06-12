@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -13,7 +14,19 @@ import std;
 import :member;
 import :enumeration;
 
-export namespace gal::prometheus::meta
+#else
+#pragma once
+
+#include <format>
+#include <type_traits>
+
+#include <prometheus/macro.hpp>
+#include <meta/member.ixx>
+#include <meta/enumeration.ixx>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::meta)
 {
 	template<
 		std::ranges::output_range<char> StringType = std::basic_string<char>,

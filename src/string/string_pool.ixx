@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -12,7 +13,20 @@ export module gal.prometheus.string:string_pool;
 import std;
 import gal.prometheus.error;
 
-export namespace gal::prometheus::string
+#else
+#pragma once
+
+#include <string>
+#include <memory>
+#include <algorithm>
+#include <ranges>
+
+#include <prometheus/macro.hpp>
+#include <error/error.ixx>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::string)
 {
 	template<typename CharType = char, bool IsNullTerminate = true, typename CharTrait = std::char_traits<CharType>>
 	class StringPool

@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -12,6 +13,18 @@ export module gal.prometheus.infrastructure:state_machine;
 import std;
 import gal.prometheus.functional;
 import gal.prometheus.meta;
+
+#else
+#pragma once
+
+#include <type_traits>
+#include <utility>
+
+#include <prometheus/macro.hpp>
+#include <functional/functional.ixx>
+#include <meta/meta.ixx>
+
+#endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_GNU)
 	#define STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE auto
@@ -658,8 +671,7 @@ namespace gal::prometheus::infrastructure
 		};
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<meta::basic_fixed_string State>
 		[[nodiscard]] constexpr auto operator""_s() noexcept
 			-> state_machine_detail::transition<false, meta::to_char_array<State>(), state_machine_detail::state_continue> { return {}; }
@@ -701,7 +713,7 @@ namespace gal::prometheus::infrastructure
 
 		template<typename Invocable>
 		state_machine(Invocable) -> state_machine<Invocable>;
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
 #undef STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE

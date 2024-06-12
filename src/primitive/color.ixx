@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -12,7 +13,19 @@ export module gal.prometheus.primitive:color;
 import std;
 import :multidimensional;
 
-export namespace gal::prometheus::primitive
+#else
+#pragma once
+
+#include <type_traits>
+#include <tuple>
+#include <format>
+
+#include <prometheus/macro.hpp>
+#include <primitive/multidimensional.ixx>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 {
 	using universal_32_bit_color_type = std::uint32_t;
 
@@ -458,7 +471,7 @@ export namespace gal::prometheus::primitive
 	}
 }
 
-export namespace std
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 {
 	template<std::size_t Index, typename T>
 	struct

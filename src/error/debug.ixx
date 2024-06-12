@@ -3,11 +3,21 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
+module;
+
+#include <prometheus/macro.hpp>
+
 export module gal.prometheus.error:debug;
 
-import std;
+#else
+#pragma once
 
-export namespace gal::prometheus::error
+#include <prometheus/macro.hpp>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 {
 	auto debug_break(const char* message) noexcept -> void;
 } // namespace gal::prometheus::error

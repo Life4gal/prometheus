@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -10,6 +11,18 @@ module;
 export module gal.prometheus.meta:name;
 
 import std;
+
+#else
+#pragma once
+
+#include <ranges>
+#include <type_traits>
+#include <string>
+#include <source_location>
+
+#include <prometheus/macro.hpp>
+
+#endif
 
 struct dummy_struct_do_not_put_into_any_namespace {};
 
@@ -22,8 +35,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return std::source_location::current().function_name(); }
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename T>
 		[[nodiscard]] constexpr auto name_of() noexcept -> std::string_view
 		{
@@ -82,5 +94,5 @@ namespace gal::prometheus::meta
 
 		template<typename T>
 		[[nodiscard]] constexpr auto name_of(T&&) noexcept -> std::string_view { return name_of<std::remove_cvref_t<T>>(); }
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

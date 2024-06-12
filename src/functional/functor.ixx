@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -10,6 +11,16 @@ module;
 export module gal.prometheus.functional:functor;
 
 import std;
+
+#else
+#pragma once
+
+#include <utility>
+#include <type_traits>
+
+#include <prometheus/macro.hpp>
+
+#endif
 
 #if __cpp_static_call_operator >= 202207L
 #define FUNCTOR_WORKAROUND_OPERATOR_STATIC static
@@ -23,8 +34,7 @@ import std;
 
 namespace gal::prometheus::functional
 {
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename FunctionType>
 		struct y_combinator
 		{
@@ -47,7 +57,7 @@ namespace gal::prometheus::functional
 			constexpr explicit overloaded(Ts&&... ts) noexcept((std::is_nothrow_constructible_v<Ts, decltype(ts)> and ...))
 				: Ts{std::forward<Ts>(ts)}... {}
 		};
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace functor_detail
 	{
@@ -171,7 +181,7 @@ namespace gal::prometheus::functional
 		};
 	}
 
-	export namespace functor
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(functor)
 	{
 		constexpr functor_detail::unary_invoker<functor_detail::as_boolean, functor_detail::InvokeFoldType::ALL> all;
 		constexpr functor_detail::unary_invoker<functor_detail::as_boolean, functor_detail::InvokeFoldType::ANY> any;

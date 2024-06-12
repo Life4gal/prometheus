@@ -3,11 +3,25 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
+module;
+
+#include <prometheus/macro.hpp>
+
 export module gal.prometheus.error:exception;
 
 import std;
 
-export namespace gal::prometheus::error
+#else
+#pragma once
+
+#include <source_location>
+#include <stacktrace>
+
+#include <prometheus/macro.hpp>
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 {
 	class AbstractException
 	{

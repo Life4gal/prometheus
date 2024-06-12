@@ -3,18 +3,30 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 export module gal.prometheus.coroutine:generator;
 
 import std;
 
+#else
+#pragma once
+
+#include <type_traits>
+#include <coroutine>
+#include <exception>
+#include <iterator>
+
+#include <prometheus/macro.hpp>
+
+#endif
+
 namespace gal::prometheus::coroutine
 {
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename ReturnType>
 			requires(not std::is_void_v<ReturnType>)
 		class Generator;
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	template<typename ReturnType>
 	class GeneratorPromise final
@@ -137,8 +149,7 @@ namespace gal::prometheus::coroutine
 		[[nodiscard]] constexpr auto operator->() && noexcept -> decltype(auto) { return std::addressof(std::move(*this).operator*()); }
 	};
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename ReturnType>
 			requires(not std::is_void_v<ReturnType>)
 		class Generator
@@ -196,5 +207,5 @@ namespace gal::prometheus::coroutine
 				return {};
 			}
 		};
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 } // namespace gal::prometheus::coroutine

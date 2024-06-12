@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -11,6 +12,19 @@ export module gal.prometheus.meta:member;
 
 import std;
 import :string;
+
+#else
+#pragma once
+
+#include <string>
+#include <source_location>
+#include <tuple>
+#include <utility>
+
+#include <prometheus/macro.hpp>
+#include <meta/string.ixx>
+
+#endif
 
 namespace gal::prometheus::meta
 {
@@ -3039,8 +3053,7 @@ namespace gal::prometheus::meta
 		}
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename T>
 		constexpr auto is_member_gettable_v = member_detail::is_member_gettable_v<T>;
 		template<typename T>
@@ -3063,6 +3076,16 @@ namespace gal::prometheus::meta
 					},
 					std::forward<T>(value));
 		}
+
+		template<std::size_t N, typename T>
+			requires member_gettable_t<std::remove_cvref_t<T>>
+		struct member_type_of_index
+		{
+			using type = std::decay_t<decltype(member_of_index<N>(std::declval<T>()))>;
+		};
+
+		template<std::size_t N, typename T>
+		using member_type_of_index_t = typename member_type_of_index<N, T>::type;
 
 		template<typename Function, typename T>
 			requires member_gettable_t<std::remove_cvref_t<T>>
@@ -3206,7 +3229,7 @@ namespace gal::prometheus::meta
 			name.remove_suffix(full_function_name_suffix_size);
 			return name;
 		}
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace member_detail
 	{
@@ -3249,8 +3272,7 @@ namespace gal::prometheus::meta
 		}
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename T, basic_fixed_string Name>
 			requires member_gettable_t<std::remove_cvref_t<T>>
 		[[nodiscard]] constexpr auto has_member_of_name() noexcept -> bool //
@@ -3281,5 +3303,5 @@ namespace gal::prometheus::meta
 					},
 					std::forward<T>(value));
 		}
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

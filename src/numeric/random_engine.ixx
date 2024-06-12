@@ -5,6 +5,7 @@
 
 // A C++ implementation based on [http://prng.di.unimi.it/].
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -12,6 +13,22 @@ module;
 export module gal.prometheus.numeric:random_engine;
 
 import std;
+
+#else
+#pragma once
+
+#include <type_traits>
+#include <cstdint>
+#include <concepts>
+#include <array>
+#include <limits>
+#include <algorithm>
+#include <ranges>
+#include <random>
+
+#include <prometheus/macro.hpp>
+
+#endif
 
 #if not defined(CHAR_BIT)
 #define CHAR_BIT std::numeric_limits<unsigned char>::digits
@@ -361,8 +378,7 @@ namespace gal::prometheus::numeric
 		};
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		enum class RandomEngineCategory
 		{
 			// xor + shift + rotate
@@ -1008,5 +1024,5 @@ namespace gal::prometheus::numeric
 
 		static_assert(std::uniform_random_bit_generator<random_engine_xsr_512_star_star>);
 		static_assert(sizeof(random_engine_xsr_512_star_star) == 512 / CHAR_BIT);
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

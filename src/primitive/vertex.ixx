@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -13,7 +14,20 @@ import std;
 import :point;
 import :color;
 
-export namespace gal::prometheus::primitive
+#else
+#pragma once
+
+#include <tuple>
+#include <utility>
+#include <format>
+
+#include <prometheus/macro.hpp>
+#include <primitive/point.ixx>
+#include <primitive/color.ixx>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 {
 	template<
 		basic_point_t PointType,
@@ -98,7 +112,7 @@ export namespace gal::prometheus::primitive
 	concept basic_vertex_t = is_basic_vertex_v<T>;
 }
 
-export namespace std
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 {
 	template<std::size_t Index, typename PointType, typename UvType, typename ColorValueType>
 	struct

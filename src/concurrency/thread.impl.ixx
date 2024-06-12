@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -18,6 +19,25 @@ import std;
 import gal.prometheus.error;
 
 import :thread;
+
+#else
+#pragma once
+
+#include <unordered_map>
+#include <mutex>
+#include <filesystem>
+
+#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
+#include <Windows.h>
+#else
+
+#endif
+
+#include <prometheus/macro.hpp>
+#include <concurrency/thread.ixx>
+#include <error/error.ixx>
+
+#endif
 
 namespace
 {

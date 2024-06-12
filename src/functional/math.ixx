@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -12,10 +13,20 @@ export module gal.prometheus.functional:math;
 import std;
 import gal.prometheus.error;
 
+#else
+#pragma once
+
+#include <cmath>
+#include <numbers>
+
+#include <prometheus/macro.hpp>
+#include <error/error.ixx>
+
+#endif
+
 namespace gal::prometheus::functional
 {
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename T>
 			requires std::is_arithmetic_v<T>
 		[[nodiscard]] constexpr auto is_nan(const T value) noexcept -> bool
@@ -153,7 +164,7 @@ namespace gal::prometheus::functional
 
 			return static_cast<T>(std::hypot(x, y, z));
 		}
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace math_detail
 	{
@@ -208,8 +219,7 @@ namespace gal::prometheus::functional
 		}
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename T>
 			requires std::is_arithmetic_v<T>
 		[[nodiscard]] constexpr auto tan(const T value) noexcept -> T
@@ -273,5 +283,5 @@ namespace gal::prometheus::functional
 
 			return static_cast<T>(std::cos(value));
 		}
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

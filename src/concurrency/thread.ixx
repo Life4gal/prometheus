@@ -3,11 +3,27 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
+module;
+
+#include <prometheus/macro.hpp>
+
 export module gal.prometheus.concurrency:thread;
 
 import std;
 
-export namespace gal::prometheus::concurrency
+#else
+#pragma once
+
+#include <cstdint>
+#include <optional>
+#include <string_view>
+
+#include <prometheus/macro.hpp>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::concurrency)
 {
 	using thread_id = std::uint32_t;
 	using process_id = std::uint32_t;

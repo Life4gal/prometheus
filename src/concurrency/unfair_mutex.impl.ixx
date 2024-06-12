@@ -3,6 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 module;
 
 #include <prometheus/macro.hpp>
@@ -13,6 +14,19 @@ import std;
 import gal.prometheus.error;
 
 import :unfair_mutex;
+
+#else
+#pragma once
+
+#include <mutex>
+#include <vector>
+#include <algorithm>
+
+#include <prometheus/macro.hpp>
+#include <concurrency/unfair_mutex.ixx>
+#include <error/error.ixx>
+
+#endif
 
 namespace
 {
