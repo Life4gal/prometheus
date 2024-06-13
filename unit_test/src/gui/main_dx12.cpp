@@ -60,7 +60,7 @@ namespace
 			ID3D12Resource* font_texture_resource;
 			D3D12_CPU_DESCRIPTOR_HANDLE font_cpu_descriptor;
 			D3D12_GPU_DESCRIPTOR_HANDLE font_gpu_descriptor;
-			ID3D12DescriptorHeap* d3d_descriptor_head;
+			ID3D12DescriptorHeap* descriptor_heap;
 
 			UINT frames_in_flight;
 			std::unique_ptr<d3d_render_buffer[]> frame_resource;
@@ -71,6 +71,13 @@ namespace
 		using rect_type = primitive::basic_rect<float, 2>;
 		using vertex_type = primitive::basic_vertex<point_type>;
 		using vertex_index_type = std::uint16_t;
+
+		struct d3d_vertex_type
+		{
+			float pos[2];
+			float uv[2];
+			std::uint32_t color;
+		};
 
 		template<typename T> using my_vector_type = std::vector<T>;
 
@@ -90,7 +97,7 @@ namespace
 
 			my_vector_type<draw_list_type> draw_lists;
 
-			[[nodiscard]] constexpr auto total_vertex_size() const noexcept
+			[[nodiscard]] constexpr auto total_vertex_size() const noexcept -> std::size_t
 			{
 				return std::ranges::fold_left(
 					draw_lists,
@@ -99,7 +106,7 @@ namespace
 				);
 			}
 
-			[[nodiscard]] constexpr auto total_index_size() const noexcept
+			[[nodiscard]] constexpr auto total_index_size() const noexcept -> std::size_t
 			{
 				return std::ranges::fold_left(
 					draw_lists,
@@ -112,12 +119,18 @@ namespace
 		d3d_data_type g_d3d_data;
 		draw_data_type g_draw_data;
 
+		font_type g_font;
+
 		namespace detail
 		{
 			[[nodiscard]] auto create_fonts_texture() -> bool
 			{
 				// todo: RGBA(8+8+8+8)
-				const auto [pixels, width, height] = load_font();
+				if (g_font.data == nullptr)
+				{
+					g_font = load_font();
+				}
+				const auto& [pixels, width, height] = g_font;
 
 				if (pixels == nullptr)
 				{
@@ -363,15 +376,15 @@ namespace
 				{
 					const D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view{
 							.BufferLocation = frame.vertex->GetGPUVirtualAddress(),
-							.SizeInBytes = frame.vertex_count * static_cast<UINT>(sizeof(vertex_type)),
-							.StrideInBytes = sizeof(vertex_type)
+							.SizeInBytes = frame.vertex_count * static_cast<UINT>(sizeof(d3d_vertex_type)),
+							.StrideInBytes = sizeof(d3d_vertex_type)
 					};
 					context.IASetVertexBuffers(0, 1, &vertex_buffer_view);
 
 					const D3D12_INDEX_BUFFER_VIEW index_buffer_view{
 							.BufferLocation = frame.index->GetGPUVirtualAddress(),
-							.SizeInBytes = frame.index_count * static_cast<UINT>(sizeof(unsigned short)),
-							.Format = sizeof(unsigned short) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT
+							.SizeInBytes = frame.index_count * static_cast<UINT>(sizeof(vertex_index_type)),
+							.Format = sizeof(vertex_index_type) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT
 					};
 					context.IASetIndexBuffer(&index_buffer_view);
 					context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -711,7 +724,7 @@ namespace
 			const DXGI_FORMAT rtv_format,
 			const D3D12_CPU_DESCRIPTOR_HANDLE font_cpu_descriptor,
 			const D3D12_GPU_DESCRIPTOR_HANDLE font_gpu_descriptor,
-			ID3D12DescriptorHeap& d3d_descriptor_head,
+			ID3D12DescriptorHeap& descriptor_heap,
 			const UINT frames_in_flight
 		) -> void
 		{
@@ -722,7 +735,7 @@ namespace
 			g_d3d_data.font_texture_resource = nullptr;
 			g_d3d_data.font_cpu_descriptor = font_cpu_descriptor;
 			g_d3d_data.font_gpu_descriptor = font_gpu_descriptor;
-			g_d3d_data.d3d_descriptor_head = std::addressof(d3d_descriptor_head);
+			g_d3d_data.descriptor_heap = std::addressof(descriptor_heap);
 
 			g_d3d_data.frames_in_flight = frames_in_flight;
 			g_d3d_data.frame_resource = std::make_unique<d3d_render_buffer[]>(frames_in_flight);
@@ -742,6 +755,12 @@ namespace
 			d3d_destroy_device_objects();
 
 			// delete g_d3d_data.frame_resource
+
+			// fixme
+			// if (g_font.data)
+			// {
+			// 	std::free(g_font.data);
+			// }
 		}
 
 		auto d3d_new_frame() -> void //
@@ -862,13 +881,6 @@ namespace
 				return;
 			}
 
-			struct d3d_vertex_type
-			{
-				float pos[2];
-				float uv[2];
-				std::uint32_t color;
-			};
-
 			std::ranges::for_each(
 				draw_data.draw_lists,
 				[
@@ -919,7 +931,8 @@ namespace
 					};
 
 					context.RSSetScissorRects(1, &rect);
-					context.DrawIndexedInstanced(static_cast<UINT>(draw_list.index_list.size()), 1, offset_index, offset_vertex, 0);
+					// context.DrawIndexedInstanced(static_cast<UINT>(draw_list.index_list.size()), 1, offset_index, offset_vertex, 0);
+					context.DrawInstanced(draw_list.vertex_list.size(), 1, offset_vertex, 0);
 
 					offset_vertex += static_cast<UINT>(draw_list.vertex_list.size());
 					offset_index += static_cast<INT>(draw_list.index_list.size());
