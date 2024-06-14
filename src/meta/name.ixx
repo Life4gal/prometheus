@@ -91,8 +91,5 @@ namespace gal::prometheus::meta
 			full_name.remove_suffix(full_function_name_suffix_size);
 			return full_name;
 		}
-
-		template<typename T>
-		[[nodiscard]] constexpr auto name_of(T&&) noexcept -> std::string_view { return name_of<std::remove_cvref_t<T>>(); }
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
