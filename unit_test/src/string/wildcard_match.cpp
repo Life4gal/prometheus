@@ -1,8 +1,13 @@
 #include <prometheus/macro.hpp>
 
+#if GAL_PROMETHEUS_USE_MODULE
 import std;
-import gal.prometheus.infrastructure;
-import gal.prometheus.string;
+import gal.prometheus;
+
+#else
+#include <prometheus.ixx>
+
+#endif
 
 using namespace gal::prometheus;
 
