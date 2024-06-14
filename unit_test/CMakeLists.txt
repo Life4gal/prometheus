@@ -43,11 +43,43 @@ add_test(
 		COMMAND ${PROJECT_NAME}
 )
 
-add_executable(
-		${PROJECT_NAME}-gui
+# ===================================
+option(${PROJECT_NAME_PREFIX}UNIT_TEST_GUI_BACKEND_VULKAN "ON => VULKAN / OFF => DX12" ON)
 
-		${PROJECT_SOURCE_DIR}/src/gui_main.cpp
-)
+if (${PROJECT_NAME_PREFIX}UNIT_TEST_GUI_BACKEND_VULKAN)
+	add_executable(
+			${PROJECT_NAME}-gui
+
+			${PROJECT_SOURCE_DIR}/src/gui/main_vulkan.cpp
+	)
+
+	# todo
+	# glfw: clone from github
+	CPMAddPackage(
+			NAME glfw
+			GIT_TAG 3.4
+			GITHUB_REPOSITORY "glfw/glfw"
+			OPTIONS "BUILD_SHARED_LIBS OFF" "GLFW_BUILD_EXAMPLES OFF" "GLFW_BUILD_TESTS OFF" "GLFW_BUILD_DOCS OFF" "GLFW_INSTALL OFF"
+	)
+	cmake_language(
+			CALL
+			${PROJECT_NAME_PREFIX}cpm_install
+			${PROJECT_NAME}-gui 
+			glfw 
+			PUBLIC 
+			glfw
+	)
+	# vulkan: local
+	find_package(Vulkan REQUIRED)
+	target_link_libraries(${PROJECT_NAME}-gui PRIVATE ${Vulkan_LIBRARY})
+	target_include_directories(${PROJECT_NAME}-gui PRIVATE ${Vulkan_INCLUDE_DIRS})
+else()
+	add_executable(
+			${PROJECT_NAME}-gui
+
+			${PROJECT_SOURCE_DIR}/src/gui/main_dx12.cpp
+	)
+endif (${PROJECT_NAME_PREFIX}UNIT_TEST_GUI_BACKEND_VULKAN)
 
 target_compile_features(
 		${PROJECT_NAME}-gui
