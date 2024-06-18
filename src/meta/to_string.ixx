@@ -96,13 +96,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::meta)
 			out.push_back('[');
 
 			std::ranges::for_each(
-					t,
-					[&out]<typename E>(const E& element) noexcept -> decltype(auto)
-					{
-						// sub-element does not contains type name.
-						meta::to_string<StringType, false>(element, out);
-						out.push_back(',');
-					});
+				t,
+				[&out]<typename E>(const E& element) noexcept -> decltype(auto)
+				{
+					// sub-element does not contains type name.
+					meta::to_string<StringType, false>(element, out);
+					out.push_back(',');
+				});
 
 			out.back() = ']';
 		}
@@ -115,15 +115,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::meta)
 			if constexpr (meta::member_size<type>() == 0) { out.push_back(','); }
 			else
 			{
-				meta::member_for_each(
-						[&out]<std::size_t Index, typename E>(const E& element) noexcept -> void
-						{
-							std::format_to(std::back_inserter(out), ".{} = ", meta::name_of_member<type, Index>());
-							// sub-element does not contains type name.
-							meta::to_string<StringType, false>(element, out);
-							out.push_back(',');
-						},
-						t);
+				meta::member_walk(
+					[&out]<std::size_t Index, typename E>(const E& element) noexcept -> void
+					{
+						std::format_to(std::back_inserter(out), ".{} = ", meta::name_of_member<type, Index>());
+						// sub-element does not contains type name.
+						meta::to_string<StringType, false>(element, out);
+						out.push_back(',');
+					},
+					t);
 			}
 
 			out.back() = '}';
