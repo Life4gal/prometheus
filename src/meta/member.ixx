@@ -52,6 +52,14 @@ namespace gal::prometheus::meta
 			constexpr explicit(false) operator T() const noexcept;
 		};
 
+		template<class T>
+		struct any_except_base_of
+		{
+			template<class U>
+				requires(not std::is_base_of_v<U, T>)
+			constexpr explicit(false) operator U() const noexcept;
+		};
+
 		template<typename T>
 		struct wrapper
 		{
@@ -107,9 +115,18 @@ namespace gal::prometheus::meta
 			else if constexpr (std::is_aggregate_v<T>)
 			{
 				if constexpr (sizeof...(Args) > sizeof(T)) { return member_size_unknown; }
-				else if constexpr (requires { T{Args{}...}; } and not requires { T{Args{}..., any{}}; }
-				) { return sizeof...(Args); }
-				else { return member_size_impl<T, Args..., any>(); }
+				else if constexpr (requires { T{Args{}...}; } and not requires { T{Args{}..., any{}}; }) //
+				{
+					return (0 + ... + std::is_same_v<Args, any_except_base_of<T>>);
+				}
+				else if constexpr (requires { T{Args{}...}; } and not requires { T{Args{}..., any_except_base_of<T>{}}; }) //
+				{
+					return member_size_impl<T, Args..., any>();
+				}
+				else //
+				{
+					return member_size_impl<T, Args..., any_except_base_of<T>>();
+				}
 			}
 			else { return member_size_unknown; }
 		}
@@ -147,14 +164,14 @@ namespace gal::prometheus::meta
 
 
 
-			#if __cpp_structured_bindings >= 202401L
-			auto&& [... vs] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+			#if __cpp_structured_bindings >= 202601L
+			auto&& [... vs] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 			return std::invoke(MEMBER_NAME_VISIT_DO_FORWARD(function), MEMBER_NAME_VISIT_DO_FORWARD_LIKE(vs)...);
 			#else
 			if constexpr (constexpr auto size = member_size<T>();
 				size == 1)
 			{
-				auto&& [m0] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				auto&& [m0] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0)
@@ -162,7 +179,7 @@ namespace gal::prometheus::meta
 			}
 			else if constexpr (size == 2)
 			{
-				auto&& [m0, m1] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				auto&& [m0, m1] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -171,7 +188,7 @@ namespace gal::prometheus::meta
 			}
 			else if constexpr (size == 3)
 			{
-				auto&& [m0, m1, m2] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				auto&& [m0, m1, m2] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -181,7 +198,7 @@ namespace gal::prometheus::meta
 			}
 			else if constexpr (size == 4)
 			{
-				auto&& [m0, m1, m2, m3] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				auto&& [m0, m1, m2, m3] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -192,7 +209,7 @@ namespace gal::prometheus::meta
 			}
 			else if constexpr (size == 5)
 			{
-				auto&& [m0, m1, m2, m3, m4] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				auto&& [m0, m1, m2, m3, m4] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -204,7 +221,7 @@ namespace gal::prometheus::meta
 			}
 			else if constexpr (size == 6)
 			{
-				auto&& [m0, m1, m2, m3, m4, m5] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				auto&& [m0, m1, m2, m3, m4, m5] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -217,7 +234,7 @@ namespace gal::prometheus::meta
 			}
 			else if constexpr (size == 7)
 			{
-				auto&& [m0, m1, m2, m3, m4, m5, m6] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				auto&& [m0, m1, m2, m3, m4, m5, m6] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -231,7 +248,7 @@ namespace gal::prometheus::meta
 			}
 			else if constexpr (size == 8)
 			{
-				auto&& [m0, m1, m2, m3, m4, m5, m6, m7] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				auto&& [m0, m1, m2, m3, m4, m5, m6, m7] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -249,7 +266,7 @@ namespace gal::prometheus::meta
 				auto&& [
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -268,7 +285,7 @@ namespace gal::prometheus::meta
 				auto&& [
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -288,7 +305,7 @@ namespace gal::prometheus::meta
 				auto&& [
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -309,7 +326,7 @@ namespace gal::prometheus::meta
 				auto&& [
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -331,7 +348,7 @@ namespace gal::prometheus::meta
 				auto&& [
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11, m12
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -354,7 +371,7 @@ namespace gal::prometheus::meta
 				auto&& [
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11, m12, m13
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -378,7 +395,7 @@ namespace gal::prometheus::meta
 				auto&& [
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11, m12, m13,m14
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -403,7 +420,7 @@ namespace gal::prometheus::meta
 				auto&& [
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11, m12, m13,m14, m15
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -430,7 +447,7 @@ namespace gal::prometheus::meta
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -458,7 +475,7 @@ namespace gal::prometheus::meta
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -487,7 +504,7 @@ namespace gal::prometheus::meta
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -517,7 +534,7 @@ namespace gal::prometheus::meta
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -548,7 +565,7 @@ namespace gal::prometheus::meta
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -580,7 +597,7 @@ namespace gal::prometheus::meta
 					m0, m1, m2, m3, m4, m5, m6,m7,
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20, m21
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -613,7 +630,7 @@ namespace gal::prometheus::meta
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20, m21, m22
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -647,7 +664,7 @@ namespace gal::prometheus::meta
 					m0, m1, m2, m3, m4, m5, m6, m7,
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20, m21, m22, m23
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -683,7 +700,7 @@ namespace gal::prometheus::meta
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20, m21, m22, m23,
 					m24
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -720,7 +737,7 @@ namespace gal::prometheus::meta
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20, m21, m22, m23,
 					m24, m25
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -758,7 +775,7 @@ namespace gal::prometheus::meta
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20, m21, m22, m23,
 					m24, m25,m26
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -797,7 +814,7 @@ namespace gal::prometheus::meta
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20, m21, m22, m23,
 					m24, m25,m26,m27
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -837,7 +854,7 @@ namespace gal::prometheus::meta
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20, m21, m22, m23,
 					m24, m25,m26,m27, m28
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -878,7 +895,7 @@ namespace gal::prometheus::meta
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20, m21, m22, m23,
 					m24, m25,m26,m27, m28, m29
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -920,7 +937,7 @@ namespace gal::prometheus::meta
 					m7, m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20, m21, m22, m23,
 					m24, m25,m26,m27, m28, m29, m30
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -963,7 +980,7 @@ namespace gal::prometheus::meta
 					m8, m9, m10, m11, m12, m13,m14, m15,
 					m16, m17, m18, m19,m20, m21, m22, m23,
 					m24, m25,m26,m27, m28, m29, m30, m31
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1008,7 +1025,7 @@ namespace gal::prometheus::meta
 					m16, m17, m18, m19,m20, m21, m22, m23,
 					m24, m25,m26,m27, m28, m29, m30, m31,
 					m32
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1054,7 +1071,7 @@ namespace gal::prometheus::meta
 					m16, m17, m18,m19, m20, m21, m22, m23,
 					m24,m25, m26,m27, m28, m29, m30, m31,
 					m32, m33
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1101,7 +1118,7 @@ namespace gal::prometheus::meta
 					m16, m17, m18, m19, m20, m21, m22, m23,
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1149,7 +1166,7 @@ namespace gal::prometheus::meta
 					m16, m17, m18, m19, m20, m21, m22, m23,
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1198,7 +1215,7 @@ namespace gal::prometheus::meta
 					m16, m17, m18, m19, m20, m21, m22, m23,
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35, m36
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1248,7 +1265,7 @@ namespace gal::prometheus::meta
 					m16, m17, m18, m19, m20, m21, m22, m23,
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35, m36, m37
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1299,7 +1316,7 @@ namespace gal::prometheus::meta
 					m16, m17, m18, m19, m20, m21, m22, m23,
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35, m36, m37, m38
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1351,7 +1368,7 @@ namespace gal::prometheus::meta
 					m16, m17, m18, m19, m20, m21, m22, m23,
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35, m36, m37, m38, m39
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1405,7 +1422,7 @@ namespace gal::prometheus::meta
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1460,7 +1477,7 @@ namespace gal::prometheus::meta
 					m24, m25, m26,m27, m28, m29, m30,
 					m31, m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1516,7 +1533,7 @@ namespace gal::prometheus::meta
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1573,7 +1590,7 @@ namespace gal::prometheus::meta
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1631,7 +1648,7 @@ namespace gal::prometheus::meta
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1690,7 +1707,7 @@ namespace gal::prometheus::meta
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44, m45
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1750,7 +1767,7 @@ namespace gal::prometheus::meta
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44, m45, m46
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1811,7 +1828,7 @@ namespace gal::prometheus::meta
 					m24, m25, m26,m27, m28, m29, m30, m31,
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44, m45, m46, m47
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1874,7 +1891,7 @@ namespace gal::prometheus::meta
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -1938,7 +1955,7 @@ namespace gal::prometheus::meta
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2003,7 +2020,7 @@ namespace gal::prometheus::meta
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2069,7 +2086,7 @@ namespace gal::prometheus::meta
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50,m51
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2136,7 +2153,7 @@ namespace gal::prometheus::meta
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50,m51, m52
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2204,7 +2221,7 @@ namespace gal::prometheus::meta
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50, m51, m52,m53
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2273,7 +2290,7 @@ namespace gal::prometheus::meta
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50, m51, m52,m53, m54
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2343,7 +2360,7 @@ namespace gal::prometheus::meta
 					m32, m33, m34, m35, m36, m37, m38, m39,
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50, m51, m52,m53, m54, m55
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2415,7 +2432,7 @@ namespace gal::prometheus::meta
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50, m51, m52,m53, m54, m55,
 					m56
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2488,7 +2505,7 @@ namespace gal::prometheus::meta
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50, m51, m52,m53, m54, m55,
 					m56, m57
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2562,7 +2579,7 @@ namespace gal::prometheus::meta
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50, m51, m52,m53, m54, m55,
 					m56, m57, m58
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2637,7 +2654,7 @@ namespace gal::prometheus::meta
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50, m51, m52,m53, m54, m55,
 					m56, m57, m58, m59
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2713,7 +2730,7 @@ namespace gal::prometheus::meta
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50, m51, m52,m53, m54, m55,
 					m56, m57, m58, m59, m60
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2790,7 +2807,7 @@ namespace gal::prometheus::meta
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50, m51, m52,m53, m54, m55,
 					m56, m57, m58, m59, m60, m61
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2868,7 +2885,7 @@ namespace gal::prometheus::meta
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50, m51, m52,m53, m54, m55,
 					m56, m57, m58, m59, m60, m61, m62
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -2947,7 +2964,7 @@ namespace gal::prometheus::meta
 					m40, m41, m42, m43, m44, m45, m46, m47,
 					m48, m49, m50, m51, m52,m53, m54, m55,
 					m56, m57, m58, m59, m60, m61, m62, m63
-				] = MEMBER_NAME_VISIT_DO_FORWARD_LIKE(value);
+				] = MEMBER_NAME_VISIT_DO_FORWARD(value);
 				return std::invoke(
 					MEMBER_NAME_VISIT_DO_FORWARD(function),
 					MEMBER_NAME_VISIT_DO_FORWARD_LIKE(m0),
@@ -3089,9 +3106,9 @@ namespace gal::prometheus::meta
 
 	template<typename Function, typename T>
 		requires member_gettable_t<std::remove_cvref_t<T>>
-	constexpr auto member_view_all(Function function, T&& value) noexcept -> void
+	constexpr auto member_walk(Function function, T&& value) noexcept -> void
 	{
-		[function]<std::size_t... Index, typename U>(
+		[&function]<std::size_t... Index, typename U>(
 			std::index_sequence<Index...>,
 			U&& u
 		) mutable noexcept -> void //
@@ -3107,15 +3124,15 @@ namespace gal::prometheus::meta
 			member_gettable_t<std::remove_cvref_t<T>> and
 			(sizeof...(Ts) == 0 or ((member_gettable_t<std::remove_cvref_t<Ts>>) and ...)) and
 			// size
-			(sizeof...(Ts) == 0 or ((member_size<T>() == member_size<Ts>()) and ...))
+			(sizeof...(Ts) == 0 or ((member_size<T>() >= member_size<Ts>()) and ...))
 		)
-	constexpr auto member_for_each(
+	constexpr auto member_zip_walk(
 		Function function,
 		T&& value,
 		Ts&&... optional_extra_values
 	) noexcept -> void
 	{
-		[function] <std::size_t... Index, typename... Us>(
+		[&function] <std::size_t... Index, typename... Us>(
 			std::index_sequence<Index...>,
 			Us&&... us
 		) mutable noexcept -> void //
@@ -3128,7 +3145,7 @@ namespace gal::prometheus::meta
 					//	... //
 					//);
 
-					const auto f = [function]<std::size_t I, typename... U>(U&&... u) noexcept -> void //
+					const auto f = [&function]<std::size_t I, typename... U>(U&&... u) noexcept -> void //
 					{
 						member_detail::invoke<I>(function, member_of_index<I>(std::forward<U>(u))...);
 					};
@@ -3144,15 +3161,15 @@ namespace gal::prometheus::meta
 			member_gettable_t<std::remove_cvref_t<T>> and
 			(sizeof...(Ts) == 0 or ((member_gettable_t<std::remove_cvref_t<Ts>>) and ...)) and
 			// size
-			(sizeof...(Ts) == 0 or ((member_size<T>() == member_size<Ts>()) and ...))
+			(sizeof...(Ts) == 0 or ((member_size<T>() >= member_size<Ts>()) and ...))
 		)
-	constexpr auto member_for_each_until(
+	constexpr auto member_zip_walk_until(
 		Function function,
 		T&& value,
 		Ts&&... optional_extra_values
 	) noexcept -> void
 	{
-		[function] <std::size_t... Index, typename... Us>(
+		[&function] <std::size_t... Index, typename... Us>(
 			std::index_sequence<Index...>,
 			Us&&... us
 		) mutable noexcept -> void //
@@ -3165,7 +3182,7 @@ namespace gal::prometheus::meta
 					// 	... //
 					// );
 
-					const auto f = [function]<std::size_t I, typename... U>(U&&... u) noexcept -> void //
+					const auto f = [&function]<std::size_t I, typename... U>(U&&... u) noexcept -> void //
 					{
 						member_detail::invoke<I>(function, member_of_index<I>(std::forward<U>(u))...);
 					};
