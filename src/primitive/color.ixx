@@ -46,7 +46,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	};
 
 	template<ColorFormat>
-	struct color_format {};
+	struct color_format_type {};
+
+	template<ColorFormat Format>
+	constexpr auto color_format = color_format_type<Format>{};
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
@@ -73,7 +76,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			  alpha{alpha} {}
 
 		template<ColorFormat Format>
-		constexpr basic_color(const universal_32_bit_color_type color, const color_format<Format>) noexcept
+		constexpr basic_color(const universal_32_bit_color_type color, const color_format_type<Format>) noexcept
 			: basic_color{}
 		{
 			*this = [color]() noexcept -> basic_color
@@ -243,7 +246,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		}
 
 		template<ColorFormat Format>
-		[[nodiscard]] constexpr auto to(const color_format<Format>) const noexcept -> universal_32_bit_color_type //
+		[[nodiscard]] constexpr auto to(const color_format_type<Format>) const noexcept -> universal_32_bit_color_type //
 		{
 			return this->to<Format>();
 		}
