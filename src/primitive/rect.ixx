@@ -159,7 +159,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		template<std::size_t Index>
 			requires(Index < 2)
-		[[nodiscard]] constexpr auto get() const noexcept -> std::conditional_t<Index == 0, point_type, extent_type>
+		[[nodiscard]] constexpr auto get() const noexcept -> std::conditional_t<Index == 0, const point_type&, const extent_type&>
 		{
 			if constexpr (Index == 0) { return point; }
 			else if constexpr (Index == 1) { return extent; }

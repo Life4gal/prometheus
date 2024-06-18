@@ -75,7 +75,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		template<std::size_t Index>
 			requires(Index < 2)
-		[[nodiscard]] constexpr auto get() const noexcept -> std::conditional_t<Index == 0, const point_type&, value_type>
+		[[nodiscard]] constexpr auto get() const noexcept -> std::conditional_t<Index == 0, const point_type&, const value_type&>
 		{
 			if constexpr (Index == 0) { return center; }
 			else if constexpr (Index == 1) { return radius; }
@@ -240,11 +240,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 		auto format(const gal::prometheus::primitive::basic_circle<T, N>& circle, FormatContext& context) const noexcept -> auto
 		{
 			return std::format_to(
-					context.out(),
-					"[{}->{}]",
-					circle.center,
-					circle.radius
-					);
+				context.out(),
+				"[{}->{}]",
+				circle.center,
+				circle.radius
+			);
 		}
 	};
 }

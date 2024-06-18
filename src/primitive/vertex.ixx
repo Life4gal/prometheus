@@ -62,12 +62,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		[[nodiscard]] constexpr auto get() const noexcept
 			-> std::conditional_t<
 				Index == 0,
-				point_type,
+				const point_type&,
 				std::conditional_t<
 					Index == 1,
-					uv_type,
-					color_type
-				>
+					const uv_type&,
+					const color_type&>
 			>
 		{
 			if constexpr (Index == 0) { return position; }
@@ -81,12 +80,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		[[nodiscard]] constexpr auto get() noexcept
 			-> std::conditional_t<
 				Index == 0,
-				point_type,
+				point_type&,
 				std::conditional_t<
 					Index == 1,
-					uv_type,
-					color_type
-				>
+					uv_type&,
+					color_type&>
 			>
 		{
 			if constexpr (Index == 0) { return position; }
@@ -148,17 +146,17 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 
 		template<typename FormatContext>
 		auto format(
-				const gal::prometheus::primitive::basic_vertex<PointType, UvType, ColorValueType>& vertex,
-				FormatContext& context
-				) const noexcept -> auto
+			const gal::prometheus::primitive::basic_vertex<PointType, UvType, ColorValueType>& vertex,
+			FormatContext& context
+		) const noexcept -> auto
 		{
 			return std::format_to(
-					context.out(),
-					"[pos{}uv{}color{}]",
-					vertex.position,
-					vertex.uv,
-					vertex.color
-					);
+				context.out(),
+				"[pos{}uv{}color{}]",
+				vertex.position,
+				vertex.uv,
+				vertex.color
+			);
 		}
 	};
 }

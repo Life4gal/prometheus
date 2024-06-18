@@ -119,7 +119,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		template<std::size_t Index>
 			requires(Index < 2)
-		[[nodiscard]] constexpr auto get() const noexcept -> value_type
+		[[nodiscard]] constexpr auto get() const noexcept -> const value_type&
 		{
 			if constexpr (Index == 0) { return width; }
 			else if constexpr (Index == 1) { return height; }
