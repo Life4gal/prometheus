@@ -259,7 +259,6 @@ namespace
 		}
 
 		std::println(std::cerr, "VULKAN Error: {} -- at {}:{}\n", meta::name_of(result), location.file_name(), location.line());
-		// todo
 		std::abort();
 	}
 
@@ -351,7 +350,12 @@ int main(int, char**)
 	{
 		g_draw_data.display_rect = {0, 0, static_cast<float>(g_window_width), static_cast<float>(g_window_height)};
 		auto& draw_list = g_draw_data.draw_lists.emplace_back();
-		draw_list.vertex_list.triangle({100, 100}, {150, 150}, {200, 200}, primitive::colors::gold);
+
+		constexpr vertex_type v1{{100, 100}, {.1f, .1f}, primitive::colors::red};
+		constexpr vertex_type v2{{150, 150}, {.1f, .1f}, primitive::colors::green};
+		constexpr vertex_type v3{{200, 200}, {.1f, .1f}, primitive::colors::blue};
+
+		draw_list.vertex_list.triangle(v1, v2, v3);
 		draw_list.index_list.push_back(0);
 		draw_list.index_list.push_back(1);
 		draw_list.index_list.push_back(2);
@@ -464,9 +468,11 @@ namespace
 			instance_create_info.ppEnabledExtensionNames = extensions.data();
 			vulkan_check_error(vkCreateInstance(&instance_create_info, g_allocation_callbacks, &g_instance));
 
-			// setup the debug report callback
+			// Setup the debug report callback
 			const auto create_debug_report_callback =
-					reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(g_instance, "vkCreateDebugReportCallbackEXT"));
+					reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>( // NOLINT(clang-diagnostic-cast-function-type-strict)
+						vkGetInstanceProcAddr(g_instance, "vkCreateDebugReportCallbackEXT")
+					);
 			assert(create_debug_report_callback);
 			VkDebugReportCallbackCreateInfoEXT debug_report_callback_create_info{
 					.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
@@ -574,6 +580,7 @@ namespace
 			constexpr VkDescriptorPoolSize descriptor_pool_size[]{
 					{.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1},
 			};
+			// ReSharper disable once CppVariableCanBeMadeConstexpr
 			const VkDescriptorPoolCreateInfo descriptor_pool_create_info{
 					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 					.pNext = nullptr,
@@ -688,6 +695,7 @@ namespace
 
 				constexpr VkAttachmentReference attachment_reference{.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
+				// ReSharper disable once CppVariableCanBeMadeConstexpr
 				const VkSubpassDescription sub_pass_description{
 						.flags = 0,
 						.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -913,10 +921,10 @@ namespace
 
 		// Select Present Mode
 		{
-			// todo: unlimited frame rate?
+			// fixme: unlimited frame rate?
 			constexpr VkPresentModeKHR request_present_mode[]
 			{
-					#if 1
+					#if 1  // NOLINT(readability-avoid-unconditional-preprocessor-if)
 					VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR,
 					#endif
 					VK_PRESENT_MODE_FIFO_KHR
@@ -1095,6 +1103,7 @@ namespace
 					.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 					.pImmutableSamplers = nullptr
 			};
+			// ReSharper disable once CppVariableCanBeMadeConstexpr
 			const VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{
 					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 					.pNext = nullptr,
@@ -1112,8 +1121,11 @@ namespace
 
 		if (g_pipeline_layout == VK_NULL_HANDLE)
 		{
-			constexpr VkPushConstantRange push_constant_range{.stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = sizeof(float) * 0,
-			                                                  .size = sizeof(float) * 4};
+			constexpr VkPushConstantRange push_constant_range{
+					.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+					.offset = sizeof(float) * 0,
+					.size = sizeof(float) * 4};
+			// ReSharper disable once CppVariableCanBeMadeConstexpr
 			const VkPipelineLayoutCreateInfo pipeline_layout_create_info{
 					.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 					.pNext = nullptr,
@@ -1377,6 +1389,7 @@ namespace
 					.alphaBlendOp = VK_BLEND_OP_ADD,
 					.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
 			};
+			// ReSharper disable once CppVariableCanBeMadeConstexpr
 			const VkPipelineColorBlendStateCreateInfo pipeline_color_blend_state_create_info{
 					.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 					.pNext = nullptr,
@@ -1389,6 +1402,7 @@ namespace
 			};
 
 			constexpr VkDynamicState dynamic_state[2]{VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+			// ReSharper disable once CppVariableCanBeMadeConstexpr
 			const VkPipelineDynamicStateCreateInfo pipeline_dynamic_state_create_info{
 					.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
 					.pNext = nullptr,
@@ -1517,7 +1531,7 @@ namespace
 
 		// todo: RGBA[8+8+8+8]
 		const auto [pixels, width, height] = load_font();
-		const auto upload_size = width * height * 4 * sizeof(unsigned char);
+		const auto upload_size = static_cast<VkDeviceSize>(width) * height * 4 * sizeof(unsigned char);
 
 		// Create Image
 		{
@@ -1683,7 +1697,7 @@ namespace
 					.bufferRowLength = 0,
 					.bufferImageHeight = 0,
 					.imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1},
-					.imageOffset = 0,
+					.imageOffset = {.x = 0, .y = 0, .z = 0},
 					.imageExtent = {.width = static_cast<std::uint32_t>(width), .height = static_cast<std::uint32_t>(height), .depth = 1}
 			};
 			vkCmdCopyBufferToImage(
@@ -1723,6 +1737,7 @@ namespace
 			);
 
 			// End command buffer
+			// ReSharper disable once CppVariableCanBeMadeConstexpr
 			const VkSubmitInfo submit_info{
 					.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 					.pNext = nullptr,
@@ -1909,9 +1924,12 @@ namespace
 							mapped_vertex,
 							[](const auto& vertex) -> target_vertex_type
 							{
-								return {.position = {vertex.position.x, vertex.position.y},
-								        .uv = {vertex.uv.x, vertex.uv.y},
-								        .color = vertex.color.to(primitive::color_format<primitive::ColorFormat::A_B_G_R>{})
+								return {
+										.position = {vertex.position.x, vertex.position.y},
+										.uv = {vertex.uv.x, vertex.uv.y},
+									// todo
+										// .color = vertex.color.to(primitive::color_format<primitive::ColorFormat::A_B_G_R>)
+										.color = vertex.color.to(primitive::color_format<primitive::ColorFormat::B_G_R_A>)
 								};
 							}
 						);
@@ -1957,6 +1975,7 @@ namespace
 						this_frame.command_buffer,
 						this_render_buffer.index_buffer,
 						0,
+						// ReSharper disable once CppUnreachableCode
 						sizeof(vertex_index_type) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32
 					);
 				}
@@ -2006,7 +2025,7 @@ namespace
 					g_draw_data.draw_lists,
 					[&this_frame,
 						display_rect = g_draw_data.display_rect,
-						offset_vertex = static_cast<std::uint32_t>(0),
+						offset_vertex = static_cast<std::int32_t>(0),
 						offset_index = static_cast<std::uint32_t>(0)
 					](const draw_list_type& draw_list) mutable
 					{
@@ -2034,7 +2053,12 @@ namespace
 						);
 
 						// Draw
-						vkCmdDrawIndexed(this_frame.command_buffer, draw_list.index_list.size(), 1, offset_index, offset_vertex, 0);
+						vkCmdDrawIndexed(this_frame.command_buffer,
+						                 static_cast<std::uint32_t>(draw_list.index_list.size()),
+						                 1,
+						                 offset_index,
+						                 offset_vertex,
+						                 0);
 
 						offset_vertex += draw_list.vertex_list.size();
 						offset_index += draw_list.index_list.size();
@@ -2187,7 +2211,9 @@ namespace
 		vkDestroyDescriptorPool(g_device, g_descriptor_pool, g_allocation_callbacks);
 
 		const auto destroy_debug_report_callback =
-				reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(g_instance, "vkDestroyDebugReportCallbackEXT"));
+				reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>( // NOLINT(clang-diagnostic-cast-function-type-strict)
+					vkGetInstanceProcAddr(g_instance, "vkDestroyDebugReportCallbackEXT")
+				);
 		destroy_debug_report_callback(g_instance, g_debug_report_callback, g_allocation_callbacks);
 
 		vkDestroyDevice(g_device, g_allocation_callbacks);

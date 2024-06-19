@@ -11,7 +11,7 @@ import gal.prometheus;
 // for print_hr_error
 #include <comdef.h>
 // for font
-#include "gui_font.hpp"
+#include "font.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -899,7 +899,7 @@ namespace
 							{
 									.pos = {vertex.position.x, vertex.position.y},
 									.uv = {vertex.uv.x, vertex.uv.y},
-									.color = primitive::make_color<primitive::ColorFormat::A_B_G_R>(vertex.color)
+									.color = vertex.color.to(primitive::color_format<primitive::ColorFormat::A_B_G_R>)
 							};
 						}
 					);
@@ -931,8 +931,8 @@ namespace
 					};
 
 					context.RSSetScissorRects(1, &rect);
-					// context.DrawIndexedInstanced(static_cast<UINT>(draw_list.index_list.size()), 1, offset_index, offset_vertex, 0);
-					context.DrawInstanced(draw_list.vertex_list.size(), 1, offset_vertex, 0);
+					context.DrawIndexedInstanced(static_cast<UINT>(draw_list.index_list.size()), 1, offset_index, offset_vertex, 0);
+					// context.DrawInstanced(static_cast<UINT>(draw_list.vertex_list.size()), 1, offset_vertex, 0);
 
 					offset_vertex += static_cast<UINT>(draw_list.vertex_list.size());
 					offset_index += static_cast<INT>(draw_list.index_list.size());
@@ -1383,15 +1383,37 @@ int main(int, char**)
 
 	// test
 	{
-		RECT rect;
-		GetClientRect(window, &rect);
-		p::g_draw_data.display_rect = rect;
+		{
+			RECT rect;
+			GetClientRect(window, &rect);
+			p::g_draw_data.display_rect = rect;
+		}
 
-		auto& draw_list = p::g_draw_data.draw_lists.emplace_back();
-		draw_list.vertex_list.triangle({100, 100}, {150, 150}, {200, 100}, p::primitive::colors::gold);
-		draw_list.index_list.push_back(0);
-		draw_list.index_list.push_back(1);
-		draw_list.index_list.push_back(2);
+		{
+			using namespace p;
+			auto& draw_list = g_draw_data.draw_lists.emplace_back();
+			draw_list.vertex_list.triangle({100, 100}, {150, 150}, {200, 100}, primitive::colors::blue);
+			draw_list.vertex_list.rect_filled({150, 150}, {200, 200}, primitive::colors::gold);
+			draw_list.vertex_list.rect_filled({200, 200}, {300, 300}, primitive::colors::red);
+
+			const vertex_list_type::rect_type rect{vertex_list_type::point_type{300, 300}, vertex_list_type::extent_type{200, 200}};
+			draw_list.vertex_list.rect(rect, primitive::colors::light_pink);
+			draw_list.vertex_list.circle(primitive::inscribed_circle(rect), primitive::colors::orange);
+			draw_list.vertex_list.circle(primitive::circumscribed_circle(rect), primitive::colors::orange);
+
+			draw_list.vertex_list.circle_filled({100, 400}, 100, primitive::colors::red);
+
+			draw_list.vertex_list.arc<primitive::ArcQuadrant::Q1>({400, 150}, 80, primitive::colors::red);
+			draw_list.vertex_list.arc_filled<primitive::ArcQuadrant::Q2>({400, 150}, 60, primitive::colors::green);
+			draw_list.vertex_list.arc<primitive::ArcQuadrant::Q3>({400, 150}, 40, primitive::colors::blue);
+			draw_list.vertex_list.arc_filled<primitive::ArcQuadrant::Q4>({400, 150}, 20, primitive::colors::yellow);
+			draw_list.vertex_list.circle_filled({400, 150}, 10, primitive::colors::gold);
+
+			draw_list.vertex_list.triangle({100, 100}, {150, 150}, {200, 100}, primitive::colors::gold);
+			draw_list.index_list.push_back(0);
+			draw_list.index_list.push_back(1);
+			draw_list.index_list.push_back(2);
+		}
 	}
 
 	// Main loop
