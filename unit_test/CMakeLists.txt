@@ -43,7 +43,7 @@ add_test(
 		COMMAND ${PROJECT_NAME}
 )
 
-find_package(Vulkan REQUIRED)
+find_package(Vulkan)
 
 if (Vulkan_FOUND)
 	add_executable(
