@@ -43,17 +43,15 @@ add_test(
 		COMMAND ${PROJECT_NAME}
 )
 
-# ===================================
-option(${PROJECT_NAME_PREFIX}UNIT_TEST_GUI_BACKEND_VULKAN "ON => VULKAN / OFF => DX12" ON)
+find_package(Vulkan REQUIRED)
 
-if (${PROJECT_NAME_PREFIX}UNIT_TEST_GUI_BACKEND_VULKAN)
+if (Vulkan_FOUND)
 	add_executable(
-			${PROJECT_NAME}-gui
+			${PROJECT_NAME}-gui-vulkan
 
 			${PROJECT_SOURCE_DIR}/src/gui/main_vulkan.cpp
 	)
 
-	# todo
 	# glfw: clone from github
 	CPMAddPackage(
 			NAME glfw
@@ -64,36 +62,60 @@ if (${PROJECT_NAME_PREFIX}UNIT_TEST_GUI_BACKEND_VULKAN)
 	cmake_language(
 			CALL
 			${PROJECT_NAME_PREFIX}cpm_install
-			${PROJECT_NAME}-gui 
+			${PROJECT_NAME}-gui-vulkan
 			glfw 
 			PUBLIC 
 			glfw
 	)
-	# vulkan: local
-	find_package(Vulkan REQUIRED)
-	target_link_libraries(${PROJECT_NAME}-gui PRIVATE ${Vulkan_LIBRARY})
-	target_include_directories(${PROJECT_NAME}-gui PRIVATE ${Vulkan_INCLUDE_DIRS})
-else()
-	add_executable(
-			${PROJECT_NAME}-gui
 
-			${PROJECT_SOURCE_DIR}/src/gui/main_dx12.cpp
+	target_link_libraries(${PROJECT_NAME}-gui-vulkan PRIVATE ${Vulkan_LIBRARY})
+	target_include_directories(${PROJECT_NAME}-gui-vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
+
+	target_compile_features(
+		${PROJECT_NAME}-gui-vulkan
+		PUBLIC
+		cxx_std_23
 	)
-endif (${PROJECT_NAME_PREFIX}UNIT_TEST_GUI_BACKEND_VULKAN)
+
+	target_link_libraries(
+			${PROJECT_NAME}-gui-vulkan
+			PUBLIC
+			prometheus
+	)
+endif (Vulkan_FOUND)
+
+add_executable(
+		${PROJECT_NAME}-gui-dx12
+
+		${PROJECT_SOURCE_DIR}/src/gui/main_dx12.cpp
+)
 
 target_compile_features(
-		${PROJECT_NAME}-gui
+		${PROJECT_NAME}-gui-dx12
 		PUBLIC
 		cxx_std_23
 )
 
 target_link_libraries(
-		${PROJECT_NAME}-gui
+		${PROJECT_NAME}-gui-dx12
 		PUBLIC
 		prometheus
 )
 
-add_test(
-		NAME ${PROJECT_NAME}-gui
-		COMMAND ${PROJECT_NAME}-gui
+add_executable(
+		${PROJECT_NAME}-gui-dx11
+
+		${PROJECT_SOURCE_DIR}/src/gui/main_dx11.cpp
+)
+
+target_compile_features(
+		${PROJECT_NAME}-gui-dx11
+		PUBLIC
+		cxx_std_23
+)
+
+target_link_libraries(
+		${PROJECT_NAME}-gui-dx11
+		PUBLIC
+		prometheus
 )
