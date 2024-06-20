@@ -53,27 +53,43 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
+	struct basic_color;
+
+	template<typename>
+	struct is_basic_color : std::false_type {};
+
+	template<typename T>
+	struct is_basic_color<basic_color<T>> : std::true_type {};
+
+	template<typename T>
+	constexpr auto is_basic_color_v = is_basic_color<T>::value;
+
+	template<typename T>
+	concept basic_color_t = is_basic_color_v<T>;
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_color final : multidimensional<T, basic_color<T>>
 	{
 		using value_type = T;
 		constexpr static auto is_integral_value = std::is_integral_v<value_type>;
 
-		value_type red;
-		value_type green;
-		value_type blue;
 		value_type alpha;
+		value_type blue;
+		value_type green;
+		value_type red;
 
 		constexpr explicit(false) basic_color(const value_type value = value_type{0}) noexcept
-			: red{value},
-			  green{value},
+			: alpha{0},
 			  blue{value},
-			  alpha{0} {}
+			  green{value},
+			  red{value} {}
 
 		constexpr basic_color(const value_type red, const value_type green, const value_type blue, const value_type alpha) noexcept
-			: red{red},
-			  green{green},
+			: alpha{alpha},
 			  blue{blue},
-			  alpha{alpha} {}
+			  green{green},
+			  red{red} {}
 
 		template<ColorFormat Format>
 		constexpr basic_color(const universal_32_bit_color_type color, const color_format_type<Format>) noexcept
@@ -179,6 +195,20 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 				}
 				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 			}();
+		}
+
+		[[nodiscard]] constexpr auto transparent() const noexcept -> basic_color
+		{
+			return {
+					// red
+					red,
+					// green
+					green,
+					// blue
+					blue,
+					// alpha
+					0
+			};
 		}
 
 		template<ColorFormat Format>
