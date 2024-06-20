@@ -7,6 +7,7 @@
 module;
 
 #include <prometheus/macro.hpp>
+#include <intrin.h>
 
 export module gal.prometheus.functional:math;
 
@@ -18,6 +19,7 @@ import gal.prometheus.error;
 
 #include <cmath>
 #include <numbers>
+#include <intrin.h>
 
 #include <prometheus/macro.hpp>
 #include <error/error.ixx>
@@ -27,9 +29,16 @@ import gal.prometheus.error;
 namespace gal::prometheus::functional
 {
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		template<typename T>
-			requires std::is_arithmetic_v<T>
-		[[nodiscard]] constexpr auto is_nan(const T value) noexcept -> bool
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto is_nan(const T value) noexcept -> bool
+	{
+		if constexpr (not std::is_floating_point_v<T>)
+		{
+			return false;
+		}
+		else
 		{
 			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 			{
@@ -39,10 +48,17 @@ namespace gal::prometheus::functional
 
 			return std::isnan(value);
 		}
+	}
 
-		template<typename T>
-			requires std::is_arithmetic_v<T>
-		[[nodiscard]] constexpr auto abs(const T value) noexcept -> T
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto abs(const T value) noexcept -> T
+	{
+		if constexpr (std::is_unsigned_v<T>)
+		{
+			return value;
+		}
+		else
 		{
 			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 			{
@@ -52,118 +68,120 @@ namespace gal::prometheus::functional
 
 			return std::abs(value);
 		}
+	}
 
-		template<typename T>
-			requires std::is_arithmetic_v<T>
-		[[nodiscard]] constexpr auto floor(const T value) noexcept -> T
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto floor(const T value) noexcept -> T
+	{
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{
-			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+			if constexpr (std::is_integral_v<T>) { return value; }
+			else
 			{
-				if constexpr (std::is_integral_v<T>) { return value; }
-				else
+				if (value >= 0 or static_cast<T>(static_cast<unsigned long long>(value)) == value)
 				{
-					if (value >= 0 or static_cast<T>(static_cast<unsigned long long>(value)) == value)
-					{
-						return static_cast<T>(static_cast<unsigned long long>(value));
-					}
-
-					return static_cast<T>(static_cast<unsigned long long>(value) - 1);
-				}
-			}
-
-			return std::floor(value);
-		}
-
-		template<typename T>
-			requires std::is_arithmetic_v<T>
-		[[nodiscard]] constexpr auto tgamma(const T value) noexcept -> T
-		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(value >= 0);
-
-			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
-			{
-				//
-				return (value <= 1) ? 1 : (value * functional::tgamma(value - 1));
-			}
-
-			return static_cast<T>(std::tgamma(value));
-		}
-
-		template<std::integral T>
-		[[nodiscard]] constexpr auto factorial(const T value) noexcept -> T //
-		{
-			return functional::tgamma(value);
-		}
-
-		template<typename T>
-			requires std::is_arithmetic_v<T>
-		[[nodiscard]] constexpr auto pow(const T base, const int exp) noexcept -> T
-		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(exp >= 0);
-
-			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
-			{
-				if (exp == 0) { return static_cast<T>(1); }
-
-				return static_cast<T>(base * functional::pow(base, exp - 1));
-			}
-
-			return static_cast<T>(std::pow(base, exp));
-		}
-
-		template<typename T>
-			requires std::is_arithmetic_v<T>
-		[[nodiscard]] constexpr auto sqrt(const T value) noexcept -> T
-		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(value >= 0);
-
-			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
-			{
-				if (value == 0) // NOLINT(clang-diagnostic-float-equal)
-				{
-					return value;
+					return static_cast<T>(static_cast<unsigned long long>(value));
 				}
 
-				T prev = 0;
-				T current = value / 2;
-
-				while (current != prev) // NOLINT(clang-diagnostic-float-equal)
-				{
-					prev = current;
-					current = (current + value / current) / 2;
-				}
-
-				return current;
+				return static_cast<T>(static_cast<unsigned long long>(value) - 1);
 			}
-
-			return static_cast<T>(std::sqrt(value));
 		}
 
-		template<typename T>
-			requires std::is_arithmetic_v<T>
-		[[nodiscard]] constexpr auto hypot(const T x, const std::type_identity_t<T> y) noexcept -> T
+		return std::floor(value);
+	}
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto tgamma(const T value) noexcept -> T
+	{
+		GAL_PROMETHEUS_DEBUG_AXIOM(value >= 0);
+
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{
-			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
-			{
-				//
-				return functional::sqrt(functional::pow(x, 2) + functional::pow(y, 2));
-			}
-
-			return static_cast<T>(std::hypot(x, y));
+			//
+			return (value <= 1) ? 1 : (value * functional::tgamma(value - 1));
 		}
 
-		template<typename T>
-			requires std::is_arithmetic_v<T>
-		[[nodiscard]] constexpr auto hypot(const T x, const std::type_identity_t<T> y, const std::type_identity_t<T> z) noexcept -> T
+		return static_cast<T>(std::tgamma(value));
+	}
+
+	template<std::integral T>
+	[[nodiscard]] constexpr auto factorial(const T value) noexcept -> T //
+	{
+		return functional::tgamma(value);
+	}
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto pow(const T base, const int exp) noexcept -> T
+	{
+		GAL_PROMETHEUS_DEBUG_AXIOM(exp >= 0);
+
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{
-			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+			if (exp == 0) { return static_cast<T>(1); }
+
+			return static_cast<T>(base * functional::pow(base, exp - 1));
+		}
+
+		return static_cast<T>(std::pow(base, exp));
+	}
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto sqrt(const T value) noexcept -> T
+	{
+		GAL_PROMETHEUS_DEBUG_AXIOM(value >= 0);
+
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+		{
+			if (value == 0) // NOLINT(clang-diagnostic-float-equal)
 			{
-				//
-				return functional::sqrt(functional::pow(x, 2) + functional::pow(y, 2) + functional::pow(z, 2));
+				return value;
 			}
 
-			return static_cast<T>(std::hypot(x, y, z));
+			T prev = 0;
+			T current = value / 2;
+
+			while (current != prev) // NOLINT(clang-diagnostic-float-equal)
+			{
+				prev = current;
+				current = (current + value / current) / 2;
+			}
+
+			return current;
 		}
+
+		return static_cast<T>(std::sqrt(value));
+	}
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto hypot(const T x, const std::type_identity_t<T> y) noexcept -> T
+	{
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+		{
+			//
+			return functional::sqrt(functional::pow(x, 2) + functional::pow(y, 2));
+		}
+
+		return static_cast<T>(std::hypot(x, y));
+	}
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto hypot(const T x, const std::type_identity_t<T> y, const std::type_identity_t<T> z) noexcept -> T
+	{
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+		{
+			//
+			return functional::sqrt(functional::pow(x, 2) + functional::pow(y, 2) + functional::pow(z, 2));
+		}
+
+		return static_cast<T>(std::hypot(x, y, z));
+	}
+
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace math_detail
@@ -220,68 +238,155 @@ namespace gal::prometheus::functional
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		template<typename T>
-			requires std::is_arithmetic_v<T>
-		[[nodiscard]] constexpr auto tan(const T value) noexcept -> T
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto tan(const T value) noexcept -> T
+	{
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{
-			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
-			{
-				if (functional::is_nan(value)) { return std::numeric_limits<T>::quiet_NaN(); }
+			if (functional::is_nan(value)) { return std::numeric_limits<T>::quiet_NaN(); }
 
-				if (value < static_cast<T>(0)) { return -math_detail::tan_begin(-value); }
+			if (value < static_cast<T>(0)) { return -math_detail::tan_begin(-value); }
 
-				return math_detail::tan_begin(value);
-			}
-
-			return std::tan(value);
+			return math_detail::tan_begin(value);
 		}
 
-		template<typename T>
-			requires std::is_arithmetic_v<T>
-		[[nodiscard]] constexpr auto sin(const T value) noexcept -> T
+		return std::tan(value);
+	}
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto sin(const T value) noexcept -> T
+	{
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{
-			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
-			{
-				if (functional::is_nan(value)) { return std::numeric_limits<T>::quiet_NaN(); }
+			if (functional::is_nan(value)) { return std::numeric_limits<T>::quiet_NaN(); }
 
-				if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T> / 2)) { return 1; }
+			if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T> / 2)) { return 1; }
 
-				if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T> / 2)) { return -1; }
+			if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T> / 2)) { return -1; }
 
-				if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T>)) { return 0; }
+			if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T>)) { return 0; }
 
-				if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T>)) { return -0; }
+			if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T>)) { return -0; }
 
-				// sin(x) = 2tan(x/2) / (1 + tan²(x/2))
-				const auto z = functional::tan(value / static_cast<T>(2));
-				return (static_cast<T>(2) * z) / (static_cast<T>(1) + z * z);
-			}
-
-			return static_cast<T>(std::sin(value));
+			// sin(x) = 2tan(x/2) / (1 + tan²(x/2))
+			const auto z = functional::tan(value / static_cast<T>(2));
+			return (static_cast<T>(2) * z) / (static_cast<T>(1) + z * z);
 		}
 
-		template<typename T>
-			requires std::is_arithmetic_v<T>
-		[[nodiscard]] constexpr auto cos(const T value) noexcept -> T
+		return static_cast<T>(std::sin(value));
+	}
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto cos(const T value) noexcept -> T
+	{
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{
-			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
-			{
-				if (functional::is_nan(value)) { return std::numeric_limits<T>::quiet_NaN(); }
+			if (functional::is_nan(value)) { return std::numeric_limits<T>::quiet_NaN(); }
 
-				if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T> / 2)) { return 0; }
+			if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T> / 2)) { return 0; }
 
-				if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T> / 2)) { return -0; }
+			if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T> / 2)) { return -0; }
 
-				if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T>)) { return -1; }
+			if (std::numeric_limits<T>::min() > functional::abs(value - std::numbers::pi_v<T>)) { return -1; }
 
-				if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T>)) { return -1; }
+			if (std::numeric_limits<T>::min() > functional::abs(value + std::numbers::pi_v<T>)) { return -1; }
 
-				// cos(x) = (1 - tan²(x/2)) / (1 + tan²(x/2))
-				const auto z = functional::tan(value / static_cast<T>(2));
-				return (static_cast<T>(1) - z * z) / (static_cast<T>(1) + z * z);
-			}
-
-			return static_cast<T>(std::cos(value));
+			// cos(x) = (1 - tan²(x/2)) / (1 + tan²(x/2))
+			const auto z = functional::tan(value / static_cast<T>(2));
+			return (static_cast<T>(1) - z * z) / (static_cast<T>(1) + z * z);
 		}
+
+		return static_cast<T>(std::cos(value));
+	}
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto normalize(const T x, const T y) noexcept -> std::pair<T, T>
+	{
+		const auto d = functional::pow(x, 2) + functional::pow(y, 2);
+		const auto d2 = [d]
+		{
+			if constexpr (std::is_floating_point_v<T>)
+			{
+				return d;
+			}
+			else
+			{
+				if constexpr (sizeof(T) == sizeof(float))
+				{
+					return static_cast<float>(d);
+				}
+				else if constexpr (sizeof(T) == sizeof(double))
+				{
+					return static_cast<double>(d);
+				}
+				else
+				{
+					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+				}
+			}
+		}();
+
+		if (d2 > static_cast<decltype(d2)>(0))
+		{
+			// todo
+
+			const auto inv_len = [d2]
+			{
+				if constexpr (sizeof(d2) == sizeof(float))
+				{
+					#if defined(__AVX512F__)
+					__m512 d2_v = _mm512_set1_ps(d2);
+					__m512 inv_len_v = _mm512_rsqrt14_ps(d2_v);
+					return  _mm512_cvtss_f32(inv_len_v);
+					#elif defined(__AVX__)
+					__m256 d2_v = _mm256_set1_ps(d2);
+					__m256 inv_len_v = _mm256_rsqrt_ps(d2_v);
+					return _mm256_cvtss_f32(inv_len_v);
+					#elif defined(__SSE4_1__) or defined(__SSE3__) or defined(__SSE__)
+					__m128 d2_v = _mm_set_ss(d2);
+					__m128 inv_len_v = _mm_rsqrt_ss(d2_v);
+					return _mm_cvtss_f32(inv_len_v);
+					#else
+					return 1.0f / functional::sqrt(d2);
+					#endif
+				}
+				else if constexpr (sizeof(d2) == sizeof(double))
+				{
+					#if defined(__AVX512F__)
+					__m512d d2_v = _mm512_set1_pd(d2);
+					__m512d sqrt_d2_v = _mm512_sqrt_pd(d2_v);
+					__m512d inv_sqrt_d2_v = _mm512_div_pd(_mm512_set1_pd(1.0), sqrt_d2_v);
+					return _mm512_cvtsd_f64(inv_sqrt_d2_v);
+					#elif defined(__AVX__)
+					__m256d d2_v = _mm256_set1_pd(d2);
+					__m256d sqrt_d2_v = _mm256_sqrt_pd(d2_v);
+					__m256d inv_sqrt_d2_v = _mm256_div_pd(_mm256_set1_pd(1.0), sqrt_d2_v);
+					return _mm256_cvtsd_f64(inv_sqrt_d2_v);
+					#elif defined(__SSE4_1__) or defined(__SSE3__) or defined(__SSE__)
+					__m128d d2_v = _mm_set1_pd(d2);
+					__m128d sqrt_d2_v = _mm_sqrt_pd(d2_v);
+					__m128d inv_sqrt_d2_v = _mm_div_pd(_mm_set1_pd(1.0), sqrt_d2_v);
+					return _mm_cvtsd_f64(inv_sqrt_d2_v);
+					#else
+					return 1.0 / functional::sqrt(d2);
+					#endif
+				}
+				else
+				{
+					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+				}
+			}();
+
+			return {static_cast<T>(x * inv_len), static_cast<T>(y * inv_len)};
+		}
+
+		return {x, y};
+	}
+
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
