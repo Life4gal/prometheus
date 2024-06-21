@@ -93,6 +93,27 @@ namespace gal::prometheus::functional
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
+	[[nodiscard]] constexpr auto ceil(const T value) noexcept -> T
+	{
+		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+		{
+			if constexpr (std::is_integral_v<T>) { return value; }
+			else
+			{
+				if (value >= 0 or static_cast<T>(static_cast<unsigned long long>(value)) == value)
+				{
+					return static_cast<T>(static_cast<unsigned long long>(value));
+				}
+
+				return static_cast<T>(static_cast<unsigned long long>(value) + 1);
+			}
+		}
+
+		return std::ceil(value);
+	}
+
+	template<typename T>
+		requires std::is_arithmetic_v<T>
 	[[nodiscard]] constexpr auto tgamma(const T value) noexcept -> T
 	{
 		GAL_PROMETHEUS_DEBUG_AXIOM(value >= 0);
