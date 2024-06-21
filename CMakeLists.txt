@@ -344,6 +344,14 @@ set(
 		${PROJECT_SOURCE_DIR}/src/functional/functional.ixx
 
 		# =========================
+		# GUI
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/gui/draw_list.ixx
+
+		${PROJECT_SOURCE_DIR}/src/gui/gui.ixx
+
+		# =========================
 		# INFRASTRUCTURE
 		# =========================
 
@@ -429,7 +437,6 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/error/debug.impl.ixx
 		${PROJECT_SOURCE_DIR}/src/error/platform.impl.ixx
-
 )
 
 if (${PROJECT_NAME_PREFIX}MODULE)

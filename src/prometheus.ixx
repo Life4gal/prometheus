@@ -6,6 +6,7 @@ export import gal.prometheus.concurrency;
 export import gal.prometheus.coroutine;
 export import gal.prometheus.error;
 export import gal.prometheus.functional;
+export import gal.prometheus.gui;
 export import gal.prometheus.infrastructure;
 export import gal.prometheus.memory;
 export import gal.prometheus.meta;
@@ -20,6 +21,7 @@ export import gal.prometheus.string;
 #include <coroutine/coroutine.ixx>
 #include <error/error.ixx>
 #include <functional/functional.ixx>
+#include <gui/gui.ixx>
 #include <infrastructure/infrastructure.ixx>
 #include <memory/memory.ixx>
 #include <meta/meta.ixx>
