@@ -75,6 +75,24 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename T, typename U>
 	concept extent_compatible_t = is_extent_compatible_v<T, U>;
 
+	template<typename L, typename R, std::size_t N>
+	[[nodiscard]] constexpr auto operator==(const basic_extent<L, N>& lhs, const basic_extent<R, N>& rhs) noexcept -> bool
+	{
+		return lhs.width == rhs.width and lhs.height == rhs.height;
+	}
+
+	template<typename T, std::size_t N, extent_compatible_t<basic_extent<T, N>> R>
+	[[nodiscard]] constexpr auto operator==(const basic_extent<T, N>& lhs, const R& rhs) noexcept -> bool
+	{
+		return lhs.width == meta::member_of_index<0>(rhs) and lhs.height == meta::member_of_index<1>(rhs);
+	}
+
+	template<typename T, std::size_t N, extent_compatible_t<basic_extent<T, N>> L>
+	[[nodiscard]] constexpr auto operator==(const L& lhs, const basic_extent<T, N>& rhs) noexcept -> bool
+	{
+		return rhs.width == meta::member_of_index<0>(lhs) and rhs.height == meta::member_of_index<1>(lhs);
+	}
+
 	template<typename T>
 		requires std::is_arithmetic_v<T>
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent<T, 2> final : multidimensional<T, basic_extent<T, 2>>

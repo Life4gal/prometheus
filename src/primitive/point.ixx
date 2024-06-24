@@ -91,6 +91,24 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename OtherType, typename PointType>
 	concept point_compatible_t = is_point_compatible_v<OtherType, PointType>;
 
+	template<typename L, typename R, std::size_t N>
+	[[nodiscard]] constexpr auto operator==(const basic_point<L, N>& lhs, const basic_point<R, N>& rhs) noexcept -> bool
+	{
+		return lhs.x == rhs.x and lhs.y == rhs.y;
+	}
+
+	template<typename T, std::size_t N, point_compatible_t<basic_point<T, N>> R>
+	[[nodiscard]] constexpr auto operator==(const basic_point<T, N>& lhs, const R& rhs) noexcept -> bool
+	{
+		return lhs.x == meta::member_of_index<0>(rhs) and lhs.y == meta::member_of_index<1>(rhs);
+	}
+
+	template<typename T, std::size_t N, point_compatible_t<basic_point<T, N>> L>
+	[[nodiscard]] constexpr auto operator==(const L& lhs, const basic_point<T, N>& rhs) noexcept -> bool
+	{
+		return rhs.x == meta::member_of_index<0>(lhs) and rhs.y == meta::member_of_index<1>(lhs);
+	}
+
 	template<typename T>
 		requires std::is_arithmetic_v<T>
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point<T, 2> final : multidimensional<T, basic_point<T, 2>>

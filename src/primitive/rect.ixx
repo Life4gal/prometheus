@@ -91,6 +91,24 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename T, typename U>
 	concept rect_compatible_t = is_rect_compatible_v<T, U>;
 
+	template<typename L, typename R, std::size_t N>
+	[[nodiscard]] constexpr auto operator==(const basic_rect<L, N>& lhs, const basic_rect<R, N>& rhs) noexcept -> bool
+	{
+		return lhs.point == rhs.point and lhs.extent == rhs.extent;
+	}
+
+	template<typename T, std::size_t N, rect_compatible_t<basic_rect<T, N>> R>
+	[[nodiscard]] constexpr auto operator==(const basic_rect<T, N>& lhs, const R& rhs) noexcept -> bool
+	{
+		return lhs.point == meta::member_of_index<0>(rhs) and lhs.extent == meta::member_of_index<1>(rhs);
+	}
+
+	template<typename T, std::size_t N, rect_compatible_t<basic_rect<T, N>> L>
+	[[nodiscard]] constexpr auto operator==(const L& lhs, const basic_rect<T, N>& rhs) noexcept -> bool
+	{
+		return rhs.point == meta::member_of_index<0>(lhs) and rhs.extent == meta::member_of_index<1>(lhs);
+	}
+
 	template<typename T>
 		requires std::is_arithmetic_v<T>
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_rect<T, 2> final : multidimensional<T, basic_rect<T, 2>>

@@ -52,6 +52,44 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename T>
 	concept basic_circle_t = is_basic_circle_v<T>;
 
+	template<typename, typename>
+	struct is_circle_compatible : std::false_type {};
+
+	template<typename T>
+	struct is_circle_compatible<T, T> : std::false_type {};
+
+	template<typename CircleValueType, std::size_t N, member_gettable_but_not_same_t<basic_circle<CircleValueType, N>> U>
+		requires(meta::member_size<U>() == 2)
+	struct is_circle_compatible<U, basic_circle<CircleValueType, N>> :
+			std::bool_constant<
+				is_point_compatible_v<meta::member_type_of_index_t<0, U>, basic_point<CircleValueType, N>> and
+				std::convertible_to<meta::member_type_of_index_t<1, U>, CircleValueType>
+			> {};
+
+	template<typename OtherType, typename CircleType>
+	constexpr auto is_circle_compatible_v = is_circle_compatible<OtherType, CircleType>::value;
+
+	template<typename OtherType, typename CircleType>
+	concept circle_compatible_t = is_circle_compatible_v<OtherType, CircleType>;
+
+	template<typename L, typename R, std::size_t N>
+	[[nodiscard]] constexpr auto operator==(const basic_circle<L, N>& lhs, const basic_circle<R, N>& rhs) noexcept -> bool
+	{
+		return lhs.center == rhs.center and lhs.radius == rhs.radius;
+	}
+
+	template<typename T, std::size_t N, circle_compatible_t<basic_circle<T, N>> R>
+	[[nodiscard]] constexpr auto operator==(const basic_circle<T, N>& lhs, const R& rhs) noexcept -> bool
+	{
+		return lhs.center == meta::member_of_index<0>(rhs) and lhs.radius == meta::member_of_index<1>(rhs);
+	}
+
+	template<typename T, std::size_t N, circle_compatible_t<basic_circle<T, N>> L>
+	[[nodiscard]] constexpr auto operator==(const L& lhs, const basic_circle<T, N>& rhs) noexcept -> bool
+	{
+		return rhs.center == meta::member_of_index<0>(lhs) and rhs.radius == meta::member_of_index<1>(lhs);
+	}
+
 	template<typename T, std::size_t N>
 		requires std::is_arithmetic_v<T>
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_circle final : multidimensional<T, basic_circle<T, N>>
@@ -72,6 +110,29 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		constexpr basic_circle(const point_type& p, const value_type r) noexcept
 			: center{p},
 			  radius{r} {}
+
+		template<circle_compatible_t<basic_circle> U>
+		constexpr explicit basic_circle(const U& value) noexcept
+			: basic_circle{}
+		{
+			*this = value;
+		}
+
+		constexpr basic_circle(const basic_circle&) noexcept = default;
+		constexpr basic_circle(basic_circle&&) noexcept = default;
+		constexpr auto operator=(const basic_circle&) noexcept -> basic_circle& = default;
+		constexpr auto operator=(basic_circle&&) noexcept -> basic_circle& = default;
+		constexpr ~basic_circle() noexcept = default;
+
+		template<circle_compatible_t<basic_circle> U>
+		constexpr auto operator=(const U& value) noexcept -> basic_circle&
+		{
+			const auto [_center, _radius] = value;
+			center = _center;
+			radius = _radius;
+
+			return *this;
+		}
 
 		template<std::size_t Index>
 			requires(Index < 2)
