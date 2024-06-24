@@ -7,6 +7,7 @@
 module;
 
 #include <prometheus/macro.hpp>
+#include <intrin.h>
 
 export module gal.prometheus.primitive:draw_list;
 
@@ -22,6 +23,7 @@ import gal.prometheus.primitive;
 #include <utility>
 #include <limits>
 #include <numbers>
+#include <intrin.h>
 
 #include <prometheus/macro.hpp>
 #include <functional/functional.ixx>
@@ -33,101 +35,7 @@ namespace gal::prometheus::gui
 {
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-	enum class ArcQuadrant : unsigned
-	{
-		// [0~3)
-		Q1 = 0x0001,
-		// [3~6)
-		Q2 = 0x0010,
-		// [6~9)
-		Q3 = 0x0100,
-		// [9~12)
-		Q4 = 0x1000,
-
-		RIGHT_TOP = Q1,
-		LEFT_TOP = Q2,
-		LEFT_BOTTOM = Q3,
-		RIGHT_BOTTOM = Q4,
-		TOP = Q1 | Q2,
-		BOTTOM = Q3 | Q4,
-		LEFT = Q2 | Q3,
-		RIGHT = Q1 | Q4,
-		ALL = Q1 | Q2 | Q3 | Q4,
-	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-
-	namespace draw_list_detail
-	{
-		template<typename> struct detect_vertex_uv
-		{
-			using type = void;
-			using value_type = void;
-		};
-
-		template<typename PositionType, typename UvType, typename ColorType>
-			requires(not std::is_same_v<UvType, void>)
-		struct detect_vertex_uv<primitive::basic_vertex<PositionType, UvType, ColorType>>
-		{
-			using type = typename primitive::basic_vertex<PositionType, UvType, ColorType>::uv_type;
-			using value_type = typename primitive::basic_vertex<PositionType, UvType, ColorType>::uv_value_type;
-		};
-
-		constexpr auto draw_list_texture_line_max_width{63};
-
-		// @see https://stackoverflow.com/a/2244088/15194693
-		// Number of segments (N) is calculated using equation:
-		//	N = ceil ( pi / acos(1 - error / r) ) where r > 0 and error <= r
-		constexpr auto circle_segments_min = 4;
-		constexpr auto circle_segments_max = 512;
-		constexpr auto circle_roundup_to_even = [](const auto v) noexcept -> auto { return (v + 1) / 2 * 2; };
-		constexpr auto circle_segments_maker = [](const float radius, const float max_error) noexcept -> auto
-		{
-			return std::ranges::clamp(
-				circle_roundup_to_even(static_cast<int>(std::ceil(std::numbers::pi_v<float> / std::acos(1 - std::ranges::min(radius, max_error) / radius)))),
-				circle_segments_min,
-				circle_segments_max
-			);
-		};
-		constexpr auto circle_segments_maker_radius = [](const std::size_t n, const float max_error) noexcept -> auto
-		{
-			return max_error / (1 - std::cos(std::numbers::pi_v<float> / std::ranges::max(static_cast<float>(n), std::numbers::pi_v<float>)));
-		};
-		constexpr auto circle_segments_maker_error = [](const std::size_t n, const float radius) noexcept -> auto
-		{
-			return (1 - std::cos(std::numbers::pi_v<float> / std::ranges::max(static_cast<float>(n), std::numbers::pi_v<float>))) / radius;
-		};
-
-		using circle_segment_counts_type = std::array<std::uint8_t, 64>;
-		using vertex_sample_points_type = std::array<primitive::basic_point<float, 2>, 48>;
-		constexpr auto vertex_sample_point_maker = []<std::size_t... Index>(std::index_sequence<Index...>) noexcept //
-		{
-			const auto make_point = []<std::size_t I>() noexcept //
-			{
-				const auto a = static_cast<float>(I) / static_cast<float>(vertex_sample_points_type{}.size()) * 2 * std::numbers::pi_v<float>;
-				return primitive::basic_point<float, 2>{functional::cos(a), -functional::sin(a)};
-			};
-
-			return vertex_sample_points_type{{make_point.template operator()<Index>()...}};
-		};
-		constexpr auto vertex_sample_points{vertex_sample_point_maker.operator()(std::make_index_sequence<vertex_sample_points_type{}.size()>{})};
-
-		constexpr auto range_of_quadrant = [](const ArcQuadrant quadrant) noexcept -> auto
-		{
-			constexpr auto factor = vertex_sample_points.size() / 12;
-
-			if (quadrant == ArcQuadrant::Q1) { return std::make_pair(0 * factor, 3 * factor); }
-			if (quadrant == ArcQuadrant::Q2) { return std::make_pair(3 * factor, 6 * factor); }
-			if (quadrant == ArcQuadrant::Q3) { return std::make_pair(6 * factor, 9 * factor); }
-			if (quadrant == ArcQuadrant::Q4) { return std::make_pair(9 * factor, 12 * factor); }
-
-			std::unreachable();
-		};
-	}
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	enum class DrawFlag: std::uint32_t
+	enum class DrawFlag : std::uint32_t
 	{
 		NONE = 0,
 		// specify that shape should be closed
@@ -139,7 +47,7 @@ namespace gal::prometheus::gui
 		// @see basic_draw_list::path_rect
 		// @see basic_draw_list::rect
 		// @see basic_draw_list::rect_filled
-		ROUND_CORNERS_LEFT_TOP = 1 << 1,
+		ROUND_CORNER_LEFT_TOP = 1 << 1,
 		// enable rounding right_top corner only (when rounding > 0.0f, we default to all corners)
 		// @see basic_draw_list::path_rect
 		// @see basic_draw_list::rect
@@ -158,12 +66,12 @@ namespace gal::prometheus::gui
 		// disable rounding on all corners (when rounding > 0.0f)
 		ROUND_CORNER_NONE = 1 << 5,
 
-		ROUND_CORNER_LEFT = ROUND_CORNERS_LEFT_TOP | ROUND_CORNER_LEFT_BOTTOM,
-		ROUND_CORNER_TOP = ROUND_CORNERS_LEFT_TOP | ROUND_CORNER_RIGHT_TOP,
+		ROUND_CORNER_LEFT = ROUND_CORNER_LEFT_TOP | ROUND_CORNER_LEFT_BOTTOM,
+		ROUND_CORNER_TOP = ROUND_CORNER_LEFT_TOP | ROUND_CORNER_RIGHT_TOP,
 		ROUND_CORNER_RIGHT = ROUND_CORNER_RIGHT_TOP | ROUND_CORNER_RIGHT_BOTTOM,
 		ROUND_CORNER_BOTTOM = ROUND_CORNER_LEFT_BOTTOM | ROUND_CORNER_RIGHT_BOTTOM,
 
-		ROUND_CORNER_ALL = ROUND_CORNERS_LEFT_TOP | ROUND_CORNER_RIGHT_TOP | ROUND_CORNER_LEFT_BOTTOM | ROUND_CORNER_RIGHT_BOTTOM,
+		ROUND_CORNER_ALL = ROUND_CORNER_LEFT_TOP | ROUND_CORNER_RIGHT_TOP | ROUND_CORNER_LEFT_BOTTOM | ROUND_CORNER_RIGHT_BOTTOM,
 		ROUND_CORNER_DEFAULT = ROUND_CORNER_ALL,
 		ROUND_CORNER_MASK = ROUND_CORNER_ALL | ROUND_CORNER_NONE,
 	};
@@ -176,35 +84,167 @@ namespace gal::prometheus::gui
 		ANTI_ALIASED_FILL,
 	};
 
-	template<
-		primitive::basic_vertex_t VertexType,
-		typename IndexType,
-		template<typename> typename ContainerType = std::vector
-	>
-		requires std::is_arithmetic_v<IndexType>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_draw_list
+	enum class ArcQuadrant : std::uint32_t
 	{
-		using vertex_type = VertexType;
-		using index_type = IndexType;
+		// [0~3)
+		Q1 = 0x0000'0001,
+		// [3~6)
+		Q2 = 0x0000'0010,
+		// [6~9)
+		Q3 = 0x0000'0100,
+		// [9~12)
+		Q4 = 0x0000'1000,
 
-		using position_type = typename vertex_type::position_type;
-		using uv_type = typename draw_list_detail::detect_vertex_uv<vertex_type>::type;
-		using color_type = typename vertex_type::color_type;
+		RIGHT_TOP = Q1,
+		LEFT_TOP = Q2,
+		LEFT_BOTTOM = Q3,
+		RIGHT_BOTTOM = Q4,
+		TOP = Q1 | Q2,
+		BOTTOM = Q3 | Q4,
+		LEFT = Q2 | Q3,
+		RIGHT = Q1 | Q4,
+		ALL = Q1 | Q2 | Q3 | Q4,
 
-		using position_value_type = typename vertex_type::position_value_type;
-		using uv_value_type = typename draw_list_detail::detect_vertex_uv<vertex_type>::value_type;
-		using color_value_type = typename vertex_type::color_value_type;
+		// [3, 0)
+		Q1_CLOCK_WISH = 0x0001'0000,
+		// [6, 3)
+		Q2_CLOCK_WISH = 0x0010'0000,
+		// [9, 6)
+		Q3_CLOCK_WISH = 0x0100'0000,
+		// [12, 9_)
+		Q4_CLOCK_WISH = 0x1000'0000,
 
-		using vertex_list_type = ContainerType<vertex_type>;
-		using index_list_type = ContainerType<index_type>;
+		RIGHT_TOP_CLOCK_WISH = Q1_CLOCK_WISH,
+		LEFT_TOP_CLOCK_WISH = Q2_CLOCK_WISH,
+		LEFT_BOTTOM_CLOCK_WISH = Q3_CLOCK_WISH,
+		RIGHT_BOTTOM_CLOCK_WISH = Q4_CLOCK_WISH,
+		TOP_CLOCK_WISH = Q1_CLOCK_WISH | Q2_CLOCK_WISH,
+		BOTTOM_CLOCK_WISH = Q3_CLOCK_WISH | Q4_CLOCK_WISH,
+		LEFT_CLOCK_WISH = Q2_CLOCK_WISH | Q3_CLOCK_WISH,
+		RIGHT_CLOCK_WISH = Q1_CLOCK_WISH | Q4_CLOCK_WISH,
+		ALL_CLOCK_WISH = Q1_CLOCK_WISH | Q2_CLOCK_WISH | Q3_CLOCK_WISH | Q4_CLOCK_WISH,
+	};
 
-		using vertex_list_iterator = typename vertex_list_type::iterator;
-		using index_list_iterator = typename index_list_type::iterator;
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
-		using circle_type = primitive::basic_circle<position_value_type, std::tuple_size_v<position_type>>;
-		using rect_type = primitive::basic_rect<position_value_type, std::tuple_size_v<position_type>>;
+	namespace draw_list_detail
+	{
+		[[nodiscard]] constexpr auto to_fixed_rect_corner_flag(const DrawFlag flag) noexcept -> DrawFlag
+		{
+			if (functional::exclude(flag, DrawFlag::ROUND_CORNER_MASK))
+			{
+				using functional::operators::operator|;
+				return DrawFlag::ROUND_CORNER_ALL | flag;
+			}
 
-		constexpr static auto vertex_has_uv = not std::is_same_v<uv_type, void> and not std::is_same_v<uv_value_type, void>;
+			return flag;
+		}
+
+		using point_type = primitive::basic_point<float, 2>;
+		using uv_type = primitive::basic_point<float, 2>;
+		using color_type = primitive::basic_color<std::uint8_t>;
+
+		using circle_type = primitive::basic_circle<float, 2>;
+		using rect_type = primitive::basic_rect<float, 2>;
+
+		using vertex_type = primitive::basic_vertex<point_type, uv_type, color_type>;
+		using index_type = std::uint16_t;
+
+		// @see https://stackoverflow.com/a/2244088/15194693
+		// Number of segments (N) is calculated using equation:
+		//	N = ceil ( pi / acos(1 - error / r) ) where r > 0 and error <= r
+		constexpr int circle_segments_min = 4;
+		constexpr int circle_segments_max = 512;
+		constexpr auto circle_segments_calc = [](const float radius, const float max_error) noexcept -> auto
+		{
+			constexpr auto circle_segments_roundup_to_even = [](const auto v) noexcept -> auto
+			{
+				return (v + 1) / 2 * 2;
+			};
+
+			return std::ranges::clamp(
+				circle_segments_roundup_to_even(static_cast<int>(std::ceil(std::numbers::pi_v<float> / std::acos(1 - std::ranges::min(radius, max_error) / radius)))),
+				circle_segments_min,
+				circle_segments_max
+			);
+		};
+		constexpr auto circle_segments_calc_radius = [](const std::size_t n, const float max_error) noexcept -> auto
+		{
+			return max_error / (1 - std::cos(std::numbers::pi_v<float> / std::ranges::max(static_cast<float>(n), std::numbers::pi_v<float>)));
+		};
+		constexpr auto circle_segments_calc_error = [](const std::size_t n, const float radius) noexcept -> auto
+		{
+			return (1 - std::cos(std::numbers::pi_v<float> / std::ranges::max(static_cast<float>(n), std::numbers::pi_v<float>))) / radius;
+		};
+
+		constexpr std::size_t vertex_sample_points_count = 48;
+		using vertex_sample_points_type = std::array<point_type, vertex_sample_points_count>;
+		constexpr std::size_t circle_segment_counts_count = 64;
+		using circle_segment_counts_type = std::array<std::uint8_t, circle_segment_counts_count>;
+
+		constexpr auto vertex_sample_points = []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> vertex_sample_points_type
+		{
+			constexpr auto make_point = []<std::size_t I>() noexcept -> point_type
+			{
+				const auto a = static_cast<float>(I) / static_cast<float>(vertex_sample_points_type{}.size()) * 2 * std::numbers::pi_v<float>;
+				return {functional::cos(a), -functional::sin(a)};
+			};
+
+			return {{make_point.template operator()<Index>()...}};
+		}(std::make_index_sequence<vertex_sample_points_count>{});
+
+		constexpr auto range_of_quadrant = [](const ArcQuadrant quadrant) noexcept -> std::pair<int, int>
+		{
+			constexpr auto factor = static_cast<int>(vertex_sample_points.size() / 12);
+
+			switch (quadrant)
+			{
+				case ArcQuadrant::Q1: { return std::make_pair(0 * factor, 3 * factor); }
+				case ArcQuadrant::Q2: { return std::make_pair(3 * factor, 6 * factor); }
+				case ArcQuadrant::Q3: { return std::make_pair(6 * factor, 9 * factor); }
+				case ArcQuadrant::Q4: { return std::make_pair(9 * factor, 12 * factor); }
+				case ArcQuadrant::TOP: { return std::make_pair(0 * factor, 6 * factor); }
+				case ArcQuadrant::BOTTOM: { return std::make_pair(6 * factor, 12 * factor); }
+				case ArcQuadrant::LEFT: { return std::make_pair(3 * factor, 9 * factor); }
+				case ArcQuadrant::RIGHT: { return std::make_pair(9 * factor, 15 * factor); }
+				case ArcQuadrant::ALL: { return std::make_pair(0 * factor, 12 * factor); }
+				case ArcQuadrant::Q1_CLOCK_WISH: { return std::make_pair(3 * factor, 0 * factor); }
+				case ArcQuadrant::Q2_CLOCK_WISH: { return std::make_pair(6 * factor, 3 * factor); }
+				case ArcQuadrant::Q3_CLOCK_WISH: { return std::make_pair(9 * factor, 6 * factor); }
+				case ArcQuadrant::Q4_CLOCK_WISH: { return std::make_pair(12 * factor, 9 * factor); }
+				case ArcQuadrant::TOP_CLOCK_WISH: { return std::make_pair(6 * factor, 0 * factor); }
+				case ArcQuadrant::BOTTOM_CLOCK_WISH: { return std::make_pair(12 * factor, 6 * factor); }
+				case ArcQuadrant::LEFT_CLOCK_WISH: { return std::make_pair(9 * factor, 3 * factor); }
+				case ArcQuadrant::RIGHT_CLOCK_WISH: { return std::make_pair(15 * factor, 9 * factor); }
+				case ArcQuadrant::ALL_CLOCK_WISH: { return std::make_pair(12 * factor, 0 * factor); }
+			}
+
+			std::unreachable();
+		};
+
+		constexpr auto draw_list_texture_line_max_width{63};
+	}
+
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+
+	class DrawList
+	{
+	public:
+		using point_type = draw_list_detail::point_type;
+		using uv_type = draw_list_detail::uv_type;
+		using color_type = draw_list_detail::color_type;
+
+		using circle_type = draw_list_detail::circle_type;
+		using rect_type = draw_list_detail::rect_type;
+
+		using vertex_type = draw_list_detail::vertex_type;
+		using index_type = draw_list_detail::index_type;
+
+		template<typename T>
+		using list_type = std::vector<T>;
+
+		using vertex_list_type = list_type<vertex_type>;
+		using index_list_type = list_type<index_type>;
 
 		vertex_list_type vertex_list;
 		index_list_type index_list;
@@ -212,11 +252,12 @@ namespace gal::prometheus::gui
 		DrawListFlag draw_list_flag;
 
 	private:
-		using path_list_type = ContainerType<position_type>;
+		using path_list_type = list_type<point_type>;
+
 		using circle_segment_counts_type = draw_list_detail::circle_segment_counts_type;
 		using vertex_sample_points_type = draw_list_detail::vertex_sample_points_type;
 
-		constexpr static auto vertex_sample_points_count = vertex_sample_points_type{}.size();
+		constexpr static auto vertex_sample_points_count = draw_list_detail::vertex_sample_points_count;
 
 		circle_segment_counts_type circle_segment_counts_;
 		// Maximum error (in pixels) allowed when using `circle`/`circle_filled` or drawing rounded corner rectangles with no explicit segment count specified.
@@ -227,15 +268,46 @@ namespace gal::prometheus::gui
 
 		path_list_type path_list_;
 
-		constexpr auto get_circle_auto_segment_count(const float radius) const noexcept -> auto
+		[[nodiscard]] constexpr auto get_circle_auto_segment_count(const float radius) const noexcept -> auto
 		{
 			// ceil to never reduce accuracy
-			if (const auto radius_index = static_cast<std::ptrdiff_t>(radius + .999999f);
-				radius_index >= 0 and radius_index < circle_segment_counts_.size())
+			if (const auto radius_index = static_cast<std::uintptr_t>(radius + .999999f);
+				radius_index < circle_segment_counts_.size())
 			{
 				return circle_segment_counts_[radius_index];
 			}
-			return static_cast<circle_segment_counts_type::value_type>(draw_list_detail::circle_segments_maker(radius, circle_segment_max_error_));
+			return static_cast<circle_segment_counts_type::value_type>(draw_list_detail::circle_segments_calc(radius, circle_segment_max_error_));
+		}
+
+		constexpr static auto get_fixed_normal(const float x, const float y) noexcept -> std::pair<float, float>
+		{
+			if (const auto d = functional::pow(x, 2) + functional::pow(y, 2);
+				d > 1e-6f)
+			{
+				// todo
+				const auto inv_len = [d]
+				{
+					#if defined(__AVX512F__)
+					__m512 d_v = _mm512_set1_ps(d);
+					__m512 inv_len_v = _mm512_rcp14_ps(d_v);
+					return _mm512_cvtss_f32(inv_len_v);
+					#elif defined(__AVX__)
+					__m256 d_v = _mm256_set1_ps(d);
+					__m256 inv_len_v = _mm256_rcp_ps(d_v);
+					return _mm256_cvtss_f32(inv_len_v);
+					#elif defined(__SSE4_1__) or defined(__SSE3__) or defined(__SSE__)
+					__m128 d_v = _mm_set_ss(d);
+					__m128 inv_len_v = _mm_rcp_ss(d_v);
+					return _mm_cvtss_f32(inv_len_v);
+					#else
+					return 1.0f / d;
+					#endif
+				}();
+
+				return {x * inv_len, y * inv_len};
+			}
+
+			return {x, y};
 		}
 
 		constexpr auto draw_polygon_line(const color_type& color, const DrawFlag draw_flag, const float thickness) noexcept -> void
@@ -248,8 +320,7 @@ namespace gal::prometheus::gui
 				return;
 			}
 
-			const auto draw_flag_value = std::to_underlying(draw_flag);
-			const auto is_closed = (draw_flag_value & std::to_underlying(DrawFlag::CLOSED)) != 0;
+			const auto is_closed = not functional::exclude(draw_flag, DrawFlag::CLOSED);
 			const auto segments_count = is_closed ? path_point_count : path_point_count - 1;
 
 			const auto vertex_count = segments_count * 4;
@@ -264,29 +335,19 @@ namespace gal::prometheus::gui
 				const auto& p1 = path_point[i];
 				const auto& p2 = path_point[n];
 
-				auto normalized = functional::normalize(p2.x - p1.x, p2.y - p1.y);
-				normalized.first *= (thickness * .5f);
-				normalized.second *= (thickness * .5f);
+				auto [normalized_x, normalized_y] = functional::normalize(p2.x - p1.x, p2.y - p1.y);
+				normalized_x *= (thickness * .5f);
+				normalized_y *= (thickness * .5f);
 
-				const auto current_vertex_index = vertex_list.size();
+				const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
 
-				if constexpr (vertex_has_uv)
-				{
-					// todo
-					constexpr auto opaque_uv = vertex_type::default_uv;
+				// todo
+				constexpr auto opaque_uv = vertex_type::default_uv;
 
-					vertex_list.emplace_back(p1 + position_type{normalized.second, -normalized.first}, opaque_uv, color);
-					vertex_list.emplace_back(p2 + position_type{normalized.second, -normalized.first}, opaque_uv, color);
-					vertex_list.emplace_back(p2 + position_type{-normalized.second, normalized.first}, opaque_uv, color);
-					vertex_list.emplace_back(p1 + position_type{-normalized.second, normalized.first}, opaque_uv, color);
-				}
-				else
-				{
-					vertex_list.emplace_back(p1 + position_type{normalized.second, -normalized.first}, color);
-					vertex_list.emplace_back(p2 + position_type{normalized.second, -normalized.first}, color);
-					vertex_list.emplace_back(p2 + position_type{-normalized.second, normalized.first}, color);
-					vertex_list.emplace_back(p1 + position_type{-normalized.second, normalized.first}, color);
-				}
+				vertex_list.emplace_back(p1 + point_type{normalized_y, -normalized_x}, opaque_uv, color);
+				vertex_list.emplace_back(p2 + point_type{normalized_y, -normalized_x}, opaque_uv, color);
+				vertex_list.emplace_back(p2 + point_type{-normalized_y, normalized_x}, opaque_uv, color);
+				vertex_list.emplace_back(p1 + point_type{-normalized_y, normalized_x}, opaque_uv, color);
 
 				index_list.push_back(current_vertex_index + 0);
 				index_list.push_back(current_vertex_index + 1);
@@ -311,9 +372,7 @@ namespace gal::prometheus::gui
 			constexpr auto opaque_uv = vertex_type::default_uv;
 			const auto transparent_color = color.transparent();
 
-			const auto draw_list_flag_value = std::to_underlying(draw_list_flag);
-			const auto draw_flag_value = std::to_underlying(draw_flag);
-			const auto is_closed = (draw_flag_value & std::to_underlying(DrawFlag::CLOSED)) != 0;
+			const auto is_closed = not functional::exclude(draw_flag, DrawFlag::CLOSED);
 			const auto segments_count = is_closed ? path_point_count : path_point_count - 1;
 			const auto is_thick_line = thickness > 1.f;
 
@@ -322,9 +381,10 @@ namespace gal::prometheus::gui
 			const auto thickness_fractional = thickness - static_cast<float>(thickness_integer);
 
 			const auto is_use_texture =
-			(draw_list_flag_value & std::to_underlying(DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE) and
-			 (thickness_integer < draw_list_detail::draw_list_texture_line_max_width) and
-			 (thickness_fractional <= .00001f));
+			(
+				functional::contains<functional::EnumCheckPolicy::ANY_BIT>(draw_list_flag, DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE) and
+				(thickness_integer < draw_list_detail::draw_list_texture_line_max_width) and
+				(thickness_fractional <= .00001f));
 
 			const auto vertex_cont = is_use_texture ? (path_point_count * 2) : (is_thick_line ? path_point_count * 4 : path_point_count * 3);
 			const auto index_count = is_use_texture ? (segments_count * 6) : (is_thick_line ? segments_count * 18 : segments_count * 12);
@@ -332,19 +392,20 @@ namespace gal::prometheus::gui
 			index_list.reserve(index_list.size() + index_count);
 
 			// The first <path_point_count> items are normals at each line point, then after that there are either 2 or 4 temp points for each line point
-			ContainerType<position_type> temp_buffer{};
+			list_type<point_type> temp_buffer{};
 			temp_buffer.resize(path_point_count * ((is_use_texture or not is_thick_line) ? 3 : 5));
 			auto temp_buffer_normals = std::span{temp_buffer.begin(), path_point_count};
-			auto temp_buffer_points = std::span{temp_buffer.begin() + path_point_count, temp_buffer.end()};
+			auto temp_buffer_points = std::span{temp_buffer.begin() + static_cast<std::ptrdiff_t>(path_point_count), temp_buffer.end()};
 
 			// Calculate normals (tangents) for each line segment
 			for (std::decay_t<decltype(segments_count)> i = 0; i < segments_count; ++i)
 			{
 				const auto n = (i + 1) % path_point_count;
 				const auto d = path_point[n] - path_point[i];
-				const auto normalized = functional::normalize(d.x, d.y);
-				temp_buffer_normals[i].x = normalized.first;
-				temp_buffer_normals[i].y = -normalized.second;
+
+				const auto [normalized_x, normalized_y] = functional::normalize(d.x, d.y);
+				temp_buffer_normals[i].x = normalized_y;
+				temp_buffer_normals[i].y = -normalized_x;
 			}
 
 			if (not is_closed)
@@ -381,47 +442,48 @@ namespace gal::prometheus::gui
 
 					// Average normals
 					const auto d = (temp_buffer_normals[first_point_of_segment] + temp_buffer_normals[second_point_of_segment]) * .5f;
-					auto normalized = functional::normalize(d.x, d.y);
-					normalized.first *= half_draw_size;
-					normalized.second *= half_draw_size;
+					// dm_x, dm_y are offset to the outer edge of the AA area
+					auto [dm_x, dm_y] = get_fixed_normal(d.x, d.y);
+					dm_x *= half_draw_size;
+					dm_y *= half_draw_size;
 
 					// Add temporary vertexes for the outer edges
-					temp_buffer_points[second_point_of_segment * 2 + 0] = path_point[second_point_of_segment] + position_type{normalized.first, normalized.second};
-					temp_buffer_points[second_point_of_segment * 2 + 1] = path_point[second_point_of_segment] - position_type{normalized.first, normalized.second};
+					temp_buffer_points[second_point_of_segment * 2 + 0] = path_point[second_point_of_segment] + point_type{dm_x, dm_y};
+					temp_buffer_points[second_point_of_segment * 2 + 1] = path_point[second_point_of_segment] - point_type{dm_x, dm_y};
 
 					if (is_use_texture)
 					{
 						// Add indices for two triangles
 
 						// right
-						index_list.push_back(vertex_index_for_end + 0);
-						index_list.push_back(vertex_index_for_start + 0);
-						index_list.push_back(vertex_index_for_start + 1);
+						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 1));
 						// left
-						index_list.push_back(vertex_index_for_end + 1);
-						index_list.push_back(vertex_index_for_start + 1);
-						index_list.push_back(vertex_index_for_end + 0);
+						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 1));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
 					}
 					else
 					{
 						// Add indexes for four triangles
 
 						// right 1
-						index_list.push_back(vertex_index_for_end + 0);
-						index_list.push_back(vertex_index_for_start + 0);
-						index_list.push_back(vertex_index_for_start + 2);
+						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 2));
 						// right 2
-						index_list.push_back(vertex_index_for_start + 2);
-						index_list.push_back(vertex_index_for_end + 2);
-						index_list.push_back(vertex_index_for_end + 0);
+						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 2));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 2));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
 						// left 1
-						index_list.push_back(vertex_index_for_end + 1);
-						index_list.push_back(vertex_index_for_start + 1);
-						index_list.push_back(vertex_index_for_start + 0);
+						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 1));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
 						// left 2
-						index_list.push_back(vertex_index_for_start + 0);
-						index_list.push_back(vertex_index_for_end + 0);
-						index_list.push_back(vertex_index_for_end + 1);
+						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
+						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
 					}
 
 					vertex_index_for_start = vertex_index_for_end;
@@ -480,43 +542,42 @@ namespace gal::prometheus::gui
 
 					// Average normals
 					const auto d = (temp_buffer_normals[first_point_of_segment] + temp_buffer_normals[second_point_of_segment]) * .5f;
-					auto normalized = functional::normalize(d.x, d.y);
-
-					const auto normalized_out_x = normalized.first * (half_inner_thickness + 1.f);
-					const auto normalized_out_y = normalized.second * (half_inner_thickness + 1.f);
-					const auto normalized_in_x = normalized.first * (half_inner_thickness + 0.f);
-					const auto normalized_in_y = normalized.second * (half_inner_thickness + 0.f);
+					const auto [dm_x, dm_y] = get_fixed_normal(d.x, d.y);
+					const auto dm_out_x = dm_x * (half_inner_thickness + 1.f);
+					const auto dm_out_y = dm_y * (half_inner_thickness + 1.f);
+					const auto dm_in_x = dm_x * (half_inner_thickness + 0.f);
+					const auto dm_in_y = dm_y * (half_inner_thickness + 0.f);
 
 					// Add temporary vertices
-					temp_buffer_points[second_point_of_segment * 4 + 0] = path_point[second_point_of_segment] + position_type{normalized_out_x, normalized_out_y};
-					temp_buffer_points[second_point_of_segment * 4 + 1] = path_point[second_point_of_segment] + position_type{normalized_in_x, normalized_in_y};
-					temp_buffer_points[second_point_of_segment * 4 + 2] = path_point[second_point_of_segment] - position_type{normalized_in_x, normalized_in_y};
-					temp_buffer_points[second_point_of_segment * 4 + 3] = path_point[second_point_of_segment] - position_type{normalized_out_x, normalized_out_y};
+					temp_buffer_points[second_point_of_segment * 4 + 0] = path_point[second_point_of_segment] + point_type{dm_out_x, dm_out_y};
+					temp_buffer_points[second_point_of_segment * 4 + 1] = path_point[second_point_of_segment] + point_type{dm_in_x, dm_in_y};
+					temp_buffer_points[second_point_of_segment * 4 + 2] = path_point[second_point_of_segment] - point_type{dm_in_x, dm_in_y};
+					temp_buffer_points[second_point_of_segment * 4 + 3] = path_point[second_point_of_segment] - point_type{dm_out_x, dm_out_y};
 
 					// Add indexes
-					index_list.push_back(vertex_index_for_end + 1);
-					index_list.push_back(vertex_index_for_end + 1);
-					index_list.push_back(vertex_index_for_start + 2);
+					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 2));
 
-					index_list.push_back(vertex_index_for_start + 2);
-					index_list.push_back(vertex_index_for_end + 2);
-					index_list.push_back(vertex_index_for_end + 1);
+					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 2));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 2));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
 
-					index_list.push_back(vertex_index_for_end + 1);
-					index_list.push_back(vertex_index_for_start + 1);
-					index_list.push_back(vertex_index_for_start + 0);
+					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 1));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
 
-					index_list.push_back(vertex_index_for_start + 0);
-					index_list.push_back(vertex_index_for_end + 0);
-					index_list.push_back(vertex_index_for_end + 1);
+					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
 
-					index_list.push_back(vertex_index_for_end + 2);
-					index_list.push_back(vertex_index_for_start + 2);
-					index_list.push_back(vertex_index_for_start + 3);
+					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 2));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 2));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 3));
 
-					index_list.push_back(vertex_index_for_start + 3);
-					index_list.push_back(vertex_index_for_end + 3);
-					index_list.push_back(vertex_index_for_end + 2);
+					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 3));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 3));
+					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 2));
 
 					vertex_index_for_start = vertex_index_for_end;
 				}
@@ -529,6 +590,100 @@ namespace gal::prometheus::gui
 					vertex_list.emplace_back(temp_buffer_points[i * 4 + 2], opaque_uv, color);
 					vertex_list.emplace_back(temp_buffer_points[i * 4 + 2], opaque_uv, transparent_color);
 				}
+			}
+		}
+
+		constexpr auto draw_convex_polygon_line_filled(const color_type& color) noexcept -> void
+		{
+			const auto path_point_count = path_list_.size();
+			const auto& path_point = path_list_;
+
+			if (path_point_count < 3 or color.alpha == 0)
+			{
+				return;
+			}
+
+			const auto vertex_count = path_point_count;
+			const auto index_count = (path_point_count - 2) * 3;
+			vertex_list.reserve(vertex_list.size() + vertex_count);
+			index_list.reserve(index_list.size() + index_count);
+
+			const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
+
+			// todo
+			constexpr auto opaque_uv = vertex_type::default_uv;
+
+			std::ranges::transform(path_point, std::back_inserter(vertex_list), [opaque_uv, color](const point_type& point) noexcept -> vertex_type { return {point, opaque_uv, color}; });
+			for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
+			{
+				index_list.emplace_back(current_vertex_index + 0);
+				index_list.emplace_back(current_vertex_index + i - 1);
+				index_list.emplace_back(current_vertex_index + i);
+			}
+		}
+
+		constexpr auto draw_convex_polygon_line_filled_aa(const color_type& color) noexcept -> void
+		{
+			const auto path_point_count = path_list_.size();
+			const auto& path_point = path_list_;
+
+			if (path_point_count < 3 or color.alpha == 0)
+			{
+				return;
+			}
+
+			// todo
+			constexpr auto opaque_uv = vertex_type::default_uv;
+			const auto transparent_color = color.transparent();
+
+			const auto vertex_count = path_point_count * 2;
+			const auto index_count = (path_point_count - 2) * 3 + path_point_count * 6;
+			vertex_list.reserve(vertex_list.size() + vertex_count);
+			index_list.reserve(index_list.size() + index_count);
+
+			const auto current_vertex_inner_index = static_cast<index_type>(vertex_list.size());
+			const auto current_vertex_outer_index = static_cast<index_type>(vertex_list.size()) + 1;
+
+			// Add indexes for fill
+			for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
+			{
+				index_list.emplace_back(current_vertex_inner_index + 0);
+				index_list.emplace_back(current_vertex_inner_index + ((i - 1) << 1));
+				index_list.emplace_back(current_vertex_inner_index + (i << 1));
+			}
+
+			list_type<point_type> temp_buffer{};
+			temp_buffer.resize(path_point_count);
+			auto temp_buffer_normals = std::span{temp_buffer.begin(), path_point_count};
+
+			for (auto i = path_point_count - 1, n = static_cast<decltype(i)>(0); n < path_point_count; i = n++)
+			{
+				const auto d = path_point[n] - path_point[i];
+
+				const auto [normalized_x, normalized_y] = functional::normalize(d.x, d.y);
+				temp_buffer_normals[i].x = normalized_y;
+				temp_buffer_normals[i].y = -normalized_x;
+			}
+			for (auto i = path_point_count - 1, n = static_cast<decltype(i)>(0); n < path_point_count; i = n++)
+			{
+				// Average normals
+				const auto d = (temp_buffer_normals[n] + temp_buffer_normals[i]) * .5f;
+				auto [dm_x, dm_y] = get_fixed_normal(d.x, d.y);
+				dm_x *= .5f;
+				dm_y *= .5f;
+
+				// inner
+				vertex_list.emplace_back(path_point[n] - point_type{dm_x, dm_y}, opaque_uv, color);
+				// outer
+				vertex_list.emplace_back(path_point[n] + point_type{dm_x, dm_y}, opaque_uv, transparent_color);
+
+				// Add indexes for fringes
+				index_list.emplace_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
+				index_list.emplace_back(static_cast<index_type>(current_vertex_inner_index + (i << 1)));
+				index_list.emplace_back(static_cast<index_type>(current_vertex_outer_index + (i << 1)));
+				index_list.emplace_back(static_cast<index_type>(current_vertex_outer_index + (i << 1)));
+				index_list.emplace_back(static_cast<index_type>(current_vertex_outer_index + (n << 1)));
+				index_list.emplace_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
 			}
 		}
 
@@ -547,12 +702,12 @@ namespace gal::prometheus::gui
 			path_reserve(path_list_.size() + size);
 		}
 
-		constexpr auto path_pin(const position_type& point) noexcept -> void
+		constexpr auto path_pin(const point_type& point) noexcept -> void
 		{
 			path_list_.push_back(point);
 		}
 
-		constexpr auto path_pin_merge_duplicate(const position_type& point) noexcept -> void
+		constexpr auto path_pin_merge_duplicate(const point_type& point) noexcept -> void
 		{
 			if (path_list_.empty() or path_list_.back() != point)
 			{
@@ -560,39 +715,40 @@ namespace gal::prometheus::gui
 			}
 		}
 
-		constexpr auto path_stroke(const color_type& color, const DrawFlag flag = DrawFlag::NONE, const float thickness = 1.f) noexcept -> void
+		constexpr auto path_stroke(const color_type& color, const DrawFlag flag, const float thickness) noexcept -> void
 		{
-			if constexpr (vertex_has_uv)
+			if (functional::contains<functional::EnumCheckPolicy::ANY_BIT>(draw_list_flag, DrawListFlag::ANTI_ALIASED_LINE))
 			{
-				const auto draw_list_flag_value = std::to_underlying(draw_list_flag);
-
-				if (const auto is_aa = draw_list_flag_value & std::to_underlying(DrawListFlag::ANTI_ALIASED_LINE);
-					is_aa)
-				{
-					draw_polygon_line_aa(color, flag, thickness);
-				}
-				else
-				{
-					draw_polygon_line(color, flag, thickness);
-				}
+				draw_polygon_line_aa(color, flag, thickness);
 			}
 			else
 			{
 				draw_polygon_line(color, flag, thickness);
 			}
 
-			draw_polygon_line(color, flag, thickness);
+			path_clear();
+		}
+
+		constexpr auto path_stroke(const color_type& color) noexcept -> void
+		{
+			if (functional::contains<functional::EnumCheckPolicy::ANY_BIT>(draw_list_flag, DrawListFlag::ANTI_ALIASED_FILL))
+			{
+				draw_convex_polygon_line_filled_aa(color);
+			}
+			else
+			{
+				draw_convex_polygon_line_filled(color);
+			}
+
 			path_clear();
 		}
 
 		// Use precomputed angles for a 12 steps circle
-		constexpr auto path_arc_fast(const circle_type& circle, const unsigned from, const unsigned to) noexcept -> void
+		constexpr auto path_arc_fast(const circle_type& circle, const int from, const int to) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(to > from);
-
 			const auto& [center, radius] = circle;
 
-			if (radius < static_cast<position_value_type>(.5f))
+			if (radius < .5f)
 			{
 				path_pin(center);
 				return;
@@ -603,7 +759,7 @@ namespace gal::prometheus::gui
 			// Make sure we never do steps larger than one quarter of the circle
 			step = std::clamp(step, static_cast<decltype(step)>(1), vertex_sample_points_count / 4);
 
-			const auto sample_range = to - from;
+			const auto sample_range = functional::abs(to - from);
 			const auto next_step = step;
 
 			auto extra_max_sample = false;
@@ -626,16 +782,56 @@ namespace gal::prometheus::gui
 				path_reserve_extra(sample_range + 1);
 			}
 
-			for (auto i = from; i <= to; i += step, step = next_step)
+			auto sample_index = from;
+			if (sample_index < 0 or std::cmp_greater_equal(sample_index, vertex_sample_points_count))
 			{
-				const auto& sample_point = draw_list_detail::vertex_sample_points[i % vertex_sample_points_count];
+				sample_index = sample_index % static_cast<int>(vertex_sample_points_count);
+				if (sample_index < 0)
+				{
+					sample_index += vertex_sample_points_count;
+				}
+			}
 
-				path_pin({center + sample_point * radius});
+			if (to >= from)
+			{
+				for (int i = from; i <= to; i += static_cast<int>(step), sample_index += static_cast<int>(step), step = next_step)
+				{
+					// a_step is clamped to vertex_sample_points_count, so we have guaranteed that it will not wrap over range twice or more
+					if (std::cmp_greater_equal(sample_index, vertex_sample_points_count))
+					{
+						sample_index -= vertex_sample_points_count;
+					}
+
+					const auto& sample_point = draw_list_detail::vertex_sample_points[sample_index];
+
+					path_pin({center + sample_point * radius});
+				}
+			}
+			else
+			{
+				for (int i = from; i >= to; i -= static_cast<int>(step), sample_index -= static_cast<int>(step), step = next_step)
+				{
+					// a_step is clamped to vertex_sample_points_count, so we have guaranteed that it will not wrap over range twice or more
+					if (sample_index < 0)
+					{
+						sample_index += vertex_sample_points_count;
+					}
+
+					const auto& sample_point = draw_list_detail::vertex_sample_points[sample_index];
+
+					path_pin({center + sample_point * radius});
+				}
 			}
 
 			if (extra_max_sample)
 			{
-				const auto& sample_point = draw_list_detail::vertex_sample_points[to % vertex_sample_points_count];
+				auto normalized_max_sample_index = to % static_cast<int>(vertex_sample_points_count);
+				if (normalized_max_sample_index < 0)
+				{
+					normalized_max_sample_index += vertex_sample_points_count;
+				}
+
+				const auto& sample_point = draw_list_detail::vertex_sample_points[normalized_max_sample_index];
 
 				path_pin({center + sample_point * radius});
 			}
@@ -649,25 +845,24 @@ namespace gal::prometheus::gui
 			return path_arc_fast(circle, from, to);
 		}
 
-		constexpr auto path_arc_n(const circle_type& circle, const float from, const float to, const int segments) noexcept -> void
+		constexpr auto path_arc_n(const circle_type& circle, const float from, const float to, const std::uint32_t segments) noexcept -> void
 		{
 			GAL_PROMETHEUS_DEBUG_AXIOM(to > from);
 			GAL_PROMETHEUS_DEBUG_AXIOM(from >= 0);
-			GAL_PROMETHEUS_DEBUG_AXIOM(segments > 0);
 
 			const auto& [center, radius] = circle;
 
-			if (radius < static_cast<position_value_type>(.5f))
+			if (radius < .5f)
 			{
 				path_pin(center);
 				return;
 			}
 
 			path_reserve_extra(segments + 1);
-			for (int i = 0; i < segments; ++i)
+			for (std::uint32_t i = 0; i < segments; ++i)
 			{
 				const auto a = from + static_cast<float>(i) / static_cast<float>(segments) * (to - from);
-				path_pin({center + position_type{functional::cos(a), functional::sin(a)} * radius});
+				path_pin({center + point_type{functional::cos(a), functional::sin(a)} * radius});
 			}
 		}
 
@@ -675,7 +870,7 @@ namespace gal::prometheus::gui
 		{
 			const auto& [center, radius] = circle;
 
-			if (radius < static_cast<position_value_type>(.5f))
+			if (radius < .5f)
 			{
 				path_pin(center);
 				return;
@@ -704,7 +899,7 @@ namespace gal::prometheus::gui
 				if (emit_start)
 				{
 					// The quadrant must be the same, otherwise it is not continuous with the path drawn by `path_arc_fast`.
-					path_pin({center + position_type{functional::cos(from), -functional::sin(from)} * radius});
+					path_pin({center + point_type{functional::cos(from), -functional::sin(from)} * radius});
 				}
 				if (sample_mid > 0)
 				{
@@ -713,7 +908,7 @@ namespace gal::prometheus::gui
 				if (emit_end)
 				{
 					// The quadrant must be the same, otherwise it is not continuous with the path drawn by `path_arc_fast`.
-					path_pin({center + position_type{functional::cos(to), -functional::sin(to)} * radius});
+					path_pin({center + point_type{functional::cos(to), -functional::sin(to)} * radius});
 				}
 			}
 			else
@@ -728,8 +923,55 @@ namespace gal::prometheus::gui
 			}
 		}
 
+		constexpr auto path_arc(const point_type& center, const float radius, const float from, const float to) noexcept -> void
+		{
+			return path_arc({center, radius}, from, to);
+		}
+
+		constexpr auto path_rect(const rect_type& rect, float rounding, DrawFlag flag) noexcept -> void
+		{
+			GAL_PROMETHEUS_DEBUG_ASSUME(rect.valid() and not rect.empty());
+
+			if (rounding >= .5f)
+			{
+				flag = draw_list_detail::to_fixed_rect_corner_flag(flag);
+
+				const auto v = functional::contains<functional::EnumCheckPolicy::ALL_BITS, functional::EnumFoldPolicy::LOGICAL_OR>(flag, DrawFlag::ROUND_CORNER_TOP, DrawFlag::ROUND_CORNER_BOTTOM);
+				const auto h = functional::contains<functional::EnumCheckPolicy::ALL_BITS, functional::EnumFoldPolicy::LOGICAL_OR>(flag, DrawFlag::ROUND_CORNER_LEFT, DrawFlag::ROUND_CORNER_RIGHT);
+
+				rounding = std::ranges::min(rounding, rect.width() * (v ? .5f : 1.f) - 1.f);
+				rounding = std::ranges::min(rounding, rect.height() * (h ? .5f : 1.f) - 1.f);
+			}
+
+			using functional::operators::operator&;
+			if (rounding < .5f or (DrawFlag::ROUND_CORNER_MASK & flag) == DrawFlag::NONE)
+			{
+				path_pin(rect.left_top());
+				path_pin(rect.right_top());
+				path_pin(rect.right_bottom());
+				path_pin(rect.left_bottom());
+			}
+			else
+			{
+				const auto rounding_left_top = functional::contains<functional::EnumCheckPolicy::ANY_BIT>(flag, DrawFlag::ROUND_CORNER_LEFT_TOP) ? rounding : 0;
+				const auto rounding_right_top = functional::contains<functional::EnumCheckPolicy::ANY_BIT>(flag, DrawFlag::ROUND_CORNER_RIGHT_TOP) ? rounding : 0;
+				const auto rounding_left_bottom = functional::contains<functional::EnumCheckPolicy::ANY_BIT>(flag, DrawFlag::ROUND_CORNER_LEFT_BOTTOM) ? rounding : 0;
+				const auto rounding_right_bottom = functional::contains<functional::EnumCheckPolicy::ANY_BIT>(flag, DrawFlag::ROUND_CORNER_RIGHT_BOTTOM) ? rounding : 0;
+
+				path_arc_fast({rect.left_top() + point_type{rounding_left_top, rounding_left_top}, rounding_left_top}, ArcQuadrant::Q2_CLOCK_WISH);
+				path_arc_fast({rect.right_top() + point_type{-rounding_right_top, rounding_right_top}, rounding_right_top}, ArcQuadrant::Q1_CLOCK_WISH);
+				path_arc_fast({rect.right_bottom() + point_type{-rounding_right_bottom, -rounding_right_bottom}, rounding_right_bottom}, ArcQuadrant::Q4_CLOCK_WISH);
+				path_arc_fast({rect.left_bottom() + point_type{rounding_left_bottom, -rounding_left_bottom}, rounding_left_bottom}, ArcQuadrant::Q3_CLOCK_WISH);
+			}
+		}
+
+		constexpr auto path_rect(const point_type& left_top, const point_type& right_bottom, const float rounding, const DrawFlag flag) noexcept -> void
+		{
+			path_rect({left_top, right_bottom}, rounding, flag);
+		}
+
 	public:
-		constexpr basic_draw_list() noexcept
+		constexpr DrawList() noexcept
 			: draw_list_flag{DrawListFlag::NONE},
 			  circle_segment_counts_{},
 			  circle_segment_max_error_{},
@@ -750,22 +992,71 @@ namespace gal::prometheus::gui
 			for (decltype(circle_segment_counts_.size()) i = 0; i < circle_segment_counts_.size(); ++i)
 			{
 				const auto radius = static_cast<float>(i);
-				circle_segment_counts_[i] = static_cast<std::uint8_t>(draw_list_detail::circle_segments_maker(radius, max_error));
+				circle_segment_counts_[i] = static_cast<std::uint8_t>(draw_list_detail::circle_segments_calc(radius, max_error));
 			}
 			circle_segment_max_error_ = max_error;
-			arc_fast_radius_cutoff_ = draw_list_detail::circle_segments_maker_radius(vertex_sample_points_count, max_error);
+			arc_fast_radius_cutoff_ = draw_list_detail::circle_segments_calc_radius(vertex_sample_points_count, max_error);
 		}
 
-		constexpr auto line(const position_type& from, const position_type& to, const color_type& color) noexcept -> void
+		constexpr auto line(const point_type& from, const point_type& to, const color_type& color, const float thickness = 1.f) noexcept -> void
 		{
 			if (color.alpha == 0)
 			{
 				return;
 			}
 
-			path_pin(from + position_type{.5f, .5f});
-			path_pin(to + position_type{.5f, .5f});
+			path_pin(from + point_type{.5f, .5f});
+			path_pin(to + point_type{.5f, .5f});
+			path_stroke(color, DrawFlag::NONE, thickness);
+		}
+
+		constexpr auto triangle(const point_type& a, const point_type& b, const point_type& c, const color_type& color, const float thickness = 1.f) noexcept -> void
+		{
+			if (color.alpha == 0)
+			{
+				return;
+			}
+
+			path_pin(a);
+			path_pin(b);
+			path_pin(c);
+			path_stroke(color, DrawFlag::CLOSED, thickness);
+		}
+
+		constexpr auto triangle_filled(const point_type& a, const point_type& b, const point_type& c, const color_type& color) noexcept -> void
+		{
+			if (color.alpha == 0)
+			{
+				return;
+			}
+
+			path_pin(a);
+			path_pin(b);
+			path_pin(c);
 			path_stroke(color);
+		}
+
+		constexpr auto rect(const rect_type& rect, const color_type& color, const float rounding = .0f, const DrawFlag flag = DrawFlag::NONE, const float thickness = 1.f) noexcept -> void
+		{
+			if (color.alpha == 0)
+			{
+				return;
+			}
+
+			path_rect(rect.left_top() + point_type{.5f, .5f}, rect.right_bottom() - point_type{.5f, .5f}, rounding, flag);
+			path_stroke(color, DrawFlag::CLOSED, thickness);
+		}
+
+		constexpr auto rect(
+			const point_type& left_top,
+			const point_type& right_bottom,
+			const color_type& color,
+			const float rounding = .0f,
+			const DrawFlag flag = DrawFlag::NONE,
+			const float thickness = 1.f
+		) noexcept -> void
+		{
+			return rect({left_top, right_bottom}, color, rounding, flag, thickness);
 		}
 	};
 
