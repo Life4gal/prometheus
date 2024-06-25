@@ -340,6 +340,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/functional/aligned_union.ixx
 		${PROJECT_SOURCE_DIR}/src/functional/function_ref.ixx
 		${PROJECT_SOURCE_DIR}/src/functional/math.ixx
+		${PROJECT_SOURCE_DIR}/src/functional/flag.ixx
 
 		${PROJECT_SOURCE_DIR}/src/functional/functional.ixx
 
@@ -399,6 +400,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/primitive/extent.ixx
 		${PROJECT_SOURCE_DIR}/src/primitive/rect.ixx
 		${PROJECT_SOURCE_DIR}/src/primitive/circle.ixx
+		${PROJECT_SOURCE_DIR}/src/primitive/ellipse.ixx
 		${PROJECT_SOURCE_DIR}/src/primitive/color.ixx
 		${PROJECT_SOURCE_DIR}/src/primitive/vertex.ixx
 		${PROJECT_SOURCE_DIR}/src/primitive/vertex_list.ixx

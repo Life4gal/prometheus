@@ -175,10 +175,10 @@ int main(int, char**)
 		g_window_position_top,
 		g_window_width,
 		g_window_height,
-		NULL,
-		NULL,
+		nullptr,
+		nullptr,
 		window_class.hInstance,
-		NULL
+		nullptr
 	);
 
 	// Initialize Direct3D
@@ -189,14 +189,14 @@ int main(int, char**)
 		return -1;
 	}
 
-	// Show the window
-	ShowWindow(window, SW_SHOWDEFAULT);
-	UpdateWindow(window);
-
 	// Setup Platform/Renderer backends
 	win32_init(window);
 	d3d_init();
 	prometheus_init();
+
+	// Show the window
+	ShowWindow(window, SW_SHOWDEFAULT);
+	UpdateWindow(window);
 
 	// Main loop
 	{
@@ -425,7 +425,7 @@ namespace
 						"PS_INPUT main(VS_INPUT input)"
 						"{"
 						"	PS_INPUT output;"
-						"	output.pos = mul( ProjectionMatrix, float4(input.pos.xy, 0.f, 1.f));"
+						"	output.pos = mul(ProjectionMatrix, float4(input.pos.xy, 0.f, 1.f));"
 						"	output.col = input.col;"
 						"	output.uv  = input.uv;"
 						"	return output;"
@@ -701,62 +701,54 @@ namespace
 		d3d_destroy_device_objects();
 	}
 
-	using point_type = primitive::basic_point<float, 2>;
-	using vertex_type = primitive::basic_vertex<point_type>;
-	using vertex_list_type = primitive::basic_vertex_list<vertex_type>;
-	using vertex_index_type = d3d_vertex_index_type;
-	using vertex_index_list_type = std::vector<vertex_index_type>;
+	static_assert(sizeof(gui::DrawList::vertex_type) == sizeof(d3d_vertex_type));
+	static_assert(sizeof(gui::DrawList::index_type) == sizeof(d3d_vertex_index_type));
 
-	static_assert(sizeof(d3d_vertex_type) == sizeof(vertex_type));
-
-	vertex_list_type g_vertex_list;
-	vertex_index_list_type g_vertex_index_list;
+	gui::DrawList g_draw_list;
 
 	auto prometheus_init() -> void //
-	{}
+	{
+		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_LINE;
+
+		g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
+		g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
+
+		g_draw_list.rect({100, 100}, {300, 300}, primitive::colors::blue);
+		g_draw_list.rect({150, 150}, {250, 250}, primitive::colors::blue, 30);
+
+		g_draw_list.triangle({120, 120}, {120, 150}, {150, 120}, primitive::colors::green);
+		g_draw_list.triangle_filled({130, 130}, {130, 150}, {150, 130}, primitive::colors::red);
+
+		g_draw_list.rect_filled({300, 100}, {400, 200}, primitive::colors::pink);
+		g_draw_list.rect_filled({300, 200}, {400, 300}, primitive::colors::pink, 20);
+		g_draw_list.rect_filled({300, 300}, {400, 400}, primitive::colors::pink, primitive::colors::gold, primitive::colors::azure, primitive::colors::lavender);
+
+		g_draw_list.quad({100, 500}, {200, 500}, {250, 550}, {50, 550}, primitive::colors::red);
+		g_draw_list.quad_filled({100, 500}, {200, 500}, {250, 450}, {50, 450}, primitive::colors::red);
+
+		g_draw_list.circle({100, 600}, 50, primitive::colors::green);
+		g_draw_list.circle({200, 600}, 50, primitive::colors::red, 8);
+		g_draw_list.circle_filled({100, 700}, 50, primitive::colors::green);
+		g_draw_list.circle_filled({200, 700}, 50, primitive::colors::red, 8);
+
+		g_draw_list.ellipse({500, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 8);
+		g_draw_list.ellipse_filled({500, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 8);
+		g_draw_list.ellipse({600, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 16);
+		g_draw_list.ellipse_filled({600, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 16);
+		g_draw_list.ellipse({700, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 24);
+		g_draw_list.ellipse_filled({700, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 24);
+		g_draw_list.ellipse({800, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red);
+		g_draw_list.ellipse_filled({800, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red);
+	}
 
 	auto prometheus_new_frame() -> void //
 	{
-		g_vertex_list.clear();
-		g_vertex_index_list.clear();
+		//
 	}
 
 	auto prometheus_render() -> void
 	{
-		// todo: fill index
-
-		g_vertex_list.triangle({100, 100}, {150, 150}, {200, 100}, primitive::colors::blue);
-		g_vertex_list.rect_filled({150, 150}, {200, 200}, primitive::colors::gold);
-		g_vertex_list.rect_filled({200, 200}, {300, 300}, primitive::colors::red);
-
-		constexpr vertex_list_type::rect_type rect{vertex_list_type::point_type{300, 300}, vertex_list_type::extent_type{200, 200}};
-		g_vertex_list.rect(rect, primitive::colors::light_pink);
-		g_vertex_list.circle(primitive::inscribed_circle(rect), primitive::colors::orange);
-		g_vertex_list.circle(primitive::circumscribed_circle(rect), primitive::colors::orange);
-
-		g_vertex_list.circle_filled({100, 400}, 100, primitive::colors::red);
-
-		g_vertex_list.arc<primitive::ArcQuadrant::Q1>({400.f, 150.f}, 80, primitive::colors::red);
-		g_vertex_list.arc_filled<primitive::ArcQuadrant::Q2>({400.f, 150.f}, 60, primitive::colors::green);
-		g_vertex_list.arc<primitive::ArcQuadrant::Q3>({400.f, 150.f}, 40, primitive::colors::blue);
-		g_vertex_list.arc_filled<primitive::ArcQuadrant::Q4>({400.f, 150.f}, 20, primitive::colors::yellow);
-		g_vertex_list.circle_filled({400, 150}, 10, primitive::colors::gold);
-
-		{
-			constexpr decltype(primitive::colors::red) colors[]{
-					primitive::colors::red,
-					primitive::colors::blue,
-					primitive::colors::green,
-					primitive::colors::yellow,
-					primitive::colors::pink,
-			};
-
-			static int tick = 0;
-			const auto index = tick % std::ranges::size(colors);
-
-			g_vertex_list.triangle({50, 50}, {75, 75}, {100, 50}, colors[index]);
-			tick += 1;
-		}
+		//
 	}
 
 	auto prometheus_draw() -> void
@@ -766,13 +758,13 @@ namespace
 			return;
 		}
 
-		if (not g_vertex_buffer or g_vertex_list.size() > g_vertex_buffer_size)
+		if (not g_vertex_buffer or g_draw_list.vertex_list.size() > g_vertex_buffer_size)
 		{
 			// todo: grow factor
-			g_vertex_buffer_size = g_vertex_list.size() + 5000;
+			g_vertex_buffer_size = g_draw_list.vertex_list.size() + 5000;
 
 			const D3D11_BUFFER_DESC buffer_desc{
-					.ByteWidth = static_cast<UINT>(g_vertex_buffer_size * sizeof(vertex_type)),
+					.ByteWidth = static_cast<UINT>(g_vertex_buffer_size * sizeof(gui::DrawList::vertex_type)),
 					.Usage = D3D11_USAGE_DYNAMIC,
 					.BindFlags = D3D11_BIND_VERTEX_BUFFER,
 					.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE,
@@ -781,13 +773,13 @@ namespace
 			};
 			check_hr_error(g_device->CreateBuffer(&buffer_desc, nullptr, g_vertex_buffer.ReleaseAndGetAddressOf()));
 		}
-		if (not g_index_buffer or g_vertex_index_list.size() > g_index_buffer_size)
+		if (not g_index_buffer or g_draw_list.index_list.size() > g_index_buffer_size)
 		{
 			// todo: grow factor
-			g_index_buffer_size = g_vertex_index_list.size() + 10000;
+			g_index_buffer_size = g_draw_list.index_list.size() + 10000;
 
 			const D3D11_BUFFER_DESC buffer_desc{
-					.ByteWidth = static_cast<UINT>(g_index_buffer_size * sizeof(vertex_index_type)),
+					.ByteWidth = static_cast<UINT>(g_index_buffer_size * sizeof(gui::DrawList::index_type)),
 					.Usage = D3D11_USAGE_DYNAMIC,
 					.BindFlags = D3D11_BIND_INDEX_BUFFER,
 					.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE,
@@ -806,17 +798,18 @@ namespace
 
 			auto* mapped_vertex = static_cast<d3d_vertex_type*>(mapped_vertex_resource.pData);
 			auto* mapped_index = static_cast<d3d_vertex_index_type*>(mapped_index_resource.pData);
+
 			std::ranges::transform(
-				g_vertex_list.vertices(),
+				g_draw_list.vertex_list,
 				mapped_vertex,
-				[](const vertex_type& vertex) -> d3d_vertex_type
+				[](const gui::DrawList::vertex_type& vertex) -> d3d_vertex_type
 				{
 					return {.position = {vertex.position.x, vertex.position.y},
 					        .uv = {vertex.uv.x, vertex.uv.y},
 					        .color = vertex.color.to(primitive::color_format<primitive::ColorFormat::A_B_G_R>)};
 				}
 			);
-			std::ranges::copy(g_vertex_index_list, mapped_index);
+			std::ranges::copy(g_draw_list.index_list, mapped_index);
 
 			g_device_immediate_context->Unmap(g_vertex_buffer.Get(), 0);
 			g_device_immediate_context->Unmap(g_index_buffer.Get(), 0);
@@ -894,9 +887,7 @@ namespace
 			g_device_immediate_context->PSSetShaderResources(0, 1, g_font_texture_view.GetAddressOf());
 		}
 
-		// todo
-		g_device_immediate_context->Draw(static_cast<UINT>(g_vertex_list.size()), 0);
-		// g_device_immediate_context->DrawIndexed(static_cast<UINT>(g_vertex_index_list.size()), 0, 0);
+		g_device_immediate_context->DrawIndexed(static_cast<UINT>(g_draw_list.index_list.size()), 0, 0);
 	}
 
 	auto prometheus_shutdown() -> void //

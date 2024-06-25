@@ -43,64 +43,64 @@ add_test(
 		COMMAND ${PROJECT_NAME}
 )
 
-find_package(Vulkan)
+#find_package(Vulkan)
+#
+#if (Vulkan_FOUND)
+#	add_executable(
+#			${PROJECT_NAME}-gui-vulkan
+#
+#			${PROJECT_SOURCE_DIR}/src/gui/main_vulkan.cpp
+#	)
+#
+#	# glfw: clone from github
+#	CPMAddPackage(
+#			NAME glfw
+#			GIT_TAG 3.4
+#			GITHUB_REPOSITORY "glfw/glfw"
+#			OPTIONS "BUILD_SHARED_LIBS OFF" "GLFW_BUILD_EXAMPLES OFF" "GLFW_BUILD_TESTS OFF" "GLFW_BUILD_DOCS OFF" "GLFW_INSTALL OFF"
+#	)
+#	cmake_language(
+#			CALL
+#			${PROJECT_NAME_PREFIX}cpm_install
+#			${PROJECT_NAME}-gui-vulkan
+#			glfw 
+#			PUBLIC 
+#			glfw
+#	)
+#
+#	target_link_libraries(${PROJECT_NAME}-gui-vulkan PRIVATE ${Vulkan_LIBRARY})
+#	target_include_directories(${PROJECT_NAME}-gui-vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
+#
+#	target_compile_features(
+#		${PROJECT_NAME}-gui-vulkan
+#		PUBLIC
+#		cxx_std_23
+#	)
+#
+#	target_link_libraries(
+#			${PROJECT_NAME}-gui-vulkan
+#			PUBLIC
+#			prometheus
+#	)
+#endif (Vulkan_FOUND)
 
-if (Vulkan_FOUND)
-	add_executable(
-			${PROJECT_NAME}-gui-vulkan
-
-			${PROJECT_SOURCE_DIR}/src/gui/main_vulkan.cpp
-	)
-
-	# glfw: clone from github
-	CPMAddPackage(
-			NAME glfw
-			GIT_TAG 3.4
-			GITHUB_REPOSITORY "glfw/glfw"
-			OPTIONS "BUILD_SHARED_LIBS OFF" "GLFW_BUILD_EXAMPLES OFF" "GLFW_BUILD_TESTS OFF" "GLFW_BUILD_DOCS OFF" "GLFW_INSTALL OFF"
-	)
-	cmake_language(
-			CALL
-			${PROJECT_NAME_PREFIX}cpm_install
-			${PROJECT_NAME}-gui-vulkan
-			glfw 
-			PUBLIC 
-			glfw
-	)
-
-	target_link_libraries(${PROJECT_NAME}-gui-vulkan PRIVATE ${Vulkan_LIBRARY})
-	target_include_directories(${PROJECT_NAME}-gui-vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
-
-	target_compile_features(
-		${PROJECT_NAME}-gui-vulkan
-		PUBLIC
-		cxx_std_23
-	)
-
-	target_link_libraries(
-			${PROJECT_NAME}-gui-vulkan
-			PUBLIC
-			prometheus
-	)
-endif (Vulkan_FOUND)
-
-add_executable(
-		${PROJECT_NAME}-gui-dx12
-
-		${PROJECT_SOURCE_DIR}/src/gui/main_dx12.cpp
-)
-
-target_compile_features(
-		${PROJECT_NAME}-gui-dx12
-		PUBLIC
-		cxx_std_23
-)
-
-target_link_libraries(
-		${PROJECT_NAME}-gui-dx12
-		PUBLIC
-		prometheus
-)
+#add_executable(
+#		${PROJECT_NAME}-gui-dx12
+#
+#		${PROJECT_SOURCE_DIR}/src/gui/main_dx12.cpp
+#)
+#
+#target_compile_features(
+#		${PROJECT_NAME}-gui-dx12
+#		PUBLIC
+#		cxx_std_23
+#)
+#
+#target_link_libraries(
+#		${PROJECT_NAME}-gui-dx12
+#		PUBLIC
+#		prometheus
+#)
 
 add_executable(
 		${PROJECT_NAME}-gui-dx11
