@@ -88,7 +88,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		template<std::size_t Index>
 			requires(Index < element_size)
-		[[nodiscard]] constexpr auto get() const noexcept -> std::add_const_t<std::add_lvalue_reference_t<element_type<Index>>>
+		[[nodiscard]] constexpr auto get() const noexcept -> std::add_lvalue_reference_t<std::add_const_t<element_type<Index>>>
 		{
 			if constexpr (Index == 0) { return position; }
 			else if constexpr (Index == 1) { return uv; }
