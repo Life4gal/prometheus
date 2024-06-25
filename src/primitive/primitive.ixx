@@ -11,6 +11,7 @@ export import :point;
 export import :extent;
 export import :rect;
 export import :circle;
+export import :ellipse;
 export import :color;
 export import :vertex;
 export import :vertex_list;
@@ -23,6 +24,7 @@ export import :vertex_list;
 #include <primitive/extent.ixx>
 #include <primitive/rect.ixx>
 #include <primitive/circle.ixx>
+#include <primitive/ellipse.ixx>
 #include <primitive/color.ixx>
 #include <primitive/vertex.ixx>
 #include <primitive/vertex_list.ixx>
