@@ -144,7 +144,9 @@ namespace gal::prometheus::gui
 		using uv_type = primitive::basic_point<float, 2>;
 		using color_type = primitive::basic_color<std::uint8_t>;
 
+		using extent_type = primitive::basic_extent<float, 2>;
 		using circle_type = primitive::basic_circle<float, 2>;
+		using ellipse_type = primitive::basic_ellipse<float, 2>;
 		using rect_type = primitive::basic_rect<float, 2>;
 
 		using vertex_type = primitive::basic_vertex<point_type, uv_type, color_type>;
@@ -153,8 +155,8 @@ namespace gal::prometheus::gui
 		// @see https://stackoverflow.com/a/2244088/15194693
 		// Number of segments (N) is calculated using equation:
 		//	N = ceil ( pi / acos(1 - error / r) ) where r > 0 and error <= r
-		constexpr int circle_segments_min = 4;
-		constexpr int circle_segments_max = 512;
+		constexpr std::uint32_t circle_segments_min = 4;
+		constexpr std::uint32_t circle_segments_max = 512;
 		constexpr auto circle_segments_calc = [](const float radius, const float max_error) noexcept -> auto
 		{
 			constexpr auto circle_segments_roundup_to_even = [](const auto v) noexcept -> auto
@@ -163,7 +165,7 @@ namespace gal::prometheus::gui
 			};
 
 			return std::ranges::clamp(
-				circle_segments_roundup_to_even(static_cast<int>(std::ceil(std::numbers::pi_v<float> / std::acos(1 - std::ranges::min(radius, max_error) / radius)))),
+				circle_segments_roundup_to_even(static_cast<std::uint32_t>(std::ceil(std::numbers::pi_v<float> / std::acos(1 - std::ranges::min(radius, max_error) / radius)))),
 				circle_segments_min,
 				circle_segments_max
 			);
@@ -234,7 +236,9 @@ namespace gal::prometheus::gui
 		using uv_type = draw_list_detail::uv_type;
 		using color_type = draw_list_detail::color_type;
 
+		using extent_type = draw_list_detail::extent_type;
 		using circle_type = draw_list_detail::circle_type;
+		using ellipse_type = draw_list_detail::ellipse_type;
 		using rect_type = draw_list_detail::rect_type;
 
 		using vertex_type = draw_list_detail::vertex_type;
@@ -246,10 +250,10 @@ namespace gal::prometheus::gui
 		using vertex_list_type = list_type<vertex_type>;
 		using index_list_type = list_type<index_type>;
 
+		DrawListFlag draw_list_flag;
+
 		vertex_list_type vertex_list;
 		index_list_type index_list;
-
-		DrawListFlag draw_list_flag;
 
 	private:
 		using path_list_type = list_type<point_type>;
@@ -430,7 +434,7 @@ namespace gal::prometheus::gui
 					temp_buffer_points[(path_point_count - 1) * 2 + 1] = path_point[path_point_count - 1] - temp_buffer_normals[path_point_count - 1] * half_draw_size;
 				}
 
-				const auto current_vertex_index = vertex_list.size();
+				const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
 
 				// Generate the indices to form a number of triangles for each line segment, and the vertices for the line edges
 				// This takes points n and n+1 and writes into n+1, with the first point in a closed line being generated from the final one (as n+1 wraps)
@@ -438,7 +442,11 @@ namespace gal::prometheus::gui
 				for (std::decay_t<decltype(segments_count)> first_point_of_segment = 0; first_point_of_segment < segments_count; ++first_point_of_segment)
 				{
 					const auto second_point_of_segment = (first_point_of_segment + 1) % path_point_count;
-					const auto vertex_index_for_end = (first_point_of_segment + 1) == path_point_count ? current_vertex_index : (vertex_index_for_start + (is_use_texture ? 2 : 3));
+					const auto vertex_index_for_end = static_cast<index_type>(
+						(first_point_of_segment + 1) == path_point_count
+							? current_vertex_index
+							: (vertex_index_for_start + (is_use_texture ? 2 : 3))
+					);
 
 					// Average normals
 					const auto d = (temp_buffer_normals[first_point_of_segment] + temp_buffer_normals[second_point_of_segment]) * .5f;
@@ -456,34 +464,34 @@ namespace gal::prometheus::gui
 						// Add indices for two triangles
 
 						// right
-						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 1));
+						index_list.push_back(vertex_index_for_end + 0);
+						index_list.push_back(vertex_index_for_start + 0);
+						index_list.push_back(vertex_index_for_start + 1);
 						// left
-						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 1));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
+						index_list.push_back(vertex_index_for_end + 1);
+						index_list.push_back(vertex_index_for_start + 1);
+						index_list.push_back(vertex_index_for_end + 0);
 					}
 					else
 					{
 						// Add indexes for four triangles
 
 						// right 1
-						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 2));
+						index_list.push_back(vertex_index_for_end + 0);
+						index_list.push_back(vertex_index_for_start + 0);
+						index_list.push_back(vertex_index_for_start + 2);
 						// right 2
-						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 2));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 2));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
+						index_list.push_back(vertex_index_for_start + 2);
+						index_list.push_back(vertex_index_for_end + 2);
+						index_list.push_back(vertex_index_for_end + 0);
 						// left 1
-						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 1));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
+						index_list.push_back(vertex_index_for_end + 1);
+						index_list.push_back(vertex_index_for_start + 1);
+						index_list.push_back(vertex_index_for_start + 0);
 						// left 2
-						index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
-						index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
+						index_list.push_back(vertex_index_for_start + 0);
+						index_list.push_back(vertex_index_for_end + 0);
+						index_list.push_back(vertex_index_for_end + 1);
 					}
 
 					vertex_index_for_start = vertex_index_for_end;
@@ -530,7 +538,7 @@ namespace gal::prometheus::gui
 					temp_buffer_points[point_last * 4 + 3] = path_point[point_last] - temp_buffer_normals[point_last] * (half_inner_thickness + 1.f);
 				}
 
-				const auto current_vertex_index = vertex_list.size();
+				const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
 
 				// Generate the indices to form a number of triangles for each line segment, and the vertices for the line edges
 				// This takes points n and n+1 and writes into n+1, with the first point in a closed line being generated from the final one (as n+1 wraps)
@@ -538,7 +546,11 @@ namespace gal::prometheus::gui
 				for (std::decay_t<decltype(segments_count)> first_point_of_segment = 0; first_point_of_segment < segments_count; ++first_point_of_segment)
 				{
 					const auto second_point_of_segment = (first_point_of_segment + 1) % path_point_count;
-					const auto vertex_index_for_end = (first_point_of_segment + 1) == path_point_count ? current_vertex_index : (vertex_index_for_start + 4);
+					const auto vertex_index_for_end = static_cast<index_type>(
+						(first_point_of_segment + 1) == path_point_count
+							? current_vertex_index
+							: (vertex_index_for_start + 4)
+					);
 
 					// Average normals
 					const auto d = (temp_buffer_normals[first_point_of_segment] + temp_buffer_normals[second_point_of_segment]) * .5f;
@@ -555,29 +567,29 @@ namespace gal::prometheus::gui
 					temp_buffer_points[second_point_of_segment * 4 + 3] = path_point[second_point_of_segment] - point_type{dm_out_x, dm_out_y};
 
 					// Add indexes
-					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 2));
+					index_list.push_back(vertex_index_for_end + 1);
+					index_list.push_back(vertex_index_for_end + 1);
+					index_list.push_back(vertex_index_for_start + 2);
 
-					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 2));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 2));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
+					index_list.push_back(vertex_index_for_start + 2);
+					index_list.push_back(vertex_index_for_end + 2);
+					index_list.push_back(vertex_index_for_end + 1);
 
-					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 1));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
+					index_list.push_back(vertex_index_for_end + 1);
+					index_list.push_back(vertex_index_for_start + 1);
+					index_list.push_back(vertex_index_for_start + 0);
 
-					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 0));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 0));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 1));
+					index_list.push_back(vertex_index_for_start + 0);
+					index_list.push_back(vertex_index_for_end + 0);
+					index_list.push_back(vertex_index_for_end + 1);
 
-					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 2));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 2));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 3));
+					index_list.push_back(vertex_index_for_end + 2);
+					index_list.push_back(vertex_index_for_start + 2);
+					index_list.push_back(vertex_index_for_start + 3);
 
-					index_list.push_back(static_cast<index_type>(vertex_index_for_start + 3));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 3));
-					index_list.push_back(static_cast<index_type>(vertex_index_for_end + 2));
+					index_list.push_back(vertex_index_for_start + 3);
+					index_list.push_back(vertex_index_for_end + 3);
+					index_list.push_back(vertex_index_for_end + 2);
 
 					vertex_index_for_start = vertex_index_for_end;
 				}
@@ -642,7 +654,7 @@ namespace gal::prometheus::gui
 			index_list.reserve(index_list.size() + index_count);
 
 			const auto current_vertex_inner_index = static_cast<index_type>(vertex_list.size());
-			const auto current_vertex_outer_index = static_cast<index_type>(vertex_list.size()) + 1;
+			const auto current_vertex_outer_index = static_cast<index_type>(vertex_list.size() + 1);
 
 			// Add indexes for fill
 			for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
@@ -678,13 +690,45 @@ namespace gal::prometheus::gui
 				vertex_list.emplace_back(path_point[n] + point_type{dm_x, dm_y}, opaque_uv, transparent_color);
 
 				// Add indexes for fringes
-				index_list.emplace_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
-				index_list.emplace_back(static_cast<index_type>(current_vertex_inner_index + (i << 1)));
-				index_list.emplace_back(static_cast<index_type>(current_vertex_outer_index + (i << 1)));
-				index_list.emplace_back(static_cast<index_type>(current_vertex_outer_index + (i << 1)));
-				index_list.emplace_back(static_cast<index_type>(current_vertex_outer_index + (n << 1)));
-				index_list.emplace_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
+				index_list.push_back(current_vertex_inner_index + static_cast<index_type>((n << 1)));
+				index_list.push_back(current_vertex_inner_index + static_cast<index_type>((i << 1)));
+				index_list.push_back(current_vertex_outer_index + static_cast<index_type>((i << 1)));
+				index_list.push_back(current_vertex_outer_index + static_cast<index_type>((i << 1)));
+				index_list.push_back(current_vertex_outer_index + static_cast<index_type>((n << 1)));
+				index_list.push_back(current_vertex_inner_index + static_cast<index_type>((n << 1)));
 			}
+		}
+
+		constexpr auto draw_rect_filled(
+			const rect_type& rect,
+			const color_type& color_left_top,
+			const color_type& color_right_top,
+			const color_type& color_left_bottom,
+			const color_type& color_right_bottom
+		) noexcept -> void
+		{
+			// two triangle without path
+			constexpr auto vertex_count = 4;
+			constexpr auto index_count = 6;
+			vertex_list.reserve(vertex_list.size() + vertex_count);
+			index_list.reserve(index_list.size() + index_count);
+
+			// todo
+			constexpr auto opaque_uv = vertex_type::default_uv;
+
+			const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
+
+			vertex_list.emplace_back(rect.left_top(), opaque_uv, color_left_top);
+			vertex_list.emplace_back(rect.right_top(), opaque_uv, color_right_top);
+			vertex_list.emplace_back(rect.right_bottom(), opaque_uv, color_right_bottom);
+			vertex_list.emplace_back(rect.left_bottom(), opaque_uv, color_left_bottom);
+
+			index_list.push_back(current_vertex_index + 0);
+			index_list.push_back(current_vertex_index + 1);
+			index_list.push_back(current_vertex_index + 2);
+			index_list.push_back(current_vertex_index + 0);
+			index_list.push_back(current_vertex_index + 2);
+			index_list.push_back(current_vertex_index + 3);
 		}
 
 		constexpr auto path_clear() noexcept -> void
@@ -743,7 +787,6 @@ namespace gal::prometheus::gui
 			path_clear();
 		}
 
-		// Use precomputed angles for a 12 steps circle
 		constexpr auto path_arc_fast(const circle_type& circle, const int from, const int to) noexcept -> void
 		{
 			const auto& [center, radius] = circle;
@@ -837,7 +880,6 @@ namespace gal::prometheus::gui
 			}
 		}
 
-		// Use precomputed angles for a 12 steps circle
 		constexpr auto path_arc_fast(const circle_type& circle, const ArcQuadrant quadrant) noexcept -> void
 		{
 			const auto [from, to] = draw_list_detail::range_of_quadrant(quadrant);
@@ -858,7 +900,7 @@ namespace gal::prometheus::gui
 				return;
 			}
 
-			path_reserve_extra(segments + 1);
+			path_reserve_extra(segments);
 			for (std::uint32_t i = 0; i < segments; ++i)
 			{
 				const auto a = from + static_cast<float>(i) / static_cast<float>(segments) * (to - from);
@@ -923,9 +965,29 @@ namespace gal::prometheus::gui
 			}
 		}
 
-		constexpr auto path_arc(const point_type& center, const float radius, const float from, const float to) noexcept -> void
+		constexpr auto path_arc_elliptical(const ellipse_type& ellipse, const float from, const float to, const std::uint32_t segments) noexcept -> void
 		{
-			return path_arc({center, radius}, from, to);
+			const auto& [center, radius, rotation] = ellipse;
+			const auto cos_theta = functional::cos(rotation);
+			const auto sin_theta = functional::sin(rotation);
+
+			path_reserve_extra(segments);
+			for (std::uint32_t i = 0; i < segments; ++i)
+			{
+				const auto a = from + static_cast<float>(i) / static_cast<float>(segments) * (to - from);
+				const auto offset = point_type{functional::cos(a), functional::sin(a)} * radius;
+				const auto prime_x = offset.x * cos_theta - offset.y * sin_theta;
+				const auto prime_y = offset.x * sin_theta + offset.y * cos_theta;
+				path_pin({center + point_type{prime_x, prime_y}});
+			}
+		}
+
+		constexpr auto path_quad(const point_type& p1, const point_type& p2, const point_type& p3, const point_type& p4) noexcept -> void
+		{
+			path_pin(p1);
+			path_pin(p2);
+			path_pin(p3);
+			path_pin(p4);
 		}
 
 		constexpr auto path_rect(const rect_type& rect, float rounding, DrawFlag flag) noexcept -> void
@@ -944,12 +1006,9 @@ namespace gal::prometheus::gui
 			}
 
 			using functional::operators::operator&;
-			if (rounding < .5f or (DrawFlag::ROUND_CORNER_MASK & flag) == DrawFlag::NONE)
+			if (rounding < .5f or (DrawFlag::ROUND_CORNER_MASK & flag) == DrawFlag::ROUND_CORNER_NONE)
 			{
-				path_pin(rect.left_top());
-				path_pin(rect.right_top());
-				path_pin(rect.right_bottom());
-				path_pin(rect.left_bottom());
+				path_quad(rect.left_top(), rect.right_top(), rect.right_bottom(), rect.left_bottom());
 			}
 			else
 			{
@@ -963,11 +1022,6 @@ namespace gal::prometheus::gui
 				path_arc_fast({rect.right_bottom() + point_type{-rounding_right_bottom, -rounding_right_bottom}, rounding_right_bottom}, ArcQuadrant::Q4_CLOCK_WISH);
 				path_arc_fast({rect.left_bottom() + point_type{rounding_left_bottom, -rounding_left_bottom}, rounding_left_bottom}, ArcQuadrant::Q3_CLOCK_WISH);
 			}
-		}
-
-		constexpr auto path_rect(const point_type& left_top, const point_type& right_bottom, const float rounding, const DrawFlag flag) noexcept -> void
-		{
-			path_rect({left_top, right_bottom}, rounding, flag);
 		}
 
 	public:
@@ -1043,7 +1097,7 @@ namespace gal::prometheus::gui
 				return;
 			}
 
-			path_rect(rect.left_top() + point_type{.5f, .5f}, rect.right_bottom() - point_type{.5f, .5f}, rounding, flag);
+			path_rect({rect.left_top() + point_type{.5f, .5f}, rect.right_bottom() - point_type{.5f, .5f}}, rounding, flag);
 			path_stroke(color, DrawFlag::CLOSED, thickness);
 		}
 
@@ -1056,7 +1110,269 @@ namespace gal::prometheus::gui
 			const float thickness = 1.f
 		) noexcept -> void
 		{
-			return rect({left_top, right_bottom}, color, rounding, flag, thickness);
+			return rect(rect_type{left_top, right_bottom}, color, rounding, flag, thickness);
+		}
+
+		constexpr auto rect_filled(const rect_type& rect, const color_type& color, const float rounding = .0f, const DrawFlag flag = DrawFlag::NONE) noexcept -> void
+		{
+			if (color.alpha == 0)
+			{
+				return;
+			}
+
+			using functional::operators::operator&;
+			if (rounding < .5f or (DrawFlag::ROUND_CORNER_MASK & flag) == DrawFlag::ROUND_CORNER_NONE)
+			{
+				draw_rect_filled(rect, color, color, color, color);
+			}
+			else
+			{
+				path_rect(rect, rounding, flag);
+				path_stroke(color);
+			}
+		}
+
+		constexpr auto rect_filled(
+			const point_type& left_top,
+			const point_type& right_bottom,
+			const color_type& color,
+			const float rounding = .0f,
+			const DrawFlag flag = DrawFlag::NONE
+		) noexcept -> void
+		{
+			return rect_filled(rect_type{left_top, right_bottom}, color, rounding, flag);
+		}
+
+		constexpr auto rect_filled(
+			const rect_type& rect,
+			const color_type& color_left_top,
+			const color_type& color_right_top,
+			const color_type& color_left_bottom,
+			const color_type& color_right_bottom
+		) noexcept -> void
+		{
+			if (color_left_top.alpha == 0 or color_right_top.alpha == 0 or color_left_bottom.alpha == 0 or color_right_bottom.alpha == 0)
+			{
+				return;
+			}
+
+			draw_rect_filled(rect, color_left_top, color_right_top, color_left_bottom, color_right_bottom);
+		}
+
+		constexpr auto rect_filled(
+			const point_type& left_top,
+			const point_type& right_bottom,
+			const color_type& color_left_top,
+			const color_type& color_right_top,
+			const color_type& color_left_bottom,
+			const color_type& color_right_bottom
+		) noexcept -> void
+		{
+			return rect_filled(rect_type{left_top, right_bottom}, color_left_top, color_right_top, color_left_bottom, color_right_bottom);
+		}
+
+		constexpr auto quad(const point_type& p1, const point_type& p2, const point_type& p3, const point_type& p4, const color_type& color, const float thickness = 1.f) noexcept -> void
+		{
+			if (color.alpha == 0)
+			{
+				return;
+			}
+
+			path_quad(p1, p2, p3, p4);
+			path_stroke(color, DrawFlag::CLOSED, thickness);
+		}
+
+		constexpr auto quad_filled(const point_type& p1, const point_type& p2, const point_type& p3, const point_type& p4, const color_type& color) noexcept -> void
+		{
+			if (color.alpha == 0)
+			{
+				return;
+			}
+
+			path_quad(p1, p2, p3, p4);
+			path_stroke(color);
+		}
+
+		constexpr auto polygon(const circle_type& circle, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
+		{
+			if (color.alpha == 0 or circle.radius < .5f or segments < 3)
+			{
+				return;
+			}
+
+			path_arc_n(circle, 0, std::numbers::pi_v<float> * 2, segments);
+			path_stroke(color, DrawFlag::CLOSED, thickness);
+		}
+
+		constexpr auto polygon(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
+		{
+			return polygon(circle_type{center, radius}, color, segments, thickness);
+		}
+
+		constexpr auto polygon(const ellipse_type& ellipse, const color_type& color, const std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
+		{
+			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f or segments < 3)
+			{
+				return;
+			}
+
+			path_arc_elliptical(ellipse, 0, std::numbers::pi_v<float> * 2, segments);
+			path_stroke(color, DrawFlag::CLOSED, thickness);
+		}
+
+		constexpr auto polygon(
+			const point_type& center,
+			const extent_type& radius,
+			const float rotation,
+			const color_type& color,
+			const std::uint32_t segments = 0,
+			const float thickness = 1.f
+		) noexcept -> void
+		{
+			return polygon(ellipse_type{center, radius, rotation}, color, segments, thickness);
+		}
+
+		constexpr auto polygon_filled(const circle_type& circle, const color_type& color, const std::uint32_t segments) noexcept -> void
+		{
+			if (color.alpha == 0 or circle.radius < .5f or segments < 3)
+			{
+				return;
+			}
+
+			path_arc_n(circle, 0, std::numbers::pi_v<float> * 2, segments);
+			path_stroke(color);
+		}
+
+		constexpr auto polygon_filled(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments) noexcept -> void
+		{
+			return polygon_filled(circle_type{center, radius}, color, segments);
+		}
+
+		constexpr auto polygon_filled(const ellipse_type& ellipse, const color_type& color, const std::uint32_t segments = 0) noexcept -> void
+		{
+			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f or segments < 3)
+			{
+				return;
+			}
+
+			path_arc_elliptical(ellipse, 0, std::numbers::pi_v<float> * 2, segments);
+			path_stroke(color);
+		}
+
+		constexpr auto polygon_filled(
+			const point_type& center,
+			const extent_type& radius,
+			const float rotation,
+			const color_type& color,
+			const std::uint32_t segments
+		) noexcept -> void
+		{
+			return polygon_filled(ellipse_type{center, radius, rotation}, color, segments);
+		}
+
+		constexpr auto circle(const circle_type& circle, const color_type& color, const std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
+		{
+			if (color.alpha == 0 or circle.radius < .5f)
+			{
+				return;
+			}
+
+			if (segments == 0)
+			{
+				path_arc_fast(circle, 0, vertex_sample_points_count - 1);
+				path_stroke(color, DrawFlag::CLOSED, thickness);
+			}
+			else
+			{
+				const auto clamped_segments = std::ranges::clamp(segments, draw_list_detail::circle_segments_min, draw_list_detail::circle_segments_max);
+
+				polygon(circle, color, clamped_segments, thickness);
+			}
+		}
+
+		constexpr auto circle(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
+		{
+			return circle({center, radius}, color, segments, thickness);
+		}
+
+		constexpr auto circle_filled(const circle_type& circle, const color_type& color, const std::uint32_t segments = 0) noexcept -> void
+		{
+			if (color.alpha == 0 or circle.radius < .5f)
+			{
+				return;
+			}
+
+			if (segments == 0)
+			{
+				path_arc_fast(circle, 0, vertex_sample_points_count - 1);
+				path_stroke(color);
+			}
+			else
+			{
+				const auto clamped_segments = std::ranges::clamp(segments, draw_list_detail::circle_segments_min, draw_list_detail::circle_segments_max);
+
+				polygon_filled(circle, color, clamped_segments);
+			}
+		}
+
+		constexpr auto circle_filled(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments = 0) noexcept -> void
+		{
+			return circle_filled({center, radius}, color, segments);
+		}
+
+		constexpr auto ellipse(const ellipse_type& ellipse, const color_type& color, std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
+		{
+			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f)
+			{
+				return;
+			}
+
+			if (segments == 0)
+			{
+				// todo: maybe there's a better computation to do here
+				segments = get_circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
+			}
+
+			polygon(ellipse, color, segments, thickness);
+		}
+
+		constexpr auto ellipse(
+			const point_type& center,
+			const extent_type& radius,
+			const float rotation,
+			const color_type& color,
+			const std::uint32_t segments = 0,
+			const float thickness = 1.f
+		) noexcept -> void
+		{
+			return ellipse(ellipse_type{center, radius, rotation}, color, segments, thickness);
+		}
+
+		constexpr auto ellipse_filled(const ellipse_type& ellipse, const color_type& color, std::uint32_t segments = 0) noexcept -> void
+		{
+			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f)
+			{
+				return;
+			}
+
+			if (segments == 0)
+			{
+				// todo: maybe there's a better computation to do here
+				segments = get_circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
+			}
+
+			polygon_filled(ellipse, color, segments);
+		}
+
+		constexpr auto ellipse_filled(
+			const point_type& center,
+			const extent_type& radius,
+			const float rotation,
+			const color_type& color,
+			const std::uint32_t segments = 0
+		) noexcept -> void
+		{
+			return ellipse_filled(ellipse_type{center, radius, rotation}, color, segments);
 		}
 	};
 
