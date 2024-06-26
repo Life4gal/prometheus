@@ -704,11 +704,14 @@ namespace
 	static_assert(sizeof(gui::DrawList::vertex_type) == sizeof(d3d_vertex_type));
 	static_assert(sizeof(gui::DrawList::index_type) == sizeof(d3d_vertex_index_type));
 
+	auto g_draw_list_shared_data = std::make_shared<gui::DrawListSharedData>();
 	gui::DrawList g_draw_list;
 
 	auto prometheus_init() -> void //
 	{
+		g_draw_list.shared_data = g_draw_list_shared_data;
 		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_LINE;
+		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_FILL;
 
 		g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
 		g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
@@ -723,8 +726,8 @@ namespace
 		g_draw_list.rect_filled({300, 200}, {400, 300}, primitive::colors::pink, 20);
 		g_draw_list.rect_filled({300, 300}, {400, 400}, primitive::colors::pink, primitive::colors::gold, primitive::colors::azure, primitive::colors::lavender);
 
-		g_draw_list.quad({100, 500}, {200, 500}, {250, 550}, {50, 550}, primitive::colors::red);
-		g_draw_list.quad_filled({100, 500}, {200, 500}, {250, 450}, {50, 450}, primitive::colors::red);
+		g_draw_list.quadrilateral({100, 500}, {200, 500}, {250, 550}, {50, 550}, primitive::colors::red);
+		g_draw_list.quadrilateral_filled({100, 500}, {200, 500}, {250, 450}, {50, 450}, primitive::colors::red);
 
 		g_draw_list.circle({100, 600}, 50, primitive::colors::green);
 		g_draw_list.circle({200, 600}, 50, primitive::colors::red, 8);
@@ -739,6 +742,28 @@ namespace
 		g_draw_list.ellipse_filled({700, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 24);
 		g_draw_list.ellipse({800, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red);
 		g_draw_list.ellipse_filled({800, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red);
+
+		g_draw_list.circle_filled({500, 300}, 5, primitive::colors::red);
+		g_draw_list.circle_filled({600, 350}, 5, primitive::colors::red);
+		g_draw_list.circle_filled({450, 500}, 5, primitive::colors::red);
+		g_draw_list.circle_filled({550, 550}, 5, primitive::colors::red);
+		g_draw_list.bezier_cubic({500, 300}, {600, 350}, {450, 500}, {550, 550}, primitive::colors::green);
+
+		g_draw_list.circle_filled({600, 300}, 5, primitive::colors::red);
+		g_draw_list.circle_filled({700, 350}, 5, primitive::colors::red);
+		g_draw_list.circle_filled({550, 500}, 5, primitive::colors::red);
+		g_draw_list.circle_filled({650, 550}, 5, primitive::colors::red);
+		g_draw_list.bezier_cubic({600, 300}, {700, 350}, {550, 500}, {650, 550}, primitive::colors::green, 5);
+
+		g_draw_list.circle_filled({500, 600}, 5, primitive::colors::red);
+		g_draw_list.circle_filled({600, 650}, 5, primitive::colors::red);
+		g_draw_list.circle_filled({450, 800}, 5, primitive::colors::red);
+		g_draw_list.bezier_quadratic({500, 600}, {600, 650}, {450, 800}, primitive::colors::green);
+
+		g_draw_list.circle_filled({600, 600}, 5, primitive::colors::red);
+		g_draw_list.circle_filled({700, 650}, 5, primitive::colors::red);
+		g_draw_list.circle_filled({550, 800}, 5, primitive::colors::red);
+		g_draw_list.bezier_quadratic({600, 600}, {700, 650}, {550, 800}, primitive::colors::green, 5);
 	}
 
 	auto prometheus_new_frame() -> void //
