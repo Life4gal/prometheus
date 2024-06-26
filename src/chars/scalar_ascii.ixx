@@ -23,13 +23,14 @@ import :encoding;
 #include <numeric>
 
 #include <prometheus/macro.hpp>
-#include <chars/encoding.hpp>
-#include <error/error.hpp>
-#include <meta/meta.hpp>
-#include <memory/memory.hpp>
+#include <chars/encoding.ixx>
+#include <error/error.ixx>
+#include <meta/meta.ixx>
+#include <memory/memory.ixx>
 #endif
 
-namespace gal::prometheus::chars
+// ReSharper disable once CppRedundantNamespaceDefinition
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 {
 	template<>
 	class Scalar<"ascii">
@@ -41,10 +42,8 @@ namespace gal::prometheus::chars
 		using pointer_type = input_type::const_pointer;
 		using size_type = input_type::size_type;
 
-		[[nodiscard]] constexpr auto validate(const input_type input) const noexcept -> result_type
+		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> result_type
 		{
-			(void)this;
-
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
 			const auto input_length = input.size();
@@ -64,9 +63,9 @@ namespace gal::prometheus::chars
 
 			if (const auto it =
 						std::ranges::find_if(
-								it_input_current,
-								it_input_end,
-								[](const auto byte) noexcept { return byte >= 0b1000'0000; });
+							it_input_current,
+							it_input_end,
+							[](const auto byte) noexcept { return byte >= 0b1000'0000; });
 				it != it_input_end)
 			{
 				return result_type{.error = ErrorCode::TOO_LARGE, .count = static_cast<std::size_t>(std::ranges::distance(it, it_input_begin))};
@@ -75,53 +74,49 @@ namespace gal::prometheus::chars
 			return result_type{.error = ErrorCode::NONE, .count = input_length};
 		}
 
-		[[nodiscard]] constexpr auto validate(const pointer_type input) const noexcept -> result_type
+		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> result_type
 		{
-			return this->validate({input, std::char_traits<char_type>::length(input)});
+			return validate({input, std::char_traits<char_type>::length(input)});
 		}
 
 		// note: we are not BOM aware
 		template<CharsCategory OutputCategory>
-		[[nodiscard]] constexpr auto length(const input_type input) const noexcept -> size_type
+		[[nodiscard]] constexpr static auto length(const input_type input) noexcept -> size_type
 		{
-			(void)this;
-
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
 			if constexpr (OutputCategory == CharsCategory::ASCII) { return input.size(); } // NOLINT(bugprone-branch-clone)
-			else if constexpr (OutputCategory == CharsCategory::UTF8)
+			else if constexpr (OutputCategory == CharsCategory::UTF8_CHAR or OutputCategory == CharsCategory::UTF8)
 			{
 				return std::transform_reduce(
-						input.begin(),
-						input.end(),
-						static_cast<size_type>(0),
-						std::plus<>{},
-						[](const auto byte) noexcept { return 1 + (byte >> 7); });
+					input.begin(),
+					input.end(),
+					input.size(),
+					std::plus<>{},
+					[](const auto byte) noexcept { return +(byte >> 7); });
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE) { return input.size(); }
+			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE or OutputCategory == CharsCategory::UTF16) { return input.size(); }
 			else if constexpr (OutputCategory == CharsCategory::UTF32) { return input.size(); }
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
 		// note: we are not BOM aware
 		template<CharsCategory OutputCategory>
-		[[nodiscard]] constexpr auto length(const pointer_type input) const noexcept -> size_type
+		[[nodiscard]] constexpr static auto length(const pointer_type input) noexcept -> size_type
 		{
-			return this->length<OutputCategory>({input, std::char_traits<char_type>::length(input)});
+			return length<OutputCategory>({input, std::char_traits<char_type>::length(input)});
 		}
 
 		template<
 			CharsCategory OutputCategory,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
-		[[nodiscard]] constexpr auto convert(
-				const input_type input,
-				typename output_type<OutputCategory>::pointer output
-				) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
+		[[nodiscard]] constexpr static auto convert(
+			const input_type input,
+			typename output_type<OutputCategory>::pointer output
+		) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
-			(void)this;
-
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
 
@@ -143,7 +138,7 @@ namespace gal::prometheus::chars
 				it_input_current += input_length;
 				it_output_current += input_length;
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF8)
+			else if constexpr (OutputCategory == CharsCategory::UTF8_CHAR or OutputCategory == CharsCategory::UTF8)
 			{
 				for (; it_input_current < it_input_end; ++it_input_current)
 				{
@@ -159,12 +154,12 @@ namespace gal::prometheus::chars
 								(value & 0x8080'8080'8080'8080) == 0)
 							{
 								std::ranges::transform(
-										it_input_current,
-										it_input_current + 16,
-										it_output_current,
-										[](const auto byte) noexcept { return static_cast<output_char_type>(byte); });
+									it_input_current,
+									it_input_current + 16,
+									it_output_current,
+									[](const auto byte) noexcept { return static_cast<output_char_type>(byte); });
 
-								// 15 more step
+								// 15 more step, see `for (; it_input_current < it_input_end; ++it_input_current)`
 								it_input_current += 15;
 								it_output_current += 16;
 								continue;
@@ -189,29 +184,30 @@ namespace gal::prometheus::chars
 			else if constexpr (
 				OutputCategory == CharsCategory::UTF16_LE or
 				OutputCategory == CharsCategory::UTF16_BE or
+				// OutputCategory == CharsCategory::UTF16 or
 				OutputCategory == CharsCategory::UTF32
 			)
 			{
 				std::ranges::transform(
-						it_input_current,
-						it_input_end,
-						it_output_current,
-						[](const auto byte) noexcept
-						{
-							if constexpr (
-								OutputCategory == CharsCategory::UTF32 or
-								((OutputCategory == CharsCategory::UTF16_LE) == (std::endian::native == std::endian::little))
-							) { return static_cast<output_char_type>(byte); }
-							else { returnstatic_cast<output_char_type>(std::byteswap(static_cast<output_char_type>(byte))); }
-						});
+					it_input_current,
+					it_input_end,
+					it_output_current,
+					[](const auto byte) noexcept
+					{
+						if constexpr (
+							OutputCategory == CharsCategory::UTF32 or
+							((OutputCategory == CharsCategory::UTF16_LE) == (std::endian::native == std::endian::little))
+						) { return static_cast<output_char_type>(byte); }
+						else { return static_cast<output_char_type>(std::byteswap(static_cast<output_char_type>(byte))); }
+					});
 			}
-			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("Unknown or unsupported `OutputCategory` (we don't know the `endian` by UTF16, so it's not allowed to use it here)."); }
 
 			if constexpr (
-				Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-				Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+				ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+				ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 			) { return static_cast<std::size_t>(it_output_current - it_output_begin); }
-			else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+			else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 			{
 				return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
 			}
@@ -220,21 +216,21 @@ namespace gal::prometheus::chars
 
 		template<
 			CharsCategory OutputCategory,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
-		[[nodiscard]] constexpr auto convert(
-				const pointer_type input,
-				typename output_type<OutputCategory>::pointer output
-				) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
+		[[nodiscard]] constexpr static auto convert(
+			const pointer_type input,
+			typename output_type<OutputCategory>::pointer output
+		) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
-			return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
+			return convert<OutputCategory, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
 		}
 
 		template<
 			typename StringType,
 			CharsCategory OutputCategory,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
 			requires requires(StringType& string)
@@ -244,19 +240,19 @@ namespace gal::prometheus::chars
 					string.data()
 				} -> std::convertible_to<typename output_type<OutputCategory>::pointer>;
 			}
-		[[nodiscard]] constexpr auto convert(const input_type input) const noexcept -> StringType
+		[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> StringType
 		{
 			StringType result{};
-			result.resize(this->length<OutputCategory>(input));
+			result.resize(length<OutputCategory>(input));
 
-			(void)this->convert<OutputCategory, Criterion, CheckNextBlock>(input, result.data());
+			(void)convert<OutputCategory, ProcessPolicy, CheckNextBlock>(input, result.data());
 			return result;
 		}
 
 		template<
 			typename StringType,
 			CharsCategory OutputCategory,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
 			requires requires(StringType& string)
@@ -266,21 +262,39 @@ namespace gal::prometheus::chars
 					string.data()
 				} -> std::convertible_to<typename output_type<OutputCategory>::pointer>;
 			}
-		[[nodiscard]] constexpr auto convert(const pointer_type input) const noexcept -> StringType
+		[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> StringType
 		{
 			StringType result{};
-			result.resize(this->length<OutputCategory>(input));
+			result.resize(length<OutputCategory>(input));
 
-			return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
+			return convert<OutputCategory, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
+		}
+
+		template<
+			CharsCategory OutputCategory,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
+		{
+			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
+			result.resize(length<OutputCategory>(input));
+
+			(void)convert<OutputCategory, ProcessPolicy, CheckNextBlock>(input, result.data());
+			return result;
+		}
+
+		template<
+			CharsCategory OutputCategory,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
+		{
+			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
+			result.resize(length<OutputCategory>(input));
+
+			return convert<OutputCategory, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	namespace instance
-	{
-		constexpr Scalar<"ascii"> scalar_ascii;
-	}
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
