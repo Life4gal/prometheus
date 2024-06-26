@@ -335,7 +335,7 @@
 
 #define GAL_PROMETHEUS_DEBUG_UNREACHABLE(...) \
 		GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("UNRECHABLE-CHECK", false __VA_OPT__(, ) __VA_ARGS__); \
-		std::unrechable()
+		std::unreachable()
 
 #define GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW(error_type, expression, message, ...) \
 	do \
