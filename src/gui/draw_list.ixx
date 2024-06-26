@@ -965,7 +965,7 @@ namespace gal::prometheus::gui
 			}
 		}
 
-		constexpr auto path_arc_elliptical(const ellipse_type& ellipse, const float from, const float to, const std::uint32_t segments) noexcept -> void
+		constexpr auto path_arc_elliptical_n(const ellipse_type& ellipse, const float from, const float to, const std::uint32_t segments) noexcept -> void
 		{
 			const auto& [center, radius, rotation] = ellipse;
 			const auto cos_theta = functional::cos(rotation);
@@ -1097,7 +1097,7 @@ namespace gal::prometheus::gui
 				return;
 			}
 
-			path_rect({rect.left_top() + point_type{.5f, .5f}, rect.right_bottom() - point_type{.5f, .5f}}, rounding, flag);
+			path_rect(rect_type{rect.left_top() + point_type{.5f, .5f}, rect.right_bottom() - point_type{.5f, .5f}}, rounding, flag);
 			path_stroke(color, DrawFlag::CLOSED, thickness);
 		}
 
@@ -1193,7 +1193,7 @@ namespace gal::prometheus::gui
 			path_stroke(color);
 		}
 
-		constexpr auto polygon(const circle_type& circle, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
+		constexpr auto circle_n(const circle_type& circle, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
 		{
 			if (color.alpha == 0 or circle.radius < .5f or segments < 3)
 			{
@@ -1204,35 +1204,35 @@ namespace gal::prometheus::gui
 			path_stroke(color, DrawFlag::CLOSED, thickness);
 		}
 
-		constexpr auto polygon(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
+		constexpr auto circle_n(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
 		{
-			return polygon(circle_type{center, radius}, color, segments, thickness);
+			return circle_n(circle_type{center, radius}, color, segments, thickness);
 		}
 
-		constexpr auto polygon(const ellipse_type& ellipse, const color_type& color, const std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
+		constexpr auto ellipse_n(const ellipse_type& ellipse, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
 		{
 			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f or segments < 3)
 			{
 				return;
 			}
 
-			path_arc_elliptical(ellipse, 0, std::numbers::pi_v<float> * 2, segments);
+			path_arc_elliptical_n(ellipse, 0, std::numbers::pi_v<float> * 2, segments);
 			path_stroke(color, DrawFlag::CLOSED, thickness);
 		}
 
-		constexpr auto polygon(
+		constexpr auto ellipse_n(
 			const point_type& center,
 			const extent_type& radius,
 			const float rotation,
 			const color_type& color,
-			const std::uint32_t segments = 0,
+			const std::uint32_t segments,
 			const float thickness = 1.f
 		) noexcept -> void
 		{
-			return polygon(ellipse_type{center, radius, rotation}, color, segments, thickness);
+			return ellipse_n(ellipse_type{center, radius, rotation}, color, segments, thickness);
 		}
 
-		constexpr auto polygon_filled(const circle_type& circle, const color_type& color, const std::uint32_t segments) noexcept -> void
+		constexpr auto circle_n_filled(const circle_type& circle, const color_type& color, const std::uint32_t segments) noexcept -> void
 		{
 			if (color.alpha == 0 or circle.radius < .5f or segments < 3)
 			{
@@ -1243,23 +1243,23 @@ namespace gal::prometheus::gui
 			path_stroke(color);
 		}
 
-		constexpr auto polygon_filled(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments) noexcept -> void
+		constexpr auto circle_n_filled(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments) noexcept -> void
 		{
-			return polygon_filled(circle_type{center, radius}, color, segments);
+			return circle_n_filled(circle_type{center, radius}, color, segments);
 		}
 
-		constexpr auto polygon_filled(const ellipse_type& ellipse, const color_type& color, const std::uint32_t segments = 0) noexcept -> void
+		constexpr auto ellipse_n_filled(const ellipse_type& ellipse, const color_type& color, const std::uint32_t segments) noexcept -> void
 		{
 			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f or segments < 3)
 			{
 				return;
 			}
 
-			path_arc_elliptical(ellipse, 0, std::numbers::pi_v<float> * 2, segments);
+			path_arc_elliptical_n(ellipse, 0, std::numbers::pi_v<float> * 2, segments);
 			path_stroke(color);
 		}
 
-		constexpr auto polygon_filled(
+		constexpr auto ellipse_n_filled(
 			const point_type& center,
 			const extent_type& radius,
 			const float rotation,
@@ -1267,7 +1267,7 @@ namespace gal::prometheus::gui
 			const std::uint32_t segments
 		) noexcept -> void
 		{
-			return polygon_filled(ellipse_type{center, radius, rotation}, color, segments);
+			return ellipse_n_filled(ellipse_type{center, radius, rotation}, color, segments);
 		}
 
 		constexpr auto circle(const circle_type& circle, const color_type& color, const std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
@@ -1286,13 +1286,13 @@ namespace gal::prometheus::gui
 			{
 				const auto clamped_segments = std::ranges::clamp(segments, draw_list_detail::circle_segments_min, draw_list_detail::circle_segments_max);
 
-				polygon(circle, color, clamped_segments, thickness);
+				circle_n(circle, color, clamped_segments, thickness);
 			}
 		}
 
 		constexpr auto circle(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
 		{
-			return circle({center, radius}, color, segments, thickness);
+			return circle(circle_type{center, radius}, color, segments, thickness);
 		}
 
 		constexpr auto circle_filled(const circle_type& circle, const color_type& color, const std::uint32_t segments = 0) noexcept -> void
@@ -1311,13 +1311,13 @@ namespace gal::prometheus::gui
 			{
 				const auto clamped_segments = std::ranges::clamp(segments, draw_list_detail::circle_segments_min, draw_list_detail::circle_segments_max);
 
-				polygon_filled(circle, color, clamped_segments);
+				circle_n_filled(circle, color, clamped_segments);
 			}
 		}
 
 		constexpr auto circle_filled(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments = 0) noexcept -> void
 		{
-			return circle_filled({center, radius}, color, segments);
+			return circle_filled(circle_type{center, radius}, color, segments);
 		}
 
 		constexpr auto ellipse(const ellipse_type& ellipse, const color_type& color, std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
@@ -1333,7 +1333,7 @@ namespace gal::prometheus::gui
 				segments = get_circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
 			}
 
-			polygon(ellipse, color, segments, thickness);
+			ellipse_n(ellipse, color, segments, thickness);
 		}
 
 		constexpr auto ellipse(
@@ -1361,7 +1361,7 @@ namespace gal::prometheus::gui
 				segments = get_circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
 			}
 
-			polygon_filled(ellipse, color, segments);
+			ellipse_n_filled(ellipse, color, segments);
 		}
 
 		constexpr auto ellipse_filled(
