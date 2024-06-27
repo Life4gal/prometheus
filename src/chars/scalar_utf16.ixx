@@ -16,6 +16,7 @@ import std;
 import gal.prometheus.error;
 import gal.prometheus.meta;
 import gal.prometheus.memory;
+
 import :encoding;
 
 #else
@@ -23,13 +24,14 @@ import :encoding;
 #include <numeric>
 
 #include <prometheus/macro.hpp>
-#include <chars/encoding.hpp>
-#include <error/error.hpp>
-#include <meta/meta.hpp>
-#include <memory/memory.hpp>
+#include <chars/encoding.ixx>
+#include <error/error.ixx>
+#include <meta/meta.ixx>
+#include <memory/memory.ixx>
 #endif
 
-namespace gal::prometheus::chars
+// ReSharper disable once CppRedundantNamespaceDefinition
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 {
 	template<>
 	class Scalar<"utf16">
@@ -42,7 +44,7 @@ namespace gal::prometheus::chars
 		using size_type = input_type::size_type;
 
 		template<std::endian Endian = std::endian::native>
-		[[nodiscard]] constexpr auto validate(const input_type input) const noexcept -> result_type
+		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> result_type
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
@@ -86,85 +88,87 @@ namespace gal::prometheus::chars
 		}
 
 		template<std::endian Endian = std::endian::native>
-		[[nodiscard]] constexpr auto validate(const pointer_type input) const noexcept -> result_type
+		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> result_type
 		{
-			return this->validate<Endian>({input, std::char_traits<char_type>::length(input)});
+			return validate<Endian>({input, std::char_traits<char_type>::length(input)});
 		}
 
 		// note: we are not BOM aware
 		template<CharsCategory OutputCategory, std::endian Endian = std::endian::native>
-		[[nodiscard]] constexpr auto length(const input_type input) const noexcept -> size_type
+		[[nodiscard]] constexpr static auto length(const input_type input) noexcept -> size_type
 		{
-			(void)this;
-
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
-			if constexpr (OutputCategory == CharsCategory::ASCII) { return input.size(); }
-			else if constexpr (OutputCategory == CharsCategory::UTF8)
+			if constexpr (OutputCategory == CharsCategory::ASCII)
+			{
+				return input.size(); // NOLINT(bugprone-branch-clone)
+			}
+			else if constexpr (OutputCategory == CharsCategory::UTF8_CHAR or OutputCategory == CharsCategory::UTF8)
 			{
 				return std::transform_reduce(
-						input.begin(),
-						input.end(),
-						static_cast<size_type>(0),
-						std::plus<>{},
-						[](const auto word) noexcept
+					input.begin(),
+					input.end(),
+					static_cast<size_type>(0),
+					std::plus<>{},
+					[](const auto word) noexcept
+					{
+						const auto native_word = [word]() noexcept
 						{
-							const auto native_word = [word]() noexcept
-							{
-								if constexpr (Endian != std::endian::native) { return std::byteswap(word); }
-								else { return word; }
-							}();
+							if constexpr (Endian != std::endian::native) { return std::byteswap(word); }
+							else { return word; }
+						}();
 
-							return 1 // ascii
-							       +
-							       (native_word > 0x7f) // non-ASCII is at least 2 bytes, surrogates are 2*2 == 4 bytes
-							       +
-							       ((native_word > 0x7ff && native_word <= 0xd7ff) || (native_word >= 0xe000)) // three-byte
-									;
-						});
+						return 1 // ascii
+						       +
+						       (native_word > 0x7f) // non-ASCII is at least 2 bytes, surrogates are 2*2 == 4 bytes
+						       +
+						       ((native_word > 0x7ff && native_word <= 0xd7ff) || (native_word >= 0xe000)) // three-byte
+								;
+					});
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE) { return input.size(); }
+			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE or OutputCategory == CharsCategory::UTF16)
+			{
+				return input.size();
+			}
 			else if constexpr (OutputCategory == CharsCategory::UTF32)
 			{
 				return std::transform_reduce(
-						input.begin(),
-						input.end(),
-						static_cast<size_type>(0),
-						std::plus<>{},
-						[](const auto word) noexcept
+					input.begin(),
+					input.end(),
+					static_cast<size_type>(0),
+					std::plus<>{},
+					[](const auto word) noexcept
+					{
+						const auto native_word = [word]() noexcept
 						{
-							const auto native_word = [word]() noexcept
-							{
-								if constexpr (Endian != std::endian::native) { return std::byteswap(word); }
-								else { return word; }
-							}();
+							if constexpr (Endian != std::endian::native) { return std::byteswap(word); }
+							else { return word; }
+						}();
 
-							return +((native_word & 0xfc00) != 0xdc00);
-						});
+						return +((native_word & 0xfc00) != 0xdc00);
+					});
 			}
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
 		// note: we are not BOM aware
 		template<CharsCategory OutputCategory, std::endian Endian = std::endian::native>
-		[[nodiscard]] constexpr auto length(const pointer_type input) const noexcept -> size_type
+		[[nodiscard]] constexpr static auto length(const pointer_type input) noexcept -> size_type
 		{
-			return this->length<OutputCategory, Endian>({input, std::char_traits<char_type>::length(input)});
+			return length<OutputCategory, Endian>({input, std::char_traits<char_type>::length(input)});
 		}
 
 		template<
 			CharsCategory OutputCategory,
 			std::endian Endian = std::endian::native,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
-		[[nodiscard]] constexpr auto convert(
-				const input_type input,
-				typename output_type<OutputCategory>::pointer output
-				) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
+		[[nodiscard]] constexpr static auto convert(
+			const input_type input,
+			typename output_type<OutputCategory>::pointer output
+		) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
-			(void)this;
-
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
 
@@ -205,7 +209,7 @@ namespace gal::prometheus::chars
 										.v1 = (v1 >> 8) | (v1 << (64 - 8)),
 										.v2 = (v2 >> 8) | (v2 << (64 - 8)),
 										.v3 = (v3 >> 8) | (v3 << (64 - 8)),
-										.v4 = (v1 >> 8) | (v4 << (64 - 8))};
+										.v4 = (v4 >> 8) | (v4 << (64 - 8))};
 							}
 							else { return word; }
 						};
@@ -214,31 +218,31 @@ namespace gal::prometheus::chars
 						if (it_input_current + 16 <= it_input_end)
 						{
 							const auto [v1, v2, v3, v4] = to_native_word(
-									{
-											.v1 = memory::unaligned_load<std::uint64_t>(it_input_current + 0),
-											.v2 = memory::unaligned_load<std::uint64_t>(it_input_current + 4),
-											.v3 = memory::unaligned_load<std::uint64_t>(it_input_current + 8),
-											.v4 = memory::unaligned_load<std::uint64_t>(it_input_current + 12)
-									}
-									);
+								{
+										.v1 = memory::unaligned_load<std::uint64_t>(it_input_current + 0),
+										.v2 = memory::unaligned_load<std::uint64_t>(it_input_current + 4),
+										.v3 = memory::unaligned_load<std::uint64_t>(it_input_current + 8),
+										.v4 = memory::unaligned_load<std::uint64_t>(it_input_current + 12)
+								}
+							);
 
 							if (const auto value = (v1 | v2 | v3 | v4);
 								(value & 0xff00'ff00'ff00'ff00) == 0)
 							{
 								std::ranges::transform(
-										it_input_current,
-										it_input_current + 16,
-										it_output_current,
-										[](const auto word) noexcept
+									it_input_current,
+									it_input_current + 16,
+									it_output_current,
+									[](const auto word) noexcept
+									{
+										if constexpr (Endian != std::endian::native)
 										{
-											if constexpr (Endian != std::endian::native)
-											{
-												return static_cast<output_char_type>(std::byteswap(word));
-											}
-											else { return static_cast<output_char_type>(word); }
-										});
+											return static_cast<output_char_type>(std::byteswap(word));
+										}
+										else { return static_cast<output_char_type>(word); }
+									});
 
-								// 15 more steps
+								// 15 more steps, see `for (; it_input_current < it_input_end; ++it_input_current)`
 								it_input_current += 15;
 								it_output_current += 16;
 								continue;
@@ -251,12 +255,12 @@ namespace gal::prometheus::chars
 						if constexpr (Endian != std::endian::native) { return std::byteswap(w); }
 						else { return w; }
 					}();
-					if constexpr (Criterion != InputProcessCriterion::ASSUME_VALID_INPUT)
+					if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
 					{
 						if ((word & 0xff00) != 0)
 						{
-							if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
-							else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+							if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
+							else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 							{
 								return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error};
 							}
@@ -268,7 +272,7 @@ namespace gal::prometheus::chars
 					it_output_current += 1;
 				}
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF8)
+			else if constexpr (OutputCategory == CharsCategory::UTF8_CHAR or OutputCategory == CharsCategory::UTF8)
 			{
 				for (; it_input_current < it_input_end; ++it_input_current)
 				{
@@ -286,22 +290,22 @@ namespace gal::prometheus::chars
 						if (it_input_current + 4 <= it_input_end)
 						{
 							if (const auto value = to_native_word(memory::unaligned_load<std::uint64_t>(it_input_current));
-								(value & 0xffff'ff80'ffff'ff80) == 0)
+								(value & 0xff80'ff80'ff80'ff80) == 0)
 							{
 								std::ranges::transform(
-										it_input_current,
-										it_input_current + 4,
-										it_output_current,
-										[](const auto word) noexcept
+									it_input_current,
+									it_input_current + 4,
+									it_output_current,
+									[](const auto word) noexcept
+									{
+										if constexpr (Endian != std::endian::native)
 										{
-											if constexpr (Endian != std::endian::native)
-											{
-												return static_cast<output_char_type>(std::byteswap(word));
-											}
-											else { return static_cast<output_char_type>(word); }
-										});
+											return static_cast<output_char_type>(std::byteswap(word));
+										}
+										else { return static_cast<output_char_type>(word); }
+									});
 
-								// 3 more step
+								// 3 more step, see `for (; it_input_current < it_input_end; ++it_input_current)`
 								it_input_current += 3;
 								it_output_current += 4;
 								continue;
@@ -342,12 +346,12 @@ namespace gal::prometheus::chars
 						// 4-bytes utf8
 						// must be a surrogate pair
 						const auto diff = word - 0xd800;
-						if constexpr (Criterion != InputProcessCriterion::ASSUME_VALID_INPUT)
+						if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
 						{
 							if (diff > 0x3ff)
 							{
-								if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
-								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+								if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
+								else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 								{
 									return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error};
 								}
@@ -359,10 +363,10 @@ namespace gal::prometheus::chars
 						if (it_input_current + 1 >= it_input_end)
 						{
 							if constexpr (
-								Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-								Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+								ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+								ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 							) { return 0; }
-							else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+							else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 							{
 								return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error};
 							}
@@ -375,13 +379,12 @@ namespace gal::prometheus::chars
 							else { return w; }
 						}();
 						const auto next_diff = next_word - 0xdc00;
-						if constexpr (Criterion != InputProcessCriterion::ASSUME_VALID_INPUT)
+						if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
 						{
 							if (next_diff > 0x3ff)
 							{
-								// minimal bound checking
-								if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
-								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+								if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
+								else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 								{
 									return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error};
 								}
@@ -397,16 +400,23 @@ namespace gal::prometheus::chars
 						*(it_output_current + 2) = static_cast<output_char_type>(((value >> 6) & 0b0011'1111) | 0b1000'0000);
 						*(it_output_current + 3) = static_cast<output_char_type>((value & 0b0011'1111) | 0b1000'0000);
 
-						// one more step
+						// one more step, see `for (; it_input_current < it_input_end; ++it_input_current)`
 						it_input_current += 1;
 						it_output_current += 4;
 					}
 				}
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE)
+			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE or OutputCategory == CharsCategory::UTF16)
 			{
-				// fixme: endian?
-				std::memcpy(it_output_current, it_input_current, input_length * sizeof(char_type));
+				if ((OutputCategory == CharsCategory::UTF16) or ((Endian == std::endian::little) == (OutputCategory == CharsCategory::UTF16_LE)))
+				{
+					std::memcpy(it_output_current, it_input_current, input_length * sizeof(char_type));
+				}
+				else
+				{
+					flip_endian(input, output);
+				}
+
 				it_input_current += input_length;
 				it_output_current += input_length;
 			}
@@ -431,12 +441,12 @@ namespace gal::prometheus::chars
 					{
 						// must be a surrogate pair
 						const auto diff = word - 0xd800;
-						if constexpr (Criterion != InputProcessCriterion::ASSUME_VALID_INPUT)
+						if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
 						{
 							if (diff > 0x3ff)
 							{
-								if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
-								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+								if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
+								else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 								{
 									return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error};
 								}
@@ -448,9 +458,9 @@ namespace gal::prometheus::chars
 						if (it_input_current + 1 >= it_input_end)
 						{
 							if constexpr (
-								Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-								Criterion == InputProcessCriterion::ASSUME_VALID_INPUT) { return 0; }
-							else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+								ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+								ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT) { return 0; }
+							else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 							{
 								return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error};
 							}
@@ -463,13 +473,12 @@ namespace gal::prometheus::chars
 							else { return w; }
 						}();
 						const auto next_diff = next_word - 0xdc00;
-						if constexpr (Criterion != InputProcessCriterion::ASSUME_VALID_INPUT)
+						if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
 						{
 							if (next_diff > 0x3ff)
 							{
-								// minimal bound checking
-								if constexpr (Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
-								else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+								if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
+								else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 								{
 									return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error};
 								}
@@ -481,7 +490,7 @@ namespace gal::prometheus::chars
 
 						*(it_output_current + 0) = static_cast<output_char_type>(value);
 
-						// one more step
+						// one more step, see `for (; it_input_current < it_input_end; ++it_input_current)`
 						it_input_current += 1;
 						it_output_current += 1;
 					}
@@ -490,10 +499,10 @@ namespace gal::prometheus::chars
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 
 			if constexpr (
-				Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-				Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+				ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+				ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 			) { return static_cast<std::size_t>(it_output_current - it_output_begin); }
-			if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+			if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 			{
 				return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
 			}
@@ -503,22 +512,22 @@ namespace gal::prometheus::chars
 		template<
 			CharsCategory OutputCategory,
 			std::endian Endian = std::endian::native,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
-		[[nodiscard]] constexpr auto convert(
-				const pointer_type input,
-				typename output_type<OutputCategory>::pointer output
-				) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
+		[[nodiscard]] constexpr static auto convert(
+			const pointer_type input,
+			typename output_type<OutputCategory>::pointer output
+		) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
-			return this->convert<OutputCategory, Endian, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
+			return convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
 		}
 
 		template<
 			typename StringType,
 			CharsCategory OutputCategory,
 			std::endian Endian = std::endian::native,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
 			requires requires(StringType& string)
@@ -528,12 +537,12 @@ namespace gal::prometheus::chars
 					string.data()
 				} -> std::convertible_to<typename output_type<OutputCategory>::pointer>;
 			}
-		[[nodiscard]] constexpr auto convert(const input_type input) const noexcept -> StringType
+		[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> StringType
 		{
 			StringType result{};
-			result.resize(this->length<OutputCategory>(input));
+			result.resize(length<OutputCategory>(input));
 
-			(void)this->convert<OutputCategory, Endian, Criterion, CheckNextBlock>(input, result.data());
+			(void)convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>(input, result.data());
 			return result;
 		}
 
@@ -541,7 +550,7 @@ namespace gal::prometheus::chars
 			typename StringType,
 			CharsCategory OutputCategory,
 			std::endian Endian = std::endian::native,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
 			requires requires(StringType& string)
@@ -551,15 +560,41 @@ namespace gal::prometheus::chars
 					string.data()
 				} -> std::convertible_to<typename output_type<OutputCategory>::pointer>;
 			}
-		[[nodiscard]] constexpr auto convert(const pointer_type input) const noexcept -> StringType
+		[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> StringType
 		{
 			StringType result{};
-			result.resize(this->length<OutputCategory, Endian>(input));
+			result.resize(length<OutputCategory, Endian>(input));
 
-			return this->convert<OutputCategory, Endian, Criterion, CheckNextBlock>(
-					{input, std::char_traits<char_type>::length(input)},
-					result.data()
-					);
+			return convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
+		}
+
+		template<
+			CharsCategory OutputCategory,
+			std::endian Endian = std::endian::native,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
+		{
+			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
+			result.resize(length<OutputCategory>(input));
+
+			(void)convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>(input, result.data());
+			return result;
+		}
+
+		template<
+			CharsCategory OutputCategory,
+			std::endian Endian = std::endian::native,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
+		{
+			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
+			result.resize(length<OutputCategory>(input));
+
+			return convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
 
 		template<std::endian Endian = std::endian::native>
@@ -570,35 +605,50 @@ namespace gal::prometheus::chars
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
 			return std::ranges::count_if(
-					input,
-					[](auto word) noexcept -> bool
-					{
-						if constexpr (Endian != std::endian::native) { word = std::byteswap(word); }
+				input,
+				[](auto word) noexcept -> bool
+				{
+					if constexpr (Endian != std::endian::native) { word = std::byteswap(word); }
 
-						return (word & 0xfc00) != 0xdc00;
-					});
+					return (word & 0xfc00) != 0xdc00;
+				});
 		}
 
-		constexpr auto flip_endian(const input_type input, const output_type<input_category>::pointer output) const noexcept -> void
+		constexpr auto static flip_endian(const input_type input, const output_type<input_category>::pointer output) noexcept -> void
 		{
-			(void)this;
-
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
 
 			std::ranges::transform(
-					input,
-					output,
-					[](const auto word) noexcept { return static_cast<output_type<input_category>::value_type>(word >> 8 | word << 8); });
+				input,
+				output,
+				[](const auto word) noexcept { return static_cast<output_type<input_category>::value_type>(word >> 8 | word << 8); });
+		}
+
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type<input_category>::pointer>;
+			}
+		[[nodiscard]] constexpr static auto flip_endian(const input_type input) noexcept -> StringType
+		{
+			StringType result{};
+			result.resize(length<input_category>(input));
+
+			flip_endian(input, result.data());
+			return result;
+		}
+
+		[[nodiscard]] constexpr static auto flip_endian(const input_type input) noexcept -> std::basic_string<output_type<input_category>::value_type>
+		{
+			std::basic_string<output_type<input_category>::value_type> result{};
+			result.resize(length<input_category>(input));
+
+			flip_endian(input, result.data());
+			return result;
 		}
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	namespace instance
-	{
-		constexpr Scalar<"utf16"> scalar_utf16;
-	}
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 } // namespace gal::prometheus::chars
