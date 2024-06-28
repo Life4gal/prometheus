@@ -17,6 +17,7 @@ import std;
 import gal.prometheus.error;
 import gal.prometheus.meta;
 import gal.prometheus.memory;
+
 import :encoding;
 import :scalar.utf32;
 
@@ -24,9 +25,9 @@ import :scalar.utf32;
 #include <intrin.h>
 
 #include <prometheus/macro.hpp>
-#include <chars/encoding.hpp>
-#include <error/error.hpp>
-#include <meta/meta.hpp>
+#include <chars/encoding.ixx>
+#include <error/error.ixx>
+#include <meta/meta.ixx>
 #endif
 
 namespace gal::prometheus::chars
@@ -555,6 +556,8 @@ namespace gal::prometheus::chars
 		};
 	}
 
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+
 	template<>
 	class Simd<"utf32">
 	{
@@ -567,11 +570,9 @@ namespace gal::prometheus::chars
 		using pointer_type = scalar_type::pointer_type;
 		using size_type = scalar_type::size_type;
 
-		template<bool ReturnResultType>
-		[[nodiscard]] constexpr auto validate(const input_type input) const noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
+		template<bool ReturnResultType = false>
+		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
-			(void)this;
-
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
 			const auto input_length = input.size();
@@ -586,23 +587,23 @@ namespace gal::prometheus::chars
 				{
 					const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-					const auto utf32 = _mm512_loadu_si512(it_input_current);
+					const auto in = _mm512_loadu_si512(it_input_current);
 					if (const auto outside_range = _mm512_cmp_epu32_mask(
-								utf32,
-								_mm512_set1_epi32(0x10'ffff),
-								_MM_CMPINT_GT
-								);
+							in,
+							_mm512_set1_epi32(0x0010'ffff),
+							_MM_CMPINT_GT
+						);
 						outside_range)
 					{
 						return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error + std::countr_zero(outside_range)};
 					}
 
-					const auto utf32_offset = _mm512_add_epi32(utf32, _mm512_set1_epi32(static_cast<int>(0xffff'2000)));
+					const auto offset = _mm512_add_epi32(in, _mm512_set1_epi32(static_cast<int>(0xffff'2000)));
 					if (const auto surrogate_range = _mm512_cmp_epu32_mask(
-								utf32_offset,
-								_mm512_set1_epi32(static_cast<int>(0xffff'f7ff)),
-								_MM_CMPINT_GT
-								);
+							offset,
+							_mm512_set1_epi32(static_cast<int>(0xffff'f7ff)),
+							_MM_CMPINT_GT
+						);
 						surrogate_range)
 					{
 						return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error + std::countr_zero(surrogate_range)};
@@ -613,21 +614,21 @@ namespace gal::prometheus::chars
 				{
 					const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-					const auto utf32 = _mm512_maskz_loadu_epi32(
-							static_cast<__mmask16>((__mmask16{1} << (it_input_end - it_input_current)) - 1),
-							it_input_current
-							);
-					if (const auto outside_range = _mm512_cmp_epu32_mask(utf32, _mm512_set1_epi32(0x10'ffff), _MM_CMPINT_GT);
+					const auto in = _mm512_maskz_loadu_epi32(
+						static_cast<__mmask16>((__mmask16{1} << (it_input_end - it_input_current)) - 1),
+						it_input_current
+					);
+					if (const auto outside_range = _mm512_cmp_epu32_mask(in, _mm512_set1_epi32(0x10'ffff), _MM_CMPINT_GT);
 						outside_range)
 					{
 						return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error + std::countr_zero(outside_range)};
 					}
 
-					const auto utf32_offset = _mm512_add_epi32(utf32, _mm512_set1_epi32(static_cast<int>(0xffff'2000)));
+					const auto offset = _mm512_add_epi32(in, _mm512_set1_epi32(static_cast<int>(0xffff'2000)));
 					if (const auto surrogate_range = _mm512_cmp_epu32_mask(
-								utf32_offset,
-								_mm512_set1_epi32(static_cast<int>(0xffff'f7ff)),
-								_MM_CMPINT_GT);
+							offset,
+							_mm512_set1_epi32(static_cast<int>(0xffff'f7ff)),
+							_MM_CMPINT_GT);
 						surrogate_range)
 					{
 						return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error + std::countr_zero(surrogate_range)};
@@ -659,22 +660,20 @@ namespace gal::prometheus::chars
 				if (const auto is_zero = _mm512_xor_si512(_mm512_max_epu32(current_offset_max, standard_offset_max), standard_offset_max);
 					_mm512_test_epi8_mask(is_zero, is_zero) != 0) { return false; }
 
-				return static_cast<bool>(instance::scalar_utf32.validate({it_input_current, input_length - (it_input_current - it_input_begin)}));
+				return static_cast<bool>(scalar_type::validate({it_input_current, input_length - (it_input_current - it_input_begin)}));
 			}
 		}
 
-		template<bool ReturnResultType>
-		[[nodiscard]] constexpr auto validate(const pointer_type input) const noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
+		template<bool ReturnResultType = false>
+		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
-			return this->validate<ReturnResultType>({input, std::char_traits<char_type>::length(input)});
+			return validate<ReturnResultType>({input, std::char_traits<char_type>::length(input)});
 		}
 
 		// note: we are not BOM aware
 		template<CharsCategory OutputCategory>
-		[[nodiscard]] constexpr auto length(const input_type input) const noexcept -> size_type
+		[[nodiscard]] constexpr static auto length(const input_type input) noexcept -> size_type
 		{
-			(void)this;
-
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
 			const auto input_length = input.size();
@@ -683,13 +682,12 @@ namespace gal::prometheus::chars
 			pointer_type it_input_current = it_input_begin;
 			const pointer_type it_input_end = it_input_begin + input_length;
 
-			if constexpr (OutputCategory == CharsCategory::ASCII) { return instance::scalar_utf32.length<OutputCategory>(input); }
-			// NOLINT(bugprone-branch-clone)
-			else if constexpr (OutputCategory == CharsCategory::UTF8)
+			if constexpr (OutputCategory == CharsCategory::ASCII) { return input.size(); } // NOLINT(bugprone-branch-clone)
+			else if constexpr (OutputCategory == CharsCategory::UTF8_CHAR or OutputCategory == CharsCategory::UTF8)
 			{
-				const auto v_0000_007f = _mm512_set1_epi32(0x0000'0007f);
-				const auto v_0000_07ff = _mm512_set1_epi32(0x0000'07ff);
-				const auto v_0000_ffff = _mm512_set1_epi32(0x0000'ffff);
+				const auto v_007f = _mm512_set1_epi32(0x0007f);
+				const auto v_07ff = _mm512_set1_epi32(0x07ff);
+				const auto v_ffff = _mm512_set1_epi32(0xffff);
 
 				auto result_length = static_cast<size_type>(0);
 
@@ -697,13 +695,13 @@ namespace gal::prometheus::chars
 				{
 					const auto utf32 = _mm512_loadu_si512(it_input_current);
 
-					const auto ascii_bitmask = _mm512_cmple_epu32_mask(utf32, v_0000_007f);
-					const auto two_bytes_bitmask = _mm512_mask_cmple_epu32_mask(_knot_mask16(ascii_bitmask), utf32, v_0000_07ff);
+					const auto ascii_bitmask = _mm512_cmple_epu32_mask(utf32, v_007f);
+					const auto two_bytes_bitmask = _mm512_mask_cmple_epu32_mask(_knot_mask16(ascii_bitmask), utf32, v_07ff);
 					const auto three_bytes_bitmask = _mm512_mask_cmple_epu32_mask(
-							_knot_mask16(_mm512_kor(ascii_bitmask, two_bytes_bitmask)),
-							utf32,
-							v_0000_ffff
-							);
+						_knot_mask16(_mm512_kor(ascii_bitmask, two_bytes_bitmask)),
+						utf32,
+						v_ffff
+					);
 
 					const auto ascii_count = std::popcount(ascii_bitmask);
 					const auto two_bytes_count = std::popcount(two_bytes_bitmask);
@@ -713,56 +711,51 @@ namespace gal::prometheus::chars
 					result_length += ascii_count + 2 * two_bytes_count + 3 * three_bytes_count + 4 * four_bytes_count;
 				}
 
-				return result_length + instance::scalar_utf32.length<OutputCategory>(
-						       {it_input_current, input_length - (it_input_current - it_input_begin)}
-						       );
+				return result_length + scalar_type::length<OutputCategory>({it_input_current, input_length - (it_input_current - it_input_begin)});
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE)
+			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE or OutputCategory == CharsCategory::UTF16)
 			{
-				const auto v_0000_ffff = _mm512_set1_epi32(0x0000'ffff);
+				const auto v_ffff = _mm512_set1_epi32(0x0000'ffff);
 
 				auto result_length = static_cast<size_type>(0);
 
 				for (; it_input_current + 16 <= it_input_end; it_input_current += 16)
 				{
 					const auto utf32 = _mm512_loadu_si512(it_input_current);
-					const auto surrogates_bitmask = _mm512_cmpgt_epu32_mask(utf32, v_0000_ffff);
+					const auto surrogates_bitmask = _mm512_cmpgt_epu32_mask(utf32, v_ffff);
 
 					result_length += 16 + std::popcount(surrogates_bitmask);
 				}
 
-				return result_length + instance::scalar_utf32.length<OutputCategory>(
-						       {it_input_current, input_length - (it_input_current - it_input_begin)}
-						       );
+				return result_length + scalar_type::length<OutputCategory>({it_input_current, input_length - (it_input_current - it_input_begin)});
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF32) { return input_length; }
+			else if constexpr (OutputCategory == CharsCategory::UTF32) { return input.size(); }
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
 		// note: we are not BOM aware
 		template<CharsCategory OutputCategory>
-		[[nodiscard]] constexpr auto length(const pointer_type input) const noexcept -> size_type
+		[[nodiscard]] constexpr static auto length(const pointer_type input) noexcept -> size_type
 		{
-			return this->length<OutputCategory>({input, std::char_traits<char_type>::length(input)});
+			return length<OutputCategory>({input, std::char_traits<char_type>::length(input)});
 		}
 
 		// fixme: haswell implementation for now
 		template<
 			CharsCategory OutputCategory,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
-		[[nodiscard]] constexpr auto convert(
-				const input_type input,
-				typename output_type<OutputCategory>::pointer output
-				) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
+		[[nodiscard]] constexpr static auto convert(
+			const input_type input,
+			typename output_type<OutputCategory>::pointer output
+		) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
-			(void)this;
-
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
 
 			using output_pointer_type = typename output_type<OutputCategory>::pointer;
+			using output_char_type = typename output_type<OutputCategory>::value_type;
 
 			const auto input_length = input.size();
 
@@ -775,75 +768,75 @@ namespace gal::prometheus::chars
 
 			if constexpr (OutputCategory == CharsCategory::ASCII)
 			{
-				const auto v_0000_00ff = _mm512_set1_epi32(0x0000'00ff);
+				const auto v_00ff = _mm512_set1_epi32(0x0000'00ff);
 				const auto shuffle_mask = _mm512_set_epi8(
-						// clang-format off
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						0,
-						60,
-						56,
-						52,
-						48,
-						44,
-						40,
-						36,
-						32,
-						28,
-						24,
-						20,
-						16,
-						12,
-						8,
-						4,
-						0
-						// clang-format on
-						);
+					// clang-format off
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					60,
+					56,
+					52,
+					48,
+					44,
+					40,
+					36,
+					32,
+					28,
+					24,
+					20,
+					16,
+					12,
+					8,
+					4,
+					0
+					// clang-format on
+				);
 
 				for (; it_input_current + 16 <= it_input_end; it_input_current += 16, it_output_current += 16)
 				{
@@ -851,28 +844,41 @@ namespace gal::prometheus::chars
 
 					const auto in = _mm512_loadu_si512(it_input_current);
 
-					if (_mm512_cmpgt_epu32_mask(in, v_0000_00ff))
+					if (_mm512_cmpgt_epu32_mask(in, v_00ff))
 					{
 						if constexpr (
-							Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-							Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+							ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+							ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 						) { return 0; }
-						else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 						{
 							const auto it = std::ranges::find_if(
-									it_input_current,
-									it_input_current + 16,
-									[](const auto data) noexcept { return data > 0xff; });
-							GAL_PROMETHEUS_DEBUG_ASSUME(it != it_input_current + 16);
+								it_input_current,
+								it_input_current + 16,
+								[](const auto data) noexcept { return data > 0xff; });
+							// fixme: write or ignore?
+							{
+								std::ranges::transform(
+									std::ranges::subrange{it_input_current, it},
+									it_output_current,
+									[](const auto word) noexcept -> output_char_type
+									{
+										return static_cast<output_char_type>(word);
+									}
+								);
+								it_output_current += std::ranges::distance(it_input_current, it);
+							}
+
+							GAL_PROMETHEUS_DEBUG_AXIOM(it != it_input_current + 16);
 							return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error + std::ranges::distance(it_input_current, it)};
 						}
 						else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 					}
 
 					_mm_storeu_si128(
-							GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(__m128i*, it_output_current),
-							_mm512_castsi512_si128(_mm512_permutexvar_epi8(shuffle_mask, in))
-							);
+						GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(__m128i*, it_output_current),
+						_mm512_castsi512_si128(_mm512_permutexvar_epi8(shuffle_mask, in))
+					);
 				}
 
 				if (const auto remaining = it_input_end - it_input_current;
@@ -883,19 +889,32 @@ namespace gal::prometheus::chars
 					const auto mask = static_cast<__mmask16>((1 << remaining) - 1);
 					const auto in = _mm512_maskz_loadu_epi32(mask, it_input_current);
 
-					if (_mm512_cmpgt_epu32_mask(in, v_0000_00ff))
+					if (_mm512_cmpgt_epu32_mask(in, v_00ff))
 					{
 						if constexpr (
-							Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-							Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+							ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+							ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 						) { return 0; }
-						else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 						{
 							const auto it = std::ranges::find_if(
-									it_input_current,
-									it_input_current + 16,
-									[](const auto data) noexcept { return data > 0xff; });
-							GAL_PROMETHEUS_DEBUG_ASSUME(it != it_input_current + 16);
+								it_input_current,
+								it_input_current + 16,
+								[](const auto data) noexcept { return data > 0xff; });
+							// fixme: write or ignore?
+							{
+								std::ranges::transform(
+									std::ranges::subrange{it_input_current, it},
+									it_output_current,
+									[](const auto word) noexcept -> output_char_type
+									{
+										return static_cast<output_char_type>(word);
+									}
+								);
+								it_output_current += std::ranges::distance(it_input_current, it);
+							}
+
+							GAL_PROMETHEUS_DEBUG_AXIOM(it != it_input_current + 16);
 							return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error + std::ranges::distance(it_input_current, it)};
 						}
 						else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
@@ -906,9 +925,9 @@ namespace gal::prometheus::chars
 					it_output_current += remaining;
 				}
 			}
-			else if constexpr (OutputCategory == CharsCategory::UTF8)
+			else if constexpr (OutputCategory == CharsCategory::UTF8_CHAR or OutputCategory == CharsCategory::UTF8)
 			{
-				const auto process = [&]() noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, bool>
+				const auto process = [&]() noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, bool>
 				{
 					const auto v_0010_ffff = _mm256_set1_epi32(0x0010'ffff);
 					const auto v_7fff_ffff = _mm256_set1_epi32(0x7fff'ffff);
@@ -924,7 +943,7 @@ namespace gal::prometheus::chars
 					// to avoid overruns
 					constexpr auto safety_margin = 12;
 
-					// used iff Criterion != InputProcessCriterion::RETURN_RESULT_TYPE
+					// used iff ProcessPolicy != InputProcessPolicy::RETURN_RESULT_TYPE
 					auto running_max = _mm256_setzero_si256();
 					auto forbidden_byte_mask = _mm256_setzero_si256();
 
@@ -933,21 +952,21 @@ namespace gal::prometheus::chars
 						const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
 						const auto in = _mm256_loadu_si256(
-								GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
-										const __m256i*,
-										it_input_current + 0 * sizeof(__m256i) / sizeof(char_type)
-										)
-								);
+							GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
+								const __m256i*,
+								it_input_current
+							) + 0
+						);
 						const auto next_in = _mm256_loadu_si256(
-								GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
-										const __m256i*,
-										it_input_current + 1 * sizeof(__m256i) / sizeof(char_type)
-										)
-								);
+							GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
+								const __m256i*,
+								it_input_current
+							) + 1
+						);
 
 						if constexpr (
-							Criterion != InputProcessCriterion::RETURN_RESULT_TYPE or Criterion ==
-							InputProcessCriterion::ASSUME_VALID_INPUT
+							ProcessPolicy != InputProcessPolicy::RETURN_RESULT_TYPE or ProcessPolicy ==
+							InputProcessPolicy::ASSUME_VALID_INPUT
 						) { running_max = _mm256_max_epu32(_mm256_max_epu32(in, running_max), next_in); }
 						else
 						{
@@ -961,9 +980,9 @@ namespace gal::prometheus::chars
 
 						// Pack 32-bit UTF-32 code units to 16-bit UTF-16 code units with unsigned saturation
 						const auto in_16 = _mm256_permute4x64_epi64(
-								_mm256_packus_epi32(_mm256_and_si256(in, v_7fff_ffff), _mm256_and_si256(next_in, v_7fff_ffff)),
-								0b1101'1000
-								);
+							_mm256_packus_epi32(_mm256_and_si256(in, v_7fff_ffff), _mm256_and_si256(next_in, v_7fff_ffff)),
+							0b1101'1000
+						);
 
 						// Try to apply UTF-16 => UTF-8 routine on 256 bits
 						if (_mm256_testz_si256(in_16, v_0000_ff80))
@@ -1026,18 +1045,20 @@ namespace gal::prometheus::chars
 
 							// 5.store the bytes
 							_mm_storeu_si128(
-									GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(__m128i*, it_output_current),
-									_mm256_castsi256_si128(utf8_packed)
-									);
+								GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(__m128i*, it_output_current),
+								_mm256_castsi256_si128(utf8_packed)
+							);
 							it_output_current += length_0;
 							_mm_storeu_si128(
-									GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(__m128i*, it_output_current),
-									_mm256_extractf128_si256(utf8_packed, 1)
-									);
+								GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(__m128i*, it_output_current),
+								_mm256_extractf128_si256(utf8_packed, 1)
+							);
 							it_output_current += length_1;
 
 							// 6.adjust iterators
 							it_input_current += 16;
+							// we are done for this round
+							continue;
 						}
 
 						// check for overflow in packing
@@ -1050,14 +1071,14 @@ namespace gal::prometheus::chars
 							// code units from register produce either 1, 2 or 3 UTF-8 bytes
 
 							if constexpr (
-								Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-								Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+								ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+								ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 							)
 							{
 								forbidden_byte_mask = _mm256_or_si256(forbidden_byte_mask,
 								                                      _mm256_cmpeq_epi16(_mm256_and_si256(in_16, v_0000_f800), v_0000_d800));
 							}
-							else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+							else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 							{
 								forbidden_byte_mask = _mm256_cmpeq_epi16(_mm256_and_si256(in_16, v_0000_f800), v_0000_d800);
 								if (static_cast<std::uint32_t>(_mm256_movemask_epi8(forbidden_byte_mask)) != 0x0)
@@ -1085,23 +1106,23 @@ namespace gal::prometheus::chars
 
 							// clang-format off
 							const auto dup_even = _mm256_setr_epi16(
-									0x0000,
-									0x0202,
-									0x0404,
-									0x0606,
-									0x0808,
-									0x0a0a,
-									0x0c0c,
-									0x0e0e,
-									0x0000,
-									0x0202,
-									0x0404,
-									0x0606,
-									0x0808,
-									0x0a0a,
-									0x0c0c,
-									0x0e0e
-									);
+								0x0000,
+								0x0202,
+								0x0404,
+								0x0606,
+								0x0808,
+								0x0a0a,
+								0x0c0c,
+								0x0e0e,
+								0x0000,
+								0x0202,
+								0x0404,
+								0x0606,
+								0x0808,
+								0x0a0a,
+								0x0c0c,
+								0x0e0e
+							);
 							// clang-format on
 
 							// [aaaa|bbbb|bbcc|cccc] => [bbcc|cccc|bbcc|cccc]
@@ -1120,9 +1141,9 @@ namespace gal::prometheus::chars
 							// [00bb|bbbb|0000|aaaa] => [11bb|bbbb|1110|aaaa]
 							const auto s3 = _mm256_or_si256(s2, _mm256_set1_epi16(static_cast<short>(0b1100'0000'1110'0000)));
 							const auto s4 = _mm256_xor_si256(
-									s3,
-									_mm256_andnot_si256(one_or_two_bytes_byte_mask, _mm256_set1_epi16(0b0100'0000'0000'0000))
-									);
+								s3,
+								_mm256_andnot_si256(one_or_two_bytes_byte_mask, _mm256_set1_epi16(0b0100'0000'0000'0000))
+							);
 
 							// expand code units 16-bit => 32-bit
 							const auto out_0 = _mm256_unpacklo_epi16(t2, s4);
@@ -1167,19 +1188,19 @@ namespace gal::prometheus::chars
 							// at least one 32-bit word is larger than 0xffff <=> it will produce four UTF-8 bytes
 							// scalar fallback
 							const auto step = static_cast<size_type>(it_input_end - it_input_current < 16 ? it_input_end - it_input_current : 16);
-							if constexpr (auto result = instance::scalar_utf32.convert<OutputCategory, Criterion, CheckNextBlock>(
-										{it_input_current, step},
-										it_output_current
-										);
-								Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-								Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+							if constexpr (auto result = scalar_type::convert<OutputCategory, ProcessPolicy, CheckNextBlock>(
+									{it_input_current, step},
+									it_output_current
+								);
+								ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+								ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 							)
 							{
 								static_assert(std::is_same_v<decltype(result), std::size_t>);
 								it_output_current += result;
 								if (result == 0) { return false; }
 							}
-							else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+							else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 							{
 								static_assert(std::is_same_v<decltype(result), result_type>);
 								it_output_current += result.count;
@@ -1191,8 +1212,8 @@ namespace gal::prometheus::chars
 					}
 
 					if constexpr (
-						Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-						Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+						ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+						ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 					)
 					{
 						// check for invalid input
@@ -1203,7 +1224,7 @@ namespace gal::prometheus::chars
 
 						return true;
 					}
-					else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+					else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 					{
 						return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
 					}
@@ -1212,26 +1233,26 @@ namespace gal::prometheus::chars
 
 				const auto result = process();
 				if constexpr (
-					Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-					Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+					ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+					ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 				) { if (not result) { return 0; } }
-				else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE) { if (not result) { return result; } }
+				else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE) { if (not result) { return result; } }
 				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 
 				if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
 					remaining != 0)
 				{
-					if (const auto scalar_result = instance::scalar_utf32.convert<OutputCategory, Criterion, CheckNextBlock>(
-								{it_input_current, remaining},
-								it_output_current
-								);
+					if (const auto scalar_result = scalar_type::convert<OutputCategory, ProcessPolicy, CheckNextBlock>(
+							{it_input_current, remaining},
+							it_output_current
+						);
 						not scalar_result)
 					{
 						if constexpr (
-							Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-							Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+							ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+							ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 						) { return 0; }
-						else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 						{
 							return result_type{.error = scalar_result.error, .count = result.count + scalar_result.count};
 						}
@@ -1240,17 +1261,17 @@ namespace gal::prometheus::chars
 					else
 					{
 						if constexpr (
-							Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-							Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+							ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+							ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 						) { it_output_current += scalar_result; }
-						else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE) { it_output_current += scalar_result.count; }
+						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE) { it_output_current += scalar_result.count; }
 						else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 					}
 				}
 			}
 			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE)
 			{
-				const auto process = [&]() noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, bool>
+				const auto process = [&]() noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, bool>
 				{
 					const auto v_ffff_0000 = _mm256_set1_epi32(static_cast<int>(0xffff'0000));
 					const auto v_0000_0000 = _mm256_setzero_si256();
@@ -1260,7 +1281,7 @@ namespace gal::prometheus::chars
 					// to avoid overruns
 					constexpr auto safety_margin = 12;
 
-					// used iff Criterion != InputProcessCriterion::RETURN_RESULT_TYPE
+					// used iff ProcessPolicy != InputProcessPolicy::RETURN_RESULT_TYPE
 					auto forbidden_byte_mask = _mm256_setzero_si256();
 
 					while (it_input_current + 8 + safety_margin <= it_input_end)
@@ -1276,14 +1297,14 @@ namespace gal::prometheus::chars
 						if (saturation_bitmask == 0xffff'ffff)
 						{
 							if constexpr (
-								Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-								Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+								ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+								ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 							)
 							{
 								forbidden_byte_mask = _mm256_or_si256(forbidden_byte_mask,
 								                                      _mm256_cmpeq_epi32(_mm256_and_si256(in, v_0000_f800), v_0000_d800));
 							}
-							else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+							else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 							{
 								forbidden_byte_mask = _mm256_cmpeq_epi32(_mm256_and_si256(in, v_0000_f800), v_0000_d800);
 								if (static_cast<std::uint32_t>(_mm256_movemask_epi8(forbidden_byte_mask)) != 0x0)
@@ -1311,19 +1332,19 @@ namespace gal::prometheus::chars
 						else
 						{
 							const auto step = static_cast<size_type>(it_input_end - it_input_current < 8 ? it_input_end - it_input_current : 8);
-							if constexpr (auto result = instance::scalar_utf32.convert<OutputCategory, Criterion, CheckNextBlock>(
-										{it_input_current, step},
-										it_output_current
-										);
-								Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-								Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+							if constexpr (auto result = scalar_type::convert<OutputCategory, ProcessPolicy, CheckNextBlock>(
+									{it_input_current, step},
+									it_output_current
+								);
+								ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+								ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 							)
 							{
 								static_assert(std::is_same_v<decltype(result), std::size_t>);
 								it_output_current += result;
 								if (result == 0) { return false; }
 							}
-							else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+							else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 							{
 								static_assert(std::is_same_v<decltype(result), result_type>);
 								it_output_current += result.count;
@@ -1335,8 +1356,8 @@ namespace gal::prometheus::chars
 					}
 
 					if constexpr (
-						Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-						Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+						ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+						ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 					)
 					{
 						// check for invalid input
@@ -1344,7 +1365,7 @@ namespace gal::prometheus::chars
 
 						return true;
 					}
-					else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+					else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 					{
 						return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
 					}
@@ -1353,26 +1374,26 @@ namespace gal::prometheus::chars
 
 				const auto result = process();
 				if constexpr (
-					Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-					Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+					ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+					ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 				) { if (not result) { return 0; } }
-				else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE) { if (not result) { return result; } }
+				else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE) { if (not result) { return result; } }
 				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 
 				if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
 					remaining != 0)
 				{
-					if (const auto scalar_result = instance::scalar_utf32.convert<OutputCategory, Criterion, CheckNextBlock>(
-								{it_input_current, remaining},
-								it_output_current
-								);
+					if (const auto scalar_result = scalar_type::convert<OutputCategory, ProcessPolicy, CheckNextBlock>(
+							{it_input_current, remaining},
+							it_output_current
+						);
 						not scalar_result)
 					{
 						if constexpr (
-							Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-							Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+							ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+							ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 						) { return 0; }
-						else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 						{
 							return result_type{.error = scalar_result.error, .count = result.count + scalar_result.count};
 						}
@@ -1381,10 +1402,10 @@ namespace gal::prometheus::chars
 					else
 					{
 						if constexpr (
-							Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-							Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+							ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+							ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 						) { it_output_current += scalar_result; }
-						else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE) { it_output_current += scalar_result.count; }
+						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE) { it_output_current += scalar_result.count; }
 						else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 					}
 				}
@@ -1395,13 +1416,16 @@ namespace gal::prometheus::chars
 				it_input_current += input_length;
 				it_output_current += input_length;
 			}
-			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			else
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("Unknown or unsupported `OutputCategory` (we don't know the `endian` by UTF16, so it's not allowed to use it here).");
+			}
 
 			if constexpr (
-				Criterion == InputProcessCriterion::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-				Criterion == InputProcessCriterion::ASSUME_VALID_INPUT
+				ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
+				ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 			) { return static_cast<std::size_t>(it_output_current - it_output_begin); }
-			else if constexpr (Criterion == InputProcessCriterion::RETURN_RESULT_TYPE)
+			else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 			{
 				return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
 			}
@@ -1410,21 +1434,21 @@ namespace gal::prometheus::chars
 
 		template<
 			CharsCategory OutputCategory,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
-		[[nodiscard]] constexpr auto convert(
-				const pointer_type input,
-				typename output_type<OutputCategory>::pointer output
-				) const noexcept -> std::conditional_t<Criterion == InputProcessCriterion::RETURN_RESULT_TYPE, result_type, std::size_t>
+		[[nodiscard]] constexpr static auto convert(
+			const pointer_type input,
+			typename output_type<OutputCategory>::pointer output
+		) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
-			return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
+			return convert<OutputCategory, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
 		}
 
 		template<
 			typename StringType,
 			CharsCategory OutputCategory,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
 			requires requires(StringType& string)
@@ -1434,19 +1458,19 @@ namespace gal::prometheus::chars
 					string.data()
 				} -> std::convertible_to<typename output_type<OutputCategory>::pointer>;
 			}
-		[[nodiscard]] constexpr auto convert(const input_type input) const noexcept -> StringType
+		[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> StringType
 		{
 			StringType result{};
-			result.resize(this->length<OutputCategory>(input));
+			result.resize(length<OutputCategory>(input));
 
-			(void)this->convert<OutputCategory, Criterion, CheckNextBlock>(input, result.data());
+			(void)convert<OutputCategory, ProcessPolicy, CheckNextBlock>(input, result.data());
 			return result;
 		}
 
 		template<
 			typename StringType,
 			CharsCategory OutputCategory,
-			InputProcessCriterion Criterion = InputProcessCriterion::RETURN_RESULT_TYPE,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
 			requires requires(StringType& string)
@@ -1456,21 +1480,41 @@ namespace gal::prometheus::chars
 					string.data()
 				} -> std::convertible_to<typename output_type<OutputCategory>::pointer>;
 			}
-		[[nodiscard]] constexpr auto convert(const pointer_type input) const noexcept -> StringType
+		[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> StringType
 		{
 			StringType result{};
-			result.resize(this->length<OutputCategory>(input));
+			result.resize(length<OutputCategory>(input));
 
-			return this->convert<OutputCategory, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
+			return convert<OutputCategory, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
+		}
+
+		template<
+			CharsCategory OutputCategory,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
+		{
+			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
+			result.resize(length<OutputCategory>(input));
+
+			(void)convert<OutputCategory, ProcessPolicy, CheckNextBlock>(input, result.data());
+			return result;
+		}
+
+		template<
+			CharsCategory OutputCategory,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			bool CheckNextBlock = true
+		>
+		[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
+		{
+			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
+			result.resize(length<OutputCategory>(input));
+
+			return convert<OutputCategory, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	namespace instance
-	{
-		constexpr Simd<"utf32"> simd_utf32;
-	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 } // namespace gal::prometheus::chars
