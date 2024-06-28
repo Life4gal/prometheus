@@ -182,10 +182,7 @@ namespace gal::prometheus::chars
 			{
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
-				if constexpr (OutputCategory == CharsCategory::ASCII)
-				{
-					return code_points(input); // NOLINT(bugprone-branch-clone)
-				}
+				if constexpr (OutputCategory == CharsCategory::ASCII) { return code_points(input); } // NOLINT(bugprone-branch-clone)
 				else if constexpr (OutputCategory == CharsCategory::UTF8_CHAR or OutputCategory == CharsCategory::UTF8) { return input.size(); }
 				else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE or OutputCategory == CharsCategory::UTF16)
 				{
@@ -299,10 +296,7 @@ namespace gal::prometheus::chars
 							leading_byte < 0b1000'0000)
 						{
 							// converting one ASCII byte
-							if constexpr (OutputCategory == CharsCategory::ASCII)
-							{
-								*it_output_current = static_cast<output_char_type>(leading_byte); // NOLINT(bugprone-branch-clone)
-							}
+							if constexpr (OutputCategory == CharsCategory::ASCII) { *it_output_current = static_cast<output_char_type>(leading_byte); } // NOLINT(bugprone-branch-clone)
 							else if constexpr (OutputCategory == CharsCategory::UTF8_CHAR or OutputCategory == CharsCategory::UTF8)
 							{
 								GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
@@ -618,7 +612,7 @@ namespace gal::prometheus::chars
 					ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
 					ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 				) { return static_cast<std::size_t>(it_output_current - it_output_begin); }
-				if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
+				else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 				{
 					return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
 				}
@@ -739,24 +733,12 @@ namespace gal::prometheus::chars
 				// fixme: no leading bytes?
 				const auto extra_count = std::ranges::distance(
 					range |
-					std::views::take_while(
-						[](const auto c) noexcept -> bool
-						{
-							if constexpr (OutputCategory == CharsCategory::ASCII)
-							{
-								// NOLINT(bugprone-branch-clone)
-								return (c & 0b1100'0000) != 0b1000'0000;
-							}
-							else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE)
-							{
-								return (c & 0b1100'0000) != 0b1000'0000;
-							}
-							else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-						}));
+					std::views::take_while([](const auto c) noexcept -> bool { return (c & 0b1100'0000) != 0b1000'0000; })
+				);
 
 				const auto it_current = it_input_begin - extra_count;
 
-				auto result = convert<InputProcessPolicy::RETURN_RESULT_TYPE, OutputCategory>({it_current, input_length + extra_count}, output);
+				auto result = convert<OutputCategory, InputProcessPolicy::RETURN_RESULT_TYPE>({it_current, input_length + extra_count}, output);
 				if (result.has_error()) { result.count -= extra_count; }
 
 				return result;
