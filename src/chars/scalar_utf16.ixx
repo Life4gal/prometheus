@@ -99,10 +99,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
-			if constexpr (OutputCategory == CharsCategory::ASCII)
-			{
-				return input.size(); // NOLINT(bugprone-branch-clone)
-			}
+			if constexpr (OutputCategory == CharsCategory::ASCII) { return input.size(); } // NOLINT(bugprone-branch-clone)
 			else if constexpr (OutputCategory == CharsCategory::UTF8_CHAR or OutputCategory == CharsCategory::UTF8)
 			{
 				return std::transform_reduce(
@@ -160,8 +157,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 		template<
 			CharsCategory OutputCategory,
-			std::endian Endian = std::endian::native,
 			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			std::endian Endian = std::endian::native,
 			bool CheckNextBlock = true
 		>
 		[[nodiscard]] constexpr static auto convert(
@@ -502,7 +499,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 				ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
 				ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 			) { return static_cast<std::size_t>(it_output_current - it_output_begin); }
-			if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
+			else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 			{
 				return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
 			}
@@ -511,8 +508,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 		template<
 			CharsCategory OutputCategory,
-			std::endian Endian = std::endian::native,
 			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			std::endian Endian = std::endian::native,
 			bool CheckNextBlock = true
 		>
 		[[nodiscard]] constexpr static auto convert(
@@ -526,8 +523,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		template<
 			typename StringType,
 			CharsCategory OutputCategory,
-			std::endian Endian = std::endian::native,
 			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			std::endian Endian = std::endian::native,
 			bool CheckNextBlock = true
 		>
 			requires requires(StringType& string)
@@ -549,8 +546,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		template<
 			typename StringType,
 			CharsCategory OutputCategory,
-			std::endian Endian = std::endian::native,
 			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			std::endian Endian = std::endian::native,
 			bool CheckNextBlock = true
 		>
 			requires requires(StringType& string)
@@ -570,8 +567,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 		template<
 			CharsCategory OutputCategory,
-			std::endian Endian = std::endian::native,
 			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			std::endian Endian = std::endian::native,
 			bool CheckNextBlock = true
 		>
 		[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
@@ -585,8 +582,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 		template<
 			CharsCategory OutputCategory,
-			std::endian Endian = std::endian::native,
 			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			std::endian Endian = std::endian::native,
 			bool CheckNextBlock = true
 		>
 		[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>

@@ -274,8 +274,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 		template<
 			CharsCategory OutputCategory,
-			std::endian Endian = std::endian::native,
 			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			std::endian Endian = std::endian::native,
 			bool CheckNextBlock = true
 		>
 		[[nodiscard]] constexpr static auto convert(
@@ -752,7 +752,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 								// Align all high surrogates in first and second by shifting to the left by 10 bits
 								// |0000.0000.0000.0000.1101.11aa.aaaa.aaaa|0000.0011.0110.bbbb.bbbb.bb00.0000.0000|
-								const auto aligned_first = _mm512_mask_slli_epi32(first, high_bitmask, first, 10);
+								const auto aligned_first = _mm512_mask_slli_epi32(first, static_cast<__mmask16>(high_bitmask), first, 10);
 								const auto aligned_second = _mm512_mask_slli_epi32(second, high_bitmask >> 16, second, 10);
 
 								// Remove surrogate prefixes and add offset 0x0001'0000 by adding in, shifted and constant
@@ -761,16 +761,16 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 								// shifted >  |????.????.????.????.????.????.????.????|0000.0000.0000.0000.1101.11aa.aaaa.aaaa|
 								const auto constant = _mm512_set1_epi32(static_cast<int>(0b1111'1100'1010'0000'0010'0100'0000'0000));
 
-								const auto added_first = _mm512_mask_add_epi32(aligned_first, high_bitmask, aligned_first, shifted_first);
+								const auto added_first = _mm512_mask_add_epi32(aligned_first, static_cast<__mmask16>(high_bitmask), aligned_first, shifted_first);
 								const auto added_second = _mm512_mask_add_epi32(aligned_second, high_bitmask >> 16, aligned_second, shifted_second);
 
-								const auto utf32_first = _mm512_mask_add_epi32(added_first, high_bitmask, added_first, constant);
+								const auto utf32_first = _mm512_mask_add_epi32(added_first, static_cast<__mmask16>(high_bitmask), added_first, constant);
 								const auto utf32_second = _mm512_mask_add_epi32(added_second, high_bitmask >> 16, added_second, constant);
 
 								// Store all valid UTF-32 code units (low surrogate positions and 32nd word are invalid)
 								const auto valid = ~low_bitmask & 0x7fff'ffff;
 
-								const auto compressed_first = _mm512_maskz_compress_epi32(valid, utf32_first);
+								const auto compressed_first = _mm512_maskz_compress_epi32(static_cast<__mmask16>(valid), utf32_first);
 								const auto compressed_second = _mm512_maskz_compress_epi32(valid >> 16, utf32_second);
 
 								const auto length_first = std::popcount(static_cast<std::uint16_t>(valid));
@@ -779,7 +779,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 								_mm512_storeu_si512(it_output_current, compressed_first);
 								it_output_current += length_first;
 								// _mm512_storeu_si512(it_output_current, compressed_second);
-								_mm512_mask_storeu_epi32(it_output_current, (1 << length_second) - 1, compressed_second);
+								_mm512_mask_storeu_epi32(it_output_current, static_cast<__mmask16>(1 << length_second) - 1, compressed_second);
 								it_output_current += length_second;
 
 								// Only process 31 code units, but keep track if the 31st word is a high surrogate as a carry
@@ -829,7 +829,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 				if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
 					remaining != 0)
 				{
-					if (const auto scalar_result = scalar_type::convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>(
+					if (const auto scalar_result = scalar_type::convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>(
 							{it_input_current, remaining},
 							it_output_current
 						);
@@ -874,8 +874,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 		template<
 			CharsCategory OutputCategory,
-			std::endian Endian = std::endian::native,
 			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			std::endian Endian = std::endian::native,
 			bool CheckNextBlock = true
 		>
 		[[nodiscard]] constexpr static auto convert(
@@ -883,14 +883,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			typename output_type<OutputCategory>::pointer output
 		) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
-			return convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
+			return convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
 		}
 
 		template<
 			typename StringType,
 			CharsCategory OutputCategory,
-			std::endian Endian = std::endian::native,
 			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			std::endian Endian = std::endian::native,
 			bool CheckNextBlock = true
 		>
 			requires requires(StringType& string)
@@ -905,15 +905,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			StringType result{};
 			result.resize(length<OutputCategory, Endian>(input));
 
-			(void)convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>(input, result.data());
+			(void)convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>(input, result.data());
 			return result;
 		}
 
 		template<
 			typename StringType,
 			CharsCategory OutputCategory,
+			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
 			std::endian Endian = std::endian::native,
-			InputProcessPolicy Criterion = InputProcessPolicy::RETURN_RESULT_TYPE,
 			bool CheckNextBlock = true
 		>
 			requires requires(StringType& string)
@@ -928,13 +928,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			StringType result{};
 			result.resize(length<OutputCategory, Endian>(input));
 
-			return convert<OutputCategory, Endian, Criterion, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
+			return convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
 
 		template<
 			CharsCategory OutputCategory,
-			std::endian Endian = std::endian::native,
 			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			std::endian Endian = std::endian::native,
 			bool CheckNextBlock = true
 		>
 		[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
@@ -942,14 +942,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
 			result.resize(length<OutputCategory, Endian>(input));
 
-			(void)convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>(input, result.data());
+			(void)convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>(input, result.data());
 			return result;
 		}
 
 		template<
 			CharsCategory OutputCategory,
-			std::endian Endian = std::endian::native,
 			InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE,
+			std::endian Endian = std::endian::native,
 			bool CheckNextBlock = true
 		>
 		[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
@@ -957,7 +957,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
 			result.resize(length<OutputCategory, Endian>(input));
 
-			return convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
+			return convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
 
 		/*constexpr*/
