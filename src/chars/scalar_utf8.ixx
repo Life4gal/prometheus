@@ -292,7 +292,7 @@ namespace gal::prometheus::chars
 						const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
 						// suppose it is not an all ASCII byte sequence
-						if (const auto leading_byte = *it_input_current;
+						if (const auto leading_byte = static_cast<std::uint8_t>(*it_input_current);
 							leading_byte < 0b1000'0000)
 						{
 							// converting one ASCII byte
