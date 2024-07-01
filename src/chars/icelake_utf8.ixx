@@ -580,7 +580,7 @@ namespace gal::prometheus::chars
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 	template<>
-	class Simd<"utf8">
+	class Simd<"icelake.utf8">
 	{
 	public:
 		using scalar_type = Scalar<"utf8">;

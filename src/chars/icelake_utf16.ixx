@@ -34,7 +34,7 @@ import :scalar.utf16;
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 {
 	template<>
-	class Simd<"utf16">
+	class Simd<"icelake.utf16">
 	{
 	public:
 		using scalar_type = Scalar<"utf16">;

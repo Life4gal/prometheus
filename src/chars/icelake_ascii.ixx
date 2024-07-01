@@ -34,7 +34,7 @@ import :scalar.ascii;
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 {
 	template<>
-	class Simd<"ascii">
+	class Simd<"icelake.ascii">
 	{
 	public:
 		using scalar_type = Scalar<"ascii">;
