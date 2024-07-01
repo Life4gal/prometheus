@@ -330,7 +330,20 @@
 #if GAL_PROMETHEUS_COMPILER_DEBUG
 #define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) GAL_PROMETHEUS_DEBUG_ASSUME(expression __VA_OPT__(, ) __VA_ARGS__)
 #else
+	#if __has_cpp_attribute(assume)
 	#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) [[assume(expression)]]
+	#else
+	// todo
+		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+			#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) __assume(expression)
+		#elif defined(GAL_PROMETHEUS_COMPILER_GNU)
+			#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) __attribute__((assume(expression))
+		#elif defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) || defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) || defined(GAL_PROMETHEUS_COMPILER_CLANG)
+			#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) __builtin_assume(expression)
+		#else
+			#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...)
+		#endif
+	#endif
 #endif
 
 #define GAL_PROMETHEUS_DEBUG_NOT_NULL(pointer, ...) GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("NOT-NULL-CHECK", pointer != nullptr __VA_OPT__(, ) __VA_ARGS__)
