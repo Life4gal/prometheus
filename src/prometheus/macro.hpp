@@ -186,20 +186,24 @@
 #endif
 
 // fixme: UB
-#define GAL_PROMETHEUS_SEMANTIC_UNRESTRICTED_CHAR_POINTER_CAST(required_type, pointer) \
-	[]<typename T>(const char* p) noexcept -> const T* requires(std::is_same_v<T, char8_t> or std::is_same_v<T, char16_t> or std::is_same_v<T, char32_t>) { return reinterpret_cast<const T*>(p); }.template operator()<required_type>(pointer)
+#define GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(required_type, pointer)                                                                            \
+	[]<typename TRIVIAL_REINTERPRET_CAST_Out, typename TRIVIAL_REINTERPRET_CAST_In>(TRIVIAL_REINTERPRET_CAST_In p) constexpr noexcept -> TRIVIAL_REINTERPRET_CAST_Out \
+		requires(std::is_pointer_v<TRIVIAL_REINTERPRET_CAST_Out> and std::is_pointer_v<TRIVIAL_REINTERPRET_CAST_In> and                                     \
+				 std::is_standard_layout_v<typename std::pointer_traits<TRIVIAL_REINTERPRET_CAST_Out>::element_type> and                                    \
+				 std::is_trivial_v<typename std::pointer_traits<TRIVIAL_REINTERPRET_CAST_Out>::element_type> and                                            \
+				 std::is_standard_layout_v<typename std::pointer_traits<TRIVIAL_REINTERPRET_CAST_In>::element_type> and                                     \
+				 std::is_trivial_v<typename std::pointer_traits<TRIVIAL_REINTERPRET_CAST_In>::element_type>)                                                \
+	{                                                                                                                                                       \
+		return reinterpret_cast<TRIVIAL_REINTERPRET_CAST_Out>(p);                                                                                           \
+	}.template operator()<required_type>(pointer)
 
 // fixme: UB
-#define GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(required_type, pointer) \
-	[]<typename Out, typename In>(In p) noexcept -> Out \
-		requires( \
-		std::is_pointer_v<Out> and std::is_pointer_v<In> and \
-		std::is_standard_layout_v<typename std::pointer_traits<Out>::element_type> and std::is_trivial_v<typename std::pointer_traits<Out>::element_type> and \
-		std::is_standard_layout_v<typename std::pointer_traits<In>::element_type> and std::is_trivial_v<typename std::pointer_traits<In>::element_type> \
-		) \
-	{ \
-		return reinterpret_cast<Out>(p); \
-	}.template operator()<required_type>(pointer)
+#define GAL_PROMETHEUS_SEMANTIC_UNRESTRICTED_CHAR_POINTER_CAST(required_char_type, pointer)                                                                                                           \
+	[]<typename UNRESTRICTED_CHAR_POINTER_CAST_In>(UNRESTRICTED_CHAR_POINTER_CAST_In p) constexpr noexcept -> auto                                                                                    \
+	{                                                                                                                                                                                                 \
+		using return_type = std::conditional_t<requires{p[0] = p[1];}, std::add_pointer_t<required_char_type>, std::add_pointer_t<std::add_const_t<required_char_type>>>; \
+		return GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(return_type, p);                                                                                                                      \
+	}(pointer)
 
 // =========================================================
 // UTILITY
@@ -324,7 +328,7 @@
 #define GAL_PROMETHEUS_DEBUG_ASSUME(expression, ...) GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("ASSUME-CHECK", expression __VA_OPT__(, ) __VA_ARGS__)
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-	#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) GAL_PROMETHEUS_DEBUG_ASSUME(expression __VA_OPT__(, ) __VA_ARGS__)
+#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) GAL_PROMETHEUS_DEBUG_ASSUME(expression __VA_OPT__(, ) __VA_ARGS__)
 #else
 	#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) [[assume(expression)]]
 #endif
