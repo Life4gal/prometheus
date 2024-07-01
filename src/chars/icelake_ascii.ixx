@@ -482,14 +482,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 				ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
 				ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 			) { return static_cast<std::size_t>(it_output_current - it_output_begin); }
-			if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
+			else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
 			{
 				return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
 			}
-			else
-			{
-				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-			}
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
 		template<
