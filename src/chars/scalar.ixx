@@ -6,10 +6,6 @@
 #pragma once
 
 #if GAL_PROMETHEUS_USE_MODULE
-module;
-
-#include <prometheus/macro.hpp>
-
 export module gal.prometheus.chars:scalar;
 
 export import :scalar.ascii;
@@ -18,8 +14,8 @@ export import :scalar.utf16;
 export import :scalar.utf32;
 
 #else
-#include <chars/scalar_ascii.hpp>
-#include <chars/scalar_utf8.hpp>
-#include <chars/scalar_utf16.hpp>
-#include <chars/scalar_utf32.hpp>
+#include <chars/scalar_ascii.ixx>
+#include <chars/scalar_utf8.ixx>
+#include <chars/scalar_utf16.ixx>
+#include <chars/scalar_utf32.ixx>
 #endif

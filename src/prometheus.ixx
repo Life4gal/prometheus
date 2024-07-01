@@ -1,7 +1,7 @@
 #if GAL_PROMETHEUS_USE_MODULE
 export module gal.prometheus;
 
-// export import gal.prometheus.chars;
+export import gal.prometheus.chars;
 export import gal.prometheus.concurrency;
 export import gal.prometheus.coroutine;
 export import gal.prometheus.error;
@@ -17,6 +17,7 @@ export import gal.prometheus.string;
 #else
 #pragma once
 
+#include <chars/chars.ixx>
 #include <concurrency/concurrency.ixx>
 #include <coroutine/coroutine.ixx>
 #include <error/error.ixx>

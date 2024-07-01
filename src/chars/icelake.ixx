@@ -6,10 +6,6 @@
 #pragma once
 
 #if GAL_PROMETHEUS_USE_MODULE
-module;
-
-#include <prometheus/macro.hpp>
-
 export module gal.prometheus.chars:icelake;
 
 export import :icelake.ascii;
@@ -18,8 +14,8 @@ export import :icelake.utf16;
 export import :icelake.utf32;
 
 #else
-#include <chars/icelake_ascii.hpp>
-#include <chars/icelake_utf8.hpp>
-#include <chars/icelake_utf16.hpp>
-#include <chars/icelake_utf32.hpp>
+#include <chars/icelake_ascii.ixx>
+#include <chars/icelake_utf8.ixx>
+#include <chars/icelake_utf16.ixx>
+#include <chars/icelake_utf32.ixx>
 #endif
