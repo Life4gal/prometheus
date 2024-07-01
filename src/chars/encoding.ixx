@@ -48,12 +48,57 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		{
 			case EncodingType::UNKNOWN: { return 0; }
 			case EncodingType::UTF8: { return 3; }
-			case EncodingType::UTF16_LE: { return 2; }
+			case EncodingType::UTF16_LE:
 			case EncodingType::UTF16_BE: { return 2; }
-			case EncodingType::UTF32_LE: { return 4; }
+			case EncodingType::UTF32_LE:
 			case EncodingType::UTF32_BE: { return 4; }
-			default: { GAL_PROMETHEUS_DEBUG_UNREACHABLE(); }
+			default: { GAL_PROMETHEUS_DEBUG_UNREACHABLE(); } // NOLINT(clang-diagnostic-covered-switch-default)
 		}
+	}
+
+	[[nodiscard]] constexpr auto bom_of(const std::span<const char8_t> string) noexcept -> EncodingType
+	{
+		// https://en.wikipedia.org/wiki/Byte_order_mark#Byte-order_marks_by_encoding
+
+		const auto length = string.size();
+		if (length < 2)
+		{
+			return EncodingType::UNKNOWN;
+		}
+
+		if (string[0] == 0xff and string[1] == 0xfe)
+		{
+			if (length >= 4 and string[2] == 0x00 and string[3] == 0x00)
+			{
+				return EncodingType::UTF32_LE;
+			}
+			return EncodingType::UTF16_LE;
+		}
+
+		if (string[0] == 0xfe and string[1] == 0xff)
+		{
+			return EncodingType::UTF16_BE;
+		}
+
+		if (length >= 4 and string[0] == 0x00 and string[1] == 0x00 and string[2] == 0xfe and string[3] == 0xff)
+		{
+			return EncodingType::UTF32_BE;
+		}
+
+		if (length >= 3 and string[0] == 0xef and string[1] == 0xbb and string[2] == 0xbf)
+		{
+			return EncodingType::UTF8;
+		}
+
+		return EncodingType::UNKNOWN;
+	}
+
+	[[nodiscard]] constexpr auto bom_of(const std::span<const char> string) noexcept -> EncodingType
+	{
+		static_assert(sizeof(char) == sizeof(char8_t));
+
+		const auto* char8_string = GAL_PROMETHEUS_SEMANTIC_UNRESTRICTED_CHAR_POINTER_CAST(char8_t, string.data());
+		return bom_of({char8_string, string.size()});
 	}
 
 	enum class ErrorCode
@@ -272,6 +317,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 	template<meta::basic_fixed_string Name>
 	class Simd;
+
+	template<meta::basic_fixed_string Name>
+	class Encoding;
 
 	template<meta::basic_fixed_string Name>
 	class Converter;
