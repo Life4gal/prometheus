@@ -45,8 +45,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		using pointer_type = scalar_type::pointer_type;
 		using size_type = scalar_type::size_type;
 
-		template<CharsCategory InputCategory, bool ReturnResultType = false>
-			requires(InputCategory == CharsCategory::UTF16_LE or InputCategory == CharsCategory::UTF16_BE)
+		template<std::endian Endian, bool ReturnResultType = false>
 		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
@@ -73,7 +72,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 				const auto in = [&byte_flip](const auto c) noexcept
 				{
-					if constexpr ((InputCategory == CharsCategory::UTF16_LE) == (std::endian::native == std::endian::little))
+					if constexpr (Endian == std::endian::native)
 					{
 						return _mm512_loadu_si512(c);
 					}
@@ -115,7 +114,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 				const auto in = [&byte_flip](const auto c, const auto e) noexcept
 				{
-					if constexpr ((InputCategory == CharsCategory::UTF16_LE) == (std::endian::native == std::endian::little))
+					if constexpr (Endian == std::endian::native)
 					{
 						return _mm512_maskz_loadu_epi16((__mmask32{1} << (e - c)) - 1, c);
 					}
@@ -147,25 +146,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			else { return true; }
 		}
 
-		template<CharsCategory InputCategory, bool ReturnResultType = false>
-			requires(InputCategory == CharsCategory::UTF16_LE or InputCategory == CharsCategory::UTF16_BE)
+		template<std::endian Endian, bool ReturnResultType = false>
 		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
-			return validate<ReturnResultType, InputCategory>({input, std::char_traits<char_type>::length(input)});
-		}
-
-		template<bool ReturnResultType = false>
-		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
-		{
-			if constexpr (std::endian::native == std::endian::little) { return validate<CharsCategory::UTF16_LE, ReturnResultType>(input); }
-			else { return validate<CharsCategory::UTF16_BE, ReturnResultType>(input); }
-		}
-
-		template<bool ReturnResultType = false>
-		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
-		{
-			if constexpr (std::endian::native == std::endian::little) { return validate<CharsCategory::UTF16_LE, ReturnResultType>(input); }
-			else { return validate<CharsCategory::UTF16_BE, ReturnResultType>(input); }
+			return validate<Endian, ReturnResultType>({input, std::char_traits<char_type>::length(input)});
 		}
 
 		// note: we are not BOM aware
