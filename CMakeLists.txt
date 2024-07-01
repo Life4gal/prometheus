@@ -302,6 +302,24 @@ set(
 		${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC
 
 		# =========================
+		# CHARS
+		# =========================
+		
+		${PROJECT_SOURCE_DIR}/src/chars/encoding.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_ascii.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf8.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf16.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf32.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_ascii.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf8.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf16.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf32.ixx
+		
+		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
+
+		# =========================
 		# CONCURRENCY
 		# =========================
 
@@ -472,31 +490,6 @@ else ()
 			${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE}
 	)
 endif (${PROJECT_NAME_PREFIX}MODULE)
-
-# todo
-#target_sources(
-#${PROJECT_NAME}
-#
-#PUBLIC
-#
-## =========================
-## CHARS
-## =========================
-#
-#${PROJECT_SOURCE_DIR}/src/chars/encoding.hpp
-#${PROJECT_SOURCE_DIR}/src/chars/scalar.hpp
-#${PROJECT_SOURCE_DIR}/src/chars/scalar_ascii.hpp
-#${PROJECT_SOURCE_DIR}/src/chars/scalar_utf8.hpp
-#${PROJECT_SOURCE_DIR}/src/chars/scalar_utf16.hpp
-#${PROJECT_SOURCE_DIR}/src/chars/scalar_utf32.hpp
-#${PROJECT_SOURCE_DIR}/src/chars/icelake.hpp
-#${PROJECT_SOURCE_DIR}/src/chars/icelake_ascii.hpp
-#${PROJECT_SOURCE_DIR}/src/chars/icelake_utf8.hpp
-#${PROJECT_SOURCE_DIR}/src/chars/icelake_utf16.hpp
-#${PROJECT_SOURCE_DIR}/src/chars/icelake_utf32.hpp
-#
-#${PROJECT_SOURCE_DIR}/src/chars/chars.hpp
-#)
 
 target_sources(
 		${PROJECT_NAME}
