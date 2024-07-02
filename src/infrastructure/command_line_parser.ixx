@@ -96,100 +96,102 @@ namespace gal::prometheus::infrastructure
 	#endif
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		class CommandLineOptionNameFormatError final : public error::Exception<void>
+
+	class CommandLineOptionNameFormatError final : public error::Exception<void>
+	{
+	public:
+		using Exception::Exception;
+
+		[[noreturn]] static auto panic(
+			const std::string_view option,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> void //
 		{
-		public:
-			using Exception::Exception;
+			error::panic<CommandLineOptionNameFormatError>(
+				std::format("Cannot parse `{}` as option name", option),
+				location,
+				std::move(stacktrace)
+			);
+		}
+	};
 
-			[[noreturn]] static auto panic(
-					const std::string_view option,
-					const std::source_location& location = std::source_location::current(),
-					std::stacktrace stacktrace = std::stacktrace::current()
-					) noexcept(false) -> void //
-			{
-				error::panic<CommandLineOptionNameFormatError>(
-						std::format("Cannot parse `{}` as option name", option),
-						location,
-						std::move(stacktrace)
-						);
-			}
-		};
+	class CommandLineOptionAlreadyExistsError final : public error::Exception<void>
+	{
+	public:
+		using Exception::Exception;
 
-		class CommandLineOptionAlreadyExistsError final : public error::Exception<void>
+		[[noreturn]] static auto panic(
+			const std::string_view option,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> void //
 		{
-		public:
-			using Exception::Exception;
+			error::panic<CommandLineOptionAlreadyExistsError>(
+				std::format("Option `{}` already exists!", option),
+				location,
+				std::move(stacktrace)
+			);
+		}
+	};
 
-			[[noreturn]] static auto panic(
-					const std::string_view option,
-					const std::source_location& location = std::source_location::current(),
-					std::stacktrace stacktrace = std::stacktrace::current()
-					) noexcept(false) -> void //
-			{
-				error::panic<CommandLineOptionAlreadyExistsError>(
-						std::format("Option `{}` already exists!", option),
-						location,
-						std::move(stacktrace)
-						);
-			}
-		};
+	class CommandLineOptionUnrecognizedError final : public error::Exception<void>
+	{
+	public:
+		using Exception::Exception;
 
-		class CommandLineOptionUnrecognizedError final : public error::Exception<void>
+		[[noreturn]] static auto panic(
+			const std::string_view option,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> void //
 		{
-		public:
-			using Exception::Exception;
+			error::panic<CommandLineOptionUnrecognizedError>(
+				std::format("Unrecognized option:\n {}", option),
+				location,
+				std::move(stacktrace)
+			);
+		}
+	};
 
-			[[noreturn]] static auto panic(
-					const std::string_view option,
-					const std::source_location& location = std::source_location::current(),
-					std::stacktrace stacktrace = std::stacktrace::current()
-					) noexcept(false) -> void //
-			{
-				error::panic<CommandLineOptionUnrecognizedError>(
-						std::format("Unrecognized option:\n {}", option),
-						location,
-						std::move(stacktrace)
-						);
-			}
-		};
+	class CommandLineOptionRequiredNotPresentError final : public error::Exception<void>
+	{
+	public:
+		using Exception::Exception;
 
-		class CommandLineOptionRequiredNotPresentError final : public error::Exception<void>
+		[[noreturn]] static auto panic(
+			const std::string_view option,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> void //
 		{
-		public:
-			using Exception::Exception;
+			error::panic<CommandLineOptionRequiredNotPresentError>(
+				std::format("Required option `{}` not present", option),
+				location,
+				std::move(stacktrace)
+			);
+		}
+	};
 
-			[[noreturn]] static auto panic(
-					const std::string_view option,
-					const std::source_location& location = std::source_location::current(),
-					std::stacktrace stacktrace = std::stacktrace::current()
-					) noexcept(false) -> void //
-			{
-				error::panic<CommandLineOptionRequiredNotPresentError>(
-						std::format("Required option `{}` not present", option),
-						location,
-						std::move(stacktrace)
-						);
-			}
-		};
+	class CommandLineOptionRequiredNotSetError final : public error::Exception<void>
+	{
+	public:
+		using Exception::Exception;
 
-		class CommandLineOptionRequiredNotSetError final : public error::Exception<void>
+		[[noreturn]] static auto panic(
+			const std::string_view option,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> void //
 		{
-		public:
-			using Exception::Exception;
+			error::panic<CommandLineOptionRequiredNotSetError>(
+				std::format("Required option `{}` not set and no default value present", option),
+				location,
+				std::move(stacktrace)
+			);
+		}
+	};
 
-			[[noreturn]] static auto panic(
-					const std::string_view option,
-					const std::source_location& location = std::source_location::current(),
-					std::stacktrace stacktrace = std::stacktrace::current()
-					) noexcept(false) -> void //
-			{
-				error::panic<CommandLineOptionRequiredNotSetError>(
-						std::format("Required option `{}` not set and no default value present", option),
-						location,
-						std::move(stacktrace)
-						);
-			}
-		};
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	using descriptor_boolean = bool;
@@ -360,12 +362,12 @@ namespace gal::prometheus::infrastructure
 		       std::views::common;
 	}
 
-	struct string_parse_functor
+	namespace parser
 	{
 		// boolean
 		template<typename T, regex_string_type Range>
 			requires std::is_same_v<T, bool>
-		[[nodiscard]] auto operator()(const Range& range) ->
+		[[nodiscard]] constexpr auto parse(const Range& range) ->
 			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
 			std::expected<bool, std::string>
 			#else
@@ -387,7 +389,7 @@ namespace gal::prometheus::infrastructure
 		// not bool, avoid ambiguous
 		template<std::integral T, regex_string_type Range>
 			requires(not std::is_same_v<T, bool>)
-		[[nodiscard]] auto operator()(const Range& range) ->
+		[[nodiscard]] constexpr auto parse(const Range& range) ->
 			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
 			std::expected<T, std::string>
 			#else
@@ -397,32 +399,32 @@ namespace gal::prometheus::infrastructure
 			#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
 			return parse_integer(range)
 					.and_then(
-							[&range](const descriptor_integer& descriptor) -> std::expected<T, std::string>
-							{
-								const auto& [is_negative, base, value] = descriptor;
-								const auto base_num = static_cast<int>(base);
+						[&range](const descriptor_integer& descriptor) -> std::expected<T, std::string>
+						{
+							const auto& [is_negative, base, value] = descriptor;
+							const auto base_num = static_cast<int>(base);
 
-								using type = std::make_unsigned_t<T>;
-								type result;
-								if (
-									const auto [last, error] = std::from_chars(value.data(), value.data() + value.size(), result, base_num);
-									error != std::errc{} or last != value.data() + value.size())
+							using type = std::make_unsigned_t<T>;
+							type result;
+							if (
+								const auto [last, error] = std::from_chars(value.data(), value.data() + value.size(), result, base_num);
+								error != std::errc{} or last != value.data() + value.size())
+							{
+								return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, meta::name_of<type>())};
+							}
+
+							if (is_negative)
+							{
+								if constexpr (not std::numeric_limits<T>::is_signed)
 								{
 									return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, meta::name_of<type>())};
 								}
 
-								if (is_negative)
-								{
-									if constexpr (not std::numeric_limits<T>::is_signed)
-									{
-										return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, meta::name_of<type>())};
-									}
+								return static_cast<T>(-static_cast<T>(result - 1) - 1);
+							}
 
-									return static_cast<T>(-static_cast<T>(result - 1) - 1);
-								}
-
-								return result;
-							});
+							return result;
+						});
 			#else
 			if (const auto descriptor = parse_integer(range);
 				descriptor.has_value())
@@ -456,40 +458,42 @@ namespace gal::prometheus::infrastructure
 			requires(not std::is_constructible_v<OutRange, Range>) and
 			        requires
 			        {
-				        std::declval<string_parse_functor&>().operator()<std::ranges::range_value_t<OutRange>>(
-						        std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(parse_list(
-								        std::declval<const Range&>()).value())>>>());
+				        parser::parse<std::ranges::range_value_t<OutRange>>(
+					        std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(
+						        parse_list(std::declval<const Range&>()).value()
+					        )>>>()
+				        );
 			        }
-		auto operator()(const Range& range, OutRange& out) -> void
+		constexpr auto parse(const Range& range, OutRange& out) -> void
 		{
 			const auto list = parse_list(range);
 			if (not list.has_value()) { return; }
 
 			if constexpr (const auto view = *list;
 				std::is_same_v<
-					std::remove_cvref_t<decltype(std::declval<string_parse_functor&>().operator()<std::ranges::range_value_t<OutRange>>(
-							std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(view)>>>()))>, //
+					std::remove_cvref_t<decltype(parser::parse<std::ranges::range_value_t<OutRange>>(
+						std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(view)>>>()))>, //
 					std::ranges::range_value_t<OutRange>> //
 			)
 			{
 				std::ranges::for_each(
-						view,
-						[this, &out](const auto& string) -> void //
+					view,
+					[&out](const auto& string) -> void //
+					{
+						if constexpr (requires { out.emplace_back(parser::parse<std::ranges::range_value_t<OutRange>>(string)); }) //
 						{
-							if constexpr (requires { out.emplace_back(this->operator()<std::ranges::range_value_t<OutRange>>(string)); }) //
-							{
-								out.emplace_back(this->operator()<std::ranges::range_value_t<OutRange>>(string));
-							}
-							else if constexpr (requires { out.push_back(this->operator()<std::ranges::range_value_t<OutRange>>(string)); }) //
-							{
-								out.push_back(this->operator()<std::ranges::range_value_t<OutRange>>(string));
-							}
-							else if constexpr (requires { out.emplace(this->operator()<std::ranges::range_value_t<OutRange>>(string)); }) //
-							{
-								out.emplace(this->operator()<std::ranges::range_value_t<OutRange>>(string));
-							}
-							else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-						});
+							out.emplace_back(parser::parse<std::ranges::range_value_t<OutRange>>(string));
+						}
+						else if constexpr (requires { out.push_back(parser::parse<std::ranges::range_value_t<OutRange>>(string)); }) //
+						{
+							out.push_back(parser::parse<std::ranges::range_value_t<OutRange>>(string));
+						}
+						else if constexpr (requires { out.emplace(parser::parse<std::ranges::range_value_t<OutRange>>(string)); }) //
+						{
+							out.emplace(parser::parse<std::ranges::range_value_t<OutRange>>(string));
+						}
+						else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+					});
 			}
 			else
 			{
@@ -498,7 +502,7 @@ namespace gal::prometheus::infrastructure
 
 				for (auto it = std::ranges::begin(view); it != std::ranges::end(view); std::ranges::advance(it, 1))
 				{
-					auto value = this->operator()<std::ranges::range_value_t<OutRange>>(*it);
+					auto value = parser::parse<std::ranges::range_value_t<OutRange>>(*it);
 					if (not value.has_value()) { return; }
 
 					if constexpr (requires { tmp_out.emplace_back(*std::move(value)); }) //
@@ -527,13 +531,13 @@ namespace gal::prometheus::infrastructure
 			requires(not std::is_constructible_v<OutRange, Range>) and
 			        requires
 			        {
-				        std::declval<string_parse_functor&>().operator()(std::declval<const Range&>(), std::declval<OutRange&>());
+				        parser::parse(std::declval<const Range&>(), std::declval<OutRange&>());
 			        }
-		[[nodiscard]] auto operator()(const Range& range) -> OutRange
+		[[nodiscard]] constexpr auto parse(const Range& range) -> OutRange
 		{
 			OutRange result{};
 
-			this->operator()(range, result);
+			parser::parse(range, result);
 
 			return result;
 		}
@@ -542,17 +546,17 @@ namespace gal::prometheus::infrastructure
 		// not list, avoid ambiguous
 		template<typename T, regex_string_type Range>
 			requires std::is_constructible_v<T, Range>
-		[[nodiscard]] auto operator()(const Range& range) noexcept(std::is_nothrow_constructible_v<T, Range>) -> T { return T{range}; }
-	};
+		[[nodiscard]] constexpr auto parse(const Range& range) noexcept(std::is_nothrow_constructible_v<T, Range>) -> T { return T{range}; }
+	}
 
-	#if GAL_PROMETHEUS_COMPILER_MSVC
+	#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 	const static int g_argc = *__p___argc();
 	static const char* const* g_argv = *__p___argv();
 	#else
-	static int		  g_argc = 0;
-	static char* const* g_argv = nullptr;
+	static int g_argc = 0;
+	static const char** g_argv = nullptr;
 
-	__attribute__((constructor)) auto do_read_command_line(const int argc, const char* argv[])  -> void
+	__attribute__((constructor)) auto do_read_command_line(const int argc, const char* argv[]) -> void
 	{
 		g_argc = argc;
 		g_argv = argv;
@@ -560,344 +564,348 @@ namespace gal::prometheus::infrastructure
 	#endif
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		template<regex_string_type StringType, regex_string_type StringViewType>
-		class CommandLineOption;
-		template<regex_string_type StringType = std::basic_string<regex_char_type>>
-		class CommandLineOptionParser;
+	template<regex_string_type StringType, regex_string_type StringViewType>
+	class CommandLineOption;
+	template<regex_string_type StringType = std::basic_string<regex_char_type>>
+	class CommandLineOptionParser;
 
-		template<regex_string_type StringType, regex_string_type StringViewType>
-		class CommandLineOption
+	template<regex_string_type StringType, regex_string_type StringViewType>
+	class CommandLineOption
+	{
+	public:
+		using string_type = StringType;
+		using string_view_type = StringViewType;
+
+		using parser_type = CommandLineOptionParser<string_type>;
+
+		friend parser_type;
+
+	private:
+		struct value_type;
+
+		struct implicit_value_type;
+
+		struct default_value_type
 		{
-		public:
-			using string_type = StringType;
-			using string_view_type = StringViewType;
+			string_view_type value;
 
-			using parser_type = CommandLineOptionParser<string_type>;
+			[[nodiscard]] constexpr auto operator+(const implicit_value_type& v) const noexcept -> value_type { return {*this, v}; }
 
-			friend parser_type;
-
-		private:
-			struct value_type;
-
-			struct implicit_value_type;
-
-			struct default_value_type
-			{
-				string_view_type value;
-
-				[[nodiscard]] constexpr auto operator+(const implicit_value_type& value) const noexcept -> value_type { return {*this, value}; }
-
-				[[nodiscard]] constexpr explicit(false) operator string_view_type() const noexcept { return value; }
-			};
-
-			struct implicit_value_type
-			{
-				string_view_type value;
-
-				[[nodiscard]] constexpr auto operator+(const default_value_type& value) const noexcept -> value_type { return {value, *this}; }
-
-				[[nodiscard]] constexpr explicit(false) operator string_view_type() const noexcept { return value; }
-			};
-
-			struct value_type
-			{
-				default_value_type dv;
-				implicit_value_type iv;
-			};
-
-		public:
-			[[nodiscard]] constexpr static auto default_value(const string_view_type value) noexcept -> default_value_type { return {value}; }
-
-			[[nodiscard]] constexpr static auto implicit_value(const string_view_type value) noexcept -> implicit_value_type { return {value}; }
-
-		private:
-			// This string has no meaning but can indicate that the current value is set.
-			constexpr static string_view_type secret_value{"~!@#$%^&*()_+"};
-
-			string_view_type option_short_format_;
-			string_view_type option_long_format_;
-
-			value_type value_;
-			string_view_type current_value_;
-
-			constexpr auto set_value_default() noexcept -> void { current_value_ = value_.dv; }
-
-			constexpr auto set_value_implicit() noexcept -> void { current_value_ = value_.iv; }
-
-			constexpr auto set_value(const string_view_type value = secret_value) noexcept -> void { current_value_ = value; }
-
-			template<typename AllocateFunction>
-				requires std::is_same_v<std::invoke_result_t<AllocateFunction, string_view_type>, string_view_type>
-			constexpr auto respawn(AllocateFunction allocator) -> void
-			{
-				option_short_format_ = allocator(option_short_format_);
-				option_long_format_ = allocator(option_long_format_);
-
-				if (not value_.dv.value.empty()) { value_.dv = {allocator(value_.dv.value)}; }
-				if (not value_.iv.value.empty()) { value_.iv = {allocator(value_.iv.value)}; }
-
-				set_value_implicit();
-			}
-
-		public:
-			constexpr CommandLineOption(
-					const string_view_type option_short_format,
-					const string_view_type option_long_format,
-					const value_type value) noexcept
-				: option_short_format_{option_short_format},
-				  option_long_format_{option_long_format},
-				  value_{value},
-				  // `Defaults` use implicit_value, if the option is given `explicitly` the `default_value` is used, if the option is given `explicitly` and a value is specified the specified value is used.
-				  current_value_{value_.iv} {}
-
-			[[nodiscard]] constexpr auto set() const noexcept -> bool { return not current_value_.empty(); }
-
-			[[nodiscard]] constexpr auto has_default() const noexcept -> bool { return not value_.dv.empty(); }
-
-			[[nodiscard]] constexpr auto default_value() const noexcept -> string_view_type { return value_.dv; }
-
-			[[nodiscard]] constexpr auto is_default() const noexcept -> bool { return current_value_ == default_value(); }
-
-			[[nodiscard]] constexpr auto has_implicit() const noexcept -> bool { return not value_.iv.empty(); }
-
-			[[nodiscard]] constexpr auto implicit_value() const noexcept -> string_view_type { return value_.iv; }
-
-			[[nodiscard]] constexpr auto is_implicit() const noexcept -> bool { return current_value_ == implicit_value(); }
-
-			template<typename T>
-				requires requires
-				{
-					std::declval<string_parse_functor&>().operator()<T>(std::declval<string_view_type>());
-				}
-			[[nodiscard]] auto as() const -> std::optional<T>
-			{
-				if (not set()) { return std::nullopt; }
-
-				if constexpr (std::is_same_v<std::remove_cvref_t<decltype(std::declval<string_parse_functor&>().operator()<
-					                             T>(std::declval<string_view_type>()))>, T>)
-				{
-					return string_parse_functor{}.operator()<T>(current_value_);
-				}
-				else
-				{
-					auto value = string_parse_functor{}.operator()<T>(current_value_);
-					#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
-					if (value.has_value()) { return *std::move(value); }
-
-					std::cerr << std::format("Cannot parse `{}` as `{}`.", current_value_, meta::name_of<T>());
-					return std::nullopt;
-					#else
-					return value;
-					#endif
-				}
-			}
+			[[nodiscard]] constexpr explicit(false) operator string_view_type() const noexcept { return value; }
 		};
 
-		template<regex_string_type StringType>
-		class CommandLineOptionParser
+		struct implicit_value_type
 		{
-		public:
-			using string_type = StringType;
-			using string_pool_type = string::StringPool<typename string_type::value_type, false>;
-			using string_view_type = typename string_pool_type::view_type;
+			string_view_type value;
 
-			using option_type = CommandLineOption<string_type, string_view_type>;
-			using option_list_type = std::unordered_map<string_view_type, std::shared_ptr<option_type>>;
-			using option_list_size_type = typename option_list_type::size_type;
+			[[nodiscard]] constexpr auto operator+(const default_value_type& v) const noexcept -> value_type { return {v, *this}; }
 
-			[[nodiscard]] constexpr static auto default_value(const string_view_type value) noexcept -> typename option_type::default_value_type
+			[[nodiscard]] constexpr explicit(false) operator string_view_type() const noexcept { return value; }
+		};
+
+		struct value_type
+		{
+			default_value_type dv;
+			implicit_value_type iv;
+		};
+
+	public:
+		[[nodiscard]] constexpr static auto default_value(const string_view_type value) noexcept -> default_value_type { return {value}; }
+
+		[[nodiscard]] constexpr static auto implicit_value(const string_view_type value) noexcept -> implicit_value_type { return {value}; }
+
+	private:
+		// This string has no meaning but can indicate that the current value is set.
+		constexpr static string_view_type secret_value{"~!@#$%^&*()_+"};
+
+		string_view_type option_short_format_;
+		string_view_type option_long_format_;
+
+		value_type value_;
+		string_view_type current_value_;
+
+		constexpr auto set_value_default() noexcept -> void { current_value_ = value_.dv; }
+
+		constexpr auto set_value_implicit() noexcept -> void { current_value_ = value_.iv; }
+
+		constexpr auto set_value(const string_view_type value = secret_value) noexcept -> void { current_value_ = value; }
+
+		template<typename AllocateFunction>
+			requires std::is_same_v<std::invoke_result_t<AllocateFunction, string_view_type>, string_view_type>
+		constexpr auto respawn(AllocateFunction allocator) -> void
+		{
+			option_short_format_ = allocator(option_short_format_);
+			option_long_format_ = allocator(option_long_format_);
+
+			if (not value_.dv.value.empty()) { value_.dv = {allocator(value_.dv.value)}; }
+			if (not value_.iv.value.empty()) { value_.iv = {allocator(value_.iv.value)}; }
+
+			set_value_implicit();
+		}
+
+	public:
+		constexpr CommandLineOption(
+			const string_view_type option_short_format,
+			const string_view_type option_long_format,
+			const value_type value) noexcept
+			: option_short_format_{option_short_format},
+			  option_long_format_{option_long_format},
+			  value_{value},
+			  // `Defaults` use implicit_value, if the option is given `explicitly` the `default_value` is used, if the option is given `explicitly` and a value is specified the specified value is used.
+			  current_value_{value_.iv} {}
+
+		[[nodiscard]] constexpr auto set() const noexcept -> bool { return not current_value_.empty(); }
+
+		[[nodiscard]] constexpr auto has_default() const noexcept -> bool { return not value_.dv.empty(); }
+
+		[[nodiscard]] constexpr auto default_value() const noexcept -> string_view_type { return value_.dv; }
+
+		[[nodiscard]] constexpr auto is_default() const noexcept -> bool { return current_value_ == default_value(); }
+
+		[[nodiscard]] constexpr auto has_implicit() const noexcept -> bool { return not value_.iv.empty(); }
+
+		[[nodiscard]] constexpr auto implicit_value() const noexcept -> string_view_type { return value_.iv; }
+
+		[[nodiscard]] constexpr auto is_implicit() const noexcept -> bool { return current_value_ == implicit_value(); }
+
+		template<typename T>
+			requires requires
 			{
-				return option_type::default_value(value);
+				parser::parse<T>(std::declval<string_view_type>());
 			}
+		[[nodiscard]] auto as() const -> std::optional<T>
+		{
+			if (not set()) { return std::nullopt; }
 
-			[[nodiscard]] constexpr static auto implicit_value(const string_view_type value) noexcept -> typename option_type::implicit_value_type
+			if constexpr (
+				std::is_same_v<
+					std::remove_cvref_t<decltype(parser::parse<T>(std::declval<string_view_type>()))>,
+					T>
+			)
 			{
-				return option_type::implicit_value(value);
+				return parser::parse(current_value_);
 			}
-
-		private:
-			string_pool_type string_pool_;
-
-			option_list_type option_list_;
-
-			bool allow_unrecognized_;
-
-			auto add_option(std::shared_ptr<option_type> option) -> void
+			else
 			{
-				option->respawn([this](const string_view_type value) -> string_view_type { return string_pool_.append(value); });
+				auto value = parser::parse<T>(current_value_);
+				#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
+				if (value.has_value()) { return *std::move(value); }
 
-				auto do_add_option = [this](const string_view_type name, std::shared_ptr<option_type> o) -> void
+				std::cerr << std::format("Cannot parse `{}` as `{}`.", current_value_, meta::name_of<T>());
+				return std::nullopt;
+				#else
+				return value;
+				#endif
+			}
+		}
+	};
+
+	template<regex_string_type StringType>
+	class CommandLineOptionParser
+	{
+	public:
+		using string_type = StringType;
+		using string_pool_type = string::StringPool<typename string_type::value_type, false>;
+		using string_view_type = typename string_pool_type::view_type;
+
+		using option_type = CommandLineOption<string_type, string_view_type>;
+		using option_list_type = std::unordered_map<string_view_type, std::shared_ptr<option_type>>;
+		using option_list_size_type = typename option_list_type::size_type;
+
+		[[nodiscard]] constexpr static auto default_value(const string_view_type value) noexcept -> typename option_type::default_value_type
+		{
+			return option_type::default_value(value);
+		}
+
+		[[nodiscard]] constexpr static auto implicit_value(const string_view_type value) noexcept -> typename option_type::implicit_value_type
+		{
+			return option_type::implicit_value(value);
+		}
+
+	private:
+		string_pool_type string_pool_;
+
+		option_list_type option_list_;
+
+		bool allow_unrecognized_;
+
+		auto add_option(std::shared_ptr<option_type> option) -> void
+		{
+			option->respawn([this](const string_view_type value) -> string_view_type { return string_pool_.append(value); });
+
+			auto do_add_option = [this](const string_view_type name, std::shared_ptr<option_type> o) -> void
+			{
+				const auto [_, inserted] = option_list_.emplace(name, std::move(o));
+				if (not inserted) { CommandLineOptionAlreadyExistsError::panic(name); }
+			};
+
+			if (not option->option_short_format_.empty()) { do_add_option(option->option_short_format_, option); }
+			do_add_option(option->option_long_format_, option);
+		}
+
+		auto add_alias(const string_view_type alias_name, const string_view_type target_option_name) -> void
+		{
+			const auto target_option_it = option_list_.find(target_option_name);
+			if (target_option_it == option_list_.end()) { CommandLineOptionRequiredNotPresentError::panic(target_option_name); }
+
+			if (const auto it = option_list_.find(alias_name);
+				it != option_list_.end()) { CommandLineOptionAlreadyExistsError::panic(alias_name); }
+
+			option_list_.emplace(alias_name, target_option_it->second);
+		}
+
+	public:
+		explicit CommandLineOptionParser(const bool allow_unrecognized = false) noexcept
+			: allow_unrecognized_{allow_unrecognized} {}
+
+		[[nodiscard]] auto options() noexcept -> auto
+		{
+			return functional::y_combinator{
+					functional::overloaded{
+							[this](auto& self, const string_view_type option, const typename option_type::value_type value) -> auto& {
+								const auto option_names = parse_list(option);
+								if (not option_names.has_value()) { CommandLineOptionNameFormatError::panic(option); }
+
+								const auto option_view = *option_names;
+								const auto option_size = std::ranges::distance(option_view);
+
+								if (option_size != 1 and option_size != 2) { CommandLineOptionNameFormatError::panic(option); }
+
+								const auto o1 = string_view_type{*std::ranges::begin(option_view)};
+								const auto o2 = option_size == 2
+									                ? string_view_type{*std::ranges::next(std::ranges::begin(option_view), 1)}
+									                : string_view_type{};
+
+								const auto short_format = o1.size() < o2.size() ? o1 : o2;
+								const auto long_format = o1.size() < o2.size() ? o2 : o1;
+
+								auto o = std::make_shared<option_type>(short_format, long_format, value);
+								add_option(o);
+
+								return self;
+							},
+							[](auto& self, const string_view_type option, const typename option_type::implicit_value_type value) -> auto& {
+								std::invoke(self, option, value + typename option_type::default_value_type{});
+								return self;
+							},
+							[](auto& self, const string_view_type option, const typename option_type::default_value_type value) -> auto& {
+								std::invoke(self, option, value + typename option_type::implicit_value_type{});
+								return self;
+							},
+							[](auto& self, const string_view_type option) -> auto& {
+								std::invoke(self, option, typename option_type::value_type{});
+								return self;
+							},
+					}};
+		}
+
+		[[nodiscard]] auto aliases() noexcept -> auto
+		{
+			return functional::y_combinator{
+					[this](auto& self, const string_view_type alias_name, const string_view_type target_option_name) -> auto& {
+						const auto option_names = parse_list(alias_name);
+						if (not option_names.has_value()) { CommandLineOptionNameFormatError::panic(alias_name); }
+
+						const auto option_view = *option_names;
+						const auto option_size = std::ranges::distance(option_view);
+
+						if (option_size != 1 and option_size != 2) { CommandLineOptionNameFormatError::panic(alias_name); }
+
+						const auto o1 = string_view_type{*std::ranges::begin(option_view)};
+						const auto o2 = option_size == 2
+							                ? string_view_type{*std::ranges::next(std::ranges::begin(option_view), 1)}
+							                : string_view_type{};
+
+						add_alias(o1, target_option_name);
+						if (not o2.empty()) { add_alias(o2, target_option_name); }
+
+						return self;
+					}};
+		}
+
+		auto parse(const std::span<const string_view_type> args) -> void
+		{
+			std::vector<string_view_type> unmatched{};
+
+			std::ranges::for_each(
+				args.begin(),
+				args.end(),
+				[this, &unmatched](const auto& string) -> void
 				{
-					const auto [_, inserted] = option_list_.emplace(name, std::move(o));
-					if (not inserted) { CommandLineOptionAlreadyExistsError::panic(name); }
-				};
+					const auto option = parse_option(string);
 
-				if (not option->option_short_format_.empty()) { do_add_option(option->option_short_format_, option); }
-				do_add_option(option->option_long_format_, option);
-			}
+					if (not option.has_value())
+					{
+						unmatched.emplace_back(string);
+						return;
+					}
 
-			auto add_alias(const string_view_type alias_name, const string_view_type target_option_name) -> void
+					auto it = option_list_.find(option->name);
+					if (it == option_list_.end())
+					{
+						unmatched.emplace_back(option->name);
+						return;
+					}
+
+					// Since we allow `--option`, we are not sure here whether the string is `--option` or `--option`.
+					if (option->value.empty())
+					{
+						if (std::ranges::starts_with(string, string_view_type{"--"}))
+						{
+							// --option
+							it->second->set_value_default();
+						}
+						else
+						{
+							// -option
+							it->second->set_value();
+						}
+					}
+					else
+					{
+						const auto allocated_value = string_pool_.append(option->value);
+						it->second->set_value(allocated_value);
+					}
+				});
+
+			if (not unmatched.empty())
 			{
-				const auto target_option_it = option_list_.find(target_option_name);
-				if (target_option_it == option_list_.end()) { CommandLineOptionRequiredNotPresentError::panic(target_option_name); }
-
-				if (const auto it = option_list_.find(alias_name);
-					it != option_list_.end()) { CommandLineOptionAlreadyExistsError::panic(alias_name); }
-
-				option_list_.emplace(alias_name, target_option_it->second);
-			}
-
-		public:
-			explicit CommandLineOptionParser(const bool allow_unrecognized = false) noexcept
-				: allow_unrecognized_{allow_unrecognized} {}
-
-			[[nodiscard]] auto options() noexcept -> auto
-			{
-				return functional::y_combinator{
-						functional::overloaded{
-								[this](auto& self, const string_view_type option, const typename option_type::value_type value) -> auto& {
-									const auto option_names = parse_list(option);
-									if (not option_names.has_value()) { CommandLineOptionNameFormatError::panic(option); }
-
-									const auto option_view = *option_names;
-									const auto option_size = std::ranges::distance(option_view);
-
-									if (option_size != 1 and option_size != 2) { CommandLineOptionNameFormatError::panic(option); }
-
-									const auto o1 = string_view_type{*std::ranges::begin(option_view)};
-									const auto o2 = option_size == 2
-										                ? string_view_type{*std::ranges::next(std::ranges::begin(option_view), 1)}
-										                : string_view_type{};
-
-									const auto short_format = o1.size() < o2.size() ? o1 : o2;
-									const auto long_format = o1.size() < o2.size() ? o2 : o1;
-
-									auto o = std::make_shared<option_type>(short_format, long_format, value);
-									add_option(o);
-
-									return self;
-								},
-								[](auto& self, const string_view_type option, const typename option_type::implicit_value_type value) -> auto& {
-									std::invoke(self, option, value + typename option_type::default_value_type{});
-									return self;
-								},
-								[](auto& self, const string_view_type option, const typename option_type::default_value_type value) -> auto& {
-									std::invoke(self, option, value + typename option_type::implicit_value_type{});
-									return self;
-								},
-								[](auto& self, const string_view_type option) -> auto& {
-									std::invoke(self, option, typename option_type::value_type{});
-									return self;
-								},
-						}};
-			}
-
-			[[nodiscard]] auto aliases() noexcept -> auto
-			{
-				return functional::y_combinator{
-						[this](auto& self, const string_view_type alias_name, const string_view_type target_option_name) -> auto& {
-							const auto option_names = parse_list(alias_name);
-							if (not option_names.has_value()) { CommandLineOptionNameFormatError::panic(alias_name); }
-
-							const auto option_view = *option_names;
-							const auto option_size = std::ranges::distance(option_view);
-
-							if (option_size != 1 and option_size != 2) { CommandLineOptionNameFormatError::panic(alias_name); }
-
-							const auto o1 = string_view_type{*std::ranges::begin(option_view)};
-							const auto o2 = option_size == 2
-								                ? string_view_type{*std::ranges::next(std::ranges::begin(option_view), 1)}
-								                : string_view_type{};
-
-							add_alias(o1, target_option_name);
-							if (not o2.empty()) { add_alias(o2, target_option_name); }
-
-							return self;
-						}};
-			}
-
-			auto parse(const std::span<const string_view_type> args) -> void
-			{
-				std::vector<string_view_type> unmatched{};
+				string_type options{};
 
 				std::ranges::for_each(
-						args.begin(),
-						args.end(),
-						[this, &unmatched](const auto& string) -> void
-						{
-							const auto option = parse_option(string);
+					unmatched,
+					[&options](const string_view_type option)
+					{
+						options.push_back('\t');
+						options.append(" - ");
+						options.append(option);
+						options.push_back('\n');
+					});
 
-							if (not option.has_value())
-							{
-								unmatched.emplace_back(string);
-								return;
-							}
+				std::cerr << std::format("Unrecognized option:\n {}", options);
 
-							auto it = option_list_.find(option->name);
-							if (it == option_list_.end())
-							{
-								unmatched.emplace_back(option->name);
-								return;
-							}
-
-							// Since we allow `--option`, we are not sure here whether the string is `--option` or `--option`.
-							if (option->value.empty())
-							{
-								if (std::ranges::starts_with(string, string_view_type{"--"}))
-								{
-									// --option
-									it->second->set_value_default();
-								}
-								else
-								{
-									// -option
-									it->second->set_value();
-								}
-							}
-							else
-							{
-								const auto allocated_value = string_pool_.append(option->value);
-								it->second->set_value(allocated_value);
-							}
-						});
-
-				if (not unmatched.empty())
-				{
-					string_type options{};
-
-					std::ranges::for_each(
-							unmatched,
-							[&options](const string_view_type option)
-							{
-								options.push_back('\t');
-								options.append(" - ");
-								options.append(option);
-								options.push_back('\n');
-							});
-
-					std::cerr << std::format("Unrecognized option:\n {}", options);
-
-					if (not allow_unrecognized_) { CommandLineOptionUnrecognizedError::panic(options); }
-				}
+				if (not allow_unrecognized_) { CommandLineOptionUnrecognizedError::panic(options); }
 			}
+		}
 
-			auto parse() -> void { return parse(std::span<const string_view_type>{g_argv, g_argc}); }
+		auto parse() -> void { return parse(std::span<const string_view_type>{g_argv, g_argc}); }
 
-			auto contains(const string_view_type arg_name) const -> bool { return option_list_.contains(arg_name); }
+		auto contains(const string_view_type arg_name) const -> bool { return option_list_.contains(arg_name); }
 
-			auto count(const string_view_type arg_name) const -> option_list_size_type { return option_list_.count(arg_name); }
+		auto count(const string_view_type arg_name) const -> option_list_size_type { return option_list_.count(arg_name); }
 
-			auto operator[](const string_view_type arg_name) const -> const option_type&
-			{
-				const auto it = option_list_.find(arg_name);
-				if (it == option_list_.end()) { CommandLineOptionRequiredNotPresentError::panic(arg_name); }
+		auto operator[](const string_view_type arg_name) const -> const option_type&
+		{
+			const auto it = option_list_.find(arg_name);
+			if (it == option_list_.end()) { CommandLineOptionRequiredNotPresentError::panic(arg_name); }
 
-				return *it->second;
-			}
-		};
+			return *it->second;
+		}
+	};
+
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
 #if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
-	#undef GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED
+#undef GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED
 #endif
