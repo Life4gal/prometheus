@@ -23,7 +23,7 @@ import std;
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_GNU)
-	#define TYPE_LIST_WORKAROUND_BINDER(T, Prediction) binder<T, Prediction>::template rebind
+#define TYPE_LIST_WORKAROUND_BINDER(T, Prediction) binder<T, Prediction>::template rebind
 #else
 #define TYPE_LIST_WORKAROUND_BINDER(T, Prediction) typename binder<T, Prediction>::rebind
 #endif
@@ -175,15 +175,33 @@ namespace gal::prometheus::functional
 				return ((Prediction<Ts>::value) and ...);
 			}
 
-			template<typename T, template<typename, typename> typename Prediction>
+			template<template<typename, typename> typename Prediction, typename T>
 			[[nodiscard]] consteval auto all() const noexcept -> bool
 			{
 				(void)this;
 				return this->template all<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>();
 			}
 
-			template<typename T>
-			[[nodiscard]] consteval auto all() const noexcept -> bool { return this->all<T, std::is_same>(); }
+			template<template<typename, typename> typename Prediction, typename... Us>
+				requires(sizeof...(Us) > 1)
+			[[nodiscard]] consteval auto all(const list<Us...>) const noexcept -> bool
+			{
+				(void)this;
+				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> bool
+				{
+					return ((Prediction<nth_type<Index>, typename list<Us...>::template nth_type<Index>>::value) and ...);
+				}(std::make_index_sequence<sizeof...(Us)>{});
+			}
+
+			template<template<typename, typename> typename Prediction, typename... Us>
+				requires(sizeof...(Us) > 1)
+			[[nodiscard]] consteval auto all() const noexcept -> bool
+			{
+				return this->template all<Prediction, Us...>(list<Us...>{});
+			}
+
+			template<typename... Us>
+			[[nodiscard]] consteval auto all() const noexcept -> bool { return this->all<std::is_same, Us...>(); }
 
 			template<template<typename> typename Prediction>
 			[[nodiscard]] consteval auto any() const noexcept -> bool
@@ -192,11 +210,32 @@ namespace gal::prometheus::functional
 				return ((Prediction<Ts>::value) or ...);
 			}
 
-			template<typename T, template<typename, typename> typename Prediction>
+			template<template<typename, typename> typename Prediction, typename T>
 			[[nodiscard]] consteval auto any() const noexcept -> bool { return this->template any<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
 
-			template<typename T>
-			[[nodiscard]] consteval auto any() const noexcept -> bool { return this->any<T, std::is_same>(); }
+			template<template<typename, typename> typename Prediction, typename... Us>
+				requires(sizeof...(Us) > 1)
+			[[nodiscard]] consteval auto any(const list<Us...>) const noexcept -> bool
+			{
+				(void)this;
+				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> bool
+				{
+					return ((Prediction<nth_type<Index>, typename list<Us...>::template nth_type<Index>>::value) or ...);
+				}(std::make_index_sequence<sizeof...(Us)>{});
+			}
+
+			template<template<typename, typename> typename Prediction, typename... Us>
+				requires(sizeof...(Us) > 1)
+			[[nodiscard]] consteval auto any() const noexcept -> bool
+			{
+				return this->template any<Prediction, Us...>(list<Us...>{});
+			}
+
+			template<typename... Us>
+			[[nodiscard]] consteval auto any() const noexcept -> bool
+			{
+				return this->any<std::is_same, Us...>();
+			}
 
 			template<template<typename> typename Prediction>
 				requires(list{}.any<Prediction>())
@@ -359,23 +398,30 @@ namespace gal::prometheus::functional
 			}
 
 			template<typename T, template<typename, typename> typename Prediction>
-				requires requires(list l) { l.template sub_list<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
+				requires requires(list l) { l.sub_list<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
 			[[nodiscard]] consteval auto sub_list() const noexcept -> auto
 			{
-				return this->template sub_list<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>();
+				return this->sub_list<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>();
 			}
 		};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		template<typename... Ts>
-		constexpr auto type_list = type_list_detail::list<Ts...>{};
+	template<typename... Ts>
+	constexpr auto type_list = type_list_detail::list<Ts...>{};
 
-		template<type_list_detail::list_t auto List>
-		using type_list_type = std::decay_t<decltype(List)>;
+	template<type_list_detail::list_t auto List>
+	using type_list_type = std::decay_t<decltype(List)>;
 
-		template<typename T>
-		concept type_list_t = type_list_detail::list_t<T>;
+	template<typename T>
+	concept type_list_t = type_list_detail::list_t<T>;
+
+	template<typename... Ts>
+	[[nodiscard]] constexpr auto to_type_list(const std::tuple<Ts...>) noexcept -> auto
+	{
+		return type_list<Ts...>;
+	}
+
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 } // namespace gal::prometheus::functional
 
