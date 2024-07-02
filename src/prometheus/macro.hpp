@@ -10,7 +10,7 @@
 // =========================================================
 
 #if defined(NDEBUG)
-	#define GAL_PROMETHEUS_COMPILER_DEBUG 0
+#define GAL_PROMETHEUS_COMPILER_DEBUG 0
 #else
 #define GAL_PROMETHEUS_COMPILER_DEBUG 1
 #endif
@@ -36,7 +36,7 @@
 
 #define GAL_PROMETHEUS_COMPILER_PRIVATE_DO_PRAGMA(X) _Pragma(#X)
 #define GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(warningName) GAL_PROMETHEUS_PRIVATE_DO_PRAGMA(GCC diagnostic ignored #warningName)
-#elif defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) || defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) || defined(GAL_PROMETHEUS_COMPILER_CLANG)
+#elif defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
 #define GAL_PROMETHEUS_COMPILER_DEBUG_TRAP() __builtin_trap()
 #define GAL_PROMETHEUS_COMPILER_IMPORTED_SYMBOL __attribute__((visibility("default")))
 #define GAL_PROMETHEUS_COMPILER_EXPORTED_SYMBOL __attribute__((visibility("default")))
@@ -59,24 +59,6 @@
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-#define GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_MSVC(...) GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(__VA_ARGS__)
-#else
-	#define GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_MSVC(...)
-#endif
-
-#if defined(GAL_PROMETHEUS_COMPILER_GNU)
-	#define GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_GNU(...) GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(__VA_ARGS__)
-#else
-#define GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_GNU(...)
-#endif
-
-#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) || defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) || defined(GAL_PROMETHEUS_COMPILER_CLANG)
-	#define GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_CLANG(...) GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(__VA_ARGS__)
-#else
-#define GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_CLANG(...)
-#endif
-
-#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 #define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #elif defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
 #if __clang_major__ >= 18
@@ -84,7 +66,7 @@
 			// https://github.com/llvm/llvm-project/pull/67199
 			#define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #else
-		#define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS
+#define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS
 #endif
 #else
 	#define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS [[no_unique_address]]
@@ -99,7 +81,7 @@
 #if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 #define GAL_PROMETHEUS_COMPILER_EMPTY_BASE __declspec(empty_bases)
 #else
-	#define GAL_PROMETHEUS_COMPILER_EMPTY_BASE
+#define GAL_PROMETHEUS_COMPILER_EMPTY_BASE
 #endif
 
 #if GAL_PROMETHEUS_USE_MODULE
@@ -327,23 +309,17 @@
 
 #define GAL_PROMETHEUS_DEBUG_ASSUME(expression, ...) GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("ASSUME-CHECK", expression __VA_OPT__(, ) __VA_ARGS__)
 
+#if __has_cpp_attribute(assume)
+#define GAL_PROMETHEUS_DEBUG_AXIOM_NO_CHECK(expression, ...) [[assume(expression)]]
+#else
+// todo
+#define GAL_PROMETHEUS_DEBUG_AXIOM_NO_CHECK(expression, ...) do { } while(false)
+#endif
+
 #if GAL_PROMETHEUS_COMPILER_DEBUG
 #define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) GAL_PROMETHEUS_DEBUG_ASSUME(expression __VA_OPT__(, ) __VA_ARGS__)
 #else
-	#if __has_cpp_attribute(assume)
-	#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) [[assume(expression)]]
-	#else
-	// todo
-		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-			#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) __assume(expression)
-		#elif defined(GAL_PROMETHEUS_COMPILER_GNU)
-			#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) __attribute__((assume(expression))
-		#elif defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) || defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) || defined(GAL_PROMETHEUS_COMPILER_CLANG)
-			#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) __builtin_assume(expression)
-		#else
-			#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...)
-		#endif
-	#endif
+#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) GAL_PROMETHEUS_DEBUG_AXIOM_NO_CHECK(expression)
 #endif
 
 #define GAL_PROMETHEUS_DEBUG_NOT_NULL(pointer, ...) GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("NOT-NULL-CHECK", pointer != nullptr __VA_OPT__(, ) __VA_ARGS__)

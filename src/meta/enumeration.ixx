@@ -59,7 +59,7 @@ namespace gal::prometheus::meta
 			#elif defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
 			// CLANG/CLANG-CL
 			// std::string_view `namespace`::get_full_function_name() [V = `DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE`]
-			constexpr std::string_view full_function_name = name_detail::get_full_function_name<DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE>();
+			constexpr std::string_view full_function_name = get_full_function_name<DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE>();
 			constexpr auto full_function_name_size = full_function_name.size();
 
 			constexpr std::string_view dummy_struct_name{"DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE"};
@@ -74,7 +74,7 @@ namespace gal::prometheus::meta
 			#else
 			// GCC
 			// constexpr std::string_view `namespace`::get_full_function_name() [with auto <anonymous> = `DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE`; std::string_view = std::basic_string_view<char>]
-			constexpr std::string_view full_function_name = name_detail::get_full_function_name<DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE>();
+			constexpr std::string_view full_function_name = get_full_function_name<DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE>();
 			constexpr auto full_function_name_size = full_function_name.size();
 
 			constexpr std::string_view dummy_struct_name{"DummyEnumDoNotPutIntoAnyNamespace::DO_NOT_USE"};
@@ -589,7 +589,7 @@ namespace gal::prometheus::meta
 
 				if constexpr (std::is_scoped_enum_v<EnumType>)
 				{
-					[[assume(last_double_colon != std::string_view::npos)]];
+					GAL_PROMETHEUS_DEBUG_AXIOM_NO_CHECK(last_double_colon != std::string_view::npos);
 
 					return name.substr(last_double_colon + 2);
 				}

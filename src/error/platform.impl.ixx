@@ -19,8 +19,6 @@ import std;
 import :platform;
 
 #else
-#pragma once
-
 #include <system_error>
 
 #include <prometheus/macro.hpp>

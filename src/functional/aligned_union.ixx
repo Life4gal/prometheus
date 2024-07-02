@@ -118,12 +118,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::functional)
 		// fixme: remove it?
 		[[nodiscard]] constexpr auto operator==(const AlignedUnion& other) const noexcept -> bool
 		{
-			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
-			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_CLANG(-Wundefined-reinterpret-cast)
-
 			return *reinterpret_cast<const void* const*>(&data_) == *reinterpret_cast<const void* const*>(&other.data_);
-
-			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
 		}
 
 		template<typename T>

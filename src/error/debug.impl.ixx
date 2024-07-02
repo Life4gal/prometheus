@@ -19,8 +19,6 @@ import std;
 import :debug;
 
 #else
-#pragma once
-
 #include <print>
 #include <iostream>
 

@@ -23,7 +23,7 @@ import std;
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_GNU)
-	#define VALUE_LIST_WORKAROUND_BINDER(Value, Prediction) binder<Value, Prediction>::template rebind
+#define VALUE_LIST_WORKAROUND_BINDER(Value, Prediction) binder<Value, Prediction>::template rebind
 #else
 #define VALUE_LIST_WORKAROUND_BINDER(Value, Prediction) typename binder<Value, Prediction>::rebind
 #endif
@@ -211,7 +211,7 @@ namespace gal::prometheus::functional
 			}
 
 			template<template<auto> typename Prediction>
-				requires(list{}.any<Prediction>())
+				requires(static_cast<list*>(nullptr)->any<Prediction>())
 			[[nodiscard]] consteval auto index_of() const noexcept -> std::size_t
 			{
 				(void)this;
@@ -236,7 +236,7 @@ namespace gal::prometheus::functional
 			{
 				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> auto //
 				{
-					return list<nth_value<values_size - 1 - Index>()...>{};
+					return list<static_cast<list*>(nullptr)->template nth_value<values_size - 1 - Index>()...>{};
 				}(std::make_index_sequence<values_size>{});
 			}
 
@@ -284,7 +284,7 @@ namespace gal::prometheus::functional
 				{
 					return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> auto //
 					{
-						return list<nth_value<Index>()...>{};
+						return list<static_cast<list*>(nullptr)->template nth_value<Index>()...>{};
 					}(std::make_index_sequence<values_size - N>{});
 				}
 			}
@@ -301,7 +301,7 @@ namespace gal::prometheus::functional
 				{
 					return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> auto //
 					{
-						return list<nth_value<N + Index>...>{};
+						return list<static_cast<list*>(nullptr)->template nth_value<N + Index>...>{};
 					}(std::make_index_sequence<values_size - N>{});
 				}
 			}
@@ -330,8 +330,8 @@ namespace gal::prometheus::functional
 				else
 				{
 					using type = typename unique_impl<
-						decltype(list{}.template front<N>().template pop_front<1>()),
-						decltype(list{}.template front<1>())
+						decltype(static_cast<list*>(nullptr)->template front<N>().template pop_front<1>()),
+						decltype(static_cast<list*>(nullptr)->template front<1>())
 					>::type;
 
 					if constexpr (N == values_size) //
@@ -340,7 +340,7 @@ namespace gal::prometheus::functional
 					}
 					else //
 					{
-						return type{}.template push_back<list{}.template back<values_size - N>()>();
+						return type{}.template push_back<static_cast<list*>(nullptr)->template back<values_size - N>()>();
 					}
 				}
 			}
@@ -355,8 +355,8 @@ namespace gal::prometheus::functional
 				else
 				{
 					using type = typename unique_impl<
-						decltype(list{}.template back<N>().template pop_front<1>()),
-						decltype(list{}.template back<N>().template front<1>())
+						decltype(static_cast<list*>(nullptr)->template back<N>().template pop_front<1>()),
+						decltype(static_cast<list*>(nullptr)->template back<N>().template front<1>())
 					>::type;
 
 					if constexpr (N == values_size) //
@@ -503,23 +503,23 @@ namespace gal::prometheus::functional
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		template<auto... Values>
-		constexpr auto value_list = value_list_detail::list<Values...>{};
+	template<auto... Values>
+	constexpr auto value_list = value_list_detail::list<Values...>{};
 
-		template<value_list_detail::list_t auto List>
-		using value_list_type = std::decay_t<decltype(List)>;
+	template<value_list_detail::list_t auto List>
+	using value_list_type = std::decay_t<decltype(List)>;
 
-		template<typename T>
-		concept value_list_t = value_list_detail::list_t<T>;
+	template<typename T>
+	concept value_list_t = value_list_detail::list_t<T>;
 
-		template<char... Cs>
-		constexpr auto char_list = value_list_detail::char_list<Cs...>{};
+	template<char... Cs>
+	constexpr auto char_list = value_list_detail::char_list<Cs...>{};
 
-		template<value_list_detail::char_list_t auto List>
-		using char_list_type = std::decay_t<decltype(List)>;
+	template<value_list_detail::char_list_t auto List>
+	using char_list_type = std::decay_t<decltype(List)>;
 
-		template<typename T>
-		concept char_list_t = value_list_detail::char_list_t<T>;
+	template<typename T>
+	concept char_list_t = value_list_detail::char_list_t<T>;
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 

@@ -39,176 +39,178 @@ import gal.prometheus.meta;
 namespace gal::prometheus::unit_test
 {
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		struct color_type
+
+	struct color_type
+	{
+		std::string_view none = "\033[0m";
+
+		std::string_view fail = "\033[31m\033[7m";
+		std::string_view pass = "\033[32m\033[7m";
+		std::string_view skip = "\033[33m\033[7m";
+		std::string_view fatal = "\033[35m\033[7m";
+
+		std::string_view suite = "\033[34m\033[7m";
+		std::string_view test = "\033[36m\033[7m";
+		std::string_view expression = "\033[38;5;207m\033[7m";
+		std::string_view message = "\033[38;5;27m\033[7m";
+	};
+
+	using clock_type = std::chrono::high_resolution_clock;
+	using time_point_type = clock_type::time_point;
+	using time_difference_type = std::chrono::milliseconds;
+
+	struct test_result_type;
+	using test_results_type = std::vector<test_result_type>;
+
+	struct test_result_type
+	{
+		enum class Status
 		{
-			std::string_view none = "\033[0m";
+			PENDING,
 
-			std::string_view fail = "\033[31m\033[7m";
-			std::string_view pass = "\033[32m\033[7m";
-			std::string_view skip = "\033[33m\033[7m";
-			std::string_view fatal = "\033[35m\033[7m";
-
-			std::string_view suite = "\033[34m\033[7m";
-			std::string_view test = "\033[36m\033[7m";
-			std::string_view expression = "\033[38;5;207m\033[7m";
-			std::string_view message = "\033[38;5;27m\033[7m";
+			PASSED,
+			FAILED,
+			SKIPPED,
+			FATAL,
 		};
 
-		using clock_type = std::chrono::high_resolution_clock;
-		using time_point_type = clock_type::time_point;
-		using time_difference_type = std::chrono::milliseconds;
+		std::string name;
 
-		struct test_result_type;
-		using test_results_type = std::vector<test_result_type>;
+		test_result_type* parent;
+		test_results_type children;
 
-		struct test_result_type
+		Status status;
+		time_point_type time_start;
+		time_point_type time_end;
+		std::size_t total_assertions_passed;
+		std::size_t total_assertions_failed;
+	};
+
+	constexpr std::string_view anonymous_suite_name{"anonymous_suite"};
+
+	struct suite_result_type
+	{
+		std::string name;
+
+		std::string report_string;
+
+		test_results_type test_results;
+	};
+
+	/**
+	 * result: std::vector<suite> {																			 
+	 * anonymous_suite: suite																						 
+	 * user_suite_0: suite																								
+	 * user_suite_1: suite																								
+	 * user_suite_2: suite																								
+	 * user_suite_3: suite																								
+	 * user_suite_n: suite																								 
+	 * }																														
+	 *																															
+	 * *_suite_*: suite {																									 
+	 * name: std::string																								
+	 * user_test_0: test																									 
+	 * user_test_1: test																									 
+	 * user_test_2: test																									 
+	 * user_test_3: test																									 
+	 * user_test_n: test																									 
+	 * }																														
+	 *																															
+	 * *_test_*: test {																									
+	 * name: std::string																								
+	 * parent: test*																										 
+	 * children(nested test): std::vector<test>																
+	 *																															
+	 * status: Status																										 
+	 * time_start: time_point_type																				
+	 * time_end: time_point_type																				
+	 * total_assertions_passed: std::size_t																		
+	 * total_assertions_failed: std::size_t																		
+	 * }
+	 */
+	// assume suite_results.front() == anonymous_suite
+	using suite_results_type = std::vector<suite_result_type>;
+
+	enum class OutputLevel
+	{
+		NONE = 0,
+		// Only the results of each suite execution are output.
+		RESULT_ONLY = 1,
+		// RESULT_ONLY + the expression of each test.
+		INCLUDE_EXPRESSION = 2,
+		// INCLUDE_EXPRESSION + the source location of each expression.
+		INCLUDE_EXPRESSION_LOCATION = 3,
+	};
+
+	struct config
+	{
+		using name_type = std::string_view;
+		using category_type = std::string_view;
+		using categories_type = std::vector<category_type>;
+
+		color_type color;
+
+		// terminate the program after n failed assertions (per suite).
+		// if abort_after_n_failures == 0:
+		//	terminate the program immediately if the assertion fails
+		std::size_t abort_after_n_failures = std::numeric_limits<std::size_t>::max();
+
+		OutputLevel output_level = OutputLevel::INCLUDE_EXPRESSION_LOCATION;
+		bool dry_run = false;
+
+		// how to terminate the program
+		std::function<void()> terminator = []() -> void
 		{
-			enum class Status
-			{
-				PENDING,
-
-				PASSED,
-				FAILED,
-				SKIPPED,
-				FATAL,
-			};
-
-			std::string name;
-
-			test_result_type* parent;
-			test_results_type children;
-
-			Status status;
-			time_point_type time_start;
-			time_point_type time_end;
-			std::size_t total_assertions_passed;
-			std::size_t total_assertions_failed;
+			std::exit(-1); // NOLINT(concurrency-mt-unsafe)
 		};
 
-		constexpr std::string_view anonymous_suite_name{"anonymous_suite"};
-
-		struct suite_result_type
+		std::function<void(std::string_view)> message_reporter = [](const std::string_view report_message) -> void
 		{
-			std::string name;
-
-			std::string report_string;
-
-			test_results_type test_results;
+			std::cout << report_message;
 		};
 
-		/**
-		 * result: std::vector<suite> {																			 
-		 * anonymous_suite: suite																						 
-		 * user_suite_0: suite																								
-		 * user_suite_1: suite																								
-		 * user_suite_2: suite																								
-		 * user_suite_3: suite																								
-		 * user_suite_n: suite																								 
-		 * }																														
-		 *																															
-		 * *_suite_*: suite {																									 
-		 * name: std::string																								
-		 * user_test_0: test																									 
-		 * user_test_1: test																									 
-		 * user_test_2: test																									 
-		 * user_test_3: test																									 
-		 * user_test_n: test																									 
-		 * }																														
-		 *																															
-		 * *_test_*: test {																									
-		 * name: std::string																								
-		 * parent: test*																										 
-		 * children(nested test): std::vector<test>																
-		 *																															
-		 * status: Status																										 
-		 * time_start: time_point_type																				
-		 * time_end: time_point_type																				
-		 * total_assertions_passed: std::size_t																		
-		 * total_assertions_failed: std::size_t																		
-		 * }
-		 */
-		// assume suite_results.front() == anonymous_suite
-		using suite_results_type = std::vector<suite_result_type>;
-
-		enum class OutputLevel
+		// Used to filter the suite/test cases that need to be executed.
+		std::function<bool(name_type)> filter_execute_suite_name = []([[maybe_unused]] const name_type suite_name) noexcept -> bool
 		{
-			NONE = 0,
-			// Only the results of each suite execution are output.
-			RESULT_ONLY = 1,
-			// RESULT_ONLY + the expression of each test.
-			INCLUDE_EXPRESSION = 2,
-			// INCLUDE_EXPRESSION + the source location of each expression.
-			INCLUDE_EXPRESSION_LOCATION = 3,
+			return true;
+		};
+		std::function<bool(name_type)> filter_execute_test_name = []([[maybe_unused]] const name_type test_name) noexcept -> bool
+		{
+			return true;
+		};
+		std::function<bool(const categories_type&)> filter_execute_test_categories = [](const categories_type& categories) noexcept -> bool
+		{
+			if (std::ranges::contains(categories, "skip")) { return false; }
+
+			return true;
 		};
 
-		struct config
+		[[noreturn]] auto terminate() const noexcept -> void
 		{
-			using name_type = std::string_view;
-			using category_type = std::string_view;
-			using categories_type = std::vector<category_type>;
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(terminator);
 
-			color_type color;
+			terminator();
+			std::exit(-1); // NOLINT(concurrency-mt-unsafe)
+		}
 
-			// terminate the program after n failed assertions (per suite).
-			// if abort_after_n_failures == 0:
-			//	terminate the program immediately if the assertion fails
-			std::size_t abort_after_n_failures = std::numeric_limits<std::size_t>::max();
+		auto report_message(const std::string_view message) const noexcept -> void
+		{
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(message_reporter);
 
-			OutputLevel output_level = OutputLevel::INCLUDE_EXPRESSION_LOCATION;
-			bool dry_run = false;
+			message_reporter(message);
+		}
 
-			// how to terminate the program
-			std::function<void()> terminator = []() -> void
-			{
-				std::exit(-1); // NOLINT(concurrency-mt-unsafe)
-			};
+		[[nodiscard]] auto is_suite_execute_required(const name_type suite_name) const noexcept -> bool //
+		{
+			return filter_execute_suite_name(suite_name);
+		}
 
-			std::function<void(std::string_view)> message_reporter = [](const std::string_view report_message) -> void
-			{
-				std::cout << report_message;
-			};
+		[[nodiscard]] auto is_test_execute_required(const name_type test_name, const categories_type& categories) const noexcept -> bool //
+		{
+			return filter_execute_test_name(test_name) and filter_execute_test_categories(categories);
+		}
+	};
 
-			// Used to filter the suite/test cases that need to be executed.
-			std::function<bool(name_type)> filter_execute_suite_name = []([[maybe_unused]] const name_type suite_name) noexcept -> bool
-			{
-				return true;
-			};
-			std::function<bool(name_type)> filter_execute_test_name = []([[maybe_unused]] const name_type test_name) noexcept -> bool
-			{
-				return true;
-			};
-			std::function<bool(const categories_type&)> filter_execute_test_categories = [](const categories_type& categories) noexcept -> bool
-			{
-				if (std::ranges::contains(categories, "skip")) { return false; }
-
-				return true;
-			};
-
-			[[noreturn]] auto terminate() const noexcept -> void
-			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(terminator);
-
-				terminator();
-				std::exit(-1); // NOLINT(concurrency-mt-unsafe)
-			}
-
-			auto report_message(const std::string_view message) const noexcept -> void
-			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(message_reporter);
-
-				message_reporter(message);
-			}
-
-			[[nodiscard]] auto is_suite_execute_required(const name_type suite_name) const noexcept -> bool //
-			{
-				return filter_execute_suite_name(suite_name);
-			}
-
-			[[nodiscard]] auto is_test_execute_required(const name_type test_name, const categories_type& categories) const noexcept -> bool //
-			{
-				return filter_execute_test_name(test_name) and filter_execute_test_categories(categories);
-			}
-		};
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	template<typename Expression>
@@ -848,9 +850,9 @@ namespace gal::prometheus::unit_test
 		public:
 			template<typename L, typename R, typename E>
 			constexpr OperandExpression(
-					L&& left,
-					R&& right,
-					E&& epsilon) noexcept
+				L&& left,
+				R&& right,
+				E&& epsilon) noexcept
 				: left_{std::forward<L>(left)},
 				  right_{std::forward<R>(right)},
 				  epsilon_{std::forward<E>(epsilon)},
@@ -858,8 +860,8 @@ namespace gal::prometheus::unit_test
 
 			template<typename L, typename R>
 			constexpr OperandExpression(
-					L&& left,
-					R&& right) noexcept
+				L&& left,
+				R&& right) noexcept
 				: left_{std::forward<L>(left)},
 				  right_{std::forward<R>(right)},
 				  epsilon_{},
@@ -967,15 +969,15 @@ namespace gal::prometheus::unit_test
 			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string
 			{
 				return std::format(
-						"throws<{}> -- [{}]",
-						meta::name_of<exception_type>(),
-						(not thrown())
-							? "not thrown"
-							: //
-							(not caught())
-							? "thrown but not caught"
-							: //
-							"caught");
+					"throws<{}> -- [{}]",
+					meta::name_of<exception_type>(),
+					(not thrown())
+						? "not thrown"
+						: //
+						(not caught())
+						? "thrown but not caught"
+						: //
+						"caught");
 			}
 		};
 
@@ -1091,12 +1093,12 @@ namespace gal::prometheus::unit_test
 					on(events::EventSummary{});
 
 					std::println(
-							std::cerr,
-							"{}fast fail for test {} after {} failures total.{}",
-							config_->color.fail,
-							fullname_of_current_test(),
-							current_test_result_->total_assertions_failed,
-							config_->color.none);
+						std::cerr,
+						"{}fast fail for test {} after {} failures total.{}",
+						config_->color.fail,
+						fullname_of_current_test(),
+						current_test_result_->total_assertions_failed,
+						config_->color.none);
 					config_->terminate();
 				}
 			}
@@ -1113,11 +1115,11 @@ namespace gal::prometheus::unit_test
 				current_suite_result_ = std::ranges::prev(suite_results_.end(), 1);
 
 				std::format_to(
-						std::back_inserter(report_string),
-						"Executing suite {}{}{} vvv\n",
-						config_->color.suite,
-						name,
-						config_->color.none);
+					std::back_inserter(report_string),
+					"Executing suite {}{}{} vvv\n",
+					config_->color.suite,
+					name,
+					config_->color.none);
 			}
 
 			auto on(const events::EventSuiteEnd& suite_end) -> void
@@ -1131,19 +1133,19 @@ namespace gal::prometheus::unit_test
 				{
 					throw std::logic_error{
 							std::format(
-									"can not pop suite because `{}` differs from `{}`",
-									current_suite_result_->name,
-									suite_end.name)};
+								"can not pop suite because `{}` differs from `{}`",
+								current_suite_result_->name,
+								suite_end.name)};
 				}
 
 				auto& [name, report_string, test_results] = *current_suite_result_;
 
 				std::format_to(
-						std::back_inserter(report_string),
-						"^^^ End of suite {}{}{} execution\n",
-						config_->color.suite,
-						name,
-						config_->color.none);
+					std::back_inserter(report_string),
+					"^^^ End of suite {}{}{} execution\n",
+					config_->color.suite,
+					name,
+					config_->color.none);
 
 				// reset to anonymous suite
 				current_suite_result_ = suite_results_.begin();
@@ -1178,13 +1180,13 @@ namespace gal::prometheus::unit_test
 					if (std::to_underlying(config_->output_level) > std::to_underlying(OutputLevel::NONE))
 					{
 						std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}Running nested test {}{}{}...\n",
-								" ",
-								ident_size_of_current_test<IdentType::TEST>(),
-								config_->color.test,
-								fullname_of_current_test(),
-								config_->color.none);
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}Running nested test {}{}{}...\n",
+							" ",
+							ident_size_of_current_test<IdentType::TEST>(),
+							config_->color.test,
+							fullname_of_current_test(),
+							config_->color.none);
 					}
 				}
 				else
@@ -1196,13 +1198,13 @@ namespace gal::prometheus::unit_test
 					if (std::to_underlying(config_->output_level) > std::to_underlying(OutputLevel::NONE))
 					{
 						std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}Running test {}{}{}...\n",
-								" ",
-								ident_size_of_current_test<IdentType::TEST>(),
-								config_->color.test,
-								fullname_of_current_test(),
-								config_->color.none);
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}Running test {}{}{}...\n",
+							" ",
+							ident_size_of_current_test<IdentType::TEST>(),
+							config_->color.test,
+							fullname_of_current_test(),
+							config_->color.none);
 					}
 				}
 			}
@@ -1229,9 +1231,9 @@ namespace gal::prometheus::unit_test
 				{
 					throw std::logic_error{
 							std::format(
-									"can not pop test because `{}` differs from `{}`",
-									current_test_result_->name,
-									test_end.name)
+								"can not pop test because `{}` differs from `{}`",
+								current_test_result_->name,
+								test_end.name)
 					};
 				}
 
@@ -1248,9 +1250,9 @@ namespace gal::prometheus::unit_test
 						{
 							current_test_result_->status =
 									std::ranges::all_of(
-											current_test_result_->children,
-											[](const auto& child_test) noexcept { return child_test.total_assertions_failed == 0; }
-											)
+										current_test_result_->children,
+										[](const auto& child_test) noexcept { return child_test.total_assertions_failed == 0; }
+									)
 										? test_result_type::Status::PASSED
 										: test_result_type::Status::FAILED;
 						}
@@ -1272,39 +1274,39 @@ namespace gal::prometheus::unit_test
 					[[likely]]
 					{
 						std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}{}{}{} after {} milliseconds.\n",
-								"",
-								ident_size_of_current_test<IdentType::TEST>(),
-								status == test_result_type::Status::PASSED ? config_->color.pass : config_->color.fail,
-								status == test_result_type::Status::PASSED ? "PASSED" : "FAILED",
-								config_->color.none,
-								ms_duration_of_current_test()
-								);
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}{}{}{} after {} milliseconds.\n",
+							"",
+							ident_size_of_current_test<IdentType::TEST>(),
+							status == test_result_type::Status::PASSED ? config_->color.pass : config_->color.fail,
+							status == test_result_type::Status::PASSED ? "PASSED" : "FAILED",
+							config_->color.none,
+							ms_duration_of_current_test()
+						);
 					}
 					else if (status == test_result_type::Status::SKIPPED)
 					[[unlikely]]
 					{
 						std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}{}SKIPPED{}\n",
-								"",
-								ident_size_of_current_test<IdentType::TEST>(),
-								config_->color.skip,
-								config_->color.none
-								);
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}{}SKIPPED{}\n",
+							"",
+							ident_size_of_current_test<IdentType::TEST>(),
+							config_->color.skip,
+							config_->color.none
+						);
 					}
 					else if (status == test_result_type::Status::FATAL)
 					[[unlikely]]
 					{
 						std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}{}INTERRUPTED{}\n",
-								"",
-								ident_size_of_current_test<IdentType::TEST>(),
-								config_->color.skip,
-								config_->color.none
-								);
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}{}INTERRUPTED{}\n",
+							"",
+							ident_size_of_current_test<IdentType::TEST>(),
+							config_->color.skip,
+							config_->color.none
+						);
 					}
 					else { std::unreachable(); }
 				}
@@ -1332,30 +1334,30 @@ namespace gal::prometheus::unit_test
 					if (level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION_LOCATION))
 					{
 						std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}[{}:{}] {}[{}]{} - {}PASSED{} \n",
-								" ",
-								ident_size_of_current_test<IdentType::ASSERTION>(),
-								assertion_pass.location.file_name(),
-								assertion_pass.location.line(),
-								config_->color.expression,
-								meta::to_string<std::string, not prefer_no_type_name>(assertion_pass.expression),
-								config_->color.none,
-								config_->color.pass,
-								config_->color.none);
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}[{}:{}] {}[{}]{} - {}PASSED{} \n",
+							" ",
+							ident_size_of_current_test<IdentType::ASSERTION>(),
+							assertion_pass.location.file_name(),
+							assertion_pass.location.line(),
+							config_->color.expression,
+							meta::to_string<std::string, not prefer_no_type_name>(assertion_pass.expression),
+							config_->color.none,
+							config_->color.pass,
+							config_->color.none);
 					}
 					else
 					{
 						std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}} {}[{}]{} - {}PASSED{} \n",
-								" ",
-								ident_size_of_current_test<IdentType::ASSERTION>(),
-								config_->color.expression,
-								meta::to_string<std::string, not prefer_no_type_name>(assertion_pass.expression),
-								config_->color.none,
-								config_->color.pass,
-								config_->color.none);
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}} {}[{}]{} - {}PASSED{} \n",
+							" ",
+							ident_size_of_current_test<IdentType::ASSERTION>(),
+							config_->color.expression,
+							meta::to_string<std::string, not prefer_no_type_name>(assertion_pass.expression),
+							config_->color.none,
+							config_->color.pass,
+							config_->color.none);
 					}
 				}
 
@@ -1378,30 +1380,30 @@ namespace gal::prometheus::unit_test
 					if (level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION_LOCATION))
 					{
 						std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}[{}:{}] {}[{}]{} - {}FAILED{} \n",
-								" ",
-								ident_size_of_current_test<IdentType::ASSERTION>(),
-								assertion_fail.location.file_name(),
-								assertion_fail.location.line(),
-								config_->color.expression,
-								meta::to_string<std::string, not prefer_no_type_name>(assertion_fail.expression),
-								config_->color.none,
-								config_->color.fail,
-								config_->color.none);
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}[{}:{}] {}[{}]{} - {}FAILED{} \n",
+							" ",
+							ident_size_of_current_test<IdentType::ASSERTION>(),
+							assertion_fail.location.file_name(),
+							assertion_fail.location.line(),
+							config_->color.expression,
+							meta::to_string<std::string, not prefer_no_type_name>(assertion_fail.expression),
+							config_->color.none,
+							config_->color.fail,
+							config_->color.none);
 					}
 					else
 					{
 						std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}} {}[{}]{} - {}FAILED{} \n",
-								" ",
-								ident_size_of_current_test<IdentType::ASSERTION>(),
-								config_->color.expression,
-								meta::to_string<std::string, not prefer_no_type_name>(assertion_fail.expression),
-								config_->color.none,
-								config_->color.pass,
-								config_->color.none);
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}} {}[{}]{} - {}FAILED{} \n",
+							" ",
+							ident_size_of_current_test<IdentType::ASSERTION>(),
+							config_->color.expression,
+							meta::to_string<std::string, not prefer_no_type_name>(assertion_fail.expression),
+							config_->color.none,
+							config_->color.pass,
+							config_->color.none);
 					}
 				}
 
@@ -1420,32 +1422,32 @@ namespace gal::prometheus::unit_test
 					level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION))
 				{
 					std::format_to(
-							std::back_inserter(current_suite_result_->report_string),
-							"{:{}}^^^ {}FATAL ERROR{}\n",
-							" ",
-							ident_size_of_current_test<IdentType::ASSERTION>() +
-							(
-								// '['
-								1 +
-								// file_name
-								std::string_view::traits_type::length(assertion_fatal.location.file_name())) +
-							// ':'
+						std::back_inserter(current_suite_result_->report_string),
+						"{:{}}^^^ {}FATAL ERROR{}\n",
+						" ",
+						ident_size_of_current_test<IdentType::ASSERTION>() +
+						(
+							// '['
 							1 +
-							// line
-							[]<typename T>(T line)
+							// file_name
+							std::string_view::traits_type::length(assertion_fatal.location.file_name())) +
+						// ':'
+						1 +
+						// line
+						[]<typename T>(T line)
+						{
+							T result = 0;
+							while (line)
 							{
-								T result = 0;
-								while (line)
-								{
-									result += 1;
-									line /= 10;
-								}
-								return result;
-							}(assertion_fatal.location.line()) +
-							// "] ["
-							3,
-							config_->color.fatal,
-							config_->color.none);
+								result += 1;
+								line /= 10;
+							}
+							return result;
+						}(assertion_fatal.location.line()) +
+						// "] ["
+						3,
+						config_->color.fatal,
+						config_->color.none);
 				}
 
 				current_test_result_->total_assertions_failed += 1;
@@ -1470,30 +1472,30 @@ namespace gal::prometheus::unit_test
 					if (level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION_LOCATION))
 					{
 						std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}[{}:{}] {}[{}]{} - {}SKIPPED{} \n",
-								" ",
-								ident_size_of_current_test<IdentType::ASSERTION>(),
-								assertion_fatal_skip.location.file_name(),
-								assertion_fatal_skip.location.line(),
-								config_->color.expression,
-								meta::to_string<std::string, not prefer_no_type_name>(assertion_fatal_skip.expression),
-								config_->color.none,
-								config_->color.fatal,
-								config_->color.none);
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}[{}:{}] {}[{}]{} - {}SKIPPED{} \n",
+							" ",
+							ident_size_of_current_test<IdentType::ASSERTION>(),
+							assertion_fatal_skip.location.file_name(),
+							assertion_fatal_skip.location.line(),
+							config_->color.expression,
+							meta::to_string<std::string, not prefer_no_type_name>(assertion_fatal_skip.expression),
+							config_->color.none,
+							config_->color.fatal,
+							config_->color.none);
 					}
 					else
 					{
 						std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}} {}[{}]{} - {}SKIPPED{} \n",
-								" ",
-								ident_size_of_current_test<IdentType::ASSERTION>(),
-								config_->color.expression,
-								meta::to_string<std::string, not prefer_no_type_name>(assertion_fatal_skip.expression),
-								config_->color.none,
-								config_->color.fatal,
-								config_->color.none);
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}} {}[{}]{} - {}SKIPPED{} \n",
+							" ",
+							ident_size_of_current_test<IdentType::ASSERTION>(),
+							config_->color.expression,
+							meta::to_string<std::string, not prefer_no_type_name>(assertion_fatal_skip.expression),
+							config_->color.none,
+							config_->color.fatal,
+							config_->color.none);
 					}
 				}
 
@@ -1519,23 +1521,23 @@ namespace gal::prometheus::unit_test
 				on(events::EventSuiteEnd{.name = suite_name});
 
 				std::format_to(
-						std::back_inserter(report_string),
-						"{}Abort test because unexpected exception with message: {}.{}\n",
-						config_->color.fail,
-						exception.what(),
-						config_->color.none);
+					std::back_inserter(report_string),
+					"{}Abort test because unexpected exception with message: {}.{}\n",
+					config_->color.fail,
+					exception.what(),
+					config_->color.none);
 
 				std::ranges::for_each(
-						suite_results_,
-						[this](const auto& suite_result) noexcept { config_->report_message(suite_result.report_string); });
+					suite_results_,
+					[this](const auto& suite_result) noexcept { config_->report_message(suite_result.report_string); });
 
 				config_->report_message(
-						std::format(
-								"--- early abort for test {}{}{} after {} failures total.",
-								config_->color.test,
-								test_name,
-								config_->color.none,
-								total_fails_exclude_current_test_));
+					std::format(
+						"--- early abort for test {}{}{} after {} failures total.",
+						config_->color.test,
+						test_name,
+						config_->color.none,
+						total_fails_exclude_current_test_));
 
 				config_->terminate();
 			}
@@ -1605,117 +1607,135 @@ namespace gal::prometheus::unit_test
 							[](auto self, const test_result_type& test_result) noexcept -> total_result
 							{
 								return std::ranges::fold_left(
-										test_result.children,
-										total_result{
-												.test_passed = (test_result.status == test_result_type::Status::PASSED) ? 1ull : 0,
-												.test_failed = (
-													               test_result.status == test_result_type::Status::FAILED or
-													               test_result.status == test_result_type::Status::FATAL
-												               )
-													               ? 1ull
-													               : 0,
-												.test_skipped = (test_result.status == test_result_type::Status::SKIPPED) ? 1ull : 0,
-												.assertion_passed = test_result.total_assertions_passed,
-												.assertion_failed = test_result.total_assertions_failed},
-										[self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result
-										{
-											return total + self(nested_test_result);
-										});
+									test_result.children,
+									total_result{
+											.test_passed = (test_result.status == test_result_type::Status::PASSED) ? 1ull : 0,
+											.test_failed = (
+												               test_result.status == test_result_type::Status::FAILED or
+												               test_result.status == test_result_type::Status::FATAL
+											               )
+												               ? 1ull
+												               : 0,
+											.test_skipped = (test_result.status == test_result_type::Status::SKIPPED) ? 1ull : 0,
+											.assertion_passed = test_result.total_assertions_passed,
+											.assertion_failed = test_result.total_assertions_failed},
+									[self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result
+									{
+										return total + self(nested_test_result);
+									}
+								);
 							}};
 
 					constexpr auto calc_result_of_suite = [calc_result_of_test](const suite_result_type& suite_result) noexcept -> total_result
 					{
 						return std::ranges::fold_left(
-								suite_result.test_results,
-								total_result{
-										.test_passed = 0,
-										.test_failed = 0,
-										.test_skipped = 0,
-										.assertion_passed = 0,
-										.assertion_failed = 0},
-								[calc_result_of_test](const total_result& total, const test_result_type& test_result) noexcept -> total_result
-								{
-									return total + calc_result_of_test(test_result);
-								});
+							suite_result.test_results,
+							total_result{
+									.test_passed = 0,
+									.test_failed = 0,
+									.test_skipped = 0,
+									.assertion_passed = 0,
+									.assertion_failed = 0},
+							[calc_result_of_test](const total_result& total, const test_result_type& test_result) noexcept -> total_result
+							{
+								// todo: clang
+								//   \src\infrastructure\unit_test.ixx(1624,26): error : function 'operator()<const gal::prometheus::unit_test::test_result_type &>' with deduced return type cannot be used before it is defined
+								//    1624 |                                                                                 return total + self(nested_test_result);
+								//         |                                                                                                ^
+								//   \src\infrastructure\unit_test.ixx(1622,10): note: while substituting into a lambda expression here
+								//    1622 |                                                                      [self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result
+								//         |                                                                         ^
+								//   C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\MSVC\14.41.33923\include\type_traits(1701,16): note: in instantiation of function template specialization 'gal::prometheus::unit_test::executor::Executor::on(const events::EventSummary &)::(anonymous class)::operator()<gal::prometheus::functional::y_combinator<(lambda at \src\infrastructure\unit_test.ixx:1607:8)>>' requested here
+								//    1701 |         return static_cast<_Callable&&>(_Obj)(static_cast<_Ty1&&>(_Arg1), static_cast<_Types2&&>(_Args2)...);
+								//         |                       ^
+								//   \src\functional\functor.ixx(99,16): note: in instantiation of function template specialization 'std::invoke<const (lambda at \src\infrastructure\unit_test.ixx:1607:8) &, const gal::prometheus::functional::y_combinator<(lambda at \src\infrastructure\unit_test.ixx:1607:8)> &, const gal::prometheus::unit_test::test_result_type &>' requested here
+								//      99 |                         return std::invoke(function, *this, std::forward<Args>(args)...);
+								//         |                                           ^
+								//   \src\infrastructure\unit_test.ixx(1643,43): note: in instantiation of function template specialization 'gal::prometheus::functional::y_combinator<(lambda at \src\infrastructure\unit_test.ixx:1607:8)>::operator()<const gal::prometheus::unit_test::test_result_type &>' requested here
+								//    1643 |                                                                 return total + calc_result_of_test(test_result);
+								//         |                                                                                                                        ^
+								//
+								return total + calc_result_of_test(test_result);
+							});
 					};
 
 					std::ranges::for_each(
-							suite_results_,
-							[&color = config_->color, c = config_, calc_result_of_suite](suite_result_type& suite_result) noexcept -> void
+						suite_results_,
+						[&color = config_->color, c = config_, calc_result_of_suite](suite_result_type& suite_result) noexcept -> void
+						{
+							// ReSharper disable once CppUseStructuredBinding
+							if (const auto result = calc_result_of_suite(suite_result);
+								result.assertion_failed == 0)
+							[[likely]]
 							{
-								// ReSharper disable once CppUseStructuredBinding
-								if (const auto result = calc_result_of_suite(suite_result);
-									result.assertion_failed == 0)
-								[[likely]]
-								{
-									std::format_to(
-											std::back_inserter(suite_result.report_string),
-											"\n==========================================\n"
-											"Suite {}{}{} -> all tests passed({} assertions in {} tests), {} tests skipped."
-											"\n==========================================\n",
-											color.suite,
-											suite_result.name,
-											color.none,
-											result.assertion_passed,
-											result.test_passed,
-											result.test_skipped);
-								}
-								else
-								[[unlikely]]
-								{
-									std::format_to(
-											std::back_inserter(suite_result.report_string),
-											"\n==========================================\n"
-											"Suite {}{}{}\n"
-											"tests {} | {} {}passed({:.6g}%){} | {} {}failed({:.6g}%){} | {} {}skipped({:.6g}%){}\n"
-											"assertions {} | {} {}passed({:.6g}%){} | {} {}failed({:.6g}%){}"
-											"\n==========================================\n",
-											color.suite,
-											suite_result.name,
-											color.none,
-											// test
-											result.test_passed + result.test_failed + result.test_skipped,
-											// passed
-											result.test_passed,
-											color.pass,
-											static_cast<double>(result.test_passed) /
-											static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
-											* 100.0,
-											color.none,
-											// failed
-											result.test_failed,
-											color.fail,
-											static_cast<double>(result.test_failed) /
-											static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
-											* 100.0,
-											color.none,
-											// skipped
-											result.test_skipped,
-											color.skip,
-											static_cast<double>(result.test_skipped) /
-											static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
-											* 100.0,
-											color.none,
-											// assertion
-											result.assertion_passed + result.assertion_failed,
-											// passed
-											result.assertion_passed,
-											color.pass,
-											static_cast<double>(result.assertion_passed) /
-											static_cast<double>(result.assertion_passed + result.assertion_failed)
-											* 100.0,
-											color.none,
-											// failed
-											result.assertion_failed,
-											color.fail,
-											static_cast<double>(result.assertion_failed) /
-											static_cast<double>(result.assertion_passed + result.assertion_failed)
-											* 100.0,
-											color.none);
-								}
+								std::format_to(
+									std::back_inserter(suite_result.report_string),
+									"\n==========================================\n"
+									"Suite {}{}{} -> all tests passed({} assertions in {} tests), {} tests skipped."
+									"\n==========================================\n",
+									color.suite,
+									suite_result.name,
+									color.none,
+									result.assertion_passed,
+									result.test_passed,
+									result.test_skipped);
+							}
+							else
+							[[unlikely]]
+							{
+								std::format_to(
+									std::back_inserter(suite_result.report_string),
+									"\n==========================================\n"
+									"Suite {}{}{}\n"
+									"tests {} | {} {}passed({:.6g}%){} | {} {}failed({:.6g}%){} | {} {}skipped({:.6g}%){}\n"
+									"assertions {} | {} {}passed({:.6g}%){} | {} {}failed({:.6g}%){}"
+									"\n==========================================\n",
+									color.suite,
+									suite_result.name,
+									color.none,
+									// test
+									result.test_passed + result.test_failed + result.test_skipped,
+									// passed
+									result.test_passed,
+									color.pass,
+									static_cast<double>(result.test_passed) /
+									static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
+									* 100.0,
+									color.none,
+									// failed
+									result.test_failed,
+									color.fail,
+									static_cast<double>(result.test_failed) /
+									static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
+									* 100.0,
+									color.none,
+									// skipped
+									result.test_skipped,
+									color.skip,
+									static_cast<double>(result.test_skipped) /
+									static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
+									* 100.0,
+									color.none,
+									// assertion
+									result.assertion_passed + result.assertion_failed,
+									// passed
+									result.assertion_passed,
+									color.pass,
+									static_cast<double>(result.assertion_passed) /
+									static_cast<double>(result.assertion_passed + result.assertion_failed)
+									* 100.0,
+									color.none,
+									// failed
+									result.assertion_failed,
+									color.fail,
+									static_cast<double>(result.assertion_failed) /
+									static_cast<double>(result.assertion_passed + result.assertion_failed)
+									* 100.0,
+									color.none);
+							}
 
-								c->report_message(suite_result.report_string);
-							});
+							c->report_message(suite_result.report_string);
+						});
 				}
 			}
 
@@ -4368,9 +4388,9 @@ namespace gal::prometheus::unit_test
 			template<typename Expression>
 				requires(is_expression_v<Expression> or detail::is_dispatched_expression_v<Expression>)
 			constexpr auto operator()(
-					Expression&& expression,
-					const std::source_location& location = std::source_location::current()
-					) const noexcept -> expect_result
+				Expression&& expression,
+				const std::source_location& location = std::source_location::current()
+			) const noexcept -> expect_result
 			{
 				if constexpr (detail::is_dispatched_expression_v<Expression>)
 				{
@@ -4378,9 +4398,9 @@ namespace gal::prometheus::unit_test
 					// using dispatcher_type = typename Expression::dispatcher_type;
 
 					const auto result = register_event(
-							events::EventAssertion<typename Expression::expression_type>{
-									.expression = std::forward<Expression>(expression).expression,
-									.location = location});
+						events::EventAssertion<typename Expression::expression_type>{
+								.expression = std::forward<Expression>(expression).expression,
+								.location = location});
 
 					return expect_result{result};
 				}
@@ -4388,7 +4408,7 @@ namespace gal::prometheus::unit_test
 				{
 					return expect_result{
 							register_event(
-									events::EventAssertion<Expression>{.expression = std::forward<Expression>(expression), .location = location})};
+								events::EventAssertion<Expression>{.expression = std::forward<Expression>(expression), .location = location})};
 				}
 			}
 		};
@@ -4483,312 +4503,312 @@ namespace gal::prometheus::unit_test
 	} // namespace dispatcher
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		// =========================================
-		// OPERANDS
-		// =========================================
-	
-		template<typename T>
-		using value = operands::OperandValue<T>;
-		
-		template<typename ExceptionType = void, std::invocable InvocableType>
-		[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> operands::OperandThrow<ExceptionType> { return {invocable}; }
-		
+	// =========================================
+	// OPERANDS
+	// =========================================
+
+	template<typename T>
+	using value = operands::OperandValue<T>;
+
+	template<typename ExceptionType = void, std::invocable InvocableType>
+	[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> operands::OperandThrow<ExceptionType> { return {invocable}; }
+
+	template<std::invocable InvocableType>
+	[[nodiscard]] constexpr auto nothrow(const InvocableType& invocable) noexcept -> operands::OperandNoThrow { return {invocable}; }
+
+	// =========================================
+	// DISPATCHER
+	// =========================================
+
+	constexpr dispatcher::expect_result::fatal fatal{};
+
+	constexpr dispatcher::DispatcherThat that{};
+	constexpr dispatcher::DispatcherExpect expect{};
+
+	// =========================================
+	// CONFIG
+	// =========================================
+
+	[[nodiscard]] inline auto config() noexcept -> auto& { return executor::executor().config(); }
+
+	// =========================================
+	// TEST & SUITE
+	// =========================================
+
+	using test = dispatcher::DispatcherTest;
+
+	template<meta::basic_fixed_string SuiteName>
+	struct suite
+	{
 		template<std::invocable InvocableType>
-		[[nodiscard]] constexpr auto nothrow(const InvocableType& invocable) noexcept -> operands::OperandNoThrow { return {invocable}; }
-		
-		// =========================================
-		// DISPATCHER
-		// =========================================
-		
-		constexpr dispatcher::expect_result::fatal fatal{};
-		
-		constexpr dispatcher::DispatcherThat that{};
-		constexpr dispatcher::DispatcherExpect expect{};
-		
-		// =========================================
-		// CONFIG
-		// =========================================
-		
-		[[nodiscard]] inline auto config() noexcept -> auto& { return executor::executor().config(); }
-	
-		// =========================================
-		// TEST & SUITE
-		// =========================================
-	
-		using test = dispatcher::DispatcherTest;
-	
-		template<meta::basic_fixed_string SuiteName>
-		struct suite
+		constexpr explicit(false) suite(InvocableType invocable) noexcept //
+			requires requires { +invocable; }
 		{
-			template<std::invocable InvocableType>
-			constexpr explicit(false) suite(InvocableType invocable) noexcept //
-				requires requires { +invocable; }
-			{
-				dispatcher::register_event(events::EventSuite{.name = SuiteName.operator std::string_view(), .suite = +invocable});
-			}
-		};
-	
-		// =========================================
-		// OPERATORS
-		// =========================================
-	
-		namespace operators
+			dispatcher::register_event(events::EventSuite{.name = SuiteName.operator std::string_view(), .suite = +invocable});
+		}
+	};
+
+	// =========================================
+	// OPERATORS
+	// =========================================
+
+	namespace operators
+	{
+		namespace detail
 		{
-			namespace detail
+			template<typename DispatchedExpression>
+			// ReSharper disable once CppFunctionIsNotImplemented
+			constexpr auto is_valid_dispatched_expression(DispatchedExpression&& expression) noexcept -> void requires requires
 			{
-				template<typename DispatchedExpression>
-				// ReSharper disable once CppFunctionIsNotImplemented
-				constexpr auto is_valid_dispatched_expression(DispatchedExpression&& expression) noexcept -> void requires requires
-				{
-					static_cast<bool>(expression.expression);
-				};
-	
-				template<typename Lhs, typename Rhs>
-				concept dispatchable_t =
-						not(dispatcher::detail::is_dispatched_expression_v<Lhs> or dispatcher::detail::is_dispatched_expression_v<Rhs>);
-			} // namespace detail
-	
-			// a == b
+				static_cast<bool>(expression.expression);
+			};
+
 			template<typename Lhs, typename Rhs>
-			[[nodiscard]] constexpr auto operator==(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-				requires detail::dispatchable_t<Lhs, Rhs> and
-				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs)); } //
-			{
-				return that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs);
-			}
-	
-			// a != b
-			template<typename Lhs, typename Rhs>
-			[[nodiscard]] constexpr auto operator!=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-				requires detail::dispatchable_t<Lhs, Rhs> and
-				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs)); } //
-			{
-				return that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs);
-			}
-	
-			// a > b
-			template<typename Lhs, typename Rhs>
-			[[nodiscard]] constexpr auto operator>(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-				requires detail::dispatchable_t<Lhs, Rhs> and
-				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs)); } //
-			{
-				return that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs);
-			}
-	
-			// a >= b
-			template<typename Lhs, typename Rhs>
-			[[nodiscard]] constexpr auto operator>=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-				requires detail::dispatchable_t<Lhs, Rhs> and
-				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs)); } //
-			{
-				return that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs);
-			}
-	
-			// a < b
-			template<typename Lhs, typename Rhs>
-			[[nodiscard]] constexpr auto operator<(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-				requires detail::dispatchable_t<Lhs, Rhs> and
-				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs)); } //
-			{
-				return that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs);
-			}
-	
-			// a <= b
-			template<typename Lhs, typename Rhs>
-			[[nodiscard]] constexpr auto operator<=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-				requires detail::dispatchable_t<Lhs, Rhs> and
-				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs)); } //
-			{
-				return that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs);
-			}
-	
-			// todo: It doesn't look like we can take over [operator and] and [operator or] :(
-	
-			// a and b
-			template<typename Lhs, typename Rhs>
-			[[nodiscard]] constexpr auto operator and(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-				requires detail::dispatchable_t<Lhs, Rhs> and
-				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs)); } //
-			{
-				return that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs);
-			}
-	
-			// a or b
-			template<typename Lhs, typename Rhs>
-			[[nodiscard]] constexpr auto operator or(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
-				requires detail::dispatchable_t<Lhs, Rhs> and
-				         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs)); } //
-			{
-				return that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs);
-			}
-		} // namespace operators
-	
-		// =========================================
-		// LITERALS
-		// =========================================
-	
-		namespace literals
+			concept dispatchable_t =
+					not(dispatcher::detail::is_dispatched_expression_v<Lhs> or dispatcher::detail::is_dispatched_expression_v<Rhs>);
+		} // namespace detail
+
+		// a == b
+		template<typename Lhs, typename Rhs>
+		[[nodiscard]] constexpr auto operator==(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and
+			         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs)); } //
 		{
-			template<meta::basic_fixed_string StringLiteral>
-			constexpr auto operator""_test() noexcept -> dispatcher::DispatcherTestLiteral<StringLiteral> //
-			{
-				return dispatcher::DispatcherTestLiteral<StringLiteral>{};
-			}
-	
-			template<char... Cs>
-			[[nodiscard]] constexpr auto operator""_auto() noexcept -> operands::OperandLiteralAuto<Cs...> //
-			{
-				return {};
-			}
-	
-			template<meta::basic_fixed_string StringLiteral>
-			[[nodiscard]] constexpr auto operator""_c() noexcept -> operands::OperandLiteralCharacter<StringLiteral.value[0]> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<int>(); }
-			[[nodiscard]] constexpr auto operator""_i() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<int>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<unsigned>(); }
-			[[nodiscard]] constexpr auto operator""_u() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<long>(); }
-			[[nodiscard]] constexpr auto operator""_l() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<unsigned long>(); }
-			[[nodiscard]] constexpr auto operator""_ul() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<long long>(); }
-			[[nodiscard]] constexpr auto operator""_ll() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long long>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<unsigned long long>(); }
-			[[nodiscard]] constexpr auto operator""_ull() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long long>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<std::int8_t>(); }
-			[[nodiscard]] constexpr auto operator""_i8() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int8_t>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<std::uint8_t>(); }
-			[[nodiscard]] constexpr auto operator""_u8() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint8_t>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<std::int16_t>(); }
-			[[nodiscard]] constexpr auto operator""_i16() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int16_t>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<std::uint16_t>(); }
-			[[nodiscard]] constexpr auto operator""_u16() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint16_t>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<std::int32_t>(); }
-			[[nodiscard]] constexpr auto operator""_i32() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int32_t>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<std::uint32_t>(); }
-			[[nodiscard]] constexpr auto operator""_u32() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint32_t>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<std::int64_t>(); }
-			[[nodiscard]] constexpr auto operator""_i64() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int64_t>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_integral<std::uint64_t>(); }
-			[[nodiscard]] constexpr auto operator""_u64() noexcept
-				-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint64_t>()> //
-			{
-				return {};
-			}
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_floating_point<float>(); }
-			[[nodiscard]] constexpr auto operator""_f() noexcept
-				-> operands::OperandLiteralFloatingPoint<
-					functional::char_list<Cs...>.template to_floating_point<float>(),
-					functional::char_list<Cs...>.denominator_length()
-				> { return {}; }
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_floating_point<double>(); }
-			[[nodiscard]] constexpr auto operator""_d() noexcept
-				-> operands::OperandLiteralFloatingPoint<
-					functional::char_list<Cs...>.template to_floating_point<double>(),
-					functional::char_list<Cs...>.denominator_length()
-				> { return {}; }
-	
-			template<char... Cs>
-				requires requires { functional::char_list<Cs...>.template to_floating_point<long double>(); }
-			[[nodiscard]] constexpr auto operator""_ld() noexcept
-				-> operands::OperandLiteralFloatingPoint<
-					functional::char_list<Cs...>.template to_floating_point<long double>(),
-					functional::char_list<Cs...>.denominator_length()
-				> { return {}; }
-	
-			[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> operands::OperandIdentity::message_type //
-			{
-				return {operands::OperandIdentity::boolean{.message = {name, size}}};
-			}
-	
-			[[nodiscard]] constexpr auto operator""_s(const char* name, std::size_t size) noexcept -> std::string_view { return {name, size}; }
-		} // namespace literals
+			return that % std::forward<Lhs>(lhs) == std::forward<Rhs>(rhs);
+		}
+
+		// a != b
+		template<typename Lhs, typename Rhs>
+		[[nodiscard]] constexpr auto operator!=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and
+			         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs)); } //
+		{
+			return that % std::forward<Lhs>(lhs) != std::forward<Rhs>(rhs);
+		}
+
+		// a > b
+		template<typename Lhs, typename Rhs>
+		[[nodiscard]] constexpr auto operator>(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and
+			         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs)); } //
+		{
+			return that % std::forward<Lhs>(lhs) > std::forward<Rhs>(rhs);
+		}
+
+		// a >= b
+		template<typename Lhs, typename Rhs>
+		[[nodiscard]] constexpr auto operator>=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and
+			         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs)); } //
+		{
+			return that % std::forward<Lhs>(lhs) >= std::forward<Rhs>(rhs);
+		}
+
+		// a < b
+		template<typename Lhs, typename Rhs>
+		[[nodiscard]] constexpr auto operator<(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and
+			         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs)); } //
+		{
+			return that % std::forward<Lhs>(lhs) < std::forward<Rhs>(rhs);
+		}
+
+		// a <= b
+		template<typename Lhs, typename Rhs>
+		[[nodiscard]] constexpr auto operator<=(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and
+			         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs)); } //
+		{
+			return that % std::forward<Lhs>(lhs) <= std::forward<Rhs>(rhs);
+		}
+
+		// todo: It doesn't look like we can take over [operator and] and [operator or] :(
+
+		// a and b
+		template<typename Lhs, typename Rhs>
+		[[nodiscard]] constexpr auto operator and(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and
+			         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs)); } //
+		{
+			return that % std::forward<Lhs>(lhs) and std::forward<Rhs>(rhs);
+		}
+
+		// a or b
+		template<typename Lhs, typename Rhs>
+		[[nodiscard]] constexpr auto operator or(Lhs&& lhs, Rhs&& rhs) noexcept -> decltype(auto) //
+			requires detail::dispatchable_t<Lhs, Rhs> and
+			         requires { detail::is_valid_dispatched_expression(that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs)); } //
+		{
+			return that % std::forward<Lhs>(lhs) or std::forward<Rhs>(rhs);
+		}
+	} // namespace operators
+
+	// =========================================
+	// LITERALS
+	// =========================================
+
+	namespace literals
+	{
+		template<meta::basic_fixed_string StringLiteral>
+		constexpr auto operator""_test() noexcept -> dispatcher::DispatcherTestLiteral<StringLiteral> //
+		{
+			return dispatcher::DispatcherTestLiteral<StringLiteral>{};
+		}
+
+		template<char... Cs>
+		[[nodiscard]] constexpr auto operator""_auto() noexcept -> operands::OperandLiteralAuto<Cs...> //
+		{
+			return {};
+		}
+
+		template<meta::basic_fixed_string StringLiteral>
+		[[nodiscard]] constexpr auto operator""_c() noexcept -> operands::OperandLiteralCharacter<StringLiteral.value[0]> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<int>(); }
+		[[nodiscard]] constexpr auto operator""_i() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<int>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<unsigned>(); }
+		[[nodiscard]] constexpr auto operator""_u() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<long>(); }
+		[[nodiscard]] constexpr auto operator""_l() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<unsigned long>(); }
+		[[nodiscard]] constexpr auto operator""_ul() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<long long>(); }
+		[[nodiscard]] constexpr auto operator""_ll() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long long>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<unsigned long long>(); }
+		[[nodiscard]] constexpr auto operator""_ull() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long long>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<std::int8_t>(); }
+		[[nodiscard]] constexpr auto operator""_i8() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int8_t>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<std::uint8_t>(); }
+		[[nodiscard]] constexpr auto operator""_u8() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint8_t>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<std::int16_t>(); }
+		[[nodiscard]] constexpr auto operator""_i16() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int16_t>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<std::uint16_t>(); }
+		[[nodiscard]] constexpr auto operator""_u16() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint16_t>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<std::int32_t>(); }
+		[[nodiscard]] constexpr auto operator""_i32() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int32_t>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<std::uint32_t>(); }
+		[[nodiscard]] constexpr auto operator""_u32() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint32_t>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<std::int64_t>(); }
+		[[nodiscard]] constexpr auto operator""_i64() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int64_t>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_integral<std::uint64_t>(); }
+		[[nodiscard]] constexpr auto operator""_u64() noexcept
+			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint64_t>()> //
+		{
+			return {};
+		}
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_floating_point<float>(); }
+		[[nodiscard]] constexpr auto operator""_f() noexcept
+			-> operands::OperandLiteralFloatingPoint<
+				functional::char_list<Cs...>.template to_floating_point<float>(),
+				functional::char_list<Cs...>.denominator_length()
+			> { return {}; }
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_floating_point<double>(); }
+		[[nodiscard]] constexpr auto operator""_d() noexcept
+			-> operands::OperandLiteralFloatingPoint<
+				functional::char_list<Cs...>.template to_floating_point<double>(),
+				functional::char_list<Cs...>.denominator_length()
+			> { return {}; }
+
+		template<char... Cs>
+			requires requires { functional::char_list<Cs...>.template to_floating_point<long double>(); }
+		[[nodiscard]] constexpr auto operator""_ld() noexcept
+			-> operands::OperandLiteralFloatingPoint<
+				functional::char_list<Cs...>.template to_floating_point<long double>(),
+				functional::char_list<Cs...>.denominator_length()
+			> { return {}; }
+
+		[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> operands::OperandIdentity::message_type //
+		{
+			return {operands::OperandIdentity::boolean{.message = {name, size}}};
+		}
+
+		[[nodiscard]] constexpr auto operator""_s(const char* name, std::size_t size) noexcept -> std::string_view { return {name, size}; }
+	} // namespace literals
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 } // namespace gal::prometheus::unit_test

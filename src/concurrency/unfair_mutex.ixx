@@ -94,7 +94,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::concurrency)
 
 		UnfairRecursiveMutex() noexcept;
 
-		constexpr ~UnfairRecursiveMutex() noexcept = default;
+		~UnfairRecursiveMutex() noexcept = default;
 
 		/**
 		 * @brief Check if the lock is held by current thread.
@@ -127,12 +127,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 		auto format(const gal::prometheus::concurrency::UnfairMutex& mutex, FormatContext& context) const noexcept -> auto
 		{
 			return std::format_to(
-					context.out(),
-					"{}",
-					gal::prometheus::meta::name_of<gal::prometheus::concurrency::UnfairMutex::SemaphoreValue>(
-							mutex.semaphore_.load(memory_order::relaxed)
-							)
-					);
+				context.out(),
+				"{}",
+				gal::prometheus::meta::name_of<gal::prometheus::concurrency::UnfairMutex::SemaphoreValue>(
+					mutex.semaphore_.load(memory_order::relaxed)
+				)
+			);
 		}
 	};
 
@@ -149,7 +149,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 		template<typename FormatContext>
 		auto format(const gal::prometheus::concurrency::UnfairRecursiveMutex& mutex, FormatContext& context) const noexcept -> auto
 		{
-			return formatter<gal::prometheus::concurrency::UnfairRecursiveMutex::mutex_type>::format(mutex.mutex_, context);
+			return std::format_to(context.out(), "{}", mutex.mutex_);
 		}
 	};
 }

@@ -16,8 +16,6 @@ import gal.prometheus.error;
 import :unfair_mutex;
 
 #else
-#pragma once
-
 #include <mutex>
 #include <vector>
 #include <algorithm>
@@ -83,7 +81,7 @@ namespace
 	 *	self: the mutex was already locked
 	 *	other_mutex: potential deadlock is found
 	 */
-	auto deadlock_lock(const UnfairMutex* const self) noexcept -> const UnfairMutex*
+	[[maybe_unused]] auto deadlock_lock(const UnfairMutex* const self) noexcept -> const UnfairMutex*
 	{
 		GAL_PROMETHEUS_DEBUG_NOT_NULL(self);
 
@@ -108,7 +106,7 @@ namespace
 	 * @brief Unlock an object on this thread.
 	 * @param self The mutex that is being locked.
 	 */
-	auto deadlock_unlock(const UnfairMutex* const self) noexcept -> bool
+	[[maybe_unused]] auto deadlock_unlock(const UnfairMutex* const self) noexcept -> bool
 	{
 		GAL_PROMETHEUS_DEBUG_NOT_NULL(self);
 
@@ -132,7 +130,7 @@ namespace
 	 * @brief Remove the object from the detection.
 	 * @param self The mutex to remove from the lock order graph.
 	 */
-	auto deadlock_remove(const UnfairMutex* const self) noexcept -> bool
+	[[maybe_unused]] auto deadlock_remove(const UnfairMutex* const self) noexcept -> bool
 	{
 		GAL_PROMETHEUS_DEBUG_NOT_NULL(self);
 
@@ -248,9 +246,9 @@ namespace gal::prometheus::concurrency
 		GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
 
 		if (semaphore_.exchange(
-				    std::to_underlying(SemaphoreValue::UNLOCKED),
-				    std::memory_order::relaxed
-				    ) != std::to_underlying(SemaphoreValue::LOCKED_NO_WAITER))
+			    std::to_underlying(SemaphoreValue::UNLOCKED),
+			    std::memory_order::relaxed
+		    ) != std::to_underlying(SemaphoreValue::LOCKED_NO_WAITER))
 		[[unlikely]]
 		{
 			semaphore_.notify_one();

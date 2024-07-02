@@ -3113,7 +3113,7 @@ namespace gal::prometheus::meta
 			U&& u
 		) mutable noexcept -> void //
 				{
-					function(member_of_index<Index>(std::forward<U>(u)...));
+					function(member_of_index<Index>(std::forward<U>(u))...);
 				}(std::make_index_sequence<member_size<T>()>{}, std::forward<T>(value));
 	}
 
