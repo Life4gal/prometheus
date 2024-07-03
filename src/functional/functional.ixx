@@ -13,6 +13,7 @@ export import :aligned_union;
 export import :function_ref;
 export import :math;
 export import :flag;
+export import :function_signature;
 
 #else
 #pragma once
@@ -24,5 +25,6 @@ export import :flag;
 #include <functional/function_ref.ixx>
 #include <functional/math.ixx>
 #include <functional/flag.ixx>
+#include <functional/function_signature.ixx>
 
 #endif
