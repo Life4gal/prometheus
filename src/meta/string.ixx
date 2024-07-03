@@ -20,6 +20,7 @@ import std;
 #include <algorithm>
 #include <string>
 #include <ranges>
+#include <functional>
 
 #include <prometheus/macro.hpp>
 

@@ -9,6 +9,7 @@ export module gal.prometheus.error;
 export import :exception;
 export import :debug;
 export import :platform;
+export import :command_line;
 
 #else
 #pragma once
@@ -16,5 +17,6 @@ export import :platform;
 #include <error/exception.ixx>
 #include <error/debug.ixx>
 #include <error/platform.ixx>
+#include <error/command_line.ixx>
 
 #endif

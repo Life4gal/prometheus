@@ -19,6 +19,7 @@ import :thread;
 #pragma once
 
 #include <format>
+#include <atomic>
 
 #include <prometheus/macro.hpp>
 #include <concurrency/thread.ixx>

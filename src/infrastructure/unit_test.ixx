@@ -25,9 +25,13 @@ import gal.prometheus.meta;
 #include <vector>
 #include <functional>
 #include <iostream>
-#include <print>
 #include <ranges>
 #include <algorithm>
+
+// todo
+#if __has_include(<print>)
+#include <print>
+#endif
 
 #include <prometheus/macro.hpp>
 #include <functional/functional.ixx>
@@ -142,7 +146,7 @@ namespace gal::prometheus::unit_test
 		INCLUDE_EXPRESSION_LOCATION = 3,
 	};
 
-	struct config
+	struct config_type
 	{
 		using name_type = std::string_view;
 		using category_type = std::string_view;
@@ -240,6 +244,18 @@ namespace gal::prometheus::unit_test
 		template<typename E>
 		concept event_t = is_event_v<E>;
 
+		GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+
+		#if defined(GAL_PROMETHEUS_COMPILER_GNU) or defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+		// struct bar {};
+		// struct foo : bar
+		// {
+		//	int a;
+		// };
+		// foo f{.a = 42}; // <-- warning: missing initializer for member `foo::<anonymous>` [-Wmissing-field-initializers]
+		GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(-Wmissing-field-initializers)
+		#endif
+
 		// =========================================
 		// SUITE
 		// =========================================
@@ -309,7 +325,7 @@ namespace gal::prometheus::unit_test
 			using arg_type = Arg;
 
 			name_type name;
-			config::categories_type categories;
+			config_type::categories_type categories;
 
 			mutable invocable_type invocable;
 			mutable arg_type arg;
@@ -486,6 +502,8 @@ namespace gal::prometheus::unit_test
 		// =========================================
 
 		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventSummary : public Event {};
+
+		GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
 	} // namespace events
 
 	namespace operands
@@ -1017,7 +1035,7 @@ namespace gal::prometheus::unit_test
 			using test_results_iterator_type = test_results_type::pointer;
 
 		private:
-			std::shared_ptr<config> config_;
+			std::shared_ptr<config_type> config_;
 
 			suite_results_type suite_results_;
 
@@ -1063,7 +1081,7 @@ namespace gal::prometheus::unit_test
 				const auto* p = std::addressof(current_suite_result_->test_results.back());
 				while (p != nullptr)
 				{
-					result.append_range(p->name);
+					result.append(p->name);
 					result.push_back('.');
 
 					p = p->children.empty() ? nullptr : std::addressof(p->children.back());
@@ -1092,13 +1110,24 @@ namespace gal::prometheus::unit_test
 					on(events::EventSuiteEnd{.name = current_suite_result_->name});
 					on(events::EventSummary{});
 
+					#if __has_include(<print>)
 					std::println(
 						std::cerr,
 						"{}fast fail for test {} after {} failures total.{}",
 						config_->color.fail,
 						fullname_of_current_test(),
 						current_test_result_->total_assertions_failed,
-						config_->color.none);
+						config_->color.none
+						);
+					#else
+					std::cerr << std::format(
+						"{}fast fail for test {} after {} failures total.{}\n",
+						config_->color.fail,
+						fullname_of_current_test(),
+						current_test_result_->total_assertions_failed,
+						config_->color.none
+						);
+					#endif
 					config_->terminate();
 				}
 			}
@@ -1560,7 +1589,11 @@ namespace gal::prometheus::unit_test
 				}
 
 				current_suite_result_->report_string.append(config_->color.message);
+				#if __cpp_lib_containers_ranges >= 202202L
 				current_suite_result_->report_string.append_range(log.message);
+				#else
+				current_suite_result_->report_string.insert(current_suite_result_->report_string.end(), std::ranges::begin(log.message), std::ranges::end(log.message));
+				#endif
 				current_suite_result_->report_string.append(config_->color.none);
 
 				// push '\n'
@@ -1604,21 +1637,17 @@ namespace gal::prometheus::unit_test
 					};
 
 					constexpr auto calc_result_of_test = functional::y_combinator{
-							[](auto self, const test_result_type& test_result) noexcept -> total_result
+							[](auto&& self, const test_result_type& test_result) noexcept -> total_result
 							{
 								return std::ranges::fold_left(
 									test_result.children,
 									total_result{
 											.test_passed = (test_result.status == test_result_type::Status::PASSED) ? 1ull : 0,
-											.test_failed = (
-												               test_result.status == test_result_type::Status::FAILED or
-												               test_result.status == test_result_type::Status::FATAL
-											               )
-												               ? 1ull
-												               : 0,
+											.test_failed = (test_result.status == test_result_type::Status::FAILED or test_result.status == test_result_type::Status::FATAL) ? 1ull : 0,
 											.test_skipped = (test_result.status == test_result_type::Status::SKIPPED) ? 1ull : 0,
 											.assertion_passed = test_result.total_assertions_passed,
-											.assertion_failed = test_result.total_assertions_failed},
+											.assertion_failed = test_result.total_assertions_failed
+									},
 									[self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result
 									{
 										return total + self(nested_test_result);
@@ -1635,10 +1664,11 @@ namespace gal::prometheus::unit_test
 									.test_failed = 0,
 									.test_skipped = 0,
 									.assertion_passed = 0,
-									.assertion_failed = 0},
+									.assertion_failed = 0
+							},
 							[calc_result_of_test](const total_result& total, const test_result_type& test_result) noexcept -> total_result
 							{
-								// todo: clang
+								// todo: 
 								//   \src\infrastructure\unit_test.ixx(1624,26): error : function 'operator()<const gal::prometheus::unit_test::test_result_type &>' with deduced return type cannot be used before it is defined
 								//    1624 |                                                                                 return total + self(nested_test_result);
 								//         |                                                                                                ^
@@ -1654,7 +1684,9 @@ namespace gal::prometheus::unit_test
 								//   \src\infrastructure\unit_test.ixx(1643,43): note: in instantiation of function template specialization 'gal::prometheus::functional::y_combinator<(lambda at \src\infrastructure\unit_test.ixx:1607:8)>::operator()<const gal::prometheus::unit_test::test_result_type &>' requested here
 								//    1643 |                                                                 return total + calc_result_of_test(test_result);
 								//         |                                                                                                                        ^
-								//
+								// clang 17.0.1: OK
+								// clang 17.0.3: ERROR
+								// clang trunk: ERROR
 								return total + calc_result_of_test(test_result);
 							});
 					};
@@ -1746,7 +1778,7 @@ namespace gal::prometheus::unit_test
 			auto operator=(Executor&&) noexcept -> Executor& = delete;
 
 			explicit Executor()
-				: config_{std::make_shared<struct config>()},
+				: config_{std::make_shared<config_type>()},
 				  current_suite_result_{suite_results_.end()},
 				  current_test_result_{nullptr},
 				  total_fails_exclude_current_test_{0}
@@ -1768,7 +1800,7 @@ namespace gal::prometheus::unit_test
 				if (not config_->dry_run) { on(events::EventSummary{}); }
 			}
 
-			[[nodiscard]] auto config() const noexcept -> config&
+			[[nodiscard]] auto config() const noexcept -> config_type&
 			{
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
 
@@ -4417,7 +4449,7 @@ namespace gal::prometheus::unit_test
 		class DispatcherTestBase
 		{
 		public:
-			using categories_type = config::categories_type;
+			using categories_type = config_type::categories_type;
 
 		protected:
 			categories_type categories_;
@@ -4463,7 +4495,14 @@ namespace gal::prometheus::unit_test
 
 					if constexpr (requires { type::value; }) { categories_.emplace_back(type::value); }
 					else if constexpr (std::is_same_v<type, categories_type::value_type>) { categories_.emplace_back(std::forward<T>(t)); }
-					else if constexpr (std::is_same_v<type, categories_type>) { categories_.append_range(std::forward<T>(t)); }
+					else if constexpr (std::is_same_v<type, categories_type>)
+					{
+						#if __cpp_lib_containers_ranges >= 202202L
+						categories_.append_range(std::forward<T>(t));
+						#else
+						categories_.insert(categories_.end(), std::ranges::begin(std::forward<T>(t)), std::ranges::end(std::forward<T>(t)));
+						#endif
+					}
 					else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("unknown type"); }
 				};
 

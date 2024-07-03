@@ -8,7 +8,12 @@
 #if GAL_PROMETHEUS_USE_MODULE
 module;
 
+#if __has_include(<intrin.h>)
 #include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
 #include <prometheus/macro.hpp>
 
 export module gal.prometheus.chars:icelake.utf8;
@@ -22,12 +27,19 @@ import :encoding;
 import :scalar.utf8;
 
 #else
+#if __has_include(<intrin.h>)
 #include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
+#include <cstring>
 
 #include <prometheus/macro.hpp>
 #include <chars/encoding.ixx>
 #include <error/error.ixx>
 #include <meta/meta.ixx>
+#include <memory/memory.ixx>
 #endif
 
 namespace gal::prometheus::chars
@@ -55,7 +67,12 @@ namespace gal::prometheus::chars
 			return shuffle<I, I, I, I>(value);
 		}
 
+		// warning: ignoring attributes on template argument ‘gal::prometheus::chars::icelake_utf8_detail::data_type’ {aka ‘__m512i’} [-Wignored-attributes]
+		#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+		[[nodiscard]] inline auto expand_and_identify(const data_type lane_0, const data_type lane_1, int& valid_count) noexcept -> data_type
+		#else
 		[[nodiscard]] inline auto expand_and_identify(const data_type lane_0, const data_type lane_1) noexcept -> std::pair<data_type, int>
+		#endif
 		{
 			const auto expand_ver2 = _mm512_setr_epi64(
 				0x0403'0201'0302'0100,
@@ -75,10 +92,15 @@ namespace gal::prometheus::chars
 			const auto t0 = _mm512_and_si512(input, v_00c0);
 			const auto leading_bytes = _mm512_cmpneq_epu32_mask(t0, v_0080);
 
+			#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+			valid_count = static_cast<int>(std::popcount(leading_bytes));
+			return _mm512_mask_compress_epi32(_mm512_setzero_si512(), leading_bytes, input);
+			#else
 			return {
 					_mm512_mask_compress_epi32(_mm512_setzero_si512(), leading_bytes, input),
 					static_cast<int>(std::popcount(leading_bytes))
 			};
+			#endif
 		}
 
 		[[nodiscard]] inline auto expand_utf8_to_utf32(const data_type input, const data_type char_class) noexcept -> data_type
@@ -669,7 +691,7 @@ namespace gal::prometheus::chars
 					const auto continuation = _mm512_set1_epi8(static_cast<char>(0b1011'1111));
 
 					__m512i unrolled_length = _mm512_setzero_si512();
-					auto reparation_length = static_cast<size_type>(0);
+					int reparation_length = 0;
 
 					while (it_input_current + sizeof(__m512i) <= it_input_end)
 					{
@@ -1288,10 +1310,8 @@ namespace gal::prometheus::chars
 										const auto mask_out_less_than_0x800 = _mm512_mask_cmplt_epu16_mask(m3, out, v_0800_0800);
 										const auto mask_out_minus_0x800 = _mm512_sub_epi16(out, v_d800_d800);
 										const auto mask_out_too_small = _mm512_mask_cmplt_epu16_mask(m3, mask_out_minus_0x800, v_0800_0800);
-										const auto mask_out_greater_equal_0x400 =
-												_mm512_mask_cmpge_epu16_mask(mask_mp3_high, mask_out_minus_0x800, v_0400_0400);
-										if (_kortestz_mask32_u8(mask_out_greater_equal_0x400,
-										                        _kor_mask32(mask_out_less_than_0x800, mask_out_too_small)) != 0) { return false; }
+										const auto mask_out_greater_equal_0x400 = _mm512_mask_cmpge_epu16_mask(mask_mp3_high, mask_out_minus_0x800, v_0400_0400);
+										if (_kortestz_mask32_u8(mask_out_greater_equal_0x400, _kor_mask32(mask_out_less_than_0x800, mask_out_too_small)) != 0) { return false; }
 									}
 
 									// we adjust mend at the end of the output.
@@ -1449,8 +1469,15 @@ namespace gal::prometheus::chars
 									const auto lane_3 = icelake_utf8_detail::broadcast<3>(in);
 									const auto lane_4 = _mm512_set1_epi32(static_cast<int>(memory::unaligned_load<std::uint32_t>(it_input_current + 64)));
 
+									#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+									int valid_count_0 = 0;
+									auto vec_0 = icelake_utf8_detail::expand_and_identify(lane_0, lane_1, valid_count_0);
+									int valid_count_1 = 0;
+									auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);// NOLINT(readability-suspicious-call-argument)
+									#else
 									auto [vec_0, valid_count_0] = icelake_utf8_detail::expand_and_identify(lane_0, lane_1);
 									auto [vec_1, valid_count_1] = icelake_utf8_detail::expand_and_identify(lane_1, lane_2); // NOLINT(readability-suspicious-call-argument)
+									#endif
 
 									if (valid_count_0 + valid_count_1 <= 16)
 									{
@@ -1488,8 +1515,15 @@ namespace gal::prometheus::chars
 										);
 									}
 
+									#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+									int valid_count_2 = 0;
+									auto vec_2 = icelake_utf8_detail::expand_and_identify(lane_2, lane_3, valid_count_2);
+									int valid_count_3 = 0;
+									auto vec_3 = icelake_utf8_detail::expand_and_identify(lane_3, lane_4, valid_count_3);
+									#else
 									auto [vec_2, valid_count_2] = icelake_utf8_detail::expand_and_identify(lane_2, lane_3);
 									auto [vec_3, valid_count_3] = icelake_utf8_detail::expand_and_identify(lane_3, lane_4);
+									#endif
 
 									if (valid_count_2 + valid_count_3 <= 16)
 									{
@@ -1551,8 +1585,15 @@ namespace gal::prometheus::chars
 										const auto lane_2 = icelake_utf8_detail::broadcast<2>(in);
 										const auto lane_3 = icelake_utf8_detail::broadcast<3>(in);
 
+										#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+										int valid_count_0 = 0;
+										auto vec_0 = icelake_utf8_detail::expand_and_identify(lane_0, lane_1, valid_count_0);
+										int valid_count_1 = 0;
+										auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);// NOLINT(readability-suspicious-call-argument)
+										#else
 										auto [vec_0, valid_count_0] = icelake_utf8_detail::expand_and_identify(lane_0, lane_1);
 										auto [vec_1, valid_count_1] = icelake_utf8_detail::expand_and_identify(lane_1, lane_2); // NOLINT(readability-suspicious-call-argument)
+										#endif
 
 										if (valid_count_0 + valid_count_1 <= 16)
 										{
@@ -1670,8 +1711,15 @@ namespace gal::prometheus::chars
 							const auto lane_3 = icelake_utf8_detail::broadcast<3>(in);
 							const auto lane_4 = _mm512_set1_epi32(static_cast<int>(memory::unaligned_load<std::uint32_t>(it_input_current + 64)));
 
+							#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+							int valid_count_0 = 0;
+							auto vec_0 = icelake_utf8_detail::expand_and_identify(lane_0, lane_1, valid_count_0);
+							int valid_count_1 = 0;
+							auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);// NOLINT(readability-suspicious-call-argument)
+							#else
 							auto [vec_0, valid_count_0] = icelake_utf8_detail::expand_and_identify(lane_0, lane_1);
 							auto [vec_1, valid_count_1] = icelake_utf8_detail::expand_and_identify(lane_1, lane_2); // NOLINT(readability-suspicious-call-argument)
+							#endif
 
 							if (valid_count_0 + valid_count_1 <= 16)
 							{
@@ -1709,8 +1757,15 @@ namespace gal::prometheus::chars
 								);
 							}
 
+							#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+							int valid_count_2 = 0;
+							auto vec_2 = icelake_utf8_detail::expand_and_identify(lane_2, lane_3, valid_count_2);
+							int valid_count_3 = 0;
+							auto vec_3 = icelake_utf8_detail::expand_and_identify(lane_3, lane_4, valid_count_3);
+							#else
 							auto [vec_2, valid_count_2] = icelake_utf8_detail::expand_and_identify(lane_2, lane_3);
 							auto [vec_3, valid_count_3] = icelake_utf8_detail::expand_and_identify(lane_3, lane_4);
+							#endif
 
 							if (valid_count_2 + valid_count_3 <= 16)
 							{
@@ -1768,8 +1823,15 @@ namespace gal::prometheus::chars
 								const auto lane_2 = icelake_utf8_detail::broadcast<2>(in);
 								const auto lane_3 = icelake_utf8_detail::broadcast<3>(in);
 
+								#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+								int valid_count_0 = 0;
+								auto vec_0 = icelake_utf8_detail::expand_and_identify(lane_0, lane_1, valid_count_0);
+								int valid_count_1 = 0;
+								auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);// NOLINT(readability-suspicious-call-argument)
+								#else
 								auto [vec_0, valid_count_0] = icelake_utf8_detail::expand_and_identify(lane_0, lane_1);
 								auto [vec_1, valid_count_1] = icelake_utf8_detail::expand_and_identify(lane_1, lane_2); // NOLINT(readability-suspicious-call-argument)
+								#endif
 
 								if (valid_count_0 + valid_count_1 <= 16)
 								{

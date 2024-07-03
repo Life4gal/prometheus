@@ -19,6 +19,7 @@ import :enumeration;
 
 #include <format>
 #include <type_traits>
+#include <cstdint>
 
 #include <prometheus/macro.hpp>
 #include <meta/member.ixx>

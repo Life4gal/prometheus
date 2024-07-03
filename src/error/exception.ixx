@@ -15,10 +15,26 @@ import std;
 #else
 #pragma once
 
+#include <string>
 #include <source_location>
 #include <stacktrace>
 
 #include <prometheus/macro.hpp>
+#endif
+
+// todo
+#if __cpp_lib_stacktrace < 202011L
+#warning "fixme: std::stacktrace"
+namespace std
+{
+	struct stacktrace
+	{
+		[[nodiscard]] static auto current() -> stacktrace
+		{
+			return {};
+		}
+	};
+}
 #endif
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)

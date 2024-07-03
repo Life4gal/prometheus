@@ -19,6 +19,7 @@ import gal.prometheus.functional;
 
 #include <type_traits>
 #include <memory>
+#include <cstring>
 
 #include <prometheus/macro.hpp>
 #include <error/error.ixx>

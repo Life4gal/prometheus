@@ -19,6 +19,7 @@ import std;
 #include <source_location>
 #include <bit>
 #include <optional>
+#include <limits>
 
 #include <prometheus/macro.hpp>
 

@@ -1,5 +1,5 @@
 // This file is part of prometheus
-// Copyright (C) 2022-2023 Life4gal <life4gal@gmail.com>
+// Copyright (C) 2022-2024 Life4gal <life4gal@gmail.com>
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
@@ -9,8 +9,6 @@ module;
 #include <prometheus/macro.hpp>
 #if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
 #include <Windows.h>
-#else
-
 #endif
 
 export module gal.prometheus.error:debug.impl;
@@ -19,16 +17,22 @@ import std;
 import :debug;
 
 #else
+#if __has_include(<print>)
 #include <print>
+#endif
 #include <iostream>
+#include <atomic>
+#include <format>
 
 #if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
 #include <Windows.h>
 #else
-
+#include <csignal>
+#include <unistd.h>
 #endif
 
 #include <prometheus/macro.hpp>
+#include <error/debug.ixx>
 
 #endif
 
@@ -72,7 +76,26 @@ namespace
 		// The jit-debugger was configured, but the user pressed Cancel.
 		return false;
 		#else
-		#error "fixme"
+		// Check if we're running under a debugger by checking the process status.
+		static bool debugger_present = false;
+		static bool checked = false;
+
+		if (not checked) {
+			debugger_present = (isatty(STDERR_FILENO) != 0);
+			checked = true;
+		}
+
+		if (debugger_present) {
+			return true;
+		}
+
+		// Raise a SIGTRAP signal to invoke the debugger.
+		raise(SIGTRAP);
+
+		// After raising SIGTRAP, if a debugger is attached, the execution will stop.
+		// If no debugger is attached, the signal might be ignored, or the program may terminate.
+		// For simplicity, we assume that if we reach here without terminating, no debugger was attached.
+		return false;
 		#endif
 	}
 
@@ -85,11 +108,15 @@ namespace gal::prometheus::error
 	{
 		if (not call_debugger())
 		{
+			#if __has_include(<print>)
 			std::println(
-					std::cerr,
-					"Unexpected behavior occurred but did not run under the debugger, terminate the program. \nReason. {}\n",
-					message
-					);
+				std::cerr,
+				"Unexpected behavior occurred but did not run under the debugger, terminate the program. \nReason. {}\n",
+				message
+			);
+			#else
+			std::cerr << std::format("Unexpected behavior occurred but did not run under the debugger, terminate the program. \nReason. {}\n\n", message);
+			#endif
 			terminate_reason.store(message, std::memory_order_relaxed);
 			std::terminate();
 		}

@@ -25,7 +25,7 @@ import :platform;
 #if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
 #include <Windows.h>
 #else
-#error "fixme"
+#include <cerrno>
 #endif
 
 #endif

@@ -29,6 +29,7 @@ import gal.prometheus.string;
 #include <expected>
 #include <iostream>
 #include <unordered_map>
+#include <iterator>
 
 #include <prometheus/macro.hpp>
 #include <error/error.ixx>
@@ -549,20 +550,6 @@ namespace gal::prometheus::infrastructure
 		[[nodiscard]] constexpr auto parse(const Range& range) noexcept(std::is_nothrow_constructible_v<T, Range>) -> T { return T{range}; }
 	}
 
-	#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-	const static int g_argc = *__p___argc();
-	static const char* const* g_argv = *__p___argv();
-	#else
-	static int g_argc = 0;
-	static const char** g_argv = nullptr;
-
-	__attribute__((constructor)) auto do_read_command_line(const int argc, const char* argv[]) -> void
-	{
-		g_argc = argc;
-		g_argv = argv;
-	}
-	#endif
-
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 	template<regex_string_type StringType, regex_string_type StringViewType>
 	class CommandLineOption;
@@ -823,13 +810,14 @@ namespace gal::prometheus::infrastructure
 					}};
 		}
 
-		auto parse(const std::span<const string_view_type> args) -> void
+		template<std::input_iterator Begin, std::sentinel_for<Begin> End>
+		auto parse(const Begin begin, const End end) -> void
 		{
 			std::vector<string_view_type> unmatched{};
 
 			std::ranges::for_each(
-				args.begin(),
-				args.end(),
+				begin,
+				end,
 				[this, &unmatched](const auto& string) -> void
 				{
 					const auto option = parse_option(string);
@@ -847,10 +835,14 @@ namespace gal::prometheus::infrastructure
 						return;
 					}
 
-					// Since we allow `--option`, we are not sure here whether the string is `--option` or `--option`.
+					// Since we allow `--option`, we are not sure here whether the string is `--option` or `-option`.
 					if (option->value.empty())
 					{
+						#if __cpp_lib_ranges_starts_ends_with >= 202106L
 						if (std::ranges::starts_with(string, string_view_type{"--"}))
+						#else
+						if(std::ranges::equal(string_view_type{"--"}, string))
+						#endif
 						{
 							// --option
 							it->second->set_value_default();
@@ -888,7 +880,16 @@ namespace gal::prometheus::infrastructure
 			}
 		}
 
-		auto parse() -> void { return parse(std::span<const string_view_type>{g_argv, g_argc}); }
+		template<std::ranges::input_range Range>
+		auto parse(const Range& range) -> void
+		{
+			parse(std::ranges::begin(range), std::ranges::end(range));
+		}
+
+		auto parse() -> void
+		{
+			parse(error::command_line_args());
+		}
 
 		auto contains(const string_view_type arg_name) const -> bool { return option_list_.contains(arg_name); }
 

@@ -112,7 +112,7 @@ cmake_language(
 )
 
 option(${PROJECT_NAME_PREFIX}PEDANTIC "Enable extra warnings and expensive tests." ON)
-option(${PROJECT_NAME_PREFIX}WERROR "Halt the compilation with an error on compiler warnings." ON)
+option(${PROJECT_NAME_PREFIX}WERROR "Halt the compilation with an error on compiler warnings." OFF)
 option(${PROJECT_NAME_PREFIX}MODULE "Enable module." OFF)
 option(${PROJECT_NAME_PREFIX}DOC "Generate the doc target." ${${PROJECT_NAME_PREFIX}MASTER_PROJECT}) # Do we have the documentation? :)
 option(${PROJECT_NAME_PREFIX}INSTALL "Generate the install target." ${${PROJECT_NAME_PREFIX}MASTER_PROJECT})
@@ -174,6 +174,17 @@ elseif (${PROJECT_NAME_PREFIX}PLATFORM_LINUX)
 	if (${PROJECT_NAME_PREFIX}WERROR)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Werror")
 	endif ()
+
+	# <stacktrace>
+	#list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "--enable-libstdcxx-backtrace")
+	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-lstdc++_libbacktrace")
+	# chars/icelake_xxx
+	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512f")
+	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512bw")
+	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vbmi")
+	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vbmi2")
+	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vpopcntdq")
+	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mbmi2")
 elseif (${PROJECT_NAME_PREFIX}PLATFORM_MACOS)
 	#########################
 	# APPLE CLANG
@@ -345,6 +356,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/error/exception.ixx
 		${PROJECT_SOURCE_DIR}/src/error/debug.ixx
 		${PROJECT_SOURCE_DIR}/src/error/platform.ixx
+		${PROJECT_SOURCE_DIR}/src/error/command_line.ixx
 
 		${PROJECT_SOURCE_DIR}/src/error/error.ixx
 
@@ -359,6 +371,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/functional/function_ref.ixx
 		${PROJECT_SOURCE_DIR}/src/functional/math.ixx
 		${PROJECT_SOURCE_DIR}/src/functional/flag.ixx
+		${PROJECT_SOURCE_DIR}/src/functional/function_signature.ixx
 
 		${PROJECT_SOURCE_DIR}/src/functional/functional.ixx
 
@@ -457,7 +470,16 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/error/debug.impl.ixx
 		${PROJECT_SOURCE_DIR}/src/error/platform.impl.ixx
+		${PROJECT_SOURCE_DIR}/src/error/command_line.impl.ixx
 )
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	set_source_files_properties(
+			${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE}
+			PROPERTIES
+			LANGUAGE CXX
+	)
+endif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 if (${PROJECT_NAME_PREFIX}MODULE)
 	target_sources(
@@ -505,10 +527,9 @@ target_sources(
 # SET FLAGS
 target_compile_options(
 		${PROJECT_NAME}
-		PRIVATE
-		${${PROJECT_NAME_PREFIX}COMPILE_FLAGS}
-
 		PUBLIC
+
+		${${PROJECT_NAME_PREFIX}COMPILE_FLAGS}
 		# __VA_OPT__
 		$<$<CXX_COMPILER_ID:MSVC>:-Zc:preprocessor>
 )

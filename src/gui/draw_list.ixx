@@ -448,6 +448,8 @@ namespace gal::prometheus::gui
 				normalized_x *= (thickness * .5f);
 				normalized_y *= (thickness * .5f);
 
+				GAL_PROMETHEUS_DEBUG_AXIOM(vertex_list.size() + 3 <= std::numeric_limits<index_type>::max());
+
 				const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
 
 				const auto& opaque_uv = shared_data->get_texture_uv_of_white_pixel();
@@ -723,16 +725,20 @@ namespace gal::prometheus::gui
 			vertex_list.reserve(vertex_list.size() + vertex_count);
 			index_list.reserve(index_list.size() + index_count);
 
-			const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
+			const auto current_vertex_index = vertex_list.size();
 
 			const auto& opaque_uv = shared_data->get_texture_uv_of_white_pixel();
 
 			std::ranges::transform(path_point, std::back_inserter(vertex_list), [opaque_uv, color](const point_type& point) noexcept -> vertex_type { return {point, opaque_uv, color}; });
 			for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
 			{
-				index_list.emplace_back(current_vertex_index + 0);
-				index_list.emplace_back(current_vertex_index + i - 1);
-				index_list.emplace_back(current_vertex_index + i);
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_index + 0 <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_index + i - 1 <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_index + i <= std::numeric_limits<index_type>::max());
+
+				index_list.push_back(static_cast<index_type>(current_vertex_index + 0));
+				index_list.push_back(static_cast<index_type>(current_vertex_index + i - 1));
+				index_list.push_back(static_cast<index_type>(current_vertex_index + i));
 			}
 		}
 
@@ -754,15 +760,19 @@ namespace gal::prometheus::gui
 			vertex_list.reserve(vertex_list.size() + vertex_count);
 			index_list.reserve(index_list.size() + index_count);
 
-			const auto current_vertex_inner_index = static_cast<index_type>(vertex_list.size());
-			const auto current_vertex_outer_index = static_cast<index_type>(vertex_list.size() + 1);
+			const auto current_vertex_inner_index = vertex_list.size();
+			const auto current_vertex_outer_index = vertex_list.size() + 1;
 
 			// Add indexes for fill
 			for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
 			{
-				index_list.emplace_back(current_vertex_inner_index + 0);
-				index_list.emplace_back(current_vertex_inner_index + ((i - 1) << 1));
-				index_list.emplace_back(current_vertex_inner_index + (i << 1));
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + 0 <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + ((i - 1) << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + (i << 1) <= std::numeric_limits<index_type>::max());
+
+				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + 0));
+				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + ((i - 1) << 1)));
+				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + (i << 1)));
 			}
 
 			list_type<point_type> temp_buffer{};
@@ -791,12 +801,19 @@ namespace gal::prometheus::gui
 				vertex_list.emplace_back(path_point[n] + point_type{dm_x, dm_y}, opaque_uv, transparent_color);
 
 				// Add indexes for fringes
-				index_list.push_back(current_vertex_inner_index + static_cast<index_type>((n << 1)));
-				index_list.push_back(current_vertex_inner_index + static_cast<index_type>((i << 1)));
-				index_list.push_back(current_vertex_outer_index + static_cast<index_type>((i << 1)));
-				index_list.push_back(current_vertex_outer_index + static_cast<index_type>((i << 1)));
-				index_list.push_back(current_vertex_outer_index + static_cast<index_type>((n << 1)));
-				index_list.push_back(current_vertex_inner_index + static_cast<index_type>((n << 1)));
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + (n << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + (i << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_outer_index + (i << 1) <=std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_outer_index + (i << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_outer_index + (n << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + (n << 1) <= std::numeric_limits<index_type>::max());
+
+				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
+				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + (i << 1)));
+				index_list.push_back(static_cast<index_type>(current_vertex_outer_index + (i << 1)));
+				index_list.push_back(static_cast<index_type>(current_vertex_outer_index + (i << 1)));
+				index_list.push_back(static_cast<index_type>(current_vertex_outer_index + (n << 1)));
+				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
 			}
 		}
 

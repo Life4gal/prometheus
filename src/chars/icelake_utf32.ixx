@@ -8,7 +8,12 @@
 #if GAL_PROMETHEUS_USE_MODULE
 module;
 
+#if __has_include(<intrin.h>)
 #include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
 #include <prometheus/macro.hpp>
 
 export module gal.prometheus.chars:icelake.utf32;
@@ -22,7 +27,13 @@ import :encoding;
 import :scalar.utf32;
 
 #else
+#if __has_include(<intrin.h>)
 #include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
+#include <cstring>
 
 #include <prometheus/macro.hpp>
 #include <chars/encoding.ixx>

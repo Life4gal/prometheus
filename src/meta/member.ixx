@@ -3241,7 +3241,7 @@ namespace gal::prometheus::meta
 
 			// fixme: find a suitable splitter.
 			// extern_any<`my_struct`>.`my_struct`::`member_name`
-			constexpr std::string_view type_name = name_of<BareType>();
+			constexpr std::string_view type_name = name_of<std::remove_cvref_t<T>>();
 			constexpr auto             type_name_size = type_name.size() + 2; // 2 == `::`
 			constexpr std::string_view splitter{">."};
 			constexpr auto             splitter_size = splitter.size();
