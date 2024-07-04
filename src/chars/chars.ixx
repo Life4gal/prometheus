@@ -14,10 +14,22 @@ export module gal.prometheus.chars;
 
 export import :encoding;
 export import :scalar;
+
+#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 export import :icelake;
+#endif
 
 #else
 #include <chars/encoding.ixx>
 #include <chars/scalar.ixx>
+
+#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 #include <chars/icelake.ixx>
 #endif
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
+{
+	
+}
