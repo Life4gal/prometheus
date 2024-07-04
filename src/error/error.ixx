@@ -10,6 +10,7 @@ export import :exception;
 export import :debug;
 export import :platform;
 export import :command_line;
+export import :instruction_set.ixx;
 
 #else
 #pragma once
@@ -18,5 +19,6 @@ export import :command_line;
 #include <error/debug.ixx>
 #include <error/platform.ixx>
 #include <error/command_line.ixx>
+#include <error/instruction_set.ixx>
 
 #endif
