@@ -101,6 +101,9 @@ else ()
 	message(FATAL_ERROR "Unsupported Platform: ${CMAKE_SYSTEM_NAME}")
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 
+# check cpu features
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake_utils/check_cpu_features.cmake)
+
 cmake_language(
 		CALL
 		${PROJECT_NAME_PREFIX}doc_var
@@ -127,7 +130,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 #set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
-endif ()
+endif (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 
 # Macros about the compiler.
 set(${PROJECT_NAME_PREFIX}COMPILER_ID ${CMAKE_CXX_COMPILER_ID})
@@ -148,7 +151,7 @@ if (${PROJECT_NAME_PREFIX}MASTER_PROJECT AND NOT DEFINED CMAKE_CXX_VISIBILITY_PR
 			PROPERTY STRINGS
 			hidden default
 	)
-endif ()
+endif (${PROJECT_NAME_PREFIX}MASTER_PROJECT AND NOT DEFINED CMAKE_CXX_VISIBILITY_PRESET)
 
 if (${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)
 	#########################
@@ -178,13 +181,16 @@ elseif (${PROJECT_NAME_PREFIX}PLATFORM_LINUX)
 	# <stacktrace>
 	#list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "--enable-libstdcxx-backtrace")
 	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-lstdc++_libbacktrace")
-	# chars/icelake_xxx
-	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512f")
-	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512bw")
-	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vbmi")
-	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vbmi2")
-	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vpopcntdq")
-	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mbmi2")
+
+	if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
+		# chars/icelake_xxx
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512f")
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512bw")
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vbmi")
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vbmi2")
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vpopcntdq")
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mbmi2")
+	endif (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 elseif (${PROJECT_NAME_PREFIX}PLATFORM_MACOS)
 	#########################
 	# APPLE CLANG
@@ -309,6 +315,22 @@ endif (${PROJECT_NAME_PREFIX}MODULE)
 # MODULE SOURCE
 # =======================
 
+if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
+	set(
+		${PROJECT_NAME_PREFIX}MODULE_SOURCE_CHARS_ICELAKE
+
+		${PROJECT_SOURCE_DIR}/src/chars/icelake.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_ascii.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf8.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf16.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf32.ixx
+	)
+else()
+	set(
+		${PROJECT_NAME_PREFIX}MODULE_SOURCE_CHARS_ICELAKE
+	)
+endif (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
+
 set(
 		${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC
 
@@ -322,11 +344,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf8.ixx
 		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf16.ixx
 		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf32.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/icelake.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/icelake_ascii.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf8.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf16.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf32.ixx
+		${${PROJECT_NAME_PREFIX}MODULE_SOURCE_CHARS_ICELAKE}
 		
 		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
 
@@ -357,6 +375,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/error/debug.ixx
 		${PROJECT_SOURCE_DIR}/src/error/platform.ixx
 		${PROJECT_SOURCE_DIR}/src/error/command_line.ixx
+		${PROJECT_SOURCE_DIR}/src/error/instruction_set.ixx
 
 		${PROJECT_SOURCE_DIR}/src/error/error.ixx
 
@@ -471,6 +490,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/error/debug.impl.ixx
 		${PROJECT_SOURCE_DIR}/src/error/platform.impl.ixx
 		${PROJECT_SOURCE_DIR}/src/error/command_line.impl.ixx
+		${PROJECT_SOURCE_DIR}/src/error/instruction_set.impl.ixx
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -555,6 +575,8 @@ target_compile_definitions(
 		${${PROJECT_NAME_PREFIX}PLATFORM}
 
 		${PROJECT_NAME_PREFIX}USE_MODULE=${${PROJECT_NAME_PREFIX}MODULE_MACRO_VARIABLE_USE_MODULE}
+
+		${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED=${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED}
 
 		# Tool macros for platform determination.
 		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_NAME_PREFIX}COMPILER_MSVC>
