@@ -3113,7 +3113,8 @@ namespace gal::prometheus::meta
 			U&& u
 		) mutable noexcept -> void //
 				{
-					function(member_of_index<Index>(std::forward<U>(u))...);
+					// function(member_of_index<Index>(std::forward<U>(u))...);
+				(member_detail::invoke<Index>(function, member_of_index<Index>(std::forward<U>(u))), ...);
 				}(std::make_index_sequence<member_size<T>()>{}, std::forward<T>(value));
 	}
 
@@ -3207,7 +3208,7 @@ namespace gal::prometheus::meta
 		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 		// MSVC
 		// class std::basic_string_view<char,struct std::char_traits<char> > `__calling_convention` `namespace`::get_full_function_name<struct `namespace`::member_name::wrapper<`member_type` const >{const `member_type`&:`namespace`::member_name::extern_any<struct `my_struct`>->`member_name`}>(void) noexcept
-		constexpr auto full_function_name_size = full_function_name.size();
+		// constexpr auto full_function_name_size = full_function_name.size();
 
 		constexpr std::string_view splitter{">->"};
 		constexpr auto splitter_size = splitter.size();
@@ -3220,39 +3221,39 @@ namespace gal::prometheus::meta
 		constexpr std::string_view suffix{"}>(void) noexcept"};
 		constexpr auto full_function_name_suffix_size = suffix.size();
 		#elif defined(GAL_PROMETHEUS_COMPILER_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
-			// CLANG/CLANG-CL
-			// std::string_view `namespace`::get_full_function_name() [Vs = <decltype(_Invoker1<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &, const `member_type` &>::_Call(static_cast<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &>(_Obj), static_cast<const `member_type` &>(_Arg1))){extern_any.`member_name`}>]
-			constexpr auto full_function_name_size = full_function_name.size();
+		// CLANG/CLANG-CL
+		// std::string_view `namespace`::get_full_function_name() [Vs = <decltype(_Invoker1<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &, const `member_type` &>::_Call(static_cast<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &>(_Obj), static_cast<const `member_type` &>(_Arg1))){extern_any.`member_name`}>]
+		// constexpr auto full_function_name_size = full_function_name.size();
 
-			constexpr std::string_view splitter{"extern_any."};
-			constexpr auto             splitter_size = splitter.size();
+		constexpr std::string_view splitter{"extern_any."};
+		constexpr auto             splitter_size = splitter.size();
 
-			// std::string_view `namespace`::get_full_function_name() [Vs = <decltype(_Invoker1<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &, const `member_type` &>::_Call(static_cast<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &>(_Obj), static_cast<const `member_type` &>(_Arg1))){extern_any.
-			static_assert(full_function_name.find(splitter) != std::string_view::npos);
-			constexpr auto full_function_name_prefix_size = full_function_name.find(splitter) + splitter_size;
+		// std::string_view `namespace`::get_full_function_name() [Vs = <decltype(_Invoker1<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &, const `member_type` &>::_Call(static_cast<(lambda at `ABS_FILE_PATH`\member_name.hpp:413:6) &>(_Obj), static_cast<const `member_type` &>(_Arg1))){extern_any.
+		static_assert(full_function_name.find(splitter) != std::string_view::npos);
+		constexpr auto full_function_name_prefix_size = full_function_name.find(splitter) + splitter_size;
 
-			// }>]
-			constexpr std::string_view suffix{"}>]"};
-			constexpr auto             full_function_name_suffix_size = suffix.size();
+		// }>]
+		constexpr std::string_view suffix{"}>]"};
+		constexpr auto             full_function_name_suffix_size = suffix.size();
 		#else
-			// GCC
-			// constexpr std::string_view `namespace`::get_full_function_name() [with auto ...<anonymous> = {`namespace`::member_name::wrapper<const bool>{`namespace`::member_name::extern_any<`my_struct`>.`my_struct`::`member_name`}}; std::string_view = std::basic_string_view<char>]
-			constexpr auto full_function_name_size = full_function_name.size();
+		// GCC
+		// constexpr std::string_view `namespace`::get_full_function_name() [with auto ...<anonymous> = {`namespace`::member_name::wrapper<const bool>{`namespace`::member_name::extern_any<`my_struct`>.`my_struct`::`member_name`}}; std::string_view = std::basic_string_view<char>]
+		// constexpr auto full_function_name_size = full_function_name.size();
 
-			// fixme: find a suitable splitter.
-			// extern_any<`my_struct`>.`my_struct`::`member_name`
-			constexpr std::string_view type_name = name_of<std::remove_cvref_t<T>>();
-			constexpr auto             type_name_size = type_name.size() + 2; // 2 == `::`
-			constexpr std::string_view splitter{">."};
-			constexpr auto             splitter_size = splitter.size();
+		// fixme: find a suitable splitter.
+		// extern_any<`my_struct`>.`my_struct`::`member_name`
+		constexpr std::string_view type_name = name_of<std::remove_cvref_t<T>>();
+		constexpr auto             type_name_size = type_name.size() + 2; // 2 == `::`
+		constexpr std::string_view splitter{">."};
+		constexpr auto             splitter_size = splitter.size();
 
-			// constexpr std::string_view `namespace`::get_full_function_name() [with auto ...<anonymous> = {`namespace`::member_name::wrapper<const bool>{`namespace`::member_name::extern_any<`my_struct`>.`my_struct`::
-			static_assert(full_function_name.find(splitter) != std::string_view::npos);
-			constexpr auto full_function_name_prefix_size = full_function_name.find(splitter) + splitter_size + type_name_size;
+		// constexpr std::string_view `namespace`::get_full_function_name() [with auto ...<anonymous> = {`namespace`::member_name::wrapper<const bool>{`namespace`::member_name::extern_any<`my_struct`>.`my_struct`::
+		static_assert(full_function_name.find(splitter) != std::string_view::npos);
+		constexpr auto full_function_name_prefix_size = full_function_name.find(splitter) + splitter_size + type_name_size;
 
-			// }}; std::string_view = std::basic_string_view<char>]
-			constexpr std::string_view suffix{"}}; std::string_view = std::basic_string_view<char>]"};
-			constexpr auto             full_function_name_suffix_size = suffix.size();
+		// }}; std::string_view = std::basic_string_view<char>]
+		constexpr std::string_view suffix{"}}; std::string_view = std::basic_string_view<char>]"};
+		constexpr auto             full_function_name_suffix_size = suffix.size();
 		#endif
 
 		auto name = full_function_name;
