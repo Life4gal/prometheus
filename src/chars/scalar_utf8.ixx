@@ -295,8 +295,10 @@ namespace gal::prometheus::chars
 				return validate<ReturnResultType>({input, std::char_traits<char_type>::length(input)});
 			}
 
-			// Finds the previous leading byte starting backward from input.data() and validates with errors from there.
+			// Finds the previous leading byte starting backward from `current` and validates with errors from there.
 			// Used to pinpoint the location of an error when an invalid chunk is detected.
+			// We assume that the stream starts with a leading byte, and to check that it is the case,
+			// we ask that you pass a pointer to the start of the stream (begin).
 			[[nodiscard]] constexpr static auto rewind_and_validate(
 				const pointer_type begin,
 				const pointer_type current,
@@ -306,21 +308,26 @@ namespace gal::prometheus::chars
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(begin);
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(current);
 				GAL_PROMETHEUS_DEBUG_ASSUME(end >= current);
-				// A leading byte cannot be further than 4 bytes away
-				GAL_PROMETHEUS_DEBUG_ASSUME(current - begin <= 4);
+				GAL_PROMETHEUS_DEBUG_ASSUME(current >= begin);
 
 				// First check that we start with a leading byte
 				if ((begin[0] & 0b1100'0000) == 0b1000'0000) { return {.error = ErrorCode::TOO_LONG, .count = 0}; }
 
-				const auto range = std::ranges::subrange{begin, current + 1} | std::views::reverse;
-				const auto extra_count = std::ranges::distance(
-					range |
-					std::views::take_while([](const auto byte) noexcept -> bool { return (byte & 0b1100'0000) == 0b1000'0000; })
-				);
+				size_type extra_count = 0;
+				// A leading byte cannot be further than 4 bytes away
+				for (std::ptrdiff_t i = 0; i < 5; ++i)
+				{
+					if (const auto byte = static_cast<std::uint8_t>(current[-i]);
+						(byte & 0b1100'0000) == 0b1000'0000)
+					{
+						break;
+					}
+					extra_count += 1;
+				}
 
 				const pointer_type it_current = current - extra_count;
 
-				auto result = validate({it_current, static_cast<size_type>(end - begin + extra_count)});
+				auto result = validate<true>({it_current, static_cast<size_type>(end - begin + extra_count)});
 				result.count -= extra_count;
 				return result;
 			}
@@ -864,7 +871,7 @@ namespace gal::prometheus::chars
 			{
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(furthest_possible_begin);
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
-				GAL_PROMETHEUS_DEBUG_ASSUME(input.data() < furthest_possible_begin);
+				GAL_PROMETHEUS_DEBUG_ASSUME(input.data() >= furthest_possible_begin);
 				// fixme
 				GAL_PROMETHEUS_DEBUG_ASSUME(furthest_possible_begin - input.data() <= 3);
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
