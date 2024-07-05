@@ -1132,31 +1132,24 @@ namespace gal::prometheus::unit_test
 				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
 
-				if (total_fails_exclude_current_test_ + current_test_result_->total_assertions_failed > config_->abort_after_n_failures)
+				if (current_test_result_->status == test_result_type::Status::FATAL or 
+					total_fails_exclude_current_test_ + current_test_result_->total_assertions_failed > config_->abort_after_n_failures)
 				[[unlikely]]
 				{
+					std::format_to(
+							std::back_inserter(current_suite_result_->report_string),
+							"{}Error: fast fail for test `{}` after `{}` failures total.{} \n",
+							config_->color.fail,
+							fullname_of_current_test(),
+							current_test_result_->total_assertions_failed,
+							config_->color.none
+					);
+
 					on(events::EventTestEnd{.name = current_test_result_->name});
 					on(events::EventSuiteEnd{.name = current_suite_result_->name});
-					on(events::EventSummary{});
+					// @see Executor::~Executor
+					// on(events::EventSummary{});
 
-					#if __has_include(<print>)
-					std::println(
-						std::cerr,
-						"{}fast fail for test {} after {} failures total.{}",
-						config_->color.fail,
-						fullname_of_current_test(),
-						current_test_result_->total_assertions_failed,
-						config_->color.none
-					);
-					#else
-					std::cerr << std::format(
-						"{}fast fail for test {} after {} failures total.{}\n",
-						config_->color.fail,
-						fullname_of_current_test(),
-						current_test_result_->total_assertions_failed,
-						config_->color.none
-						);
-					#endif
 					config_->terminate();
 				}
 			}
