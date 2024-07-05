@@ -586,11 +586,40 @@ namespace gal::prometheus::unit_test
 		template<typename T>
 		OperandValue(T) -> OperandValue<T>;
 
+		template<typename T>
+		class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandValueRef : public Operand
+		{
+		public:
+			using value_type = T;
+
+		private:
+			std::reference_wrapper<value_type> ref_;
+
+		public:
+			constexpr explicit(false) OperandValueRef(value_type& ref) noexcept
+				: ref_{ref} {}
+
+			[[nodiscard]] constexpr auto value() noexcept -> value_type& { return ref_.get(); }
+
+			[[nodiscard]] constexpr auto value() const noexcept -> const value_type& { return ref_.get(); }
+
+			[[nodiscard]] constexpr auto to_string() const noexcept -> std::string { return meta::to_string(ref_.get()); }
+		};
+
+		template<typename T>
+		OperandValueRef(T&) -> OperandValueRef<T>;
+		// propagate const
+		template<typename T>
+		OperandValueRef(const T&) -> OperandValueRef<const T>;
+
 		template<typename>
 		struct is_operand_value : std::false_type {};
 
 		template<typename T>
 		struct is_operand_value<OperandValue<T>> : std::true_type {};
+
+		template<typename T>
+		struct is_operand_value<OperandValueRef<T>> : std::true_type {};
 
 		template<typename T>
 		constexpr auto is_operand_value_v = is_operand_value<T>::value;
@@ -1118,7 +1147,7 @@ namespace gal::prometheus::unit_test
 						fullname_of_current_test(),
 						current_test_result_->total_assertions_failed,
 						config_->color.none
-						);
+					);
 					#else
 					std::cerr << std::format(
 						"{}fast fail for test {} after {} failures total.{}\n",
@@ -4548,6 +4577,8 @@ namespace gal::prometheus::unit_test
 
 	template<typename T>
 	using value = operands::OperandValue<T>;
+	template<typename T>
+	using ref = operands::OperandValueRef<T>;
 
 	template<typename ExceptionType = void, std::invocable InvocableType>
 	[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> operands::OperandThrow<ExceptionType> { return {invocable}; }
