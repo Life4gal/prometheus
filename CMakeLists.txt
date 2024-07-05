@@ -60,7 +60,7 @@ if (${PROJECT_NAME_PREFIX}MASTER_PROJECT AND NOT CMAKE_BUILD_TYPE)
 			"Choose the type of build, options are: None(CMAKE_CXX_FLAGS or "
 			"CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel."
 	)
-endif ()
+endif (${PROJECT_NAME_PREFIX}MASTER_PROJECT AND NOT CMAKE_BUILD_TYPE)
 
 project(
 		prometheus
@@ -69,11 +69,8 @@ project(
 		HOMEPAGE_URL "https://github.com/Life4gal/prometheus"
 		LANGUAGES CXX
 )
-if (${${PROJECT_NAME_PREFIX}MASTER_PROJECT})
-	message(STATUS "Our project [${PROJECT_NAME}] is the main-project. CMAKE VERSION: ${CMAKE_VERSION}. Compiler ID: ${CMAKE_CXX_COMPILER_ID}. Platform: ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}.")
-else ()
-	message(STATUS "Our project [${PROJECT_NAME}] is the sub-project. CMAKE VERSION: ${CMAKE_VERSION}. Compiler ID: ${CMAKE_CXX_COMPILER_ID}. Platform: ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}.")
-endif (${${PROJECT_NAME_PREFIX}MASTER_PROJECT})
+
+message(STATUS "CMAKE VERSION: ${CMAKE_VERSION}. Compiler ID: ${CMAKE_CXX_COMPILER_ID}. Platform: ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}.")
 message(STATUS "${PROJECT_NAME} VERSION: ${${PROJECT_NAME_PREFIX}VERSION}")
 message(STATUS "${PROJECT_NAME} BUILD TYPE: ${CMAKE_BUILD_TYPE}")
 
