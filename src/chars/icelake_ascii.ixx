@@ -168,10 +168,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 						const auto mask_3 = _mm512_cmpgt_epi8_mask(_mm512_setzero_si512(), in_3);
 
 						// Apply the masks and subtract from the runner
-						const auto not_ascii_0 = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask_0, 0xff);
-						const auto not_ascii_1 = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask_1, 0xff);
-						const auto not_ascii_2 = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask_2, 0xff);
-						const auto not_ascii_3 = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask_3, 0xff);
+						const auto not_ascii_0 = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask_0, static_cast<char>(0xff));
+						const auto not_ascii_1 = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask_1, static_cast<char>(0xff));
+						const auto not_ascii_2 = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask_2, static_cast<char>(0xff));
+						const auto not_ascii_3 = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask_3, static_cast<char>(0xff));
 
 						runner = _mm512_sub_epi8(runner, not_ascii_0);
 						runner = _mm512_sub_epi8(runner, not_ascii_1);
@@ -184,7 +184,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 						const auto in = _mm512_loadu_si512(
 							GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(const __m512i*, it_input_current + 0 * sizeof(__m512i)));
 						const auto mask = _mm512_cmpgt_epi8_mask(_mm512_setzero_si512(), in);
-						const auto not_ascii = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask, 0xff);
+						const auto not_ascii = _mm512_mask_set1_epi8(_mm512_setzero_si512(), mask, static_cast<char>(0xff));
 						runner = _mm512_sub_epi8(runner, not_ascii);
 					}
 
