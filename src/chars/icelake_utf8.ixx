@@ -803,6 +803,10 @@ namespace gal::prometheus::chars
 			{
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+				if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
+				{
+					GAL_PROMETHEUS_DEBUG_ASSUME(validate(input));
+				}
 
 				using output_pointer_type = typename output_type<OutputCategory>::pointer;
 				// using output_char_type = typename output_type<OutputCategory>::value_type;
@@ -2005,6 +2009,18 @@ namespace gal::prometheus::chars
 
 	template<>
 	class Simd<"icelake.utf8_char"> : public icelake_utf8_detail::SimdUtf8Base<CharsCategory::UTF8_CHAR> {};
+
+	template<>
+	struct simd_processor_of<CharsCategory::UTF8, "icelake">
+	{
+		using type = Simd<"icelake.utf8">;
+	};
+
+	template<>
+	struct simd_processor_of<CharsCategory::UTF8_CHAR, "icelake">
+	{
+		using type = Simd<"icelake.utf8_char">;
+	};
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

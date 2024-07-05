@@ -280,6 +280,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+			if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
+			{
+				GAL_PROMETHEUS_DEBUG_ASSUME(validate<Endian>(input));
+			}
 
 			using output_pointer_type = typename output_type<OutputCategory>::pointer;
 			using output_char_type = typename output_type<OutputCategory>::value_type;
@@ -1021,4 +1025,16 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			return result;
 		}
 	};
+
+	template<>
+	struct simd_processor_of<CharsCategory::UTF16, "icelake">
+	{
+		using type = Simd<"icelake.utf16">;
+	};
+
+	template<>
+	struct simd_processor_of<CharsCategory::UTF16_LE, "icelake"> : simd_processor_of<CharsCategory::UTF16, "icelake"> {};
+
+	template<>
+	struct simd_processor_of<CharsCategory::UTF16_BE, "icelake"> : simd_processor_of<CharsCategory::UTF16, "icelake"> {};
 } // namespace gal::prometheus::chars

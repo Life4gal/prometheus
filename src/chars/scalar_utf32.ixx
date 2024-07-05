@@ -43,7 +43,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		using pointer_type = input_type::const_pointer;
 		using size_type = input_type::size_type;
 
-		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> result_type
+		template<bool ReturnResultType = false>
+		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
@@ -58,18 +59,46 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 				const auto count_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
 				if (const auto word = *it_input_current;
-					word > 0x10'ffff) { return result_type{.error = ErrorCode::TOO_LARGE, .count = count_if_error}; }
-				else if (word >= 0xd800 and word <= 0xdfff) { return result_type{.error = ErrorCode::SURROGATE, .count = count_if_error}; }
+					word > 0x10'ffff)
+				{
+					if constexpr (ReturnResultType)
+					{
+						return result_type{.error = ErrorCode::TOO_LARGE, .count = count_if_error};
+					}
+					else
+					{
+						return false;
+					}
+				}
+				else if (word >= 0xd800 and word <= 0xdfff)
+				{
+					if constexpr (ReturnResultType)
+					{
+						return result_type{.error = ErrorCode::SURROGATE, .count = count_if_error};
+					}
+					else
+					{
+						return false;
+					}
+				}
 
 				it_input_current += 1;
 			}
 
-			return {.error = ErrorCode::NONE, .count = input_length};
+			if constexpr (ReturnResultType)
+			{
+				return {.error = ErrorCode::NONE, .count = input_length};
+			}
+			else
+			{
+				return true;
+			}
 		}
 
-		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> result_type
+		template<bool ReturnResultType = false>
+		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
-			return validate({input, std::char_traits<char_type>::length(input)});
+			return validate<ReturnResultType>({input, std::char_traits<char_type>::length(input)});
 		}
 
 		// note: we are not BOM aware
@@ -136,6 +165,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+			if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
+			{
+				GAL_PROMETHEUS_DEBUG_ASSUME(validate(input));
+			}
 
 			using output_pointer_type = typename output_type<OutputCategory>::pointer;
 			using output_char_type = typename output_type<OutputCategory>::value_type;
@@ -445,5 +478,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 			return convert<OutputCategory, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
+	};
+
+	template<>
+	struct scalar_processor_of<CharsCategory::UTF32>
+	{
+		using type = Scalar<"utf32">;
 	};
 } // namespace gal::prometheus::chars

@@ -42,7 +42,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		using pointer_type = input_type::const_pointer;
 		using size_type = input_type::size_type;
 
-		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> result_type
+		template<bool ReturnResultType = false>
+		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
@@ -68,15 +69,30 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 							[](const auto byte) noexcept { return byte >= 0b1000'0000; });
 				it != it_input_end)
 			{
-				return result_type{.error = ErrorCode::TOO_LARGE, .count = static_cast<std::size_t>(std::ranges::distance(it, it_input_begin))};
+				if constexpr (ReturnResultType)
+				{
+					return result_type{.error = ErrorCode::TOO_LARGE, .count = static_cast<std::size_t>(std::ranges::distance(it, it_input_begin))};
+				}
+				else
+				{
+					return false;
+				}
 			}
 
-			return result_type{.error = ErrorCode::NONE, .count = input_length};
+			if constexpr (ReturnResultType)
+			{
+				return result_type{.error = ErrorCode::NONE, .count = input_length};
+			}
+			else
+			{
+				return true;
+			}
 		}
 
-		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> result_type
+		template<bool ReturnResultType = false>
+		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
-			return validate({input, std::char_traits<char_type>::length(input)});
+			return validate<ReturnResultType>({input, std::char_traits<char_type>::length(input)});
 		}
 
 		// note: we are not BOM aware
@@ -119,6 +135,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+			if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
+			{
+				GAL_PROMETHEUS_DEBUG_ASSUME(validate(input));
+			}
 
 			using output_pointer_type = typename output_type<OutputCategory>::pointer;
 			using output_char_type = typename output_type<OutputCategory>::value_type;
@@ -296,5 +316,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 			return convert<OutputCategory, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
+	};
+
+	template<>
+	struct scalar_processor_of<CharsCategory::ASCII>
+	{
+		using type = Scalar<"ascii">;
 	};
 }

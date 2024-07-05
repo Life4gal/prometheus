@@ -321,6 +321,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 	template<meta::basic_fixed_string Name>
 	class Encoding;
 
-	template<meta::basic_fixed_string Name>
-	class Converter;
+	template<CharsCategory InputCategory>
+	struct scalar_processor_of;
+
+	template<CharsCategory InputCategory>
+	using scalar_processor_of_t = typename scalar_processor_of<InputCategory>::type;
+
+	template<CharsCategory InputCategory, meta::basic_fixed_string Name>
+	struct simd_processor_of;
+
+	template<CharsCategory InputCategory, meta::basic_fixed_string Name>
+	using simd_processor_of_t = typename simd_processor_of<InputCategory, Name>::type;
 }

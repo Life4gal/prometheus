@@ -43,8 +43,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		using pointer_type = input_type::const_pointer;
 		using size_type = input_type::size_type;
 
-		template<std::endian Endian = std::endian::native>
-		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> result_type
+		template<std::endian Endian = std::endian::native, bool ReturnResultType = false>
+		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
@@ -65,10 +65,30 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 				{
 					const auto count_if_error = static_cast<std::size_t>(it_input_current - it_input_end);
 
-					if (it_input_current + 1 == it_input_end) { return {.error = ErrorCode::SURROGATE, .count = count_if_error}; }
+					if (it_input_current + 1 == it_input_end)
+					{
+						if constexpr (ReturnResultType)
+						{
+							return {.error = ErrorCode::SURROGATE, .count = count_if_error};
+						}
+						else
+						{
+							return false;
+						}
+					}
 
 					if (const auto diff = word - 0xd800;
-						diff > 0x3ff) { return {.error = ErrorCode::SURROGATE, .count = count_if_error}; }
+						diff > 0x3ff)
+					{
+						if constexpr (ReturnResultType)
+						{
+							return {.error = ErrorCode::SURROGATE, .count = count_if_error};
+						}
+						else
+						{
+							return false;
+						}
+					}
 
 					const auto next_word = [it_input_current]() noexcept -> auto
 					{
@@ -77,20 +97,37 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 					}();
 
 					if (const auto diff = next_word - 0xdc00;
-						diff > 0x3ff) { return {.error = ErrorCode::SURROGATE, .count = count_if_error}; }
+						diff > 0x3ff)
+					{
+						if constexpr (ReturnResultType)
+						{
+							return {.error = ErrorCode::SURROGATE, .count = count_if_error};
+						}
+						else
+						{
+							return false;
+						}
+					}
 
 					it_input_current += 2;
 				}
 				else { it_input_current += 1; }
 			}
 
-			return {.error = ErrorCode::NONE, .count = input_length};
+			if constexpr (ReturnResultType)
+			{
+				return {.error = ErrorCode::NONE, .count = input_length};
+			}
+			else
+			{
+				return true;
+			}
 		}
 
-		template<std::endian Endian = std::endian::native>
-		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> result_type
+		template<std::endian Endian = std::endian::native, bool ReturnResultType = false>
+		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
-			return validate<Endian>({input, std::char_traits<char_type>::length(input)});
+			return validate<Endian, ReturnResultType>({input, std::char_traits<char_type>::length(input)});
 		}
 
 		// note: we are not BOM aware
@@ -168,6 +205,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		{
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+			if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
+			{
+				GAL_PROMETHEUS_DEBUG_ASSUME(validate(input));
+			}
 
 			using output_pointer_type = typename output_type<OutputCategory>::pointer;
 			using output_char_type = typename output_type<OutputCategory>::value_type;
@@ -405,7 +446,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			}
 			else if constexpr (OutputCategory == CharsCategory::UTF16_LE or OutputCategory == CharsCategory::UTF16_BE or OutputCategory == CharsCategory::UTF16)
 			{
-				if ((OutputCategory == CharsCategory::UTF16) or ((Endian == std::endian::little) == (OutputCategory == CharsCategory::UTF16_LE)))
+				if constexpr ((OutputCategory == CharsCategory::UTF16) or ((Endian == std::endian::little) == (OutputCategory == CharsCategory::UTF16_LE)))
 				{
 					std::memcpy(it_output_current, it_input_current, input_length * sizeof(char_type));
 				}
@@ -517,7 +558,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			typename output_type<OutputCategory>::pointer output
 		) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
-			return convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
+			return convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, output);
 		}
 
 		template<
@@ -539,7 +580,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			StringType result{};
 			result.resize(length<OutputCategory>(input));
 
-			(void)convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>(input, result.data());
+			(void)convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>(input, result.data());
 			return result;
 		}
 
@@ -562,7 +603,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			StringType result{};
 			result.resize(length<OutputCategory, Endian>(input));
 
-			return convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
+			return convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
 
 		template<
@@ -576,7 +617,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
 			result.resize(length<OutputCategory>(input));
 
-			(void)convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>(input, result.data());
+			(void)convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>(input, result.data());
 			return result;
 		}
 
@@ -591,7 +632,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
 			result.resize(length<OutputCategory>(input));
 
-			return convert<OutputCategory, Endian, ProcessPolicy, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
+			return convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
 
 		template<std::endian Endian = std::endian::native>
@@ -648,4 +689,16 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			return result;
 		}
 	};
+
+	template<>
+	struct scalar_processor_of<CharsCategory::UTF16>
+	{
+		using type = Scalar<"utf16">;
+	};
+
+	template<>
+	struct scalar_processor_of<CharsCategory::UTF16_LE> : scalar_processor_of<CharsCategory::UTF16> {};
+
+	template<>
+	struct scalar_processor_of<CharsCategory::UTF16_BE> : scalar_processor_of<CharsCategory::UTF16> {};
 } // namespace gal::prometheus::chars

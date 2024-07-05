@@ -44,7 +44,8 @@ namespace gal::prometheus::chars
 			using pointer_type = typename input_type::const_pointer;
 			using size_type = typename input_type::size_type;
 
-			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> result_type
+			template<bool ReturnResultType = false>
+			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 			{
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 
@@ -69,81 +70,229 @@ namespace gal::prometheus::chars
 								std::ranges::find_if(
 									it_input_current,
 									it_input_end,
-									[](const auto byte) noexcept { return byte >= 0b1000'0000; });
-						it == it_input_end) { return result_type{.error = ErrorCode::NONE, .count = input_length}; }
+									[](const auto byte) noexcept { return static_cast<std::uint8_t>(byte) >= 0b1000'0000; });
+						it == it_input_end)
+					{
+						if constexpr (ReturnResultType)
+						{
+							return result_type{.error = ErrorCode::NONE, .count = input_length};
+						}
+						else
+						{
+							return true;
+						}
+					}
 					else { it_input_current = it; }
 
 					const auto count_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-					if (const auto byte = *it_input_current;
+					if (const auto byte = static_cast<std::uint8_t>(*it_input_current);
 						(byte & 0b1110'0000) == 0b1100'0000)
 					{
-						if (it_input_current + 2 > it_input_end) { return {.error = ErrorCode::TOO_SHORT, .count = count_if_error}; }
+						if (it_input_current + 2 > it_input_end)
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
 
 						const auto next_byte = *(it_input_current + 1);
 
-						if ((next_byte & 0b1100'0000) != 0b1000'0000) { return {.error = ErrorCode::TOO_SHORT, .count = count_if_error}; }
+						if ((next_byte & 0b1100'0000) != 0b1000'0000)
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
 						// range check
 						if (const auto code_point = (byte & 0b0001'1111) << 6 | (next_byte & 0b0011'1111);
-							(code_point < 0x80) || (0x7ff < code_point)) { return {.error = ErrorCode::OVERLONG, .count = count_if_error}; }
+							(code_point < 0x80) || (0x7ff < code_point))
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::OVERLONG, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
 
 						it_input_current += 2;
 					}
 					else if ((byte & 0b1111'0000) == 0b1110'0000)
 					{
-						if (it_input_current + 3 > it_input_end) { return {.error = ErrorCode::TOO_SHORT, .count = count_if_error}; }
+						if (it_input_current + 3 > it_input_end)
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
 
 						const auto next_byte_1 = *(it_input_current + 1);
 						const auto next_byte_2 = *(it_input_current + 2);
 
-						if ((next_byte_1 & 0b1100'0000) != 0b1000'0000) { return {.error = ErrorCode::TOO_SHORT, .count = count_if_error}; }
-						if ((next_byte_2 & 0b1100'0000) != 0b1000'0000) { return {.error = ErrorCode::TOO_SHORT, .count = count_if_error}; }
+						if (((next_byte_1 & 0b1100'0000) != 0b1000'0000) or ((next_byte_2 & 0b1100'0000) != 0b1000'0000))
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
 						// range check
 						const auto code_point =
 								(byte & 0b0000'1111) << 12 |
 								(next_byte_1 & 0b0011'1111) << 6 |
 								(next_byte_2 & 0b0011'1111);
-						if ((code_point < 0x800) || (0xffff < code_point)) { return {.error = ErrorCode::OVERLONG, .count = count_if_error}; }
-						if (0xd7ff < code_point && code_point < 0xe000) { return {.error = ErrorCode::SURROGATE, .count = count_if_error}; }
+						if ((code_point < 0x800) || (0xffff < code_point))
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::OVERLONG, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
+						if (0xd7ff < code_point && code_point < 0xe000)
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::SURROGATE, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
 
 						it_input_current += 3;
 					}
 					else if ((byte & 0b1111'1000) == 0b1111'0000)
 					{
-						if (it_input_current + 4 > it_input_end) { return {.error = ErrorCode::TOO_SHORT, .count = count_if_error}; }
+						if (it_input_current + 4 > it_input_end)
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
 
 						const auto next_byte_1 = *(it_input_current + 1);
 						const auto next_byte_2 = *(it_input_current + 2);
 						const auto next_byte_3 = *(it_input_current + 3);
 
-						if ((next_byte_1 & 0b11000000) != 0b10000000) { return {.error = ErrorCode::TOO_SHORT, .count = count_if_error}; }
-						if ((next_byte_2 & 0b11000000) != 0b10000000) { return {.error = ErrorCode::TOO_SHORT, .count = count_if_error}; }
-						if ((next_byte_3 & 0b11000000) != 0b10000000) { return {.error = ErrorCode::TOO_SHORT, .count = count_if_error}; }
+						if (
+							((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
+							((next_byte_2 & 0b1100'0000) != 0b1000'0000) or
+							((next_byte_3 & 0b1100'0000) != 0b1000'0000)
+						)
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
+
 						// range check
 						const auto code_point =
 								(byte & 0b0000'0111) << 18 |
 								(next_byte_1 & 0b0011'1111) << 12 |
 								(next_byte_2 & 0b0011'1111) << 6 |
 								(next_byte_3 & 0b0011'1111);
-						if (code_point <= 0xffff) { return {.error = ErrorCode::OVERLONG, .count = count_if_error}; }
-						if (0x10'ffff < code_point) { return {.error = ErrorCode::TOO_LARGE, .count = count_if_error}; }
+						if (code_point <= 0xffff)
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::OVERLONG, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
+						if (0x10'ffff < code_point)
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::TOO_LARGE, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
 
 						it_input_current += 4;
 					}
 					else
 					{
 						// we either have too many continuation bytes or an invalid leading byte
-						if ((byte & 0b1100'0000) == 0b1000'0000) { return {.error = ErrorCode::TOO_LONG, .count = count_if_error}; }
-						return {.error = ErrorCode::HEADER_BITS, .count = count_if_error};
+						if ((byte & 0b1100'0000) == 0b1000'0000)
+						{
+							if constexpr (ReturnResultType)
+							{
+								return {.error = ErrorCode::TOO_LONG, .count = count_if_error};
+							}
+							else
+							{
+								return false;
+							}
+						}
+
+						if constexpr (ReturnResultType)
+						{
+							return {.error = ErrorCode::HEADER_BITS, .count = count_if_error};
+						}
+						else
+						{
+							return false;
+						}
 					}
 				}
 
-				return {.error = ErrorCode::NONE, .count = input_length};
+				if constexpr (ReturnResultType)
+				{
+					return {.error = ErrorCode::NONE, .count = input_length};
+				}
+				else
+				{
+					return false;
+				}
 			}
 
-			[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> result_type
+			template<bool ReturnResultType = false>
+			[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 			{
-				return validate({input, std::char_traits<char_type>::length(input)});
+				return validate<ReturnResultType>({input, std::char_traits<char_type>::length(input)});
 			}
 
 			// Finds the previous leading byte starting backward from input.data() and validates with errors from there.
@@ -226,6 +375,10 @@ namespace gal::prometheus::chars
 			{
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+				if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
+				{
+					GAL_PROMETHEUS_DEBUG_ASSUME(validate(input));
+				}
 
 				using output_pointer_type = typename output_type<OutputCategory>::pointer;
 				using output_char_type = typename output_type<OutputCategory>::value_type;
@@ -768,6 +921,18 @@ namespace gal::prometheus::chars
 
 	template<>
 	class Scalar<"utf8_char"> : public scalar_utf8_detail::ScalarUtf8Base<CharsCategory::UTF8_CHAR> {};
+
+	template<>
+	struct scalar_processor_of<CharsCategory::UTF8>
+	{
+		using type = Scalar<"utf8">;
+	};
+
+	template<>
+	struct scalar_processor_of<CharsCategory::UTF8_CHAR>
+	{
+		using type = Scalar<"utf8_char">;
+	};
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 } // namespace gal::prometheus::chars
