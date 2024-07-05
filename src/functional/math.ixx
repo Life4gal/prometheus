@@ -7,7 +7,12 @@
 module;
 
 #include <prometheus/macro.hpp>
+#if __has_include(<intrin.h>)
 #include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
 
 export module gal.prometheus.functional:math;
 
