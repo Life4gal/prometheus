@@ -1132,17 +1132,17 @@ namespace gal::prometheus::unit_test
 				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
 
-				if (current_test_result_->status == test_result_type::Status::FATAL or 
-					total_fails_exclude_current_test_ + current_test_result_->total_assertions_failed > config_->abort_after_n_failures)
+				if (current_test_result_->status == test_result_type::Status::FATAL or
+				    total_fails_exclude_current_test_ + current_test_result_->total_assertions_failed > config_->abort_after_n_failures)
 				[[unlikely]]
 				{
 					std::format_to(
-							std::back_inserter(current_suite_result_->report_string),
-							"{}Error: fast fail for test `{}` after `{}` failures total.{} \n",
-							config_->color.fail,
-							fullname_of_current_test(),
-							current_test_result_->total_assertions_failed,
-							config_->color.none
+						std::back_inserter(current_suite_result_->report_string),
+						"{}Error: fast fail for test `{}` after `{}` failures total.{} \n",
+						config_->color.fail,
+						fullname_of_current_test(),
+						current_test_result_->total_assertions_failed,
+						config_->color.none
 					);
 
 					on(events::EventTestEnd{.name = current_test_result_->name});
@@ -1725,10 +1725,12 @@ namespace gal::prometheus::unit_test
 								std::format_to(
 									std::back_inserter(suite_result.report_string),
 									"\n==========================================\n"
-									"Suite {}{}{} -> all tests passed({} assertions in {} tests), {} tests skipped."
+									"Suite {}{}{} -> {}all tests passed{}({} assertions in {} tests), {} tests skipped."
 									"\n==========================================\n",
 									color.suite,
 									suite_result.name,
+									color.none,
+									color.pass,
 									color.none,
 									result.assertion_passed,
 									result.test_passed,
@@ -1963,7 +1965,15 @@ namespace gal::prometheus::unit_test
 			concept dispatched_expression_t = is_dispatched_expression_v<T>;
 
 			template<typename T, typename RequiredType>
-			struct is_type_or_dispatched_type : std::bool_constant<std::is_same_v<std::remove_cvref_t<T>, std::remove_cvref_t<RequiredType>>> {};
+			struct is_type_or_dispatched_type : std::bool_constant<
+						// In most cases the following line will already fulfill the requirement
+						std::is_same_v<std::remove_cvref_t<T>, std::remove_cvref_t<RequiredType>> or
+						// The next two lines allow us to support more complex expressions, such as `(xxx == xxx) == "same!"_b)`
+						// implicit
+						std::is_convertible_v<std::remove_cvref_t<T>, std::remove_cvref_t<RequiredType>> or
+						// explicit
+						std::is_constructible_v<std::remove_cvref_t<RequiredType>, std::remove_cvref_t<T>>
+					> {};
 
 			template<typename T, typename Dispatcher, typename RequiredType>
 			struct is_type_or_dispatched_type<dispatched_expression<T, Dispatcher>, RequiredType> : is_type_or_dispatched_type<T, RequiredType> {};
@@ -2439,7 +2449,9 @@ namespace gal::prometheus::unit_test
 					dispatcher_type
 				>{
 						.expression = {
-								type_or_dispatched_type::get(lhs),
+								// (xxx == xxx) == "xxx"_b => (operands::OperandExpression<EQUAL> == operands::OperandIdentity::message_type)
+								// explicit cast(operands::OperandExpression => operands::OperandIdentity::value_type)
+								static_cast<operands::OperandIdentity::value_type>(type_or_dispatched_type::get(lhs)),
 								type_or_dispatched_type::get(rhs)
 						}
 				};
@@ -2833,8 +2845,16 @@ namespace gal::prometheus::unit_test
 			{
 				using dispatcher_type = lazy_dispatcher_type_t<is_dispatched_expression_v<L>, L, R>;
 
-				return dispatched_expression<operands::OperandIdentity, dispatcher_type>{
-						.expression = {not type_or_dispatched_type::get(lhs), type_or_dispatched_type::get(rhs)}
+				return dispatched_expression<
+					operands::OperandIdentity,
+					dispatcher_type
+				>{
+						.expression = {
+								// (xxx == xxx) != "xxx"_b => (operands::OperandExpression<EQUAL> != operands::OperandIdentity::message_type)
+								// explicit cast(operands::OperandExpression => operands::OperandIdentity::value_type)
+								not static_cast<operands::OperandIdentity::value_type>(type_or_dispatched_type::get(lhs)),
+								type_or_dispatched_type::get(rhs)
+						}
 				};
 			}
 
@@ -4568,6 +4588,9 @@ namespace gal::prometheus::unit_test
 	// OPERANDS
 	// =========================================
 
+	#if defined(__clang__) and __clang_major__ < 19
+	#warning "error: alias template 'value' requires template arguments; argument deduction only allowed for class templates"
+	#endif
 	template<typename T>
 	using value = operands::OperandValue<T>;
 	template<typename T>
