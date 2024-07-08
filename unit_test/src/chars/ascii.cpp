@@ -45,7 +45,7 @@ namespace
 		constexpr std::size_t trials = 1000;
 		for (std::size_t i = 0; i < trials; ++i)
 		{
-			"to_ascii"_test = [source = make_source(generator, random.get<std::size_t>(std::numeric_limits<char>::max() / 2, std::numeric_limits<char>::max()))]
+			"to_ascii"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
 			{
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::ASCII>(source) == "valid ascii string"_b) << fatal;
@@ -54,7 +54,7 @@ namespace
 				expect((chars::convert<chars::CharsCategory::ASCII, chars::CharsCategory::ASCII, chars::InputProcessPolicy::ASSUME_VALID_INPUT>(source) == source) == "valid ascii string"_b) << fatal;
 			};
 
-			"to_utf8_char"_test = [source = make_source(generator, random.get<std::size_t>(std::numeric_limits<char>::max() / 2, std::numeric_limits<char>::max()))]
+			"to_utf8_char"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
 			{
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::ASCII>(source) == "valid ascii string"_b) << fatal;
@@ -63,7 +63,7 @@ namespace
 				expect((chars::convert<chars::CharsCategory::ASCII, chars::CharsCategory::UTF8_CHAR, chars::InputProcessPolicy::ASSUME_VALID_INPUT>(source) == source) == "valid utf8_char string"_b) << fatal;
 			};
 
-			"to_utf8"_test = [source = make_source(generator, random.get<std::size_t>(std::numeric_limits<char>::max() / 2, std::numeric_limits<char>::max()))]
+			"to_utf8"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
 			{
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::ASCII>(source) == "valid ascii string"_b) << fatal;
@@ -72,7 +72,7 @@ namespace
 				expect(chars::validate<chars::CharsCategory::UTF8>(chars::convert<chars::CharsCategory::ASCII, chars::CharsCategory::UTF8, chars::InputProcessPolicy::ASSUME_VALID_INPUT>(source)) == "valid utf8 string"_b) << fatal;
 			};
 
-			"to_utf16_le"_test = [source = make_source(generator, random.get<std::size_t>(std::numeric_limits<char>::max() / 2, std::numeric_limits<char>::max()))]
+			"to_utf16_le"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
 			{
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::ASCII>(source) == "valid ascii string"_b) << fatal;
@@ -81,7 +81,7 @@ namespace
 				expect(chars::validate<chars::CharsCategory::UTF16_LE>(chars::convert<chars::CharsCategory::ASCII, chars::CharsCategory::UTF16_LE, chars::InputProcessPolicy::ASSUME_VALID_INPUT>(source)) == "valid utf16_le string"_b) << fatal;
 			};
 
-			"to_utf16_be"_test = [source = make_source(generator, random.get<std::size_t>(std::numeric_limits<char>::max() / 2, std::numeric_limits<char>::max()))]
+			"to_utf16_be"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
 			{
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::ASCII>(source) == "valid ascii string"_b) << fatal;
@@ -90,7 +90,7 @@ namespace
 				expect(chars::validate<chars::CharsCategory::UTF16_BE>(chars::convert<chars::CharsCategory::ASCII, chars::CharsCategory::UTF16_BE, chars::InputProcessPolicy::ASSUME_VALID_INPUT>(source)) == "valid utf16_be string"_b) << fatal;
 			};
 
-			"to_utf32"_test = [source = make_source(generator, random.get<std::size_t>(std::numeric_limits<char>::max() / 2, std::numeric_limits<char>::max()))]
+			"to_utf32"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
 			{
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::ASCII>(source) == "valid ascii string"_b) << fatal;
