@@ -79,7 +79,7 @@ namespace gal::prometheus::chars
 
 	[[nodiscard]] inline auto encoding_of(const std::span<const char8_t> input) noexcept -> EncodingType
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -94,7 +94,7 @@ namespace gal::prometheus::chars
 
 	[[nodiscard]] inline auto encoding_of(const std::span<const char> input) noexcept -> EncodingType
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -110,7 +110,7 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, bool ReturnResultType = false>
 	[[nodiscard]] constexpr auto validate(const typename scalar_processor_of_t<InputCategory>::input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -140,7 +140,7 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, bool ReturnResultType = false>
 	[[nodiscard]] constexpr auto validate(const typename scalar_processor_of_t<InputCategory>::pointer_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -170,7 +170,7 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, CharsCategory OutputCategory>
 	[[nodiscard]] constexpr auto length(const typename scalar_processor_of_t<InputCategory>::input_type input) noexcept -> typename scalar_processor_of_t<InputCategory>::size_type
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -200,7 +200,7 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, CharsCategory OutputCategory>
 	[[nodiscard]] constexpr auto length(const typename scalar_processor_of_t<InputCategory>::pointer_type input) noexcept -> typename scalar_processor_of_t<InputCategory>::size_type
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -233,7 +233,7 @@ namespace gal::prometheus::chars
 		typename output_type<OutputCategory>::pointer output
 	) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -266,7 +266,7 @@ namespace gal::prometheus::chars
 		typename output_type<OutputCategory>::pointer output
 	) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -296,7 +296,7 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, typename StringType, CharsCategory OutputCategory, InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE>
 	[[nodiscard]] constexpr auto convert(const typename scalar_processor_of_t<InputCategory>::input_type input) noexcept -> StringType
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -326,7 +326,7 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, typename StringType, CharsCategory OutputCategory, InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE>
 	[[nodiscard]] constexpr auto convert(const typename scalar_processor_of_t<InputCategory>::pointer_type input) noexcept -> StringType
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -356,7 +356,7 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, CharsCategory OutputCategory, InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE>
 	[[nodiscard]] constexpr auto convert(const typename scalar_processor_of_t<InputCategory>::input_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -386,7 +386,7 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, CharsCategory OutputCategory, InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE>
 	[[nodiscard]] constexpr auto convert(const typename scalar_processor_of_t<InputCategory>::pointer_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -415,7 +415,7 @@ namespace gal::prometheus::chars
 
 	inline auto flip_endian(const scalar_processor_of_t<CharsCategory::UTF16>::input_type input, const output_type<CharsCategory::UTF16>::pointer output) noexcept -> void
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -431,7 +431,7 @@ namespace gal::prometheus::chars
 	template<typename StringType>
 	[[nodiscard]] constexpr auto flip_endian(const scalar_processor_of_t<CharsCategory::UTF16>::input_type input) noexcept -> StringType
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
@@ -446,7 +446,7 @@ namespace gal::prometheus::chars
 
 	[[nodiscard]] inline auto flip_endian(const scalar_processor_of_t<CharsCategory::UTF16>::input_type input) noexcept -> std::basic_string<output_type<CharsCategory::UTF16>::value_type>
 	{
-		const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
