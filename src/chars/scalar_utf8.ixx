@@ -896,7 +896,7 @@ namespace gal::prometheus::chars
 				// output_pointer_type it_output_current = it_output_begin;
 
 				// const auto range = std::ranges::subrange{std::make_reverse_iterator(it_input_current), std::make_reverse_iterator(furthest_possible_begin)};
-				const auto range = std::ranges::subrange{furthest_possible_begin, it_input_begin + 1} | std::views::reverse;
+				const auto range = std::ranges::subrange{furthest_possible_begin, it_input_begin} | std::views::reverse;
 				// fixme: no leading bytes?
 				const auto extra_count = std::ranges::distance(
 					range |
