@@ -541,14 +541,17 @@ namespace gal::prometheus::chars
 							*it_output_current = static_cast<output_char_type>(
 								[code_point]() noexcept
 								{
-									if constexpr ((OutputCategory == CharsCategory::UTF16_LE) != (std::endian::native == std::endian::little))
+									if constexpr (
+										OutputCategory != CharsCategory::UTF32 and
+										(OutputCategory == CharsCategory::UTF16_LE) != (std::endian::native == std::endian::little)
+									)
 									{
 										return std::byteswap(code_point);
 									}
 									else { return code_point; }
 								}());
 
-							// one more step
+							// one more step, see `for (; it_input_current < it_input_end; ++it_input_current)`
 							it_input_current += 1;
 							it_output_current += 1;
 						}
@@ -636,7 +639,7 @@ namespace gal::prometheus::chars
 									else { return cp; }
 								}();
 
-								// 2 more step
+								// 2 more step, see `for (; it_input_current < it_input_end; ++it_input_current)`
 								it_input_current += 2;
 								it_output_current += 1;
 							}
@@ -720,7 +723,11 @@ namespace gal::prometheus::chars
 									if (code_point > 0x10'ffff) { return do_return(ErrorCode::TOO_LARGE); }
 								}
 
-								if constexpr (OutputCategory == CharsCategory::UTF32) { *it_output_current = static_cast<output_char_type>(code_point); }
+								if constexpr (OutputCategory == CharsCategory::UTF32)
+								{
+									*it_output_current = static_cast<output_char_type>(code_point);
+									it_output_current += 1;
+								}
 								else
 								{
 									const auto [high_surrogate, low_surrogate] = [cp = code_point - 0x1'0000]() noexcept -> auto
@@ -742,7 +749,7 @@ namespace gal::prometheus::chars
 									it_output_current += 1;
 								}
 
-								// 3 more step
+								// 3 more step, see `for (; it_input_current < it_input_end; ++it_input_current)`
 								it_input_current += 3;
 							}
 							else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
