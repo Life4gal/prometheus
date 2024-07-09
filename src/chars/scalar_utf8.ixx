@@ -84,7 +84,7 @@ namespace gal::prometheus::chars
 					}
 					else { it_input_current = it; }
 
-					const auto count_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
+					const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
 					if (const auto byte = static_cast<std::uint8_t>(*it_input_current);
 						(byte & 0b1110'0000) == 0b1100'0000)
@@ -93,7 +93,7 @@ namespace gal::prometheus::chars
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
 							}
 							else
 							{
@@ -107,7 +107,7 @@ namespace gal::prometheus::chars
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
 							}
 							else
 							{
@@ -116,11 +116,11 @@ namespace gal::prometheus::chars
 						}
 						// range check
 						if (const auto code_point = (byte & 0b0001'1111) << 6 | (next_byte & 0b0011'1111);
-							(code_point < 0x80) || (0x7ff < code_point))
+							(code_point < 0x80) or (0x7ff < code_point))
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::OVERLONG, .count = count_if_error};
+								return {.error = ErrorCode::OVERLONG, .count = length_if_error};
 							}
 							else
 							{
@@ -136,7 +136,7 @@ namespace gal::prometheus::chars
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
 							}
 							else
 							{
@@ -151,7 +151,7 @@ namespace gal::prometheus::chars
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
 							}
 							else
 							{
@@ -163,22 +163,22 @@ namespace gal::prometheus::chars
 								(byte & 0b0000'1111) << 12 |
 								(next_byte_1 & 0b0011'1111) << 6 |
 								(next_byte_2 & 0b0011'1111);
-						if ((code_point < 0x800) || (0xffff < code_point))
+						if ((code_point < 0x800) or (0xffff < code_point))
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::OVERLONG, .count = count_if_error};
+								return {.error = ErrorCode::OVERLONG, .count = length_if_error};
 							}
 							else
 							{
 								return false;
 							}
 						}
-						if (0xd7ff < code_point && code_point < 0xe000)
+						if (0xd7ff < code_point and code_point < 0xe000)
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::SURROGATE, .count = count_if_error};
+								return {.error = ErrorCode::SURROGATE, .count = length_if_error};
 							}
 							else
 							{
@@ -194,7 +194,7 @@ namespace gal::prometheus::chars
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
 							}
 							else
 							{
@@ -214,7 +214,7 @@ namespace gal::prometheus::chars
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::TOO_SHORT, .count = count_if_error};
+								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
 							}
 							else
 							{
@@ -232,18 +232,18 @@ namespace gal::prometheus::chars
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::OVERLONG, .count = count_if_error};
+								return {.error = ErrorCode::OVERLONG, .count = length_if_error};
 							}
 							else
 							{
 								return false;
 							}
 						}
-						if (0x10'ffff < code_point)
+						if (0x0010'ffff < code_point)
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::TOO_LARGE, .count = count_if_error};
+								return {.error = ErrorCode::TOO_LARGE, .count = length_if_error};
 							}
 							else
 							{
@@ -260,7 +260,7 @@ namespace gal::prometheus::chars
 						{
 							if constexpr (ReturnResultType)
 							{
-								return {.error = ErrorCode::TOO_LONG, .count = count_if_error};
+								return {.error = ErrorCode::TOO_LONG, .count = length_if_error};
 							}
 							else
 							{
@@ -270,7 +270,7 @@ namespace gal::prometheus::chars
 
 						if constexpr (ReturnResultType)
 						{
-							return {.error = ErrorCode::HEADER_BITS, .count = count_if_error};
+							return {.error = ErrorCode::HEADER_BITS, .count = length_if_error};
 						}
 						else
 						{
@@ -285,7 +285,7 @@ namespace gal::prometheus::chars
 				}
 				else
 				{
-					return false;
+					return true;
 				}
 			}
 
