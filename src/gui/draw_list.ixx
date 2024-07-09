@@ -78,10 +78,10 @@ namespace gal::prometheus::gui
 
 	enum class DrawListFlag : std::uint32_t
 	{
-		NONE = 0,
-		ANTI_ALIASED_LINE,
-		ANTI_ALIASED_LINE_USE_TEXTURE,
-		ANTI_ALIASED_FILL,
+		NONE = 0x0000'0000,
+		ANTI_ALIASED_LINE = 0x0000'0001,
+		ANTI_ALIASED_LINE_USE_TEXTURE = 0x0000'0010,
+		ANTI_ALIASED_FILL = 0x0000'0100,
 	};
 
 	enum class ArcQuadrant : std::uint32_t
