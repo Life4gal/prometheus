@@ -1,32 +1,46 @@
 // This file is part of prometheus
-// Copyright (C) 2022-2023 Life4gal <life4gal@gmail.com>
+// Copyright (C) 2022-2024 Life4gal <life4gal@gmail.com>
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
+
+#if GAL_PROMETHEUS_USE_MODULE
+
+#include <prometheus/macro.hpp>
 
 export module gal.prometheus.error:platform;
 
 import std;
+import :exception;
 
-export namespace gal::prometheus::error
+#else
+#pragma once
+
+#include <stacktrace>
+
+#include <prometheus/macro.hpp>
+#include <error/exception.ixx>
+
+#endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 {
-	/**
-	 * @brief Get the OS error code from the last error received on this thread.
-	 * @return The error code.
-	 */
-	[[nodiscard]] auto get_last_error_code() noexcept -> std::uint32_t;
-
-	/**
-	 * @brief Get the error message from an error code.
-	 * @param error_code The error code returned by an os call.
-	 * @return A formatted message.
-	 * @throws OSError When the error message was empty.
-	 */
-	[[nodiscard]] auto get_error_message(std::uint32_t error_code) -> std::string;
-
 	/**
 	 * @brief Get the OS error message from the last error received on this thread.
 	 * @return A formatted message.
-	 * @throws OSError When the error message was empty.
 	 */
-	[[nodiscard]] auto get_last_error_message() -> std::string;
-}// namespace gal::prometheus::error
+	[[nodiscard]] auto get_error_message() -> std::string;
+
+	class OsError final : public Exception<void>
+	{
+	public:
+		using Exception::Exception;
+
+		[[noreturn]] static auto panic(
+				const std::source_location& location = std::source_location::current(),
+				std::stacktrace stacktrace = std::stacktrace::current()
+				) noexcept(false) -> void //
+		{
+			error::panic<OsError>(get_error_message(), location, std::move(stacktrace));
+		}
+	};
+} // namespace gal::prometheus::error

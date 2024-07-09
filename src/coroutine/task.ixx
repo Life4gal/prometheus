@@ -1,19 +1,31 @@
 // This file is part of prometheus
-// Copyright (C) 2022-2023 Life4gal <life4gal@gmail.com>
+// Copyright (C) 2022-2024 Life4gal <life4gal@gmail.com>
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 export module gal.prometheus.coroutine:task;
 
 import std;
 
+#else
+#pragma once
+
+#include <type_traits>
+#include <coroutine>
+#include <exception>
+#include <utility>
+
+#include <prometheus/macro.hpp>
+
+#endif
+
 namespace gal::prometheus::coroutine
 {
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename ReturnType>
 		class Task;
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	template<typename ReturnType>
 	class P
@@ -29,7 +41,10 @@ namespace gal::prometheus::coroutine
 
 		template<typename... Args>
 			requires std::is_constructible_v<return_type, Args...>
-		constexpr auto return_value(Args&&... args) noexcept(std::is_nothrow_constructible_v<return_type, Args...>) -> void { value_ = return_type{std::forward<Args>(args)...}; }
+		constexpr auto return_value(Args&&... args) noexcept(std::is_nothrow_constructible_v<return_type, Args...>) -> void
+		{
+			value_ = return_type{std::forward<Args>(args)...};
+		}
 
 		constexpr auto result() & -> ReturnType&;
 
@@ -77,7 +92,7 @@ namespace gal::prometheus::coroutine
 		};
 
 	private:
-		continuation_type  continuation_{nullptr};
+		continuation_type continuation_{nullptr};
 		std::exception_ptr exception_{nullptr};
 
 	public:
@@ -121,12 +136,11 @@ namespace gal::prometheus::coroutine
 	/* constexpr */
 	inline auto P<void>::result() -> void
 	{
-		if (const auto& self = *static_cast<TaskPromise<void>*>(this);// NOLINT
+		if (const auto& self = *static_cast<TaskPromise<void>*>(this); // NOLINT
 			self.exception_) { std::rethrow_exception(self.exception_); }
 	}
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename ReturnType>
 		class [[nodiscard]] Task final
 		{
@@ -160,7 +174,7 @@ namespace gal::prometheus::coroutine
 			coroutine_handle coroutine_;
 
 		public:
-			constexpr      Task(const Task&) noexcept               = delete;
+			constexpr Task(const Task&) noexcept = delete;
 			constexpr auto operator=(const Task&) noexcept -> Task& = delete;
 
 			constexpr explicit Task() noexcept
@@ -220,5 +234,5 @@ namespace gal::prometheus::coroutine
 
 			constexpr auto operator co_await() && noexcept -> awaitable { return {.coroutine = coroutine_}; }
 		};
-	}
-}// namespace gal::prometheus::coroutine
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+} // namespace gal::prometheus::coroutine

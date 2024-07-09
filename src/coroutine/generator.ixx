@@ -1,20 +1,32 @@
 // This file is part of prometheus
-// Copyright (C) 2022-2023 Life4gal <life4gal@gmail.com>
+// Copyright (C) 2022-2024 Life4gal <life4gal@gmail.com>
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if GAL_PROMETHEUS_USE_MODULE
 export module gal.prometheus.coroutine:generator;
 
 import std;
 
+#else
+#pragma once
+
+#include <type_traits>
+#include <coroutine>
+#include <exception>
+#include <iterator>
+
+#include <prometheus/macro.hpp>
+
+#endif
+
 namespace gal::prometheus::coroutine
 {
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename ReturnType>
 			requires(not std::is_void_v<ReturnType>)
 		class Generator;
-	}
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	template<typename ReturnType>
 	class GeneratorPromise final
@@ -29,7 +41,7 @@ namespace gal::prometheus::coroutine
 		using coroutine_handle = std::coroutine_handle<promise_type>;
 
 	private:
-		pointer            value_{nullptr};
+		pointer value_{nullptr};
 		std::exception_ptr exception_{nullptr};
 
 	public:
@@ -85,7 +97,7 @@ namespace gal::prometheus::coroutine
 		}
 	};
 
-	struct iterator_sentinel { };
+	struct iterator_sentinel {};
 
 	template<typename Generator>
 	class Iterator
@@ -111,7 +123,10 @@ namespace gal::prometheus::coroutine
 		constexpr explicit Iterator(coroutine_handle coroutine = coroutine_handle{}) noexcept
 			: coroutine_{coroutine} {}
 
-		[[nodiscard]] friend constexpr auto operator==(const Iterator& lhs, iterator_sentinel) noexcept -> bool { return lhs.coroutine_ == nullptr or lhs.coroutine_.done(); }
+		[[nodiscard]] friend constexpr auto operator==(const Iterator& lhs, iterator_sentinel) noexcept -> bool
+		{
+			return lhs.coroutine_ == nullptr or lhs.coroutine_.done();
+		}
 
 		[[nodiscard]] friend constexpr auto operator==(iterator_sentinel, const Iterator& rhs) noexcept -> bool { return rhs == iterator_sentinel{}; }
 
@@ -134,8 +149,7 @@ namespace gal::prometheus::coroutine
 		[[nodiscard]] constexpr auto operator->() && noexcept -> decltype(auto) { return std::addressof(std::move(*this).operator*()); }
 	};
 
-	export
-	{
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 		template<typename ReturnType>
 			requires(not std::is_void_v<ReturnType>)
 		class Generator
@@ -162,7 +176,7 @@ namespace gal::prometheus::coroutine
 			constexpr Generator() noexcept
 				: coroutine_{nullptr} {}
 
-			constexpr      Generator(const Generator&) noexcept               = delete;
+			constexpr Generator(const Generator&) noexcept = delete;
 			constexpr auto operator=(const Generator&) noexcept -> Generator& = delete;
 
 			constexpr Generator(Generator&& other) noexcept
@@ -193,5 +207,5 @@ namespace gal::prometheus::coroutine
 				return {};
 			}
 		};
-	}
-}// namespace gal::prometheus::coroutine
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+} // namespace gal::prometheus::coroutine

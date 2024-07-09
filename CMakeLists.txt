@@ -9,7 +9,7 @@ elseif (CMAKE_VERSION VERSION_LESS "3.27")
 elseif (CMAKE_VERSION VERSION_LESS "3.28")
 	# 3.27
 	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
-else ()
+elseif (NOT CMAKE_VERSION VERSION_GREATER "3.28")
 	message(FATAL_ERROR "See `https://github.com/Kitware/CMake/blob/v${CMAKE_VERSION}/Help/dev/experimental.rst`.")
 endif (CMAKE_VERSION VERSION_LESS "3.26")
 # turn on the dynamic depends for ninja
@@ -24,7 +24,7 @@ set(
 
 set(
 		${PROJECT_NAME_PREFIX}MINOR_VERSION
-		1
+		4
 )
 
 set(
@@ -60,7 +60,7 @@ if (${PROJECT_NAME_PREFIX}MASTER_PROJECT AND NOT CMAKE_BUILD_TYPE)
 			"Choose the type of build, options are: None(CMAKE_CXX_FLAGS or "
 			"CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel."
 	)
-endif ()
+endif (${PROJECT_NAME_PREFIX}MASTER_PROJECT AND NOT CMAKE_BUILD_TYPE)
 
 project(
 		prometheus
@@ -69,11 +69,8 @@ project(
 		HOMEPAGE_URL "https://github.com/Life4gal/prometheus"
 		LANGUAGES CXX
 )
-if (${${PROJECT_NAME_PREFIX}MASTER_PROJECT})
-	message(STATUS "Our project [${PROJECT_NAME}] is the main-project. CMAKE VERSION: ${CMAKE_VERSION}. Compiler ID: ${CMAKE_CXX_COMPILER_ID}. Platform: ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}.")
-else ()
-	message(STATUS "Our project [${PROJECT_NAME}] is the sub-project. CMAKE VERSION: ${CMAKE_VERSION}. Compiler ID: ${CMAKE_CXX_COMPILER_ID}. Platform: ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}.")
-endif (${${PROJECT_NAME_PREFIX}MASTER_PROJECT})
+
+message(STATUS "CMAKE VERSION: ${CMAKE_VERSION}. Compiler ID: ${CMAKE_CXX_COMPILER_ID}. Platform: ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}.")
 message(STATUS "${PROJECT_NAME} VERSION: ${${PROJECT_NAME_PREFIX}VERSION}")
 message(STATUS "${PROJECT_NAME} BUILD TYPE: ${CMAKE_BUILD_TYPE}")
 
@@ -88,18 +85,21 @@ include(${PROJECT_SOURCE_DIR}/cmake_utils/cpm_install.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake_utils/nuget_install.cmake)
 set(${PROJECT_NAME_PREFIX}3RD_PARTY_PATH ${PROJECT_SOURCE_DIR}/3rd-party)
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	set(${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS ON)
 	set(${PROJECT_NAME_PREFIX}PLATFORM ${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	set(${PROJECT_NAME_PREFIX}PLATFORM_LINUX ON)
 	set(${PROJECT_NAME_PREFIX}PLATFORM ${PROJECT_NAME_PREFIX}PLATFORM_LINUX)
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(${PROJECT_NAME_PREFIX}PLATFORM_MACOS ON)
 	set(${PROJECT_NAME_PREFIX}PLATFORM ${PROJECT_NAME_PREFIX}PLATFORM_MACOS)
-else()
+else ()
 	message(FATAL_ERROR "Unsupported Platform: ${CMAKE_SYSTEM_NAME}")
-endif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+endif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+
+# check cpu features
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake_utils/check_cpu_features.cmake)
 
 cmake_language(
 		CALL
@@ -112,7 +112,8 @@ cmake_language(
 )
 
 option(${PROJECT_NAME_PREFIX}PEDANTIC "Enable extra warnings and expensive tests." ON)
-option(${PROJECT_NAME_PREFIX}WERROR "Halt the compilation with an error on compiler warnings." ON)
+option(${PROJECT_NAME_PREFIX}WERROR "Halt the compilation with an error on compiler warnings." OFF)
+option(${PROJECT_NAME_PREFIX}MODULE "Enable module." OFF)
 option(${PROJECT_NAME_PREFIX}DOC "Generate the doc target." ${${PROJECT_NAME_PREFIX}MASTER_PROJECT}) # Do we have the documentation? :)
 option(${PROJECT_NAME_PREFIX}INSTALL "Generate the install target." ${${PROJECT_NAME_PREFIX}MASTER_PROJECT})
 option(${PROJECT_NAME_PREFIX}TEST "Generate the test target." ${${PROJECT_NAME_PREFIX}MASTER_PROJECT})
@@ -126,7 +127,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 #set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
-endif ()
+endif (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 
 # Macros about the compiler.
 set(${PROJECT_NAME_PREFIX}COMPILER_ID ${CMAKE_CXX_COMPILER_ID})
@@ -147,7 +148,7 @@ if (${PROJECT_NAME_PREFIX}MASTER_PROJECT AND NOT DEFINED CMAKE_CXX_VISIBILITY_PR
 			PROPERTY STRINGS
 			hidden default
 	)
-endif ()
+endif (${PROJECT_NAME_PREFIX}MASTER_PROJECT AND NOT DEFINED CMAKE_CXX_VISIBILITY_PRESET)
 
 if (${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)
 	#########################
@@ -173,6 +174,20 @@ elseif (${PROJECT_NAME_PREFIX}PLATFORM_LINUX)
 	if (${PROJECT_NAME_PREFIX}WERROR)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Werror")
 	endif ()
+
+	# <stacktrace>
+	#list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "--enable-libstdcxx-backtrace")
+	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-lstdc++_libbacktrace")
+
+	if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
+		# chars/icelake_xxx
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512f")
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512bw")
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vbmi")
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vbmi2")
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mavx512vpopcntdq")
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-mbmi2")
+	endif (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 elseif (${PROJECT_NAME_PREFIX}PLATFORM_MACOS)
 	#########################
 	# APPLE CLANG
@@ -197,6 +212,7 @@ endif (${PROJECT_NAME_PREFIX}SYSTEM_HEADERS)
 # LIBRARY
 add_library(
 		${PROJECT_NAME}
+		${${PROJECT_NAME_PREFIX}MODULE_KEYWORD_INTERFACE}
 )
 
 # LIBRARY ALIAS
@@ -206,161 +222,138 @@ add_library(
 		${PROJECT_NAME}
 )
 
-set(${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH ${CMAKE_BINARY_DIR}/temp_module)
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-	if (NOT DEFINED ENV{VCToolsInstallDir})
-		message(FATAL_ERROR "Unable to find path to VC Tools in environment variables!")
-	endif (NOT DEFINED ENV{VCToolsInstallDir})
+if (${PROJECT_NAME_PREFIX}MODULE)
+	set(${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH ${CMAKE_BINARY_DIR}/temp_module)
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+		if (NOT DEFINED ENV{VCToolsInstallDir})
+			message(FATAL_ERROR "Unable to find path to VC Tools in environment variables!")
+		endif (NOT DEFINED ENV{VCToolsInstallDir})
 
-	if (NOT EXISTS $ENV{VCToolsInstallDir})
-		message(FATAL_ERROR "Invalid VC Tools installation path!")
+		if (NOT EXISTS $ENV{VCToolsInstallDir})
+			message(FATAL_ERROR "Invalid VC Tools installation path!")
+		else ()
+			message(STATUS "Found VC Tools in: [$ENV{VCToolsInstallDir}]")
+		endif (NOT EXISTS $ENV{VCToolsInstallDir})
+
+		if (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
+			message(FATAL_ERROR "Cannot find std.ixx! Please check MSVC version(${CMAKE_CXX_COMPILER_VERSION})!")
+		else ()
+			message(STATUS "Found module std.ixx in: [$ENV{VCToolsInstallDir}modules\\std.ixx]")
+		endif (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
+
+		configure_file(
+				$ENV{VCToolsInstallDir}modules/std.ixx
+				${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx
+				COPYONLY
+		)
+
+		set_source_files_properties(
+				${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx
+				PROPERTIES
+				COMPILE_OPTIONS "/Wv:18"
+		)
+
+		target_sources(
+				${PROJECT_NAME}
+				# fixme: Possible conflicts with other libraries?
+				PUBLIC
+				FILE_SET std_module
+				TYPE CXX_MODULES
+				BASE_DIRS "${PROJECT_SOURCE_DIR}"
+				FILES
+
+				$<$<CXX_COMPILER_ID:MSVC>:${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx>
+		)
+	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_clang.cmake
+		# Default to C++ extensions being off. Clang's modules support have trouble
+		# with extensions right now.
+		set(CMAKE_CXX_EXTENSIONS OFF)
+
+		# fixme: https://discourse.cmake.org/t/c-20-modules-update/7330/24
+		# fixme:
+		# PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace.
+		# Stack dump:
+		# 0.	Program arguments: "C:/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/Llvm/x64/bin/clang-scan-deps.exe" -format=p1689 -- C:\\PROGRA~1\\MIB055~1\\2022\\Preview\\VC\\Tools\\Llvm\\x64\\bin\\clang-cl.exe -DGAL_PROMETHEUS_COMPILER_CLANG_CL -DGAL_PROMETHEUS_COMPILER_ID=\"Clang\" -DGAL_PROMETHEUS_COMPILER_NAME=\"Clang.16.0.5\" -DGAL_PROMETHEUS_COMPILER_VERSION=\"16.0.5\" -DGAL_PROMETHEUS_MAJOR_VERSION=0 -DGAL_PROMETHEUS_MINOR_VERSION=0 -DGAL_PROMETHEUS_PATCH_VERSION=6 -DGAL_PROMETHEUS_PLATFORM_WINDOWS -DGAL_PROMETHEUS_VERSION=\"0.0.6\" -IC:\workspace\life4gal\prometheus\src  -x c++ C:\workspace\life4gal\prometheus\src\infrastructure\type_traits.ixx -c -o CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj -MT CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi -MD -MF CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi.d > CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi"
+		# Exception Code: 0xC0000005
+		# #0 0x00007ff7b4803c75 C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe 0x3c75 C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe 0x3efc9d0
+		# #1 0x00007ff7b4803c75 (C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe+0x3c75)
+		# #2 0x00007ff7b86fc9d0 (C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe+0x3efc9d0)
+		# 0x00007FF7B4803C75, C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe(0x00007FF7B4800000) + 0x3C75 byte(s)
+		# 0x00007FF7B86FC9D0, C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe(0x00007FF7B4800000) + 0x3EFC9D0 byte(s)
+		# 0x00007FFA728526AD, C:\WINDOWS\System32\KERNEL32.DLL(0x00007FFA72840000) + 0x126AD byte(s), BaseThreadInitThunk() + 0x1D byte(s)
+		# 0x00007FFA72C2AA68, C:\WINDOWS\SYSTEM32\ntdll.dll(0x00007FFA72BD0000) + 0x5AA68 byte(s), RtlUserThreadStart() + 0x28 byte(s)
+		string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
+				"\"${CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS}\""
+				" -format=p1689"
+				" --"
+				" \"<CMAKE_CXX_COMPILER>\" <DEFINES> <INCLUDES> "#<FLAGS>"
+				" -x c++ <SOURCE> -c -o <OBJECT>"
+				" -MT <DYNDEP_FILE>"
+				" -MD -MF <DEP_FILE>"
+				" > <DYNDEP_FILE>")
+		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "clang")
+		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "@<MODULE_MAP_FILE>")
+	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+		# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_gcc.cmake
+		string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
+				"<CMAKE_CXX_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -E -x c++ <SOURCE>"
+				" -MT <DYNDEP_FILE> -MD -MF <DEP_FILE>"
+				" -fmodules-ts "#-fdep-file=<DYNDEP_FILE> -fdep-output=<OBJECT> -fdep-format=trtbd"
+				" -o <PREPROCESSED_SOURCE>")
+		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "gcc")
+		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "-fmodules-ts -fmodule-mapper=<MODULE_MAP_FILE> -fdep-format=trtbd -x c++")
 	else ()
-		message(STATUS "Found VC Tools in: [$ENV{VCToolsInstallDir}]")
-	endif (NOT EXISTS $ENV{VCToolsInstallDir})
+		message(FATAL_ERROR "Unsupported compilers: ${CMAKE_CXX_COMPILER}")
+	endif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+endif (${PROJECT_NAME_PREFIX}MODULE)
 
-	if (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
-		message(FATAL_ERROR "Cannot find std.ixx! Please check MSVC version(${CMAKE_CXX_COMPILER_VERSION})!")
-	else ()
-		message(STATUS "Found module std.ixx in: [$ENV{VCToolsInstallDir}modules\\std.ixx]")
-	endif (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
-
-	configure_file(
-			$ENV{VCToolsInstallDir}modules/std.ixx
-			${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx
-			COPYONLY
-	)
-
-	set_source_files_properties(
-			${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx
-			PROPERTIES
-			COMPILE_OPTIONS "/Wv:18"
-	)
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_clang.cmake
-	# Default to C++ extensions being off. Clang's modules support have trouble
-	# with extensions right now.
-	set(CMAKE_CXX_EXTENSIONS OFF)
-
-	# fixme: https://discourse.cmake.org/t/c-20-modules-update/7330/24
-	# fixme:
-	# PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace.
-	# Stack dump:
-	# 0.	Program arguments: "C:/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/Llvm/x64/bin/clang-scan-deps.exe" -format=p1689 -- C:\\PROGRA~1\\MIB055~1\\2022\\Preview\\VC\\Tools\\Llvm\\x64\\bin\\clang-cl.exe -DGAL_PROMETHEUS_COMPILER_CLANG_CL -DGAL_PROMETHEUS_COMPILER_ID=\"Clang\" -DGAL_PROMETHEUS_COMPILER_NAME=\"Clang.16.0.5\" -DGAL_PROMETHEUS_COMPILER_VERSION=\"16.0.5\" -DGAL_PROMETHEUS_MAJOR_VERSION=0 -DGAL_PROMETHEUS_MINOR_VERSION=0 -DGAL_PROMETHEUS_PATCH_VERSION=6 -DGAL_PROMETHEUS_PLATFORM_WINDOWS -DGAL_PROMETHEUS_VERSION=\"0.0.6\" -IC:\workspace\life4gal\prometheus\src  -x c++ C:\workspace\life4gal\prometheus\src\infrastructure\type_traits.ixx -c -o CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj -MT CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi -MD -MF CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi.d > CMakeFiles\prometheus.dir\src\infrastructure\type_traits.ixx.obj.ddi"
-	# Exception Code: 0xC0000005
-	# #0 0x00007ff7b4803c75 C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe 0x3c75 C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe 0x3efc9d0
-	# #1 0x00007ff7b4803c75 (C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe+0x3c75)
-	# #2 0x00007ff7b86fc9d0 (C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe+0x3efc9d0)
-	# 0x00007FF7B4803C75, C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe(0x00007FF7B4800000) + 0x3C75 byte(s)
-	# 0x00007FF7B86FC9D0, C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\Llvm\x64\bin\clang-scan-deps.exe(0x00007FF7B4800000) + 0x3EFC9D0 byte(s)
-	# 0x00007FFA728526AD, C:\WINDOWS\System32\KERNEL32.DLL(0x00007FFA72840000) + 0x126AD byte(s), BaseThreadInitThunk() + 0x1D byte(s)
-	# 0x00007FFA72C2AA68, C:\WINDOWS\SYSTEM32\ntdll.dll(0x00007FFA72BD0000) + 0x5AA68 byte(s), RtlUserThreadStart() + 0x28 byte(s)
-	string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
-			"\"${CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS}\""
-			" -format=p1689"
-			" --"
-			" \"<CMAKE_CXX_COMPILER>\" <DEFINES> <INCLUDES> "#<FLAGS>"
-			" -x c++ <SOURCE> -c -o <OBJECT>"
-			" -MT <DYNDEP_FILE>"
-			" -MD -MF <DEP_FILE>"
-			" > <DYNDEP_FILE>")
-	set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "clang")
-    set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "@<MODULE_MAP_FILE>")
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	# https://gitlab.kitware.com/cmake/cmake/-/blob/master/.gitlab/ci/cxx_modules_rules_gcc.cmake
-	string(CONCAT CMAKE_EXPERIMENTAL_CXX_SCANDEP_SOURCE
-			"<CMAKE_CXX_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -E -x c++ <SOURCE>"
-			" -MT <DYNDEP_FILE> -MD -MF <DEP_FILE>"
-			" -fmodules-ts "#-fdep-file=<DYNDEP_FILE> -fdep-output=<OBJECT> -fdep-format=trtbd"
-			" -o <PREPROCESSED_SOURCE>")
-	set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "gcc")
-	set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "-fmodules-ts -fmodule-mapper=<MODULE_MAP_FILE> -fdep-format=trtbd -x c++")
-else ()
-	message(FATAL_ERROR "Unsupported compilers: ${CMAKE_CXX_COMPILER}")
-endif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-
+# =======================
 # MODULE SOURCE
-target_sources(
-		${PROJECT_NAME}
-		# fixme: Possible conflicts with other libraries?
-		PUBLIC
-		FILE_SET std_module
-		TYPE CXX_MODULES
-		BASE_DIRS "${PROJECT_SOURCE_DIR}"
-		FILES
+# =======================
 
-		$<$<CXX_COMPILER_ID:MSVC>:${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/std.ixx>
-)
+if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
+	set(
+		${PROJECT_NAME_PREFIX}MODULE_SOURCE_CHARS_ICELAKE
 
-target_sources(
-		${PROJECT_NAME}
-		PUBLIC
-		FILE_SET public_module_files
-		TYPE CXX_MODULES
-		BASE_DIRS "${PROJECT_SOURCE_DIR}"
-		FILES
+		${PROJECT_SOURCE_DIR}/src/chars/icelake.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_ascii.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf8.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf16.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf32.ixx
+	)
+else()
+	set(
+		${PROJECT_NAME_PREFIX}MODULE_SOURCE_CHARS_ICELAKE
+	)
+endif (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 
-		# =========================
-		# TEST
-		# =========================
-	
-		${PROJECT_SOURCE_DIR}/src/test/test.ixx
-	
-		# =========================
-		# ERROR
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/error/debug.ixx
-		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/error/debug.win.ixx>
-		${PROJECT_SOURCE_DIR}/src/error/platform.ixx
-		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/error/platform.win.ixx>
-		${PROJECT_SOURCE_DIR}/src/error/exception.ixx
-
-		${PROJECT_SOURCE_DIR}/src/error/error.ixx
+set(
+		${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC
 
 		# =========================
-		# UTILITY
+		# CHARS
 		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/utility/concepts.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/functional.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/aligned_union.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/cast.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/enumeration.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/compiler.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/function_ref.ixx
-		${PROJECT_SOURCE_DIR}/src/utility/memory.ixx
-
-		${PROJECT_SOURCE_DIR}/src/utility/utility.ixx
-
-		# =========================
-		# STRING
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/string/cast.ixx
-		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/string/cast.win.ixx>
-		${PROJECT_SOURCE_DIR}/src/string/charconv.ixx
-		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.ixx
-		${PROJECT_SOURCE_DIR}/src/string/meta_string.ixx
-		${PROJECT_SOURCE_DIR}/src/string/command_line_parser.ixx
-
-		${PROJECT_SOURCE_DIR}/src/string/string.ixx
+		
+		${PROJECT_SOURCE_DIR}/src/chars/encoding.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_ascii.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf8.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf16.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf32.ixx
+		${${PROJECT_NAME_PREFIX}MODULE_SOURCE_CHARS_ICELAKE}
+		
+		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
 
 		# =========================
-		# CONTAINER
+		# CONCURRENCY
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/container/string_pool.ixx
-		${PROJECT_SOURCE_DIR}/src/container/plane.ixx
+		${PROJECT_SOURCE_DIR}/src/concurrency/thread.ixx
+		${PROJECT_SOURCE_DIR}/src/concurrency/thread.impl.ixx
+		${PROJECT_SOURCE_DIR}/src/concurrency/unfair_mutex.ixx
 
-		${PROJECT_SOURCE_DIR}/src/container/container.ixx
-
-		# =========================
-		# SIMD
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/simd/instruction_set.ixx
-
-		${PROJECT_SOURCE_DIR}/src/simd/simd.ixx
+		${PROJECT_SOURCE_DIR}/src/concurrency/concurrency.ixx
 
 		# =========================
 		# COROUTINE
@@ -372,66 +365,198 @@ target_sources(
 		${PROJECT_SOURCE_DIR}/src/coroutine/coroutine.ixx
 
 		# =========================
-		# I18N
+		# ERROR
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/i18n/iso_639.ixx
-		${PROJECT_SOURCE_DIR}/src/i18n/iso_3166.ixx
-		${PROJECT_SOURCE_DIR}/src/i18n/iso_15924.ixx
-		${PROJECT_SOURCE_DIR}/src/i18n/ietf_language_tag.ixx
+		${PROJECT_SOURCE_DIR}/src/error/exception.ixx
+		${PROJECT_SOURCE_DIR}/src/error/debug.ixx
+		${PROJECT_SOURCE_DIR}/src/error/platform.ixx
+		${PROJECT_SOURCE_DIR}/src/error/command_line.ixx
+		${PROJECT_SOURCE_DIR}/src/error/instruction_set.ixx
 
-		${PROJECT_SOURCE_DIR}/src/i18n/i18n.ixx
+		${PROJECT_SOURCE_DIR}/src/error/error.ixx
 
 		# =========================
-		# CHARS
+		# FUNCTIONAL
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/chars/encoding.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/converter.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/table.ixx
+		${PROJECT_SOURCE_DIR}/src/functional/type_list.ixx
+		${PROJECT_SOURCE_DIR}/src/functional/value_list.ixx
+		${PROJECT_SOURCE_DIR}/src/functional/functor.ixx
+		${PROJECT_SOURCE_DIR}/src/functional/aligned_union.ixx
+		${PROJECT_SOURCE_DIR}/src/functional/function_ref.ixx
+		${PROJECT_SOURCE_DIR}/src/functional/math.ixx
+		${PROJECT_SOURCE_DIR}/src/functional/flag.ixx
+		${PROJECT_SOURCE_DIR}/src/functional/function_signature.ixx
 
-		# scalar
-		${PROJECT_SOURCE_DIR}/src/chars/scalar.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_ascii.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf8.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf16.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf32.ixx
+		${PROJECT_SOURCE_DIR}/src/functional/functional.ixx
 
-		# AVX-512
-#		${PROJECT_SOURCE_DIR}/src/chars/icelake.ixx
-#		${PROJECT_SOURCE_DIR}/src/chars/icelake_ascii.ixx
-#		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf8.ixx
-#		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf16.ixx
-#		${PROJECT_SOURCE_DIR}/src/chars/icelake_utf32.ixx
+		# =========================
+		# GUI
+		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
+		${PROJECT_SOURCE_DIR}/src/gui/draw_list.ixx
+
+		${PROJECT_SOURCE_DIR}/src/gui/gui.ixx
+
+		# =========================
+		# INFRASTRUCTURE
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/infrastructure/state_machine.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/unit_test.ixx
+		${PROJECT_SOURCE_DIR}/src/infrastructure/command_line_parser.ixx
+
+		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
+
+		# =========================
+		# MEMORY
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/memory/read_write.ixx
+
+		${PROJECT_SOURCE_DIR}/src/memory/memory.ixx
+
+		# =========================
+		# META
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/meta/string.ixx
+		${PROJECT_SOURCE_DIR}/src/meta/name.ixx
+		${PROJECT_SOURCE_DIR}/src/meta/enumeration.ixx
+		${PROJECT_SOURCE_DIR}/src/meta/member.ixx
+		${PROJECT_SOURCE_DIR}/src/meta/to_string.ixx
+
+		${PROJECT_SOURCE_DIR}/src/meta/meta.ixx
+
+		# =========================
+		# NUMERIC
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/numeric/random_engine.ixx
+		${PROJECT_SOURCE_DIR}/src/numeric/random.ixx
+
+		${PROJECT_SOURCE_DIR}/src/numeric/numeric.ixx
+
+		# =========================
+		# PRIMITIVE
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/primitive/multidimensional.ixx
+		${PROJECT_SOURCE_DIR}/src/primitive/point.ixx
+		${PROJECT_SOURCE_DIR}/src/primitive/extent.ixx
+		${PROJECT_SOURCE_DIR}/src/primitive/rect.ixx
+		${PROJECT_SOURCE_DIR}/src/primitive/circle.ixx
+		${PROJECT_SOURCE_DIR}/src/primitive/ellipse.ixx
+		${PROJECT_SOURCE_DIR}/src/primitive/color.ixx
+		${PROJECT_SOURCE_DIR}/src/primitive/vertex.ixx
+
+		${PROJECT_SOURCE_DIR}/src/primitive/primitive.ixx
+
+		# =========================
+		# STRING
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.ixx
+		${PROJECT_SOURCE_DIR}/src/string/charconv.ixx
+		${PROJECT_SOURCE_DIR}/src/string/string_pool.ixx
+
+		${PROJECT_SOURCE_DIR}/src/string/string.ixx
+
+		# =========================
+		# ROOT
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/prometheus.ixx
 )
+
+set(
+		${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE
+
+		# =========================
+		# CONCURRENCY
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/concurrency/unfair_mutex.impl.ixx
+
+		# =========================
+		# ERROR
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/error/debug.impl.ixx
+		${PROJECT_SOURCE_DIR}/src/error/platform.impl.ixx
+		${PROJECT_SOURCE_DIR}/src/error/command_line.impl.ixx
+		${PROJECT_SOURCE_DIR}/src/error/instruction_set.impl.ixx
+)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	set_source_files_properties(
+			${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE}
+			PROPERTIES
+			LANGUAGE CXX
+	)
+endif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+
+if (${PROJECT_NAME_PREFIX}MODULE)
+	target_sources(
+			${PROJECT_NAME}
+			PUBLIC
+			FILE_SET public_module_files
+			TYPE CXX_MODULES
+			BASE_DIRS "${PROJECT_SOURCE_DIR}"
+			FILES
+
+			${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC}
+			${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE}
+	)
+else ()
+	target_sources(
+			${PROJECT_NAME}
+			PUBLIC
+			FILE_SET public_header_files
+			TYPE HEADERS
+			BASE_DIRS "${PROJECT_SOURCE_DIR}"
+			FILES
+
+			${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC}
+	)
+
+	target_sources(
+			${PROJECT_NAME}
+			PRIVATE
+
+			${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE}
+	)
+endif (${PROJECT_NAME_PREFIX}MODULE)
 
 target_sources(
 		${PROJECT_NAME}
 		PUBLIC
-		FILE_SET header_files
+		FILE_SET macro_header_files
 		TYPE HEADERS
 		BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
 		FILES
 
 		${PROJECT_SOURCE_DIR}/src/prometheus/macro.hpp
-
-		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_SOURCE_DIR}/src/prometheus/windows.hpp>
 )
 
 # SET FLAGS
 target_compile_options(
 		${PROJECT_NAME}
-		PRIVATE
-		${${PROJECT_NAME_PREFIX}COMPILE_FLAGS}
-
 		PUBLIC
+
+		${${PROJECT_NAME_PREFIX}COMPILE_FLAGS}
 		# __VA_OPT__
 		$<$<CXX_COMPILER_ID:MSVC>:-Zc:preprocessor>
 )
 
 # SET DEFINITIONS
+if (${PROJECT_NAME_PREFIX}MODULE)
+	set(${PROJECT_NAME_PREFIX}MODULE_MACRO_VARIABLE_USE_MODULE 1)
+else ()
+	set(${PROJECT_NAME_PREFIX}MODULE_MACRO_VARIABLE_USE_MODULE 0)
+endif (${PROJECT_NAME_PREFIX}MODULE)
+
 target_compile_definitions(
 		${PROJECT_NAME}
 		PUBLIC
@@ -444,6 +569,10 @@ target_compile_definitions(
 		${PROJECT_NAME_PREFIX}COMPILER_VERSION="${${PROJECT_NAME_PREFIX}COMPILER_VERSION}"
 		${PROJECT_NAME_PREFIX}COMPILER_NAME="${${PROJECT_NAME_PREFIX}COMPILER_NAME}"
 		${${PROJECT_NAME_PREFIX}PLATFORM}
+
+		${PROJECT_NAME_PREFIX}USE_MODULE=${${PROJECT_NAME_PREFIX}MODULE_MACRO_VARIABLE_USE_MODULE}
+
+		${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED=${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED}
 
 		# Tool macros for platform determination.
 		$<$<CXX_COMPILER_ID:MSVC>:${PROJECT_NAME_PREFIX}COMPILER_MSVC>
@@ -459,7 +588,7 @@ target_compile_definitions(
 # SET FEATURES
 target_compile_features(
 		${PROJECT_NAME}
-		PUBLIC
+		PRIVATE
 		cxx_std_23
 )
 

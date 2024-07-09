@@ -1,15 +1,18 @@
 #include <prometheus/macro.hpp>
 
+#if GAL_PROMETHEUS_USE_MODULE
 import std;
-import gal.prometheus.test;
-import gal.prometheus.string;
+import gal.prometheus;
+
+#else
+#include <prometheus.ixx>
+
+#endif
+
+using namespace gal::prometheus;
 
 namespace
 {
-	using namespace gal::prometheus;
-	using namespace string;
-	using namespace string::literals;
-
 	struct point
 	{
 		int x;
@@ -51,9 +54,10 @@ struct string::wildcard_type<point>
 
 namespace
 {
-	GAL_PROMETHEUS_NO_DESTROY test::suite<"string.wildcard_match"> _ = []
+	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"string.wildcard_match"> _ = []
 	{
-		using namespace test;
+		using namespace unit_test;
+		using namespace literals;
 
 		"basic_test"_test = []
 		{
@@ -61,11 +65,11 @@ namespace
 				constexpr char pattern1[] = "";
 				constexpr char pattern2[] = R"(\)";
 
-				static_assert(match("", pattern1));
-				static_assert(match("", pattern2));
+				static_assert(string::match("", pattern1));
+				static_assert(string::match("", pattern2));
 
-				static_assert(not match("we don't care what's here", pattern1));
-				static_assert(not match("we don't care what's here", pattern2));
+				static_assert(not string::match("we don't care what's here", pattern1));
+				static_assert(not string::match("we don't care what's here", pattern2));
 			}
 			{
 				constexpr char pattern1[] = "A";
@@ -76,45 +80,45 @@ namespace
 				constexpr char pattern6[] = R"((\A))";
 				constexpr char pattern7[] = R"(([A]))";
 
-				static_assert(match("A", pattern1));
-				static_assert(match("A", pattern2));
-				static_assert(match("A", pattern3));
-				static_assert(match("A", pattern4));
-				static_assert(match("A", pattern5));
-				static_assert(match("A", pattern6));
-				static_assert(match("A", pattern7));
+				static_assert(string::match("A", pattern1));
+				static_assert(string::match("A", pattern2));
+				static_assert(string::match("A", pattern3));
+				static_assert(string::match("A", pattern4));
+				static_assert(string::match("A", pattern5));
+				static_assert(string::match("A", pattern6));
+				static_assert(string::match("A", pattern7));
 
-				static_assert(not match("", pattern1));
-				static_assert(not match("", pattern2));
-				static_assert(not match("", pattern3));
-				static_assert(not match("", pattern4));
-				static_assert(not match("", pattern5));
-				static_assert(not match("", pattern6));
-				static_assert(not match("", pattern7));
+				static_assert(not string::match("", pattern1));
+				static_assert(not string::match("", pattern2));
+				static_assert(not string::match("", pattern3));
+				static_assert(not string::match("", pattern4));
+				static_assert(not string::match("", pattern5));
+				static_assert(not string::match("", pattern6));
+				static_assert(not string::match("", pattern7));
 
-				static_assert(not match("a", pattern1));
-				static_assert(not match("a", pattern2));
-				static_assert(not match("a", pattern3));
-				static_assert(not match("a", pattern4));
-				static_assert(not match("a", pattern5));
-				static_assert(not match("a", pattern6));
-				static_assert(not match("a", pattern7));
+				static_assert(not string::match("a", pattern1));
+				static_assert(not string::match("a", pattern2));
+				static_assert(not string::match("a", pattern3));
+				static_assert(not string::match("a", pattern4));
+				static_assert(not string::match("a", pattern5));
+				static_assert(not string::match("a", pattern6));
+				static_assert(not string::match("a", pattern7));
 
-				static_assert(not match("AA", pattern1));
-				static_assert(not match("AA", pattern2));
-				static_assert(not match("AA", pattern3));
-				static_assert(not match("AA", pattern4));
-				static_assert(not match("AA", pattern5));
-				static_assert(not match("AA", pattern6));
-				static_assert(not match("AA", pattern7));
+				static_assert(not string::match("AA", pattern1));
+				static_assert(not string::match("AA", pattern2));
+				static_assert(not string::match("AA", pattern3));
+				static_assert(not string::match("AA", pattern4));
+				static_assert(not string::match("AA", pattern5));
+				static_assert(not string::match("AA", pattern6));
+				static_assert(not string::match("AA", pattern7));
 
-				static_assert(not match("we don't care what's here", pattern1));
-				static_assert(not match("we don't care what's here", pattern2));
-				static_assert(not match("we don't care what's here", pattern3));
-				static_assert(not match("we don't care what's here", pattern4));
-				static_assert(not match("we don't care what's here", pattern5));
-				static_assert(not match("we don't care what's here", pattern6));
-				static_assert(not match("we don't care what's here", pattern7));
+				static_assert(not string::match("we don't care what's here", pattern1));
+				static_assert(not string::match("we don't care what's here", pattern2));
+				static_assert(not string::match("we don't care what's here", pattern3));
+				static_assert(not string::match("we don't care what's here", pattern4));
+				static_assert(not string::match("we don't care what's here", pattern5));
+				static_assert(not string::match("we don't care what's here", pattern6));
+				static_assert(not string::match("we don't care what's here", pattern7));
 			}
 			{
 				constexpr char pattern1[] = "Hello!";
@@ -125,37 +129,37 @@ namespace
 				constexpr char pattern6[] = R"((\H\e\l\l\o\!))";
 				constexpr char pattern7[] = R"(([H][e][l][l][o]!))";
 
-				static_assert(match("Hello!", pattern1));
-				static_assert(match("Hello!", pattern2));
-				static_assert(match("Hello!", pattern3));
-				static_assert(match("Hello!", pattern4));
-				static_assert(match("Hello!", pattern5));
-				static_assert(match("Hello!", pattern6));
-				static_assert(match("Hello!", pattern7));
+				static_assert(string::match("Hello!", pattern1));
+				static_assert(string::match("Hello!", pattern2));
+				static_assert(string::match("Hello!", pattern3));
+				static_assert(string::match("Hello!", pattern4));
+				static_assert(string::match("Hello!", pattern5));
+				static_assert(string::match("Hello!", pattern6));
+				static_assert(string::match("Hello!", pattern7));
 
-				static_assert(not match("", pattern1));
-				static_assert(not match("", pattern2));
-				static_assert(not match("", pattern3));
-				static_assert(not match("", pattern4));
-				static_assert(not match("", pattern5));
-				static_assert(not match("", pattern6));
-				static_assert(not match("", pattern7));
+				static_assert(not string::match("", pattern1));
+				static_assert(not string::match("", pattern2));
+				static_assert(not string::match("", pattern3));
+				static_assert(not string::match("", pattern4));
+				static_assert(not string::match("", pattern5));
+				static_assert(not string::match("", pattern6));
+				static_assert(not string::match("", pattern7));
 
-				static_assert(not match("Hello!!", pattern1));
-				static_assert(not match("Hello!!", pattern2));
-				static_assert(not match("Hello!!", pattern3));
-				static_assert(not match("Hello!!", pattern4));
-				static_assert(not match("Hello!!", pattern5));
-				static_assert(not match("Hello!!", pattern6));
-				static_assert(not match("Hello!!", pattern7));
+				static_assert(not string::match("Hello!!", pattern1));
+				static_assert(not string::match("Hello!!", pattern2));
+				static_assert(not string::match("Hello!!", pattern3));
+				static_assert(not string::match("Hello!!", pattern4));
+				static_assert(not string::match("Hello!!", pattern5));
+				static_assert(not string::match("Hello!!", pattern6));
+				static_assert(not string::match("Hello!!", pattern7));
 
-				static_assert(not match("Hello!Hello!", pattern1));
-				static_assert(not match("Hello!Hello!", pattern2));
-				static_assert(not match("Hello!Hello!", pattern3));
-				static_assert(not match("Hello!Hello!", pattern4));
-				static_assert(not match("Hello!Hello!", pattern5));
-				static_assert(not match("Hello!Hello!", pattern6));
-				static_assert(not match("Hello!Hello!", pattern7));
+				static_assert(not string::match("Hello!Hello!", pattern1));
+				static_assert(not string::match("Hello!Hello!", pattern2));
+				static_assert(not string::match("Hello!Hello!", pattern3));
+				static_assert(not string::match("Hello!Hello!", pattern4));
+				static_assert(not string::match("Hello!Hello!", pattern5));
+				static_assert(not string::match("Hello!Hello!", pattern6));
+				static_assert(not string::match("Hello!Hello!", pattern7));
 			}
 			{
 				constexpr char pattern1[] = "*";
@@ -166,31 +170,31 @@ namespace
 				constexpr char pattern6[] = R"((\*))";
 				constexpr char pattern7[] = "([*])";
 
-				static_assert(match("", pattern1));
-				static_assert(match("", pattern2));
-				static_assert(not match("", pattern3));
-				static_assert(not match("", pattern4));
-				static_assert(match("", pattern5));
-				static_assert(not match("", pattern6));
-				static_assert(not match("", pattern7));
+				static_assert(string::match("", pattern1));
+				static_assert(string::match("", pattern2));
+				static_assert(not string::match("", pattern3));
+				static_assert(not string::match("", pattern4));
+				static_assert(string::match("", pattern5));
+				static_assert(not string::match("", pattern6));
+				static_assert(not string::match("", pattern7));
 
-				static_assert(match("*", pattern1));
-				static_assert(match("*", pattern2));
-				static_assert(match("*", pattern3));
-				static_assert(match("*", pattern4));
+				static_assert(string::match("*", pattern1));
+				static_assert(string::match("*", pattern2));
+				static_assert(string::match("*", pattern3));
+				static_assert(string::match("*", pattern4));
 				// matched without '\0'
-				static_assert(not match("*", pattern5));
-				static_assert(match("*", pattern6));
-				static_assert(match("*", pattern7));
+				static_assert(not string::match("*", pattern5));
+				static_assert(string::match("*", pattern6));
+				static_assert(string::match("*", pattern7));
 
-				static_assert(match("we don't care what's here", pattern1));
-				static_assert(match("we don't care what's here", pattern2));
-				static_assert(not match("we don't care what's here", pattern3));
-				static_assert(not match("we don't care what's here", pattern4));
+				static_assert(string::match("we don't care what's here", pattern1));
+				static_assert(string::match("we don't care what's here", pattern2));
+				static_assert(not string::match("we don't care what's here", pattern3));
+				static_assert(not string::match("we don't care what's here", pattern4));
 				// matched without '\0'
-				static_assert(not match("we don't care what's here", pattern5));
-				static_assert(not match("we don't care what's here", pattern6));
-				static_assert(not match("we don't care what's here", pattern7));
+				static_assert(not string::match("we don't care what's here", pattern5));
+				static_assert(not string::match("we don't care what's here", pattern6));
+				static_assert(not string::match("we don't care what's here", pattern7));
 			}
 			{
 				constexpr char pattern1[] = "?";
@@ -201,137 +205,139 @@ namespace
 				constexpr char pattern6[] = R"((\?))";
 				constexpr char pattern7[] = R"([?])";
 
-				static_assert(match("A", pattern1));
-				static_assert(match("A", pattern2));
-				static_assert(not match("A", pattern3));
-				static_assert(not match("A", pattern4));
-				static_assert(match("A", pattern5));
-				static_assert(not match("A", pattern6));
-				static_assert(not match("A", pattern7));
+				static_assert(string::match("A", pattern1));
+				static_assert(string::match("A", pattern2));
+				static_assert(not string::match("A", pattern3));
+				static_assert(not string::match("A", pattern4));
+				static_assert(string::match("A", pattern5));
+				static_assert(not string::match("A", pattern6));
+				static_assert(not string::match("A", pattern7));
 
-				static_assert(match("a", pattern1));
-				static_assert(match("a", pattern2));
-				static_assert(not match("a", pattern3));
-				static_assert(not match("a", pattern4));
-				static_assert(match("a", pattern5));
-				static_assert(not match("a", pattern6));
-				static_assert(not match("a", pattern7));
+				static_assert(string::match("a", pattern1));
+				static_assert(string::match("a", pattern2));
+				static_assert(not string::match("a", pattern3));
+				static_assert(not string::match("a", pattern4));
+				static_assert(string::match("a", pattern5));
+				static_assert(not string::match("a", pattern6));
+				static_assert(not string::match("a", pattern7));
 
-				static_assert(match("?", pattern1));
-				static_assert(match("?", pattern2));
-				static_assert(match("?", pattern3));
-				static_assert(match("?", pattern4));
-				static_assert(match("?", pattern5));
-				static_assert(match("?", pattern6));
-				static_assert(match("?", pattern7));
+				static_assert(string::match("?", pattern1));
+				static_assert(string::match("?", pattern2));
+				static_assert(string::match("?", pattern3));
+				static_assert(string::match("?", pattern4));
+				static_assert(string::match("?", pattern5));
+				static_assert(string::match("?", pattern6));
+				static_assert(string::match("?", pattern7));
 
-				static_assert(not match("", pattern1));
-				static_assert(not match("", pattern2));
-				static_assert(not match("", pattern3));
-				static_assert(not match("", pattern4));
-				static_assert(not match("", pattern5));
-				static_assert(not match("", pattern6));
-				static_assert(not match("", pattern7));
+				static_assert(not string::match("", pattern1));
+				static_assert(not string::match("", pattern2));
+				static_assert(not string::match("", pattern3));
+				static_assert(not string::match("", pattern4));
+				static_assert(not string::match("", pattern5));
+				static_assert(not string::match("", pattern6));
+				static_assert(not string::match("", pattern7));
 
-				static_assert(not match("we don't care what's here", pattern1));
-				static_assert(not match("we don't care what's here", pattern2));
-				static_assert(not match("we don't care what's here", pattern3));
-				static_assert(not match("we don't care what's here", pattern4));
-				static_assert(not match("we don't care what's here", pattern5));
-				static_assert(not match("we don't care what's here", pattern6));
-				static_assert(not match("we don't care what's here", pattern7));
+				static_assert(not string::match("we don't care what's here", pattern1));
+				static_assert(not string::match("we don't care what's here", pattern2));
+				static_assert(not string::match("we don't care what's here", pattern3));
+				static_assert(not string::match("we don't care what's here", pattern4));
+				static_assert(not string::match("we don't care what's here", pattern5));
+				static_assert(not string::match("we don't care what's here", pattern6));
+				static_assert(not string::match("we don't care what's here", pattern7));
 			}
 			{
 				constexpr char pattern1[] = R"(\\\* *\? \*\\)";
 				constexpr char pattern2[] = R"([\][*] *[?] [*][\])";
 
-				static_assert(match(R"(\* Hello? *\)", pattern1));
-				static_assert(match(R"(\* Hello? *\)", pattern2));
+				static_assert(string::match(R"(\* Hello? *\)", pattern1));
+				static_assert(string::match(R"(\* Hello? *\)", pattern2));
 
-				static_assert(match(R"(\* Hi? *\)", pattern1));
-				static_assert(match(R"(\* Hi? *\)", pattern2));
+				static_assert(string::match(R"(\* Hi? *\)", pattern1));
+				static_assert(string::match(R"(\* Hi? *\)", pattern2));
 
-				static_assert(match(R"(\* ? *\)", pattern1));
-				static_assert(match(R"(\* ? *\)", pattern2));
+				static_assert(string::match(R"(\* ? *\)", pattern1));
+				static_assert(string::match(R"(\* ? *\)", pattern2));
 
-				static_assert(not match(R"(\* Hello! *\)", pattern1));
-				static_assert(not match(R"(\* Hello! *\)", pattern2));
+				static_assert(not string::match(R"(\* Hello! *\)", pattern1));
+				static_assert(not string::match(R"(\* Hello! *\)", pattern2));
 
-				static_assert(not match(R"(* Hello? *\)", pattern1));
-				static_assert(not match(R"(* Hello? *\)", pattern2));
+				static_assert(not string::match(R"(* Hello? *\)", pattern1));
+				static_assert(not string::match(R"(* Hello? *\)", pattern2));
 
-				static_assert(not match(R"(\ Hello? *\)", pattern1));
-				static_assert(not match(R"(\ Hello? *\)", pattern2));
+				static_assert(not string::match(R"(\ Hello? *\)", pattern1));
+				static_assert(not string::match(R"(\ Hello? *\)", pattern2));
 
-				static_assert(not match(R"( Hello? *\)", pattern1));
-				static_assert(not match(R"( Hello? *\)", pattern2));
+				static_assert(not string::match(R"( Hello? *\)", pattern1));
+				static_assert(not string::match(R"( Hello? *\)", pattern2));
 
-				constexpr wchar_t  pattern_wc[]  = L"H?llo,*W*!";
-				constexpr char8_t  pattern_u8[]  = u8"H?llo,*W*!";
+				constexpr wchar_t pattern_wc[] = L"H?llo,*W*!";
+				constexpr char8_t pattern_u8[] = u8"H?llo,*W*!";
 				constexpr char16_t pattern_u16[] = u"H?llo,*W*!";
 				constexpr char32_t pattern_u32[] = U"H?llo,*W*!";
 
-				static_assert(match(L"Hello, World!", pattern_wc));
-				static_assert(match(u8"Hello, World!", pattern_u8));
-				static_assert(match(u"Hello, World!", pattern_u16));
-				static_assert(match(U"Hello, World!", pattern_u32));
+				static_assert(string::match(L"Hello, World!", pattern_wc));
+				static_assert(string::match(u8"Hello, World!", pattern_u8));
+				static_assert(string::match(u"Hello, World!", pattern_u16));
+				static_assert(string::match(U"Hello, World!", pattern_u32));
 			}
 			{
-				static_assert(match("aaa", "a[abc]a"));
-				static_assert(not match("aaa", "a[bcd]a"));
-				static_assert(not match("aaa", "a[a]]a"));
-				static_assert(match("aa]a", "a[a]]a"));
-				static_assert(match("aaa", "a[]abc]a"));
-				static_assert(match("aaa", "a[[a]a"));
-				static_assert(match("a[a", "a[[a]a"));
-				static_assert(match("a]a", "a[]]a"));
-				static_assert(not match("aa", "a[]a"));
-				static_assert(match("a[]a", "a[]a"));
+				static_assert(string::match("aaa", "a[abc]a"));
+				static_assert(not string::match("aaa", "a[bcd]a"));
+				static_assert(not string::match("aaa", "a[a]]a"));
+				static_assert(string::match("aa]a", "a[a]]a"));
+				static_assert(string::match("aaa", "a[]abc]a"));
+				static_assert(string::match("aaa", "a[[a]a"));
+				static_assert(string::match("a[a", "a[[a]a"));
+				static_assert(string::match("a]a", "a[]]a"));
+				static_assert(not string::match("aa", "a[]a"));
+				static_assert(string::match("a[]a", "a[]a"));
 
-				static_assert(not match("aaa", "a[!a]a"));
-				static_assert(match("aaa", "a[!b]a"));
-				static_assert(not match("aaa", "a[b!b]a"));
-				static_assert(match("a!a", "a[b!b]a"));
-				static_assert(not match("a!a", "a[!]a"));
-				static_assert(match("a[!]a", "a[!]a"));
+				static_assert(not string::match("aaa", "a[!a]a"));
+				static_assert(string::match("aaa", "a[!b]a"));
+				static_assert(not string::match("aaa", "a[b!b]a"));
+				static_assert(string::match("a!a", "a[b!b]a"));
+				static_assert(not string::match("a!a", "a[!]a"));
+				static_assert(string::match("a[!]a", "a[!]a"));
 			}
 			{
-				static_assert(match("aXb", "a(X|Y)b"));
-				static_assert(match("aYb", "a(X|Y)b"));
-				static_assert(not match("aZb", "a(X|Y)b"));
-				static_assert(match("aXb", "(a(X|Y)b|c)"));
-				static_assert(not match("a", "a|b"));
-				static_assert(match("a|b", "a|b"));
-				static_assert(match("(aa", "(a(a|b)"));
-				static_assert(not match("a(a", "(a(a|b)"));
-				static_assert(match("a(a", "(a[(]a|b)"));
-				static_assert(match("aa", "a()a"));
-				static_assert(match("", "(abc|)"));
+				static_assert(string::match("aXb", "a(X|Y)b"));
+				static_assert(string::match("aYb", "a(X|Y)b"));
+				static_assert(not string::match("aZb", "a(X|Y)b"));
+				static_assert(string::match("aXb", "(a(X|Y)b|c)"));
+				static_assert(not string::match("a", "a|b"));
+				static_assert(string::match("a|b", "a|b"));
+				static_assert(string::match("(aa", "(a(a|b)"));
+				static_assert(not string::match("a(a", "(a(a|b)"));
+				static_assert(string::match("a(a", "(a[(]a|b)"));
+				static_assert(string::match("aa", "a()a"));
+				static_assert(string::match("", "(abc|)"));
 			}
 		};
 
 		"matcher"_test = []
 		{
-			static_assert(make_wildcard_matcher("H?llo,*W*!")("Hello, World!"));
-			static_assert(make_wildcard_matcher("H_llo,%W%!", {'%', '_', '\\'})("Hello, World!"));
+			static_assert(string::make_wildcard_matcher("H?llo,*W*!")("Hello, World!"));
+			static_assert(string::make_wildcard_matcher("H_llo,%W%!", {'%', '_', '\\'})("Hello, World!"));
 
 			auto my_equal_to = [](const int num, const auto character) -> bool { return num + 48 == static_cast<int>(character); };
 
-			constexpr std::string_view    str1{"12*5?"};
-			constexpr std::wstring_view   str2{L"12*5?"};
-			constexpr std::u8string_view  str3{u8"12*5?"};
+			constexpr std::string_view str1{"12*5?"};
+			constexpr std::wstring_view str2{L"12*5?"};
+			constexpr std::u8string_view str3{u8"12*5?"};
 			constexpr std::u16string_view str4{u"12*5?"};
 			constexpr std::u32string_view str5{U"12*5?"};
 
-			static_assert(make_wildcard_matcher(str1, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
-			static_assert(make_wildcard_matcher(str2, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
-			static_assert(make_wildcard_matcher(str3, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
-			static_assert(make_wildcard_matcher(str4, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
-			static_assert(make_wildcard_matcher(str5, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
+			static_assert(string::make_wildcard_matcher(str1, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
+			static_assert(string::make_wildcard_matcher(str2, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
+			static_assert(string::make_wildcard_matcher(str3, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
+			static_assert(string::make_wildcard_matcher(str4, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
+			static_assert(string::make_wildcard_matcher(str5, my_equal_to)(std::array{1, 2, 3, 4, 5, 6}));
 		};
 
 		"literal"_test = []
 		{
+			using namespace string::literals;
+
 			static_assert("12*5?"_wm("123456"));
 			static_assert(L"12*5?"_wm(L"123456"));
 			static_assert(u8"12*5?"_wm(u8"123456"));
@@ -361,22 +367,22 @@ namespace
 
 			constexpr my_point_container<13> container2 =
 			{{{{10, 1},
-				{1234, 5678},
-				{20, 2},
-				{30, 3},
-				{1234, 5678},
-				{1234, 5678},
-				{1234, 5678},
-				{1234, 5678},
-				{1234, 5678},
-				{40, 4},
-				{100, 1},
-				{50, 5},
-				{60, 6}}}};
+			   {1234, 5678},
+			   {20, 2},
+			   {30, 3},
+			   {1234, 5678},
+			   {1234, 5678},
+			   {1234, 5678},
+			   {1234, 5678},
+			   {1234, 5678},
+			   {40, 4},
+			   {100, 1},
+			   {50, 5},
+			   {60, 6}}}};
 
 			constexpr auto point_compare = [](const point& p1, const point& p2) constexpr -> bool { return p1.x * p1.y == p2.x * p2.y; };
 
-			static_assert(make_wildcard_matcher(container1, point_compare)(container2));
+			static_assert(string::make_wildcard_matcher(container1, point_compare)(container2));
 		};
 	};
 }
