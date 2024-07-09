@@ -232,8 +232,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			}
 			else if constexpr (OutputCategory == CharsCategory::UTF32)
 			{
-				const auto low = _mm512_set1_epi32(0x0000'dc00);
-				const auto high = _mm512_set1_epi32(0x0000'df00);
+				const auto low = _mm512_set1_epi16(static_cast<short>(0xdc00));
+				const auto high = _mm512_set1_epi16(static_cast<short>(0xdfff));
 
 				auto result_length = static_cast<size_type>(0);
 
@@ -309,7 +309,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 			if constexpr (OutputCategory == CharsCategory::ASCII)
 			{
-				const auto v_0000_00ff = _mm512_set1_epi32(0x0000'00ff);
+				const auto v_00ff = _mm512_set1_epi32(0x00ff);
 				const auto shuffle_mask = _mm512_set_epi8(
 					// clang-format off
 					0,
@@ -392,7 +392,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 						else { return _mm512_shuffle_epi8(_mm512_loadu_si512(c), byte_flip); }
 					}(it_input_current);
 
-					if (_mm512_cmpgt_epu16_mask(in, v_0000_00ff))
+					if (_mm512_cmpgt_epu16_mask(in, v_00ff))
 					{
 						if constexpr (
 							ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
@@ -417,7 +417,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 								it_output_current += std::ranges::distance(it_input_current, it);
 							}
 
-							GAL_PROMETHEUS_DEBUG_AXIOM(it != it_input_current + 32);
 							return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error + std::ranges::distance(it_input_current, it)};
 						}
 						else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
@@ -444,7 +443,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 						else { return _mm512_shuffle_epi8(_mm512_maskz_loadu_epi16(mask, c), byte_flip); }
 					}(it_input_current);
 
-					if (_mm512_cmpgt_epu16_mask(in, v_0000_00ff))
+					if (_mm512_cmpgt_epu16_mask(in, v_00ff))
 					{
 						if constexpr (
 							ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
@@ -469,7 +468,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 								it_output_current += std::ranges::distance(it_input_current, it);
 							}
 
-							GAL_PROMETHEUS_DEBUG_AXIOM(it != it_input_current + remaining);
 							return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error + std::ranges::distance(it_input_current, it)};
 						}
 						else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
@@ -806,27 +804,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 						}
 					}
 
+					it_input_current += carry;
 					return true;
 				};
 
 				const auto result = process();
 				const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-				if constexpr (
-					ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-					ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
-				) { if (not result) { return 0; } }
-				else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-				{
-					if (not result)
-					{
-						return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error};
-					}
-				}
-				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-
 				if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
-					remaining != 0)
+					not result or remaining != 0)
 				{
 					if (const auto scalar_result = scalar_type::convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>(
 							{it_input_current, remaining},
@@ -850,7 +836,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 							ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
 							ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 						) { it_output_current += scalar_result; }
-						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE) { it_output_current += scalar_result.count; }
+						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE) { it_input_current += scalar_result.count; }
 						else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 					}
 				}
@@ -993,7 +979,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
 				remaining != 0)
 			{
-				const auto mask = static_cast<__mmask16>((1 << remaining) - 1);
+				const auto mask = static_cast<__mmask32>((1 << remaining) - 1);
 				const auto utf16 = _mm512_shuffle_epi8(_mm512_maskz_loadu_epi16(mask, it_input_current), byte_flip);
 				_mm512_mask_storeu_epi16(it_output_current, mask, utf16);
 			}
