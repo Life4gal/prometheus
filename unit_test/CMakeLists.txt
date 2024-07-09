@@ -14,6 +14,8 @@ add_executable(
 
 		${PROJECT_SOURCE_DIR}/src/chars/ascii.cpp
 		${PROJECT_SOURCE_DIR}/src/chars/utf8.cpp
+		${PROJECT_SOURCE_DIR}/src/chars/utf16.cpp
+		${PROJECT_SOURCE_DIR}/src/chars/utf32.cpp
 
 		# =================================
 		# STRING
