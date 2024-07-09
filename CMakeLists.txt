@@ -24,7 +24,7 @@ set(
 
 set(
 		${PROJECT_NAME_PREFIX}MINOR_VERSION
-		3
+		4
 )
 
 set(
@@ -450,7 +450,6 @@ set(
 		${PROJECT_SOURCE_DIR}/src/primitive/ellipse.ixx
 		${PROJECT_SOURCE_DIR}/src/primitive/color.ixx
 		${PROJECT_SOURCE_DIR}/src/primitive/vertex.ixx
-		${PROJECT_SOURCE_DIR}/src/primitive/vertex_list.ixx
 
 		${PROJECT_SOURCE_DIR}/src/primitive/primitive.ixx
 
