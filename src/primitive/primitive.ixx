@@ -14,7 +14,6 @@ export import :circle;
 export import :ellipse;
 export import :color;
 export import :vertex;
-export import :vertex_list;
 
 #else
 #pragma once
@@ -27,6 +26,5 @@ export import :vertex_list;
 #include <primitive/ellipse.ixx>
 #include <primitive/color.ixx>
 #include <primitive/vertex.ixx>
-#include <primitive/vertex_list.ixx>
 
 #endif
