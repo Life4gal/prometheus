@@ -207,7 +207,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
 			if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
 			{
-				GAL_PROMETHEUS_DEBUG_ASSUME(validate(input));
+				GAL_PROMETHEUS_DEBUG_ASSUME(validate<Endian>(input));
 			}
 
 			using output_pointer_type = typename output_type<OutputCategory>::pointer;
@@ -578,7 +578,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> StringType
 		{
 			StringType result{};
-			result.resize(length<OutputCategory>(input));
+			result.resize(length<OutputCategory, Endian>(input));
 
 			(void)convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>(input, result.data());
 			return result;
@@ -615,7 +615,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
 		{
 			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
-			result.resize(length<OutputCategory>(input));
+			result.resize(length<OutputCategory, Endian>(input));
 
 			(void)convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>(input, result.data());
 			return result;
@@ -630,7 +630,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
 		{
 			std::basic_string<typename output_type<OutputCategory>::value_type> result{};
-			result.resize(length<OutputCategory>(input));
+			result.resize(length<OutputCategory, Endian>(input));
 
 			return convert<OutputCategory, ProcessPolicy, Endian, CheckNextBlock>({input, std::char_traits<char_type>::length(input)}, result.data());
 		}
@@ -660,7 +660,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			std::ranges::transform(
 				input,
 				output,
-				[](const auto word) noexcept { return static_cast<output_type<input_category>::value_type>(word >> 8 | word << 8); });
+				[](const auto word) noexcept { return static_cast<output_type<input_category>::value_type>(std::byteswap(word)); });
 		}
 
 		template<typename StringType>
