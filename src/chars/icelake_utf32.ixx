@@ -1202,27 +1202,72 @@ namespace gal::prometheus::chars
 						{
 							// at least one 32-bit word is larger than 0xffff <=> it will produce four UTF-8 bytes
 							// scalar fallback
-							const auto step = static_cast<size_type>(it_input_end - it_input_current < 16 ? it_input_end - it_input_current : 16);
-							if constexpr (auto result = scalar_type::convert<OutputCategory, ProcessPolicy, CheckNextBlock>(
-									{it_input_current, step},
-									it_output_current
-								);
-								ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-								ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
-							)
+							// const auto step = static_cast<size_type>(it_input_end - it_input_current - 1 < 15 ? it_input_end - it_input_current - 1 : 15);
+							// auto result = scalar_type::convert<OutputCategory, ProcessPolicy, false>({it_input_current, step}, it_output_current);
+							// we don't currently have a way to get the length of the input read and output write at the same time (especially with the possibility of errors),
+							// so we inline it in our code (chars/scalar_utf32.ixx).
+							const auto step = static_cast<std::ptrdiff_t>(it_input_end - it_input_current - 1 < 15 ? it_input_end - it_input_current - 1 : 15);
+							for (const auto it_this_input_end = it_input_current + step; it_input_current < it_this_input_end; ++it_input_current)
 							{
-								static_assert(std::is_same_v<decltype(result), std::size_t>);
-								it_output_current += result;
-								if (result == 0) { return false; }
+								if (const auto word = *it_input_current;
+									(word & 0xffff'ff80) == 0)
+								{
+									// 1-byte ascii
+									*(it_output_current + 0) = static_cast<output_char_type>(word);
+									it_output_current += 1;
+								}
+								else if ((word & 0xffff'f800) == 0)
+								{
+									// 2-bytes utf8
+									// 0b110?'???? 0b10??'????
+									*(it_output_current + 0) = static_cast<output_char_type>((word >> 6) | 0b1100'0000);
+									*(it_output_current + 1) = static_cast<output_char_type>((word & 0b0011'1111) | 0b1000'0000);
+									it_output_current += 2;
+								}
+								else if ((word & 0xffff'0000) == 0)
+								{
+									// 3-bytes utf8
+									if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
+									{
+										if (word >= 0xd800 and word <= 0xdfff)
+										{
+											if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
+											else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
+											{
+												return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error};
+											}
+											else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+										}
+									}
+									// 0b1110'???? 0b10??'???? 0b10??'????
+									*(it_output_current + 0) = static_cast<output_char_type>((word >> 12) | 0b1110'0000);
+									*(it_output_current + 1) = static_cast<output_char_type>(((word >> 6) & 0b0011'1111) | 0b1000'0000);
+									*(it_output_current + 2) = static_cast<output_char_type>((word & 0b0011'1111) | 0b1000'0000);
+									it_output_current += 3;
+								}
+								else
+								{
+									// 4-bytes utf8
+									if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
+									{
+										if (word > 0x0010'ffff)
+										{
+											if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
+											else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
+											{
+												return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error};
+											}
+											else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+										}
+									}
+									// 0b1111'0??? 0b10??'???? 0b10??'???? 0b10??'????
+									*(it_output_current + 0) = static_cast<output_char_type>((word >> 18) | 0b1111'0000);
+									*(it_output_current + 1) = static_cast<output_char_type>(((word >> 12) & 0b0011'1111) | 0b1000'0000);
+									*(it_output_current + 2) = static_cast<output_char_type>(((word >> 6) & 0b0011'1111) | 0b1000'0000);
+									*(it_output_current + 3) = static_cast<output_char_type>((word & 0b0011'1111) | 0b1000'0000);
+									it_output_current += 4;
+								}
 							}
-							else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-							{
-								static_assert(std::is_same_v<decltype(result), result_type>);
-								it_output_current += result.count;
-								if (not result) { result.count += length_if_error; }
-								return result;
-							}
-							else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 						}
 					}
 
@@ -1278,8 +1323,14 @@ namespace gal::prometheus::chars
 						if constexpr (
 							ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
 							ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
-						) { it_output_current += scalar_result; }
-						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE) { it_output_current += scalar_result.count; }
+						)
+						{
+							it_output_current += scalar_result;
+						}
+						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
+						{
+							it_input_current += scalar_result.count;
+						}
 						else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 					}
 				}
@@ -1346,27 +1397,69 @@ namespace gal::prometheus::chars
 						}
 						else
 						{
-							const auto step = static_cast<size_type>(it_input_end - it_input_current < 8 ? it_input_end - it_input_current : 8);
-							if constexpr (auto result = scalar_type::convert<OutputCategory, ProcessPolicy, CheckNextBlock>(
-									{it_input_current, step},
-									it_output_current
-								);
-								ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-								ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
-							)
+							// scalar fallback
+							// const auto step = static_cast<size_type>(it_input_end - it_input_current - 1 < 7 ? it_input_end - it_input_current - 1 : 7);
+							// auto result = scalar_type::convert<OutputCategory, ProcessPolicy, false>({it_input_current, step}, it_output_current);
+							// we don't currently have a way to get the length of the input read and output write at the same time (especially with the possibility of errors),
+							// so we inline it in our code (chars/scalar_utf32.ixx).
+							const auto step = static_cast<std::ptrdiff_t>(it_input_end - it_input_current - 1 < 7 ? it_input_end - it_input_current - 1 : 7);
+							for (const auto it_this_input_end = it_input_current + step; it_input_current < it_this_input_end; ++it_input_current)
 							{
-								static_assert(std::is_same_v<decltype(result), std::size_t>);
-								it_output_current += result;
-								if (result == 0) { return false; }
+								if (const auto word = *it_input_current;
+									(word & 0xffff'0000) == 0)
+								{
+									if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
+									{
+										if (word >= 0xd800 and word <= 0xdfff)
+										{
+											if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
+											else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
+											{
+												return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error};
+											}
+										}
+									}
+									const auto real_word = [w = static_cast<output_char_type>(word)]() noexcept
+									{
+										if constexpr ((OutputCategory == CharsCategory::UTF16_LE) != (std::endian::native == std::endian::little))
+										{
+											return std::byteswap(w);
+										}
+										else { return w; }
+									}();
+
+									*(it_output_current + 0) = static_cast<output_char_type>(real_word);
+									it_output_current += 1;
+								}
+								else
+								{
+									if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
+									{
+										if (word > 0x0010'ffff)
+										{
+											if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT) { return 0; }
+											else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
+											{
+												return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error};
+											}
+										}
+										const auto [high_surrogate, low_surrogate] = [real_word = word - 0x0001'0000]() noexcept
+										{
+											const auto high = 0xd800 + (real_word >> 10);
+											const auto low = 0xdc00 + (real_word & 0x3ff);
+											if constexpr ((OutputCategory == CharsCategory::UTF16_LE) != (std::endian::native == std::endian::little))
+											{
+												return std::make_pair(std::byteswap(high), std::byteswap(low));
+											}
+											else { return std::make_pair(high, low); }
+										}();
+
+										*(it_output_current + 0) = static_cast<output_char_type>(high_surrogate);
+										*(it_output_current + 1) = static_cast<output_char_type>(low_surrogate);
+										it_output_current += 2;
+									}
+								}
 							}
-							else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-							{
-								static_assert(std::is_same_v<decltype(result), result_type>);
-								it_output_current += result.count;
-								if (not result) { result.count += length_if_error; }
-								return result;
-							}
-							else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 						}
 					}
 
@@ -1420,7 +1513,7 @@ namespace gal::prometheus::chars
 							ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
 							ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
 						) { it_output_current += scalar_result; }
-						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE) { it_output_current += scalar_result.count; }
+						else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE) { it_input_current += scalar_result.count; }
 						else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 					}
 				}
