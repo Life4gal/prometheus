@@ -6,11 +6,13 @@
 #if GAL_PROMETHEUS_USE_MODULE
 export module gal.prometheus.gui;
 
+export import :font;
 export import :draw_list;
 
 #else
 #pragma once
 
+#include <gui/font.ixx>
 #include <gui/draw_list.ixx>
 
 #endif
