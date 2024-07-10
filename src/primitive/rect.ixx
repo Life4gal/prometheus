@@ -209,13 +209,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		[[nodiscard]] constexpr auto width() const noexcept -> value_type
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_DEBUG_ASSUME(valid());
 			return extent.width;
 		}
 
 		[[nodiscard]] constexpr auto height() const noexcept -> value_type
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_DEBUG_ASSUME(valid());
 			return extent.height;
 		}
 
