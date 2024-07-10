@@ -56,6 +56,9 @@ namespace
 	ComPtr<ID3D11RasterizerState> g_rasterizer_state = nullptr;
 	ComPtr<ID3D11DepthStencilState> g_depth_stencil_state = nullptr;
 
+	// todo
+	gui::bitmap_font_type g_bitmap_font;
+
 	ComPtr<ID3D11ShaderResourceView> g_font_texture_view = nullptr;
 	ComPtr<ID3D11SamplerState> g_font_sampler = nullptr;
 
@@ -189,6 +192,15 @@ int main(int, char**)
 		return -1;
 	}
 
+	g_bitmap_font = gui::load_font(R"(C:\Windows\Fonts\arial.ttf)", 48);
+
+	if (g_bitmap_font.texture_data == nullptr)
+	{
+		// todo
+		__debugbreak();
+		return -1;
+	}
+
 	// Setup Platform/Renderer backends
 	win32_init(window);
 	d3d_init();
@@ -308,7 +320,7 @@ namespace
 					nullptr,
 					create_device_flags,
 					feature_levels,
-					std::ranges::size(feature_levels),
+					static_cast<UINT>(std::ranges::size(feature_levels)),
 					D3D11_SDK_VERSION,
 					&swap_chain_desc,
 					g_swap_chain.ReleaseAndGetAddressOf(),
@@ -326,7 +338,7 @@ namespace
 						nullptr,
 						create_device_flags,
 						feature_levels,
-						std::ranges::size(feature_levels),
+						static_cast<UINT>(std::ranges::size(feature_levels)),
 						D3D11_SDK_VERSION,
 						&swap_chain_desc,
 						g_swap_chain.ReleaseAndGetAddressOf(),
@@ -492,7 +504,7 @@ namespace
 				};
 				check_hr_error(g_device->CreateInputLayout(
 					input_element_desc,
-					std::ranges::size(input_element_desc),
+					static_cast<UINT>(std::ranges::size(input_element_desc)),
 					shader_blob->GetBufferPointer(),
 					shader_blob->GetBufferSize(),
 					g_vertex_input_layout.ReleaseAndGetAddressOf()
@@ -632,7 +644,9 @@ namespace
 
 		// Create font texture
 		{
-			const auto [pixels, width, height] = load_font();
+			const auto pixels = g_bitmap_font.texture_data.get();
+			const auto width = g_bitmap_font.texture_size.width;
+			const auto height = g_bitmap_font.texture_size.height;
 			assert(pixels);
 
 			const D3D11_TEXTURE2D_DESC texture_2d_desc{
@@ -712,6 +726,8 @@ namespace
 		g_draw_list.shared_data = g_draw_list_shared_data;
 		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_LINE;
 		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_FILL;
+
+		g_draw_list.text(g_bitmap_font, 24.f, {100, 700}, primitive::colors::red, "hello world!\nhello world!\n\nhello world!", 200.f);
 
 		g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
 		g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
