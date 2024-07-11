@@ -488,12 +488,6 @@ set(
 		${PROJECT_SOURCE_DIR}/src/error/platform.impl.ixx
 		${PROJECT_SOURCE_DIR}/src/error/command_line.impl.ixx
 		${PROJECT_SOURCE_DIR}/src/error/instruction_set.impl.ixx
-
-		# =========================
-		# GUI
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/gui/font.impl.ixx
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -598,17 +592,6 @@ target_compile_features(
 		PRIVATE
 		cxx_std_23
 )
-
-# LINK 3rd-PARTY LIBRARIES
-set(${PROJECT_NAME_PREFIX}3RD_PARTY_DEPENDENCIES "")
-include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/freetype.cmake)
-
-message(STATUS "=======================================")
-message(STATUS "[${PROJECT_NAME}] DEPENDENCIES:")
-foreach (DEPENDENCY IN LISTS ${PROJECT_NAME_PREFIX}3RD_PARTY_DEPENDENCIES)
-	message(STATUS "-->\t\t ${DEPENDENCY}")
-endforeach (DEPENDENCY IN LISTS ${PROJECT_NAME_PREFIX}3RD_PARTY_DEPENDENCIES)
-message(STATUS "=======================================")
 
 # SET DEBUG POSTFIX ==> lib${PROJECT_NAME} -> Release lib${PROJECT}d -> Debug
 set(${PROJECT_NAME_PREFIX}DEBUG_POSTFIX d CACHE STRING "Debug library postfix.")

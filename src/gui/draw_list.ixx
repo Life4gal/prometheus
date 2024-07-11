@@ -7,27 +7,40 @@
 module;
 
 #include <prometheus/macro.hpp>
+#if __has_include(<intrin.h>)
 #include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
 
 export module gal.prometheus.primitive:draw_list;
 
 import std;
 import gal.prometheus.functional;
 import gal.prometheus.primitive;
+import gal.prometheus.chars;
 
 #else
 #pragma once
+
+#if __has_include(<intrin.h>)
+#include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
 
 #include <vector>
 #include <type_traits>
 #include <utility>
 #include <limits>
 #include <numbers>
-#include <intrin.h>
 
 #include <prometheus/macro.hpp>
 #include <functional/functional.ixx>
 #include <primitive/primitive.ixx>
+#include <chars/chars.ixx>
 
 #endif
 
@@ -848,8 +861,9 @@ namespace gal::prometheus::gui
 			index_list.push_back(current_vertex_index + 3);
 		}
 
+		template<font_type_t FontType>
 		constexpr auto draw_text(
-			const bitmap_font_type& bitmap_font,
+			const FontType& font,
 			const float font_size,
 			const point_type& p,
 			const color_type& color,
@@ -857,34 +871,49 @@ namespace gal::prometheus::gui
 			const float wrap_width
 		) noexcept -> void
 		{
-			const auto vertex_count = 4 * text.size();
-			const auto index_count = 6 * text.size();
+			using glyph_type = typename FontType::glyph_type;
+
+			const auto utf32_text = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(text);
+
+			const auto vertex_count = 4 * utf32_text.size();
+			const auto index_count = 6 * utf32_text.size();
 			vertex_list.reserve(vertex_list.size() + vertex_count);
 			index_list.reserve(index_list.size() + index_count);
 
-			const float scale = font_size / bitmap_font.pixel_height;
+			const float scale = font_size / font.pixel_height;
 
-			auto it_input_current = text.begin();
-			const auto it_input_end = text.end();
+			auto it_input_current = utf32_text.begin();
+			const auto it_input_end = utf32_text.end();
 
 			auto cursor = p + point_type{0, font_size};
 
 			while (it_input_current != it_input_end)
 			{
-				// todo: ascii only
 				const auto c = *it_input_current;
 				it_input_current += 1;
-				if (c == '\n' or (wrap_width > 0 and cursor.x - p.x > wrap_width))
+
+				if (c == U'\n' or (wrap_width > 0 and cursor.x - p.x > wrap_width))
 				{
 					cursor.x = p.x;
-					cursor.y += bitmap_font.pixel_height * scale;
-					if (c == '\n')
+					cursor.y += font.pixel_height * scale;
+					if (c == U'\n')
 					{
 						continue;
 					}
 				}
 
-				const auto& [glyph_rect, glyph_uv, glyph_advance_x] = bitmap_font.glyphs[static_cast<std::ptrdiff_t>(static_cast<unsigned char>(c))];
+				const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&font, c]
+				{
+					if (const auto glyph_it = font.glyphs.find(c);
+						glyph_it == font.glyphs.end())
+					{
+						return is_glyph_type<glyph_type>::pack(font.default_glyph);
+					}
+					else
+					{
+						return is_glyph_type<glyph_type>::pack(glyph_it->second);
+					}
+				}();
 
 				const auto advance_x = glyph_advance_x * scale;
 				const rect_type char_rect{cursor + point_type{glyph_rect.left_top().x, -glyph_rect.left_top().y} * scale, glyph_rect.size() * scale};
@@ -1718,8 +1747,9 @@ namespace gal::prometheus::gui
 			path_stroke(color, DrawFlag::NONE, thickness);
 		}
 
+		template<font_type_t FontType>
 		constexpr auto text(
-			const bitmap_font_type& bitmap_font,
+			const FontType& font,
 			const float font_size,
 			const point_type& p,
 			const color_type& color,
@@ -1731,7 +1761,7 @@ namespace gal::prometheus::gui
 
 			if (color.alpha == 0) { return; }
 
-			draw_text(bitmap_font, font_size, p, color, text, wrap_width);
+			draw_text(font, font_size, p, color, text, wrap_width);
 		}
 	};
 
