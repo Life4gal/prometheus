@@ -179,7 +179,7 @@ namespace gal::prometheus::functional
 				: data_{data_type::constructor_tag<functor_pointer>{}, const_cast<functor_pointer>(static_cast<const void*>(&functor))},
 				  invoker_{&do_invoke_functor<Functor>} {}
 
-			constexpr auto operator()(Args... args) noexcept(noexcept(std::invoke(invoker_, data_, static_cast<Args>(args)...)))
+			constexpr auto operator()(Args... args) const noexcept(noexcept(std::invoke(invoker_, data_, static_cast<Args>(args)...)))
 			{
 				return std::invoke(invoker_, data_, static_cast<Args>(args)...);
 			}
