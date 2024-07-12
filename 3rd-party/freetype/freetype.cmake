@@ -1,4 +1,4 @@
-function(link_freetype project_name)
+function(link_3rd_library_freetype project_name)
 	target_include_directories(
 		${project_name}
 		PUBLIC
@@ -16,19 +16,21 @@ function(link_freetype project_name)
 		set(brotlidec_dll_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/brotlidec.dll)
 		set(brotlicommon_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/brotlicommon.dll)
 
-		add_library(
-				freetype_library
-				SHARED
-				IMPORTED
-		)
+		if(NOT TARGET freetype_library)
+			add_library(
+					freetype_library
+					SHARED
+					IMPORTED
+			)
 
-		set_target_properties(
-				freetype_library
-				PROPERTIES
-				IMPORTED_LOCATION ${freetype_dll_path}
-				IMPORTED_IMPLIB ${freetype_lib_path}
-				LINKER_LANGUAGE C
-		)
+			set_target_properties(
+					freetype_library
+					PROPERTIES
+					IMPORTED_LOCATION ${freetype_dll_path}
+					IMPORTED_IMPLIB ${freetype_lib_path}
+					LINKER_LANGUAGE C
+			)
+		endif(NOT TARGET freetype_library)
 
 		get_target_property(
 				target_binary_directory
@@ -73,4 +75,4 @@ function(link_freetype project_name)
 	else ()
 		message(FATAL_ERROR "Unsupported Platform: ${CMAKE_SYSTEM_NAME}")
 	endif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-endfunction(link_freetype project_name)
+endfunction(link_3rd_library_freetype project_name)
