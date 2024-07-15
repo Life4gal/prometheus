@@ -33,31 +33,6 @@ namespace
 
 	using d3d_constant_buffer_type = float[4][4];
 
-	struct glyph_type
-	{
-		using rect_type = primitive::basic_rect<float, 2>;
-
-		rect_type rect;
-		rect_type uv;
-		float advance_x;
-	};
-
-	struct bitmap_font_type
-	{
-		using extent_type = primitive::basic_extent<float, 2>;
-		using char_type = char32_t;
-		using glyph_type = glyph_type;
-
-		float pixel_height;
-
-		extent_type texture_size;
-		// texture_size.width * texture_size.height (RGBA)
-		std::unique_ptr<std::uint32_t[]> texture_data;
-
-		std::unordered_map<char_type, glyph_type> glyphs;
-		glyph_type default_glyph;
-	};
-
 	LONG g_window_position_left = 100;
 	LONG g_window_position_top = 100;
 	LONG g_window_width = 1280;
@@ -82,7 +57,7 @@ namespace
 	ComPtr<ID3D11RasterizerState> g_rasterizer_state = nullptr;
 	ComPtr<ID3D11DepthStencilState> g_depth_stencil_state = nullptr;
 
-	bitmap_font_type g_bitmap_font;
+	auto g_draw_list_shared_data = std::make_shared<gui::DrawListSharedData>();
 
 	ComPtr<ID3D11ShaderResourceView> g_font_texture_view = nullptr;
 	ComPtr<ID3D11SamplerState> g_font_sampler = nullptr;
@@ -128,8 +103,6 @@ namespace
 
 	auto create_render_target() -> void;
 	auto cleanup_render_target() -> void;
-
-	[[nodiscard]] auto load_font(std::string_view font_path, std::uint32_t pixel_height, gui::glyph_ranges_view_type glyph_ranges) noexcept -> bitmap_font_type;
 
 	auto win32_init(const_window_type window) -> void;
 	auto win32_new_frame(const_window_type window) -> void;
@@ -220,14 +193,7 @@ int main(int, char**)
 	}
 
 	const auto range = gui::glyph_range_simplified_chinese_common();
-	g_bitmap_font = load_font(R"(C:\Windows\Fonts\msyh.ttc)", 48, range);
-
-	if (g_bitmap_font.texture_data == nullptr)
-	{
-		// todo
-		__debugbreak();
-		return -1;
-	}
+	g_draw_list_shared_data->set_default_font(gui::load_font(R"(C:\Windows\Fonts\msyh.ttc)", 48, range));
 
 	// Setup Platform/Renderer backends
 	win32_init(window);
@@ -406,180 +372,6 @@ namespace
 	auto cleanup_render_target() -> void //
 	{
 		g_render_target_view.Reset();
-	}
-
-	[[nodiscard]] auto calculate_texture_size(const FT_Face ft_face, const gui::glyph_ranges_view_type glyph_ranges) noexcept -> std::uint32_t
-	{
-		std::uint32_t total_area = 0;
-		std::uint32_t max_width = 0;
-		std::uint32_t max_height = 0;
-
-		for (const auto [first, second]: glyph_ranges)
-		{
-			for (auto c = first; c <= second; ++c)
-			{
-				if (FT_Load_Char(ft_face, c, FT_LOAD_RENDER))
-				{
-					continue;
-				}
-				const auto& g = ft_face->glyph;
-
-				total_area += (g->bitmap.width + 1) * (g->bitmap.rows + 1); // Add padding
-				if (g->bitmap.width > max_width)
-				{
-					max_width = g->bitmap.width;
-				}
-				if (g->bitmap.rows > max_height)
-				{
-					max_height = g->bitmap.rows;
-				}
-			}
-		}
-
-		// Ensure the texture size is large enough to accommodate the largest glyph
-		auto side = static_cast<std::uint32_t>(std::sqrt(total_area));
-		if (side < max_width)
-		{
-			side = max_width;
-		}
-		if (side < max_height)
-		{
-			side = max_height;
-		}
-
-		// Round up to the next power of 2 for better texture alignment
-		std::uint32_t texture_size = 1;
-		while (texture_size < side)
-		{
-			texture_size *= 2;
-		}
-
-		return texture_size;
-	}
-
-	[[nodiscard]] auto load_font(const std::string_view font_path, const std::uint32_t pixel_height, const gui::glyph_ranges_view_type glyph_ranges) noexcept -> bitmap_font_type
-	{
-		FT_Library ft_library;
-		if (FT_Init_FreeType(&ft_library))
-		{
-			// Could not initialize FreeType library
-			return bitmap_font_type{};
-		}
-
-		FT_Face ft_face;
-		if (FT_New_Face(ft_library, font_path.data(), 0, &ft_face))
-		{
-			FT_Done_FreeType(ft_library);
-			// Could not load font
-			return bitmap_font_type{};
-		}
-
-		FT_Set_Pixel_Sizes(ft_face, 0, pixel_height);
-
-		const auto size = calculate_texture_size(ft_face, glyph_ranges);
-		const auto atlas_width = size;
-		const auto atlas_height = size;
-
-		bitmap_font_type font
-		{
-				.pixel_height = static_cast<float>(pixel_height),
-				.texture_size = {static_cast<float>(atlas_width), static_cast<float>(atlas_height)},
-				.texture_data = std::make_unique_for_overwrite<std::uint32_t[]>(static_cast<std::size_t>(atlas_width * atlas_height)),
-				.glyphs = {},
-				.default_glyph = {}
-		};
-
-		std::uint32_t pen_x = 0;
-		std::uint32_t pen_y = 0;
-		std::uint32_t max_row_height = 0;
-
-		for (const auto [first, second]: glyph_ranges)
-		{
-			for (auto c = first; c <= second; ++c)
-			{
-				if (FT_Load_Char(ft_face, c, FT_LOAD_RENDER))
-				{
-					continue;
-				}
-
-				const auto& g = ft_face->glyph;
-
-				if (pen_x + g->bitmap.width >= atlas_width)
-				{
-					pen_x = 0;
-					pen_y += max_row_height;
-					max_row_height = 0;
-				}
-
-				if (pen_y + g->bitmap.rows >= atlas_height)
-				{
-					// Texture atlas is too small
-					FT_Done_Face(ft_face);
-					FT_Done_FreeType(ft_library);
-
-					return bitmap_font_type{};
-				}
-
-				for (std::uint32_t y = 0; y < g->bitmap.rows; ++y)
-				{
-					for (std::uint32_t x = 0; x < g->bitmap.width; ++x)
-					{
-						const auto index = pen_x + x + (pen_y + y) * atlas_width;
-						font.texture_data[index] =
-								// A
-								g->bitmap.buffer[x + y * g->bitmap.pitch] << 24 |
-								// B
-								std::uint32_t{255} << 16 |
-								// G
-								std::uint32_t{255} << 8 |
-								// R
-								std::uint32_t{255};
-					}
-				}
-
-				font.glyphs[c] = {
-						.rect =
-						{
-								glyph_type::rect_type::point_type
-								{
-										static_cast<float>(g->bitmap_left),
-										static_cast<float>(g->bitmap_top)
-								},
-								glyph_type::rect_type::extent_type
-								{
-										static_cast<float>(g->bitmap.width),
-										static_cast<float>(g->bitmap.rows)
-								}
-						},
-						.uv = {
-								glyph_type::rect_type::point_type
-								{
-										static_cast<float>(pen_x) / static_cast<float>(atlas_width),
-										static_cast<float>(pen_y) / static_cast<float>(atlas_height)
-								},
-								glyph_type::rect_type::extent_type
-								{
-										static_cast<float>(g->bitmap.width) / static_cast<float>(atlas_width),
-										static_cast<float>(g->bitmap.rows) / static_cast<float>(atlas_height)
-								}
-						},
-						.advance_x = static_cast<float>(g->advance.x) / 64.f
-				};
-
-				pen_x += g->bitmap.width;
-				if (g->bitmap.rows > max_row_height)
-				{
-					max_row_height = g->bitmap.rows;
-				}
-			}
-		}
-
-		font.default_glyph = font.glyphs[U'?'];
-
-		FT_Done_Face(ft_face);
-		FT_Done_FreeType(ft_library);
-
-		return font;
 	}
 
 	auto win32_init(const_window_type window) -> void //
@@ -846,9 +638,10 @@ namespace
 
 		// Create font texture
 		{
-			const auto pixels = g_bitmap_font.texture_data.get();
-			const auto width = g_bitmap_font.texture_size.width;
-			const auto height = g_bitmap_font.texture_size.height;
+			const auto& font = g_draw_list_shared_data->get_default_font();
+			const auto pixels = font.texture_data.get();
+			const auto width = font.texture_size.width;
+			const auto height = font.texture_size.height;
 			assert(pixels);
 
 			const D3D11_TEXTURE2D_DESC texture_2d_desc{
@@ -920,18 +713,15 @@ namespace
 	static_assert(sizeof(gui::DrawList::vertex_type) == sizeof(d3d_vertex_type));
 	static_assert(sizeof(gui::DrawList::index_type) == sizeof(d3d_vertex_index_type));
 
-	auto g_draw_list_shared_data = std::make_shared<gui::DrawListSharedData>();
+
 	gui::DrawList g_draw_list;
 
 	auto prometheus_init() -> void //
 	{
-		g_draw_list_shared_data->set_default_font(g_bitmap_font);
-
 		g_draw_list.shared_data = g_draw_list_shared_data;
 		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_LINE;
 		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_FILL;
 
-		g_draw_list.text(g_bitmap_font, 24.f, {100, 700}, primitive::colors::red, "你好世界!\nhello world!\n\nhello world!", 200.f);
 		g_draw_list.text(24.f, {300, 700}, primitive::colors::red, "你好世界!\nhello world!\n\nhello world!", 200.f);
 
 		g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);

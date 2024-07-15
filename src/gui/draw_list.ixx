@@ -295,6 +295,8 @@ namespace gal::prometheus::gui
 
 		uv_type texture_uv_of_white_pixel_;
 
+		font_type default_font_;
+
 	public:
 		DrawListSharedData() noexcept
 			:
@@ -302,7 +304,8 @@ namespace gal::prometheus::gui
 			circle_segment_max_error_{},
 			arc_fast_radius_cutoff_{},
 			curve_tessellation_tolerance_{1.25f},
-			texture_uv_of_white_pixel_{vertex_type::default_uv}
+			texture_uv_of_white_pixel_{vertex_type::default_uv},
+			default_font_{}
 		{
 			set_circle_tessellation_max_error(.3f);
 		}
@@ -365,6 +368,20 @@ namespace gal::prometheus::gui
 		[[nodiscard]] constexpr auto get_texture_uv_of_white_pixel() const noexcept -> const uv_type&
 		{
 			return texture_uv_of_white_pixel_;
+		}
+
+		auto set_default_font(font_type&& font) noexcept -> void
+		{
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(font.texture_data);
+
+			default_font_ = std::move(font);
+		}
+
+		[[nodiscard]] constexpr auto get_default_font() const noexcept -> const font_type&
+		{
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(default_font_.texture_data);
+
+			return default_font_;
 		}
 	};
 
@@ -861,9 +878,8 @@ namespace gal::prometheus::gui
 			index_list.push_back(current_vertex_index + 3);
 		}
 
-		template<font_type_t FontType>
 		constexpr auto draw_text(
-			const FontType& font,
+			const font_type& font,
 			const float font_size,
 			const point_type& p,
 			const color_type& color,
@@ -871,8 +887,6 @@ namespace gal::prometheus::gui
 			const float wrap_width
 		) noexcept -> void
 		{
-			using glyph_type = typename FontType::glyph_type;
-
 			const auto utf32_text = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(text);
 
 			const auto vertex_count = 4 * utf32_text.size();
@@ -902,17 +916,15 @@ namespace gal::prometheus::gui
 					}
 				}
 
-				const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&font, c]
+				const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&]
 				{
-					if (const auto glyph_it = font.glyphs.find(c);
-						glyph_it == font.glyphs.end())
+					if (const auto it = font.glyphs.find(c);
+						it != font.glyphs.end())
 					{
-						return is_glyph_type<glyph_type>::pack(font.default_glyph);
+						return it->second;
 					}
-					else
-					{
-						return is_glyph_type<glyph_type>::pack(glyph_it->second);
-					}
+
+					return font.fallback_glyph;
 				}();
 
 				const auto advance_x = glyph_advance_x * scale;
@@ -1747,9 +1759,8 @@ namespace gal::prometheus::gui
 			path_stroke(color, DrawFlag::NONE, thickness);
 		}
 
-		template<font_type_t FontType>
 		constexpr auto text(
-			const FontType& font,
+			const font_type& font,
 			const float font_size,
 			const point_type& p,
 			const color_type& color,
@@ -1762,6 +1773,21 @@ namespace gal::prometheus::gui
 			if (color.alpha == 0) { return; }
 
 			draw_text(font, font_size, p, color, text, wrap_width);
+		}
+
+		constexpr auto text(
+			const float font_size,
+			const point_type& p,
+			const color_type& color,
+			const std::string_view text,
+			const float wrap_width = .0f
+		) noexcept -> void
+		{
+			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+
+			if (color.alpha == 0) { return; }
+
+			draw_text(shared_data->get_default_font(), font_size, p, color, text, wrap_width);
 		}
 	};
 

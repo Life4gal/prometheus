@@ -41,8 +41,6 @@ add_test(
 		COMMAND ${PROJECT_NAME}
 )
 
-include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/freetype.cmake)
-
 #find_package(Vulkan)
 #
 #if (Vulkan_FOUND)
@@ -120,4 +118,4 @@ target_link_libraries(
 		prometheus
 )
 
-link_freetype(${PROJECT_NAME}-gui-dx11)
+link_3rd_library_freetype(${PROJECT_NAME}-gui-dx11)

@@ -85,6 +85,8 @@ include(${PROJECT_SOURCE_DIR}/cmake_utils/cpm_install.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake_utils/nuget_install.cmake)
 set(${PROJECT_NAME_PREFIX}3RD_PARTY_PATH ${PROJECT_SOURCE_DIR}/3rd-party)
 
+include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/freetype.cmake)
+
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	set(${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS ON)
 	set(${PROJECT_NAME_PREFIX}PLATFORM ${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)
@@ -488,6 +490,12 @@ set(
 		${PROJECT_SOURCE_DIR}/src/error/platform.impl.ixx
 		${PROJECT_SOURCE_DIR}/src/error/command_line.impl.ixx
 		${PROJECT_SOURCE_DIR}/src/error/instruction_set.impl.ixx
+
+		# =========================
+		# GUI
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/gui/font.impl.ixx
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -592,6 +600,8 @@ target_compile_features(
 		PRIVATE
 		cxx_std_23
 )
+
+link_3rd_library_freetype(${PROJECT_NAME})
 
 # SET DEBUG POSTFIX ==> lib${PROJECT_NAME} -> Release lib${PROJECT}d -> Debug
 set(${PROJECT_NAME_PREFIX}DEBUG_POSTFIX d CACHE STRING "Debug library postfix.")
