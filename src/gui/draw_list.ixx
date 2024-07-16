@@ -928,7 +928,10 @@ namespace gal::prometheus::gui
 				}();
 
 				const auto advance_x = glyph_advance_x * scale;
-				const rect_type char_rect{cursor + point_type{glyph_rect.left_top().x, -glyph_rect.left_top().y} * scale, glyph_rect.size() * scale};
+				const rect_type char_rect{
+						cursor + point_type{static_cast<point_type::value_type>(glyph_rect.left_top().x), -static_cast<point_type::value_type>(glyph_rect.left_top().y)} * scale,
+						static_cast<rect_type::extent_type>(glyph_rect.size()) * scale
+				};
 				cursor.x += advance_x;
 
 				const auto current_vertex_index = static_cast<index_type>(vertex_list.size());

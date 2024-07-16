@@ -48,16 +48,17 @@ namespace gal::prometheus::gui
 
 	struct glyph_type
 	{
-		using rect_type = primitive::basic_rect<float, 2>;
+		using rect_type = primitive::basic_rect<std::uint32_t, 2>;
+		using uv_type = primitive::basic_rect<float, 2>;
 
 		rect_type rect;
-		rect_type uv;
+		uv_type uv;
 		float advance_x;
 	};
 
 	struct font_type
 	{
-		using extent_type = primitive::basic_extent<float, 2>;
+		using extent_type = primitive::basic_extent<std::uint32_t, 2>;
 		using char_type = char32_t;
 		using glyph_type = glyph_type;
 

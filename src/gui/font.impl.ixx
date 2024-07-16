@@ -243,7 +243,7 @@ namespace gal::prometheus::gui
 		font_type font
 		{
 				.pixel_height = static_cast<float>(pixel_height),
-				.texture_size = {static_cast<float>(atlas_width), static_cast<float>(atlas_height)},
+				.texture_size = {atlas_width, atlas_height},
 				.texture_data = std::make_unique_for_overwrite<std::uint32_t[]>(static_cast<std::size_t>(atlas_width * atlas_height)),
 				.glyphs = {},
 				.fallback_glyph = {}
@@ -302,22 +302,22 @@ namespace gal::prometheus::gui
 						{
 								glyph_type::rect_type::point_type
 								{
-										static_cast<float>(g->bitmap_left),
-										static_cast<float>(g->bitmap_top)
+										static_cast<std::uint32_t>(g->bitmap_left),
+										static_cast<std::uint32_t>(g->bitmap_top)
 								},
 								glyph_type::rect_type::extent_type
 								{
-										static_cast<float>(g->bitmap.width),
-										static_cast<float>(g->bitmap.rows)
+										static_cast<std::uint32_t>(g->bitmap.width),
+										static_cast<std::uint32_t>(g->bitmap.rows)
 								}
 						},
 						.uv = {
-								glyph_type::rect_type::point_type
+								glyph_type::uv_type::point_type
 								{
 										static_cast<float>(pen_x) / static_cast<float>(atlas_width),
 										static_cast<float>(pen_y) / static_cast<float>(atlas_height)
 								},
-								glyph_type::rect_type::extent_type
+								glyph_type::uv_type::extent_type
 								{
 										static_cast<float>(g->bitmap.width) / static_cast<float>(atlas_width),
 										static_cast<float>(g->bitmap.rows) / static_cast<float>(atlas_height)
