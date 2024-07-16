@@ -129,8 +129,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		constexpr auto operator=(const U& value) noexcept -> basic_extent&
 		{
 			const auto [_width, _height] = value;
-			width = _width;
-			height = _height;
+			width = static_cast<value_type>(_width);
+			height = static_cast<value_type>(_height);
 
 			return *this;
 		}
@@ -175,6 +175,30 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			: width{width},
 			  height{height},
 			  depth{depth} {}
+
+		template<extent_compatible_t<basic_extent> U>
+		constexpr explicit basic_extent(const U& value) noexcept
+			: basic_extent{}
+		{
+			*this = value;
+		}
+
+		constexpr basic_extent(const basic_extent&) noexcept = default;
+		constexpr basic_extent(basic_extent&&) noexcept = default;
+		constexpr auto operator=(const basic_extent&) noexcept -> basic_extent& = default;
+		constexpr auto operator=(basic_extent&&) noexcept -> basic_extent& = default;
+		constexpr ~basic_extent() noexcept = default;
+
+		template<extent_compatible_t<basic_extent> U>
+		constexpr auto operator=(const U& value) noexcept -> basic_extent&
+		{
+			const auto [_width, _height, _depth] = value;
+			width = static_cast<value_type>(_width);
+			height = static_cast<value_type>(_height);
+			depth = static_cast<value_type>(_depth);
+
+			return *this;
+		}
 
 		template<std::size_t Index>
 			requires(Index < 3)

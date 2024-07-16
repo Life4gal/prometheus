@@ -145,8 +145,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		constexpr auto operator=(const U& value) noexcept -> basic_point&
 		{
 			const auto [_x, _y] = value;
-			x = _x;
-			y = _y;
+			x = static_cast<value_type>(_x);
+			y = static_cast<value_type>(_y);
 
 			return *this;
 		}
@@ -254,6 +254,30 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			: x{x},
 			  y{y},
 			  z{z} {}
+
+		template<point_compatible_t<basic_point> U>
+		constexpr explicit basic_point(const U& value) noexcept
+			: basic_point{}
+		{
+			*this = value;
+		}
+
+		constexpr basic_point(const basic_point&) noexcept = default;
+		constexpr basic_point(basic_point&&) noexcept = default;
+		constexpr auto operator=(const basic_point&) noexcept -> basic_point& = default;
+		constexpr auto operator=(basic_point&&) noexcept -> basic_point& = default;
+		constexpr ~basic_point() noexcept = default;
+
+		template<point_compatible_t<basic_point> U>
+		constexpr auto operator=(const U& value) noexcept -> basic_point&
+		{
+			const auto [_x, _y, _z] = value;
+			x = static_cast<value_type>(_x);
+			y = static_cast<value_type>(_y);
+			z = static_cast<value_type>(_z);
+
+			return *this;
+		}
 
 		template<std::size_t Index>
 			requires(Index < 3)

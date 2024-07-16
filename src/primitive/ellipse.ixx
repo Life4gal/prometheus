@@ -180,15 +180,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			if constexpr (meta::member_size<U>() == 2)
 			{
 				const auto& [_center, _radius] = value;
-				center = _center;
-				radius = _radius;
+				center = static_cast<point_type>(_center);
+				radius = static_cast<radius_type>(_radius);
 			}
 			else if constexpr (meta::member_size<U>() == 3)
 			{
 				const auto& [_center, _radius, _rotation] = value;
-				center = _center;
-				radius = _radius;
-				rotation = _rotation;
+				center = static_cast<point_type>(_center);
+				radius = static_cast<radius_type>(_radius);
+				rotation = static_cast<rotation_type>(_rotation);
 			}
 			else
 			{
