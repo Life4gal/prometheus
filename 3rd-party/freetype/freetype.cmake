@@ -1,7 +1,7 @@
 function(link_3rd_library_freetype project_name)
 	target_include_directories(
 		${project_name}
-		PUBLIC
+		PRIVATE
 		${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/include
 	)
 
