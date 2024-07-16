@@ -82,23 +82,23 @@ add_test(
 #	)
 #endif (Vulkan_FOUND)
 
-#add_executable(
-#		${PROJECT_NAME}-gui-dx12
-#
-#		${PROJECT_SOURCE_DIR}/src/gui/main_dx12.cpp
-#)
-#
-#target_compile_features(
-#		${PROJECT_NAME}-gui-dx12
-#		PUBLIC
-#		cxx_std_23
-#)
-#
-#target_link_libraries(
-#		${PROJECT_NAME}-gui-dx12
-#		PUBLIC
-#		prometheus
-#)
+add_executable(
+		${PROJECT_NAME}-gui-dx12
+
+		${PROJECT_SOURCE_DIR}/src/gui/main_dx12.cpp
+)
+
+target_compile_features(
+		${PROJECT_NAME}-gui-dx12
+		PUBLIC
+		cxx_std_23
+)
+
+target_link_libraries(
+		${PROJECT_NAME}-gui-dx12
+		PUBLIC
+		prometheus
+)
 
 add_executable(
 		${PROJECT_NAME}-gui-dx11
@@ -117,5 +117,3 @@ target_link_libraries(
 		PUBLIC
 		prometheus
 )
-
-link_3rd_library_freetype(${PROJECT_NAME}-gui-dx11)

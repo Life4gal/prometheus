@@ -9,9 +9,6 @@ import gal.prometheus;
 #include <wrl/client.h>
 #include <comdef.h>
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -172,7 +169,7 @@ int main(int, char**)
 	// Create the application's window
 	const auto window = CreateWindow(
 		window_class.lpszClassName,
-		"GUI Playground Example",
+		"GUI Playground Example(DX11)",
 		WS_OVERLAPPEDWINDOW,
 		g_window_position_left,
 		g_window_position_top,
@@ -248,6 +245,7 @@ int main(int, char**)
 
 			// Rendering
 			prometheus_render();
+
 			constexpr float clear_color_value[]{.45f, .55f, .65f, 1.f};
 			g_device_immediate_context->OMSetRenderTargets(1, g_render_target_view.GetAddressOf(), nullptr);
 			g_device_immediate_context->ClearRenderTargetView(g_render_target_view.Get(), clear_color_value);
@@ -660,7 +658,7 @@ namespace
 			const D3D11_SUBRESOURCE_DATA subresource_data
 			{
 					.pSysMem = pixels,
-					.SysMemPitch = static_cast<UINT>(width) * 4,
+					.SysMemPitch = static_cast<UINT>(width * sizeof(decltype(*pixels))),
 					.SysMemSlicePitch = 0
 			};
 
@@ -695,7 +693,9 @@ namespace
 	}
 
 	auto d3d_init() -> void //
-	{}
+	{
+		//
+	}
 
 	auto d3d_new_frame() -> void
 	{
@@ -713,7 +713,6 @@ namespace
 	static_assert(sizeof(gui::DrawList::vertex_type) == sizeof(d3d_vertex_type));
 	static_assert(sizeof(gui::DrawList::index_type) == sizeof(d3d_vertex_index_type));
 
-
 	gui::DrawList g_draw_list;
 
 	auto prometheus_init() -> void //
@@ -722,7 +721,7 @@ namespace
 		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_LINE;
 		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_FILL;
 
-		g_draw_list.text(24.f, {300, 700}, primitive::colors::red, "你好世界!\nhello world!\n\nhello world!", 200.f);
+		g_draw_list.text(24.f, {20, 20}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n", 200.f);
 
 		g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
 		g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
@@ -927,5 +926,7 @@ namespace
 	}
 
 	auto prometheus_shutdown() -> void //
-	{}
+	{
+		//
+	}
 }
