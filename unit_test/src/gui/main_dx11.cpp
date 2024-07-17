@@ -9,6 +9,8 @@ import gal.prometheus;
 #include <wrl/client.h>
 #include <comdef.h>
 
+#include <cassert>
+
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -87,6 +89,9 @@ namespace
 
 		if constexpr (Abort)
 		{
+			#if defined(DEBUG) or defined(_DEBUG)
+			__debugbreak();
+			#endif
 			std::abort();
 		}
 		else
@@ -372,9 +377,17 @@ namespace
 		g_render_target_view.Reset();
 	}
 
+	INT64 g_ticks_per_second = 0;
+	INT64 g_last_time = 0;
+	INT64 g_frame_count = 0;
+	float g_fps = 0;
+
 	auto win32_init(const_window_type window) -> void //
 	{
 		(void)window;
+
+		QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&g_ticks_per_second));
+		QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&g_last_time));
 	}
 
 	auto win32_new_frame(const_window_type window) -> void
@@ -385,6 +398,18 @@ namespace
 		g_window_position_top = rect.top;
 		g_window_width = rect.right - rect.left;
 		g_window_height = rect.bottom - rect.top;
+
+		INT64 current_time;
+		QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&current_time));
+		const auto elapsed = static_cast<float>(current_time - g_last_time) / static_cast<float>(g_ticks_per_second);
+		g_frame_count += 1;
+
+		if (elapsed > .5f)
+		{
+			g_fps = static_cast<float>(g_frame_count) / elapsed;
+			g_frame_count = 0;
+			g_last_time = current_time;
+		}
 	}
 
 	auto win32_shutdown() -> void
@@ -720,8 +745,19 @@ namespace
 		g_draw_list.shared_data = g_draw_list_shared_data;
 		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_LINE;
 		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_FILL;
+	}
 
-		g_draw_list.text(24.f, {20, 20}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n", 200.f);
+	auto prometheus_new_frame() -> void //
+	{
+		g_draw_list.vertex_list.clear();
+		g_draw_list.index_list.clear();
+	}
+
+	auto prometheus_render() -> void
+	{
+		g_draw_list.text(24.f, {10, 10}, primitive::colors::blue, std::format("FPS: {:.3f}", g_fps));
+
+		g_draw_list.text(24.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n", 200.f);
 
 		g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
 		g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
@@ -774,16 +810,6 @@ namespace
 		g_draw_list.circle_filled({700, 650}, 5, primitive::colors::red);
 		g_draw_list.circle_filled({550, 800}, 5, primitive::colors::red);
 		g_draw_list.bezier_quadratic({600, 600}, {700, 650}, {550, 800}, primitive::colors::green, 5);
-	}
-
-	auto prometheus_new_frame() -> void //
-	{
-		//
-	}
-
-	auto prometheus_render() -> void
-	{
-		//
 	}
 
 	auto prometheus_draw() -> void
