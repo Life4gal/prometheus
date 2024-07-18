@@ -16,13 +16,11 @@ module;
 export module gal.prometheus.concurrency:thread.impl;
 
 import std;
-import gal.prometheus.error;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :thread;
 
 #else
-#pragma once
-
 #include <unordered_map>
 #include <mutex>
 #include <filesystem>
@@ -35,7 +33,7 @@ import :thread;
 
 #include <prometheus/macro.hpp>
 #include <concurrency/thread.ixx>
-#include <error/error.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -68,7 +66,7 @@ namespace gal::prometheus::concurrency
 			#endif
 
 			#else
-			GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED();
+			GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE();
 			#endif
 		}
 	}
@@ -92,7 +90,7 @@ namespace gal::prometheus::concurrency
 			#endif
 
 			#else
-			GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED();
+			GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE();
 			#endif
 		}
 
@@ -102,7 +100,7 @@ namespace gal::prometheus::concurrency
 			// fixme
 			const auto n = std::filesystem::path{name};
 			const auto result = SetThreadDescription(GetCurrentThread(), n.c_str());
-			GAL_PROMETHEUS_DEBUG_ASSUME(SUCCEEDED(result));
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(SUCCEEDED(result));
 
 			const auto lock = std::scoped_lock{thread_names_mutex};
 			const auto id = get_id();
@@ -110,7 +108,7 @@ namespace gal::prometheus::concurrency
 				it != thread_names.end()) { it->second = n.string(); }
 			else { thread_names.emplace_hint(it, id, n.string()); }
 			#else
-			GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED();
+			GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE();
 			#endif
 		}
 

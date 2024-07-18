@@ -17,7 +17,7 @@ module;
 export module gal.prometheus.functional:math;
 
 import std;
-import gal.prometheus.error;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 #else
 #pragma once
@@ -32,7 +32,7 @@ import gal.prometheus.error;
 #endif
 
 #include <prometheus/macro.hpp>
-#include <error/error.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -126,7 +126,7 @@ namespace gal::prometheus::functional
 		requires std::is_arithmetic_v<T>
 	[[nodiscard]] constexpr auto tgamma(const T value) noexcept -> T
 	{
-		GAL_PROMETHEUS_DEBUG_AXIOM(value >= 0);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(value >= 0);
 
 		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{
@@ -147,7 +147,7 @@ namespace gal::prometheus::functional
 		requires std::is_arithmetic_v<T>
 	[[nodiscard]] constexpr auto pow(const T base, const int exp) noexcept -> T
 	{
-		GAL_PROMETHEUS_DEBUG_AXIOM(exp >= 0);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(exp >= 0);
 
 		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{
@@ -163,7 +163,7 @@ namespace gal::prometheus::functional
 		requires std::is_arithmetic_v<T>
 	[[nodiscard]] constexpr auto sqrt(const T value) noexcept -> T
 	{
-		GAL_PROMETHEUS_DEBUG_AXIOM(value >= 0);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(value >= 0);
 
 		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 		{

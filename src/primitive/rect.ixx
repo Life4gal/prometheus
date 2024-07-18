@@ -11,8 +11,8 @@ module;
 export module gal.prometheus.primitive:rect;
 
 import std;
-import gal.prometheus.error;
 import gal.prometheus.meta;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :multidimensional;
 import :point;
@@ -27,11 +27,11 @@ import :extent;
 #include <format>
 
 #include <prometheus/macro.hpp>
-#include <error/error.ixx>
 #include <meta/meta.ixx>
 #include <primitive/multidimensional.ixx>
 #include <primitive/point.ixx>
 #include <primitive/extent.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -209,13 +209,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		[[nodiscard]] constexpr auto width() const noexcept -> value_type
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
 			return extent.width;
 		}
 
 		[[nodiscard]] constexpr auto height() const noexcept -> value_type
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
 			return extent.height;
 		}
 
@@ -223,16 +223,16 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		[[nodiscard]] constexpr auto includes(const point_type& p) const noexcept -> bool
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
 
 			return p.between(left_top(), right_bottom());
 		}
 
 		[[nodiscard]] constexpr auto includes(const basic_rect& rect) const noexcept -> bool
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
-			GAL_PROMETHEUS_DEBUG_ASSUME(not rect.empty() and rect.valid());
-			GAL_PROMETHEUS_DEBUG_ASSUME(size().exact_greater_than(rect.size()));
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(size().exact_greater_than(rect.size()));
 
 			return
 					rect.point.x >= point.x and
@@ -243,8 +243,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		[[nodiscard]] constexpr auto intersects(const basic_rect& rect) const noexcept -> bool
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
-			GAL_PROMETHEUS_DEBUG_ASSUME(not rect.empty() and rect.valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
 
 			return not(
 				rect.point.x >= point.x + width() or
@@ -427,19 +427,19 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		[[nodiscard]] constexpr auto width() const noexcept -> value_type
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
 			return extent.width;
 		}
 
 		[[nodiscard]] constexpr auto height() const noexcept -> value_type
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
 			return extent.height;
 		}
 
 		[[nodiscard]] constexpr auto depth() const noexcept -> value_type
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
 			return extent.depth;
 		}
 
@@ -447,16 +447,16 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		[[nodiscard]] constexpr auto includes(const point_type& p) const noexcept -> bool
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
 
 			return p.between(left_top_near(), right_bottom_near()) and p.z < point.z + depth();
 		}
 
 		[[nodiscard]] constexpr auto includes(const basic_rect& rect) const noexcept -> bool
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
-			GAL_PROMETHEUS_DEBUG_ASSUME(not rect.empty() and rect.valid());
-			GAL_PROMETHEUS_DEBUG_ASSUME(size().exact_greater_than(rect.size()));
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(size().exact_greater_than(rect.size()));
 
 			return
 					rect.point.x >= point.x and
@@ -469,8 +469,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		[[nodiscard]] constexpr auto intersects(const basic_rect& rect) const noexcept -> bool
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
-			GAL_PROMETHEUS_DEBUG_ASSUME(not rect.empty() and rect.valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
 
 			return not(
 				rect.point.x >= point.x + width() or

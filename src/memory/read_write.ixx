@@ -11,8 +11,8 @@ module;
 export module gal.prometheus.memory:read_write;
 
 import std;
-import gal.prometheus.error;
 import gal.prometheus.functional;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 #else
 #pragma once
@@ -22,8 +22,8 @@ import gal.prometheus.functional;
 #include <cstring>
 
 #include <prometheus/macro.hpp>
-#include <error/error.ixx>
 #include <functional/functional.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -38,7 +38,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::memory)
 		         )
 	[[nodiscard]] constexpr auto unaligned_load(const In* source) noexcept -> T
 	{
-		GAL_PROMETHEUS_DEBUG_NOT_NULL(source, "Cannot unaligned_load from null!");
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(source != nullptr, "Cannot unaligned_load from null!");
 
 		T result{};
 
@@ -81,7 +81,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::memory)
 		         )
 	constexpr auto unaligned_store(const T value, Out* dest) noexcept -> void
 	{
-		GAL_PROMETHEUS_DEBUG_NOT_NULL(dest, "Cannot unaligned_store from null!");
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(dest != nullptr, "Cannot unaligned_store from null!");
 
 		using unsigned_type = std::make_unsigned_t<T>;
 

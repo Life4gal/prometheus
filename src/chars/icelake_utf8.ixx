@@ -19,9 +19,9 @@ module;
 export module gal.prometheus.chars:icelake.utf8;
 
 import std;
-import gal.prometheus.error;
 import gal.prometheus.meta;
 import gal.prometheus.memory;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :encoding;
 import :scalar.utf8;
@@ -37,9 +37,10 @@ import :scalar.utf8;
 
 #include <prometheus/macro.hpp>
 #include <chars/encoding.ixx>
-#include <error/error.ixx>
 #include <meta/meta.ixx>
 #include <memory/memory.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #endif
 
 namespace gal::prometheus::chars
@@ -269,7 +270,7 @@ namespace gal::prometheus::chars
 		template<bool IsBigEndian, bool Masked>
 		[[nodiscard]] auto utf32_to_utf16(const data_type input, const data_type byte_flip, const int count, auto it_output_current) noexcept -> std::size_t
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(count > 0);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(count > 0);
 
 			const auto v_0000_ffff = _mm512_set1_epi32(0x0000'ffff);
 			const auto v_0001_0000 = _mm512_set1_epi32(0x0001'0000);
@@ -611,7 +612,7 @@ namespace gal::prometheus::chars
 			template<bool ReturnResultType = false>
 			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 				const auto input_length = input.size();
 
@@ -678,7 +679,7 @@ namespace gal::prometheus::chars
 			template<CharsCategory OutputCategory>
 			[[nodiscard]] constexpr static auto length(const input_type input) noexcept -> size_type
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 				const auto input_length = input.size();
 
@@ -801,11 +802,11 @@ namespace gal::prometheus::chars
 				typename output_type<OutputCategory>::pointer output
 			) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
 				if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
 				{
-					GAL_PROMETHEUS_DEBUG_ASSUME(validate(input));
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(validate(input));
 				}
 
 				using output_pointer_type = typename output_type<OutputCategory>::pointer;
@@ -904,7 +905,7 @@ namespace gal::prometheus::chars
 					{
 						const auto process_result = process.template operator()<false>({it_input_current, 64}, next_leading, next_bit6);
 
-						if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT) { GAL_PROMETHEUS_DEBUG_ASSUME(process_result == true); }
+						if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT) { GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(process_result == true); }
 						else { if (not process_result) { return fallback({it_input_current, static_cast<size_type>(it_input_end - it_input_current)}); } }
 					}
 
@@ -913,7 +914,7 @@ namespace gal::prometheus::chars
 					{
 						const auto process_result = process.template operator()<true>({it_input_current, remaining}, next_leading, next_bit6);
 
-						if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT) { GAL_PROMETHEUS_DEBUG_ASSUME(process_result == true); }
+						if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT) { GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(process_result == true); }
 						else { if (not process_result) { return fallback({it_input_current, remaining}); } }
 					}
 				}

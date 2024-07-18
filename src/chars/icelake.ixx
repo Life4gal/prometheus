@@ -8,10 +8,18 @@
 #if GAL_PROMETHEUS_USE_MODULE
 module;
 
+#if __has_include(<intrin.h>)
 #include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
 #include <prometheus/macro.hpp>
 
 export module gal.prometheus.chars:icelake;
+
+import std;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :encoding;
 export import :icelake.ascii;
@@ -20,13 +28,20 @@ export import :icelake.utf16;
 export import :icelake.utf32;
 
 #else
+#if __has_include(<intrin.h>)
 #include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
 
 #include <chars/encoding.ixx>
 #include <chars/icelake_ascii.ixx>
 #include <chars/icelake_utf8.ixx>
 #include <chars/icelake_utf16.ixx>
 #include <chars/icelake_utf32.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #endif
 
 // ReSharper disable once CppRedundantNamespaceDefinition
@@ -38,7 +53,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 	public:
 		[[nodiscard]] constexpr static auto encoding_of(const std::span<const char8_t> input) noexcept -> EncodingType
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 			if (const auto bom = bom_of(input); bom != EncodingType::UNKNOWN)
 			{

@@ -19,9 +19,9 @@ module;
 export module gal.prometheus.chars:icelake.ascii;
 
 import std;
-import gal.prometheus.error;
 import gal.prometheus.meta;
 import gal.prometheus.memory;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :encoding;
 import :scalar.ascii;
@@ -37,8 +37,9 @@ import :scalar.ascii;
 
 #include <prometheus/macro.hpp>
 #include <chars/encoding.ixx>
-#include <error/error.ixx>
 #include <meta/meta.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #endif
 
 // ReSharper disable once CppRedundantNamespaceDefinition
@@ -59,7 +60,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		template<bool ReturnResultType = false>
 		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 			const auto input_length = input.size();
 
@@ -126,7 +127,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		template<CharsCategory OutputCategory>
 		[[nodiscard]] constexpr static auto length(const input_type input) noexcept -> size_type
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 			const auto input_length = input.size();
 
@@ -239,11 +240,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			typename output_type<OutputCategory>::pointer output
 		) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
 			if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
 			{
-				GAL_PROMETHEUS_DEBUG_ASSUME(validate(input));
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(validate(input));
 			}
 
 			using output_pointer_type = typename output_type<OutputCategory>::pointer;
@@ -366,7 +367,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 				{
 					const auto non_ascii = _mm512_movepi8_mask(in);
 					const auto count = std::popcount(non_ascii);
-					GAL_PROMETHEUS_DEBUG_AXIOM(count >= 0);
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(count >= 0);
 					if (count != 0) { return process.template operator()<false>(in, 64, out); }
 
 					_mm512_storeu_si512(out, in);
@@ -434,7 +435,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 					_mm512_storeu_si512(it_output_current, out);
 				}
 
-				GAL_PROMETHEUS_DEBUG_AXIOM(it_input_current == it_rounded_input_end);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_rounded_input_end);
 
 				if (const auto remaining = input_length - rounded_input_length;
 					remaining != 0)
@@ -469,7 +470,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 					_mm512_storeu_si512(it_output_current, out);
 				}
 
-				GAL_PROMETHEUS_DEBUG_AXIOM(it_input_current == it_rounded_input_end);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_rounded_input_end);
 
 				if (const auto remaining = input_length - rounded_input_length;
 					remaining != 0)

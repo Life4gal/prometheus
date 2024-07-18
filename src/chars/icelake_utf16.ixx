@@ -19,9 +19,9 @@ module;
 export module gal.prometheus.chars:icelake.utf16;
 
 import std;
-import gal.prometheus.error;
 import gal.prometheus.meta;
 import gal.prometheus.memory;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :encoding;
 import :scalar.utf16;
@@ -37,8 +37,9 @@ import :scalar.utf16;
 
 #include <prometheus/macro.hpp>
 #include <chars/encoding.ixx>
-#include <error/error.ixx>
 #include <meta/meta.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #endif
 
 // ReSharper disable once CppRedundantNamespaceDefinition
@@ -59,7 +60,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		template<std::endian Endian, bool ReturnResultType = false>
 		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 			const auto input_length = input.size();
 
@@ -167,7 +168,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		template<CharsCategory OutputCategory, std::endian Endian = std::endian::native>
 		[[nodiscard]] constexpr static auto length(const input_type input) noexcept -> size_type
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 			const auto input_length = input.size();
 
@@ -278,11 +279,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			typename output_type<OutputCategory>::pointer output
 		) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
 			if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
 			{
-				GAL_PROMETHEUS_DEBUG_ASSUME(validate<Endian>(input));
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(validate<Endian>(input));
 			}
 
 			using output_pointer_type = typename output_type<OutputCategory>::pointer;
@@ -948,8 +949,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		/*constexpr*/
 		static auto flip_endian(const input_type input, const output_type<input_category>::pointer output) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
 
 			const auto input_length = input.size();
 
