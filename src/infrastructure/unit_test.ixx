@@ -837,6 +837,11 @@ namespace gal::prometheus::unit_test
 			{
 				const auto do_compare = [&e = epsilon_](const auto& left, const auto& right) noexcept -> bool
 				{
+					#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+					// error : lambda capture 'e' is not used [-Werror,-Wunused-lambda-capture]
+					(void)e;
+					#endif
+
 					if constexpr (category == ExpressionCategory::EQUAL)
 					{
 						using std::operator==;
@@ -4565,7 +4570,7 @@ namespace gal::prometheus::unit_test
 
 			using DispatcherTestBase<DispatcherTestLiteral>::operator=;
 
-			[[nodiscard]] constexpr static auto name() noexcept -> auto { return StringLiteral.operator name_type(); }
+			[[nodiscard]] constexpr static auto name() noexcept -> auto { return StringLiteral.template as<name_type>(); }
 		};
 
 		class DispatcherTest : public DispatcherTestBase<DispatcherTest>
@@ -4592,12 +4597,27 @@ namespace gal::prometheus::unit_test
 	// =========================================
 
 	#if defined(__clang__) and __clang_major__ < 19
-	#warning "error: alias template 'value' requires template arguments; argument deduction only allowed for class templates"
+	// #warning "error: alias template 'value' requires template arguments; argument deduction only allowed for class templates"
 	#endif
 	template<typename T>
-	using value = operands::OperandValue<T>;
+	// using value = operands::OperandValue<T>;
+	[[nodiscard]] constexpr auto value(T&& v) noexcept -> auto
+	{
+		return operands::OperandValue{std::forward<T>(v)};
+	}
+
+	// template<typename T>
+	// using ref = operands::OperandValueRef<T>;
 	template<typename T>
-	using ref = operands::OperandValueRef<T>;
+	[[nodiscard]] constexpr auto ref(T& v) noexcept -> auto
+	{
+		return operands::OperandValueRef{v};
+	}
+	template<typename T>
+	[[nodiscard]] constexpr auto ref(const T& v) noexcept -> auto
+	{
+		return operands::OperandValueRef{v};
+	}
 
 	template<typename ExceptionType = void, std::invocable InvocableType>
 	[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> operands::OperandThrow<ExceptionType> { return {invocable}; }
@@ -4633,7 +4653,7 @@ namespace gal::prometheus::unit_test
 		constexpr explicit(false) suite(InvocableType invocable) noexcept //
 			requires requires { +invocable; }
 		{
-			dispatcher::register_event(events::EventSuite{.name = SuiteName.operator std::string_view(), .suite = +invocable});
+			dispatcher::register_event(events::EventSuite{.name = SuiteName.template as<events::name_type>(), .suite = +invocable});
 		}
 	};
 

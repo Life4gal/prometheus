@@ -101,33 +101,33 @@ namespace
 			{
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8_CHAR>(source) == "valid utf8_char string"_b) << fatal;
-				expect(chars::length<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::ASCII>(source) == value{source.size()}) << fatal;
+				expect(chars::length<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::ASCII>(source) == value(source.size())) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::ASCII>(source);
-				expect((dest == ref{source}) == "valid ascii string"_b) << fatal;
+				expect((dest == ref(source)) == "valid ascii string"_b) << fatal;
 
 				const auto dest_a = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::ASCII, chars::InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-				expect((dest_a == ref{source}) == "valid ascii string"_b) << fatal;
+				expect((dest_a == ref(source)) == "valid ascii string"_b) << fatal;
 			};
 
 			"to_utf8_char"_test = [source = make_source<char>(generator, random.get<std::size_t>(0, 65535))]
 			{
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8_CHAR>(source) == "valid utf8_char string"_b) << fatal;
-				expect(chars::length<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF8_CHAR>(source) == value{source.size()}) << fatal;
+				expect(chars::length<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF8_CHAR>(source) == value(source.size())) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF8_CHAR>(source);
-				expect((dest == ref{source}) == "valid utf8_char string"_b) << fatal;
+				expect((dest == ref(source)) == "valid utf8_char string"_b) << fatal;
 
 				const auto dest_a = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF8_CHAR, chars::InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-				expect((dest_a == ref{source}) == "valid utf8_char string"_b) << fatal;
+				expect((dest_a == ref(source)) == "valid utf8_char string"_b) << fatal;
 			};
 
 			"to_utf8"_test = [source = make_source<char>(generator, random.get<std::size_t>(0, 65535))]
 			{
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8_CHAR>(source) == "valid utf8_char string"_b) << fatal;
-				expect(chars::length<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF8>(source) == value{source.size()}) << fatal;
+				expect(chars::length<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF8>(source) == value(source.size())) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF8>(source);
 				expect(chars::validate<chars::CharsCategory::UTF8>(dest) == "valid utf8 string"_b) << fatal;
@@ -248,7 +248,7 @@ namespace
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8>(source) == "valid utf8 string"_b) << fatal;
 				// fixme: MSVC ICE HERE!
-				// expect(chars::length<chars::CharsCategory::UTF8, chars::CharsCategory::ASCII>(source) == value{source.size()}) << fatal;
+				expect(chars::length<chars::CharsCategory::UTF8, chars::CharsCategory::ASCII>(source) == value(source.size())) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8, chars::CharsCategory::ASCII>(source);
 				expect(chars::validate<chars::CharsCategory::ASCII>(dest) == "valid ascii string"_b) << fatal;
@@ -262,7 +262,7 @@ namespace
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8>(source) == "valid utf8 string"_b) << fatal;
 				// fixme: MSVC ICE HERE!
-				// expect(chars::length<chars::CharsCategory::UTF8, chars::CharsCategory::UTF8_CHAR>(source) == value{source.size()}) << fatal;
+				expect(chars::length<chars::CharsCategory::UTF8, chars::CharsCategory::UTF8_CHAR>(source) == value(source.size())) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8, chars::CharsCategory::UTF8_CHAR>(source);
 				expect(chars::validate<chars::CharsCategory::UTF8_CHAR>(dest) == "valid utf8_char string"_b) << fatal;
@@ -276,13 +276,13 @@ namespace
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8>(source) == "valid utf8 string"_b) << fatal;
 				// fixme: MSVC ICE HERE!
-				// expect(chars::length<chars::CharsCategory::UTF8, chars::CharsCategory::UTF8>(source) == value{source.size()}) << fatal;
+				expect(chars::length<chars::CharsCategory::UTF8, chars::CharsCategory::UTF8>(source) == value(source.size())) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8, chars::CharsCategory::UTF8>(source);
-				expect((dest == ref{source}) == "valid utf8 string"_b) << fatal;
+				expect((dest == ref(source)) == "valid utf8 string"_b) << fatal;
 
 				const auto dest_a = chars::convert<chars::CharsCategory::UTF8, chars::CharsCategory::UTF8, chars::InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-				expect((dest_a == ref{source}) == "valid utf8 string"_b) << fatal;
+				expect((dest_a == ref(source)) == "valid utf8 string"_b) << fatal;
 			};
 
 			"to_utf16_le"_test = [source = make_source<char8_t>(generator, random.get<std::size_t>(0, 65535))]

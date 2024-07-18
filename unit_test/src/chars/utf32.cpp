@@ -136,13 +136,13 @@ namespace
 			{
 				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF32>(source) == "valid utf32 string"_b) << fatal;
-				expect(chars::length<chars::CharsCategory::UTF32, chars::CharsCategory::UTF32>(source) == value{source.size()}) << fatal;
+				expect(chars::length<chars::CharsCategory::UTF32, chars::CharsCategory::UTF32>(source) == value(source.size())) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF32, chars::CharsCategory::UTF32>(source);
-				expect((dest == ref{source}) == "valid utf32 string"_b) << fatal;
+				expect((dest == ref(source)) == "valid utf32 string"_b) << fatal;
 
 				const auto dest_a = chars::convert<chars::CharsCategory::UTF32, chars::CharsCategory::UTF32, chars::InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-				expect((dest_a == ref{source}) == "valid utf32 string"_b) << fatal;
+				expect((dest_a == ref(source)) == "valid utf32 string"_b) << fatal;
 			};
 		}
 

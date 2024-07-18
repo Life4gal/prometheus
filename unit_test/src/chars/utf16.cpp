@@ -124,10 +124,10 @@ namespace
 				expect(chars::validate<chars::CharsCategory::UTF16_LE>(source) == "valid utf16 string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF16_LE, chars::CharsCategory::UTF16_LE>(source);
-				expect((dest == ref{source}) == "valid utf16 string"_b) << fatal;
+				expect((dest == ref(source)) == "valid utf16 string"_b) << fatal;
 
 				const auto dest_a = chars::convert<chars::CharsCategory::UTF16_LE, chars::CharsCategory::UTF16_LE, chars::InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-				expect((dest_a == ref{source}) == "valid utf16 string"_b) << fatal;
+				expect((dest_a == ref(source)) == "valid utf16 string"_b) << fatal;
 			};
 
 			"to_utf16_be"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
@@ -142,7 +142,7 @@ namespace
 				expect(chars::validate<chars::CharsCategory::UTF16_BE>(dest_a) == "valid utf16_be string"_b) << fatal;
 
 				const auto flipped = chars::flip_endian(dest_a);
-				expect((flipped == ref{source}) == "valid utf16 string"_b) << fatal;
+				expect((flipped == ref(source)) == "valid utf16 string"_b) << fatal;
 			};
 
 			"to_utf32"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
@@ -254,13 +254,13 @@ namespace
 				expect(chars::validate<chars::CharsCategory::UTF16_BE>(source) == "valid utf16 string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF16_BE, chars::CharsCategory::UTF16_LE>(source);
-				expect((dest == ref{source}) == "valid utf16 string"_b) << fatal;
+				expect((dest == ref(source)) == "valid utf16 string"_b) << fatal;
 
 				const auto dest_a = chars::convert<chars::CharsCategory::UTF16_BE, chars::CharsCategory::UTF16_LE, chars::InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-				expect((dest_a == ref{source}) == "valid utf16 string"_b) << fatal;
+				expect((dest_a == ref(source)) == "valid utf16 string"_b) << fatal;
 
 				const auto flipped = chars::flip_endian(dest_a);
-				expect((flipped == ref{source}) == "valid utf16 string"_b) << fatal;
+				expect((flipped == ref(source)) == "valid utf16 string"_b) << fatal;
 			};
 
 			"to_utf16_be"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
