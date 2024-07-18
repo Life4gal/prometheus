@@ -92,9 +92,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-#        toolset: [ CLANG, MSVC ]
-        toolset: [ MSVC ]
-        build_type: [ Debug, Release ]
+        toolset: [ CLANG, MSVC ]
+        build_type: [ Debug, RelWithDebInfo ]
 
     runs-on: windows-latest
 
