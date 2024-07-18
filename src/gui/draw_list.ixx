@@ -7,27 +7,40 @@
 module;
 
 #include <prometheus/macro.hpp>
+#if __has_include(<intrin.h>)
 #include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
 
 export module gal.prometheus.primitive:draw_list;
 
 import std;
 import gal.prometheus.functional;
 import gal.prometheus.primitive;
+import gal.prometheus.chars;
 
 #else
 #pragma once
+
+#if __has_include(<intrin.h>)
+#include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
 
 #include <vector>
 #include <type_traits>
 #include <utility>
 #include <limits>
 #include <numbers>
-#include <intrin.h>
 
 #include <prometheus/macro.hpp>
 #include <functional/functional.ixx>
 #include <primitive/primitive.ixx>
+#include <chars/chars.ixx>
 
 #endif
 
@@ -282,6 +295,8 @@ namespace gal::prometheus::gui
 
 		uv_type texture_uv_of_white_pixel_;
 
+		font_type default_font_;
+
 	public:
 		DrawListSharedData() noexcept
 			:
@@ -289,7 +304,8 @@ namespace gal::prometheus::gui
 			circle_segment_max_error_{},
 			arc_fast_radius_cutoff_{},
 			curve_tessellation_tolerance_{1.25f},
-			texture_uv_of_white_pixel_{vertex_type::default_uv}
+			texture_uv_of_white_pixel_{vertex_type::default_uv},
+			default_font_{}
 		{
 			set_circle_tessellation_max_error(.3f);
 		}
@@ -352,6 +368,20 @@ namespace gal::prometheus::gui
 		[[nodiscard]] constexpr auto get_texture_uv_of_white_pixel() const noexcept -> const uv_type&
 		{
 			return texture_uv_of_white_pixel_;
+		}
+
+		auto set_default_font(font_type&& font) noexcept -> void
+		{
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(font.texture_data);
+
+			default_font_ = std::move(font);
+		}
+
+		[[nodiscard]] constexpr auto get_default_font() const noexcept -> const font_type&
+		{
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(default_font_.texture_data);
+
+			return default_font_;
 		}
 	};
 
@@ -846,6 +876,78 @@ namespace gal::prometheus::gui
 			index_list.push_back(current_vertex_index + 0);
 			index_list.push_back(current_vertex_index + 2);
 			index_list.push_back(current_vertex_index + 3);
+		}
+
+		constexpr auto draw_text(
+			const font_type& font,
+			const float font_size,
+			const point_type& p,
+			const color_type& color,
+			const std::string_view text,
+			const float wrap_width
+		) noexcept -> void
+		{
+			const auto utf32_text = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(text);
+
+			const auto vertex_count = 4 * utf32_text.size();
+			const auto index_count = 6 * utf32_text.size();
+			vertex_list.reserve(vertex_list.size() + vertex_count);
+			index_list.reserve(index_list.size() + index_count);
+
+			const float scale = font_size / font.pixel_height;
+
+			auto it_input_current = utf32_text.begin();
+			const auto it_input_end = utf32_text.end();
+
+			auto cursor = p + point_type{0, font_size};
+
+			while (it_input_current != it_input_end)
+			{
+				const auto c = *it_input_current;
+				it_input_current += 1;
+
+				if (c == U'\n' or (wrap_width > 0 and cursor.x - p.x > wrap_width))
+				{
+					cursor.x = p.x;
+					cursor.y += font.pixel_height * scale;
+					if (c == U'\n')
+					{
+						continue;
+					}
+				}
+
+				const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&]
+				{
+					if (const auto it = font.glyphs.find(c);
+						it != font.glyphs.end())
+					{
+						return it->second;
+					}
+
+					return font.fallback_glyph;
+				}();
+
+				const auto advance_x = glyph_advance_x * scale;
+				const rect_type char_rect{
+						cursor + point_type{static_cast<point_type::value_type>(glyph_rect.left_top().x), -static_cast<point_type::value_type>(glyph_rect.left_top().y)} * scale,
+						static_cast<rect_type::extent_type>(glyph_rect.size()) * scale
+				};
+				cursor.x += advance_x;
+
+				const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
+
+				vertex_list.emplace_back(char_rect.left_top(), glyph_uv.left_top(), color);
+				vertex_list.emplace_back(char_rect.right_top(), glyph_uv.right_top(), color);
+				vertex_list.emplace_back(char_rect.right_bottom(), glyph_uv.right_bottom(), color);
+				vertex_list.emplace_back(char_rect.left_bottom(), glyph_uv.left_bottom(), color);
+
+				index_list.push_back(current_vertex_index + 0);
+				index_list.push_back(current_vertex_index + 1);
+				index_list.push_back(current_vertex_index + 2);
+				index_list.push_back(current_vertex_index + 0);
+				index_list.push_back(current_vertex_index + 2);
+				index_list.push_back(current_vertex_index + 3);
+			}
 		}
 
 		constexpr auto path_clear() noexcept -> void
@@ -1658,6 +1760,37 @@ namespace gal::prometheus::gui
 
 			path_bezier_quadratic_curve(p1, p2, p3, segments);
 			path_stroke(color, DrawFlag::NONE, thickness);
+		}
+
+		constexpr auto text(
+			const font_type& font,
+			const float font_size,
+			const point_type& p,
+			const color_type& color,
+			const std::string_view text,
+			const float wrap_width = .0f
+		) noexcept -> void
+		{
+			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+
+			if (color.alpha == 0) { return; }
+
+			draw_text(font, font_size, p, color, text, wrap_width);
+		}
+
+		constexpr auto text(
+			const float font_size,
+			const point_type& p,
+			const color_type& color,
+			const std::string_view text,
+			const float wrap_width = .0f
+		) noexcept -> void
+		{
+			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+
+			if (color.alpha == 0) { return; }
+
+			draw_text(shared_data->get_default_font(), font_size, p, color, text, wrap_width);
 		}
 	};
 

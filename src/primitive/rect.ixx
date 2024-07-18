@@ -157,8 +157,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			if constexpr (meta::member_size<U>() == 2)
 			{
 				const auto [_point, _extent] = value;
-				point = _point;
-				extent = _extent;
+				point = static_cast<point_type>(_point);
+				extent = static_cast<extent_type>(_extent);
 			}
 			else if constexpr (meta::member_size<U>() == 4)
 			{
@@ -209,13 +209,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		[[nodiscard]] constexpr auto width() const noexcept -> value_type
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_DEBUG_ASSUME(valid());
 			return extent.width;
 		}
 
 		[[nodiscard]] constexpr auto height() const noexcept -> value_type
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(not empty() and valid());
+			GAL_PROMETHEUS_DEBUG_ASSUME(valid());
 			return extent.height;
 		}
 
@@ -314,17 +314,49 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			: point{left, top, near},
 			  extent{right - left, bottom - top, far - near} {}
 
+		constexpr basic_rect(const point_type& left_top_near, const point_type& right_bottom_far) noexcept
+			: basic_rect{left_top_near.x, left_top_near.y, left_top_near.z, right_bottom_far.x, right_bottom_far.y, right_bottom_far.z} {}
+
+		constexpr basic_rect(const point_type& left_top_near, const extent_type& extent) noexcept
+			: point{left_top_near},
+			  extent{extent} {}
+
+		constexpr basic_rect(const basic_rect&) noexcept = default;
+		constexpr basic_rect(basic_rect&&) noexcept = default;
+		constexpr auto operator=(const basic_rect&) noexcept -> basic_rect& = default;
+		constexpr auto operator=(basic_rect&&) noexcept -> basic_rect& = default;
+		constexpr ~basic_rect() noexcept = default;
+
+		template<rect_compatible_t<basic_rect> U>
+		constexpr auto operator=(const U& value) noexcept -> basic_rect&
+		{
+			if constexpr (meta::member_size<U>() == 2)
+			{
+				const auto [_point, _extent] = value;
+				point = static_cast<point_type>(_point);
+				extent = static_cast<extent_type>(_extent);
+			}
+			else if constexpr (meta::member_size<U>() == 6)
+			{
+				const auto [_left, _top, _near, _right, _bottom, _far] = value;
+				*this = basic_rect{
+						static_cast<value_type>(_left),
+						static_cast<value_type>(_top),
+						static_cast<value_type>(_near),
+						static_cast<value_type>(_right),
+						static_cast<value_type>(_bottom),
+						static_cast<value_type>(_far)
+				};
+			}
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+
+			return *this;
+		}
+
 		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 		#pragma pop_macro("far")
 		#pragma pop_macro("near")
 		#endif
-
-		constexpr basic_rect(const point_type& left_top_near, const point_type& right_bottom_far) noexcept
-			: basic_rect{left_top_near.x, left_top_near.y, left_top_near.z, right_bottom_far.x, right_bottom_far.y, right_bottom_far.z} {}
-
-		constexpr basic_rect(const point_type& left_top, const extent_type& extent) noexcept
-			: point{left_top},
-			  extent{extent} {}
 
 		template<std::size_t Index>
 			requires(Index < 2)

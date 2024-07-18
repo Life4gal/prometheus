@@ -9,7 +9,7 @@ import gal.prometheus;
 #include <wrl/client.h>
 #include <comdef.h>
 
-#include "font.hpp"
+#include <cassert>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -56,6 +56,8 @@ namespace
 	ComPtr<ID3D11RasterizerState> g_rasterizer_state = nullptr;
 	ComPtr<ID3D11DepthStencilState> g_depth_stencil_state = nullptr;
 
+	auto g_draw_list_shared_data = std::make_shared<gui::DrawListSharedData>();
+
 	ComPtr<ID3D11ShaderResourceView> g_font_texture_view = nullptr;
 	ComPtr<ID3D11SamplerState> g_font_sampler = nullptr;
 
@@ -87,6 +89,9 @@ namespace
 
 		if constexpr (Abort)
 		{
+			#if defined(DEBUG) or defined(_DEBUG)
+			__debugbreak();
+			#endif
 			std::abort();
 		}
 		else
@@ -169,7 +174,7 @@ int main(int, char**)
 	// Create the application's window
 	const auto window = CreateWindow(
 		window_class.lpszClassName,
-		"GUI Playground Example",
+		"GUI Playground Example(DX11)",
 		WS_OVERLAPPEDWINDOW,
 		g_window_position_left,
 		g_window_position_top,
@@ -188,6 +193,9 @@ int main(int, char**)
 		UnregisterClass(window_class.lpszClassName, window_class.hInstance);
 		return -1;
 	}
+
+	const auto range = gui::glyph_range_simplified_chinese_common();
+	g_draw_list_shared_data->set_default_font(gui::load_font(R"(C:\Windows\Fonts\msyh.ttc)", 48, range));
 
 	// Setup Platform/Renderer backends
 	win32_init(window);
@@ -242,6 +250,7 @@ int main(int, char**)
 
 			// Rendering
 			prometheus_render();
+
 			constexpr float clear_color_value[]{.45f, .55f, .65f, 1.f};
 			g_device_immediate_context->OMSetRenderTargets(1, g_render_target_view.GetAddressOf(), nullptr);
 			g_device_immediate_context->ClearRenderTargetView(g_render_target_view.Get(), clear_color_value);
@@ -308,7 +317,7 @@ namespace
 					nullptr,
 					create_device_flags,
 					feature_levels,
-					std::ranges::size(feature_levels),
+					static_cast<UINT>(std::ranges::size(feature_levels)),
 					D3D11_SDK_VERSION,
 					&swap_chain_desc,
 					g_swap_chain.ReleaseAndGetAddressOf(),
@@ -326,7 +335,7 @@ namespace
 						nullptr,
 						create_device_flags,
 						feature_levels,
-						std::ranges::size(feature_levels),
+						static_cast<UINT>(std::ranges::size(feature_levels)),
 						D3D11_SDK_VERSION,
 						&swap_chain_desc,
 						g_swap_chain.ReleaseAndGetAddressOf(),
@@ -368,9 +377,17 @@ namespace
 		g_render_target_view.Reset();
 	}
 
+	INT64 g_ticks_per_second = 0;
+	INT64 g_last_time = 0;
+	INT64 g_frame_count = 0;
+	float g_fps = 0;
+
 	auto win32_init(const_window_type window) -> void //
 	{
 		(void)window;
+
+		QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&g_ticks_per_second));
+		QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&g_last_time));
 	}
 
 	auto win32_new_frame(const_window_type window) -> void
@@ -381,6 +398,18 @@ namespace
 		g_window_position_top = rect.top;
 		g_window_width = rect.right - rect.left;
 		g_window_height = rect.bottom - rect.top;
+
+		INT64 current_time;
+		QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&current_time));
+		const auto elapsed = static_cast<float>(current_time - g_last_time) / static_cast<float>(g_ticks_per_second);
+		g_frame_count += 1;
+
+		if (elapsed > .5f)
+		{
+			g_fps = static_cast<float>(g_frame_count) / elapsed;
+			g_frame_count = 0;
+			g_last_time = current_time;
+		}
 	}
 
 	auto win32_shutdown() -> void
@@ -492,7 +521,7 @@ namespace
 				};
 				check_hr_error(g_device->CreateInputLayout(
 					input_element_desc,
-					std::ranges::size(input_element_desc),
+					static_cast<UINT>(std::ranges::size(input_element_desc)),
 					shader_blob->GetBufferPointer(),
 					shader_blob->GetBufferSize(),
 					g_vertex_input_layout.ReleaseAndGetAddressOf()
@@ -632,7 +661,10 @@ namespace
 
 		// Create font texture
 		{
-			const auto [pixels, width, height] = load_font();
+			const auto& font = g_draw_list_shared_data->get_default_font();
+			const auto pixels = font.texture_data.get();
+			const auto width = font.texture_size.width;
+			const auto height = font.texture_size.height;
 			assert(pixels);
 
 			const D3D11_TEXTURE2D_DESC texture_2d_desc{
@@ -651,7 +683,7 @@ namespace
 			const D3D11_SUBRESOURCE_DATA subresource_data
 			{
 					.pSysMem = pixels,
-					.SysMemPitch = static_cast<UINT>(width) * 4,
+					.SysMemPitch = static_cast<UINT>(width * sizeof(decltype(*pixels))),
 					.SysMemSlicePitch = 0
 			};
 
@@ -686,7 +718,9 @@ namespace
 	}
 
 	auto d3d_init() -> void //
-	{}
+	{
+		//
+	}
 
 	auto d3d_new_frame() -> void
 	{
@@ -704,7 +738,6 @@ namespace
 	static_assert(sizeof(gui::DrawList::vertex_type) == sizeof(d3d_vertex_type));
 	static_assert(sizeof(gui::DrawList::index_type) == sizeof(d3d_vertex_index_type));
 
-	auto g_draw_list_shared_data = std::make_shared<gui::DrawListSharedData>();
 	gui::DrawList g_draw_list;
 
 	auto prometheus_init() -> void //
@@ -712,6 +745,19 @@ namespace
 		g_draw_list.shared_data = g_draw_list_shared_data;
 		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_LINE;
 		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_FILL;
+	}
+
+	auto prometheus_new_frame() -> void //
+	{
+		g_draw_list.vertex_list.clear();
+		g_draw_list.index_list.clear();
+	}
+
+	auto prometheus_render() -> void
+	{
+		g_draw_list.text(24.f, {10, 10}, primitive::colors::blue, std::format("FPS: {:.3f}", g_fps));
+
+		g_draw_list.text(24.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n", 200.f);
 
 		g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
 		g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
@@ -764,16 +810,6 @@ namespace
 		g_draw_list.circle_filled({700, 650}, 5, primitive::colors::red);
 		g_draw_list.circle_filled({550, 800}, 5, primitive::colors::red);
 		g_draw_list.bezier_quadratic({600, 600}, {700, 650}, {550, 800}, primitive::colors::green, 5);
-	}
-
-	auto prometheus_new_frame() -> void //
-	{
-		//
-	}
-
-	auto prometheus_render() -> void
-	{
-		//
 	}
 
 	auto prometheus_draw() -> void
@@ -916,5 +952,7 @@ namespace
 	}
 
 	auto prometheus_shutdown() -> void //
-	{}
+	{
+		//
+	}
 }

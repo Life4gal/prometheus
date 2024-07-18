@@ -128,8 +128,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		constexpr auto operator=(const U& value) noexcept -> basic_circle&
 		{
 			const auto [_center, _radius] = value;
-			center = _center;
-			radius = _radius;
+			center = static_cast<point_type>(_center);
+			radius = static_cast<value_type>(_radius);
 
 			return *this;
 		}
