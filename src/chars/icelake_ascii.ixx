@@ -426,10 +426,18 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 					// Load 32 ascii characters into a 256-bit register
 					const auto in = _mm256_loadu_si256(GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(const __m256i *, it_input_current));
 					// Zero extend each set of 8 ascii characters to 32 16-bit integers
-					const auto out = [&byte_flip](const auto i) noexcept -> auto
+					const auto out = [byte_flip](const auto i) noexcept -> auto
 					{
 						if constexpr (is_big_endian) { return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(i), byte_flip); }
-						else { return _mm512_cvtepu8_epi16(i); }
+						else
+						{
+							#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+							// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+							(void)byte_flip;
+							#endif
+
+							return _mm512_cvtepu8_epi16(i);
+						}
 					}(in);
 					// Store the results back to memory
 					_mm512_storeu_si512(it_output_current, out);
@@ -443,10 +451,18 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 					const auto mask = (__mmask32{1} << (input_length - rounded_input_length)) - 1;
 					const auto in = _mm256_maskz_loadu_epi8(mask, it_input_current);
 					// Zero extend each set of 8 ascii characters to 32 16-bit integers
-					const auto out = [&byte_flip](const auto i) noexcept -> auto
+					const auto out = [byte_flip](const auto i) noexcept -> auto
 					{
 						if constexpr (is_big_endian) { return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(i), byte_flip); }
-						else { return _mm512_cvtepu8_epi16(i); }
+						else
+						{
+							#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+							// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+							(void)byte_flip;
+							#endif
+
+							return _mm512_cvtepu8_epi16(i);
+						}
 					}(in);
 					// Store the results back to memory
 					_mm512_mask_storeu_epi16(it_output_current, mask, out);
