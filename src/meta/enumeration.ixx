@@ -590,7 +590,7 @@ namespace gal::prometheus::meta
 
 				if constexpr (std::is_scoped_enum_v<EnumType>)
 				{
-					GAL_PROMETHEUS_DEBUG_AXIOM_NO_CHECK(last_double_colon != std::string_view::npos);
+					GAL_PROMETHEUS_ERROR_ASSUME(last_double_colon != std::string_view::npos);
 
 					return name.substr(last_double_colon + 2);
 				}

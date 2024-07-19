@@ -14,8 +14,8 @@ export module gal.prometheus.infrastructure:unit_test;
 
 import std;
 import gal.prometheus.functional;
-import gal.prometheus.error;
 import gal.prometheus.meta;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 #else
 #pragma once
@@ -35,8 +35,8 @@ import gal.prometheus.meta;
 
 #include <prometheus/macro.hpp>
 #include <functional/functional.ixx>
-#include <error/error.ixx>
 #include <meta/meta.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -191,7 +191,7 @@ namespace gal::prometheus::unit_test
 
 		[[noreturn]] auto terminate() const noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(terminator);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(terminator);
 
 			terminator();
 			std::exit(-1); // NOLINT(concurrency-mt-unsafe)
@@ -199,7 +199,7 @@ namespace gal::prometheus::unit_test
 
 		auto report_message(const std::string_view message) const noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(message_reporter);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(message_reporter);
 
 			message_reporter(message);
 		}
@@ -837,6 +837,11 @@ namespace gal::prometheus::unit_test
 			{
 				const auto do_compare = [&e = epsilon_](const auto& left, const auto& right) noexcept -> bool
 				{
+					#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+					// error : lambda capture 'e' is not used [-Werror,-Wunused-lambda-capture]
+					(void)e;
+					#endif
+
 					if constexpr (category == ExpressionCategory::EQUAL)
 					{
 						using std::operator==;
@@ -1082,9 +1087,12 @@ namespace gal::prometheus::unit_test
 			template<IdentType Type>
 			[[nodiscard]] auto nested_level_of_current_test() const noexcept -> std::size_t
 			{
-				GAL_PROMETHEUS_DEBUG_ASSUME(not current_suite_result_->test_results.empty());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not current_suite_result_->test_results.empty());
 
-				if constexpr (Type == IdentType::ASSERTION) { GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_); }
+				if constexpr (Type == IdentType::ASSERTION)
+				{
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
+				}
 				else
 				{
 					// top level
@@ -1103,7 +1111,7 @@ namespace gal::prometheus::unit_test
 			// [suite_name] test1.test2.test3
 			[[nodiscard]] auto fullname_of_current_test() const noexcept -> std::string
 			{
-				GAL_PROMETHEUS_DEBUG_ASSUME(not current_suite_result_->test_results.empty());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not current_suite_result_->test_results.empty());
 
 				auto result = std::format("[{}] ", current_suite_result_->name);
 
@@ -1122,15 +1130,15 @@ namespace gal::prometheus::unit_test
 
 			[[nodiscard]] auto ms_duration_of_current_test() const noexcept -> time_point_type::rep
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 				return std::chrono::duration_cast<time_difference_type>(current_test_result_->time_end - current_test_result_->time_start).count();
 			}
 
 			auto check_fails_may_terminate() noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 				if (current_test_result_->status == test_result_type::Status::FATAL or
 				    total_fails_exclude_current_test_ + current_test_result_->total_assertions_failed > config_->abort_after_n_failures)
@@ -1160,7 +1168,7 @@ namespace gal::prometheus::unit_test
 
 			auto on(const events::EventSuiteBegin& suite_begin) noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 
 				auto& [name, report_string, test_results] = suite_results_.emplace_back(std::string{suite_begin.name});
 				current_suite_result_ = std::ranges::prev(suite_results_.end(), 1);
@@ -1175,8 +1183,8 @@ namespace gal::prometheus::unit_test
 
 			auto on(const events::EventSuiteEnd& suite_end) -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 
 				// todo: If the user catches the exception, how do we make sure the executor is still available? How to handle the current suite?
 				if (current_suite_result_->name != suite_end.name)
@@ -1208,8 +1216,8 @@ namespace gal::prometheus::unit_test
 
 			auto on(const events::EventTestBegin& test_begin) noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 
 				// we chose to construct a temporary object here to avoid possible errors, and trust that the optimizer will forgive us ;)
 				auto t = test_result_type{
@@ -1262,8 +1270,8 @@ namespace gal::prometheus::unit_test
 
 			auto on(const events::EventTestSkip& test_skip) -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_);
 
 				on(events::EventTestBegin{.name = test_skip.name});
 				current_test_result_->status = test_result_type::Status::SKIPPED;
@@ -1272,9 +1280,9 @@ namespace gal::prometheus::unit_test
 
 			auto on(const events::EventTestEnd& test_end) -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 				// todo: If the user catches the exception, how do we make sure the executor is still available? How to handle the current test and suite?
 				if (current_test_result_->name != test_end.name)
@@ -1372,9 +1380,9 @@ namespace gal::prometheus::unit_test
 			template<expression_t Expression>
 			auto on(const events::EventAssertionPass<Expression>& assertion_pass) noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 				if (const auto level = std::to_underlying(config_->output_level);
 					level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION))
@@ -1418,9 +1426,9 @@ namespace gal::prometheus::unit_test
 			template<expression_t Expression>
 			auto on(const events::EventAssertionFail<Expression>& assertion_fail) noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 				if (const auto level = std::to_underlying(config_->output_level);
 					level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION))
@@ -1465,9 +1473,9 @@ namespace gal::prometheus::unit_test
 
 			auto on(const events::EventAssertionFatal& assertion_fatal, internal_tag) noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 				if (const auto level = std::to_underlying(config_->output_level);
 					level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION))
@@ -1510,9 +1518,9 @@ namespace gal::prometheus::unit_test
 			template<expression_t Expression>
 			auto on(const events::EventAssertionFatalSkip<Expression>& assertion_fatal_skip) noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 				if (const auto level = std::to_underlying(config_->output_level);
 					level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION))
@@ -1561,9 +1569,9 @@ namespace gal::prometheus::unit_test
 
 			auto on(const events::EventException& exception) noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 				auto& [suite_name, report_string, _] = *current_suite_result_;
 				const auto& test_name = current_test_result_->name;
@@ -1600,8 +1608,8 @@ namespace gal::prometheus::unit_test
 			template<typename MessageType>
 			auto on(const events::EventLog<MessageType>& log, internal_tag) noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 
 				if (log.message != "\n")
 				[[likely]]
@@ -1628,8 +1636,8 @@ namespace gal::prometheus::unit_test
 
 			auto on(const events::EventSummary&) noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 
 				if (const auto level = std::to_underlying(config_->output_level);
 					level >= std::to_underlying(OutputLevel::NONE))
@@ -1819,14 +1827,14 @@ namespace gal::prometheus::unit_test
 
 			~Executor() noexcept
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 
 				if (not config_->dry_run) { on(events::EventSummary{}); }
 			}
 
 			[[nodiscard]] auto config() const noexcept -> config_type&
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 
 				return *config_;
 			}
@@ -1837,7 +1845,7 @@ namespace gal::prometheus::unit_test
 
 			auto on(const events::EventSuite& suite) noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 
 				if (config_->is_suite_execute_required(suite.name))
 				{
@@ -1857,7 +1865,7 @@ namespace gal::prometheus::unit_test
 			template<typename InvocableType, typename Arg>
 			auto on(const events::EventTest<InvocableType, Arg>& test) noexcept -> void
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 
 				if (config_->is_test_execute_required(test.name, test.categories))
 				{
@@ -1882,8 +1890,8 @@ namespace gal::prometheus::unit_test
 			template<expression_t Expression>
 			auto on(const events::EventAssertion<Expression>& assertion) noexcept -> bool
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(config_);
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(current_test_result_);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 				if (config_->dry_run)
 				[[unlikely]]
@@ -4562,7 +4570,7 @@ namespace gal::prometheus::unit_test
 
 			using DispatcherTestBase<DispatcherTestLiteral>::operator=;
 
-			[[nodiscard]] constexpr static auto name() noexcept -> auto { return StringLiteral.operator name_type(); }
+			[[nodiscard]] constexpr static auto name() noexcept -> auto { return StringLiteral.template as<name_type>(); }
 		};
 
 		class DispatcherTest : public DispatcherTestBase<DispatcherTest>
@@ -4589,12 +4597,27 @@ namespace gal::prometheus::unit_test
 	// =========================================
 
 	#if defined(__clang__) and __clang_major__ < 19
-	#warning "error: alias template 'value' requires template arguments; argument deduction only allowed for class templates"
+	// #warning "error: alias template 'value' requires template arguments; argument deduction only allowed for class templates"
 	#endif
 	template<typename T>
-	using value = operands::OperandValue<T>;
+	// using value = operands::OperandValue<T>;
+	[[nodiscard]] constexpr auto value(T&& v) noexcept -> auto
+	{
+		return operands::OperandValue{std::forward<T>(v)};
+	}
+
+	// template<typename T>
+	// using ref = operands::OperandValueRef<T>;
 	template<typename T>
-	using ref = operands::OperandValueRef<T>;
+	[[nodiscard]] constexpr auto ref(T& v) noexcept -> auto
+	{
+		return operands::OperandValueRef{v};
+	}
+	template<typename T>
+	[[nodiscard]] constexpr auto ref(const T& v) noexcept -> auto
+	{
+		return operands::OperandValueRef{v};
+	}
 
 	template<typename ExceptionType = void, std::invocable InvocableType>
 	[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> operands::OperandThrow<ExceptionType> { return {invocable}; }
@@ -4630,7 +4653,7 @@ namespace gal::prometheus::unit_test
 		constexpr explicit(false) suite(InvocableType invocable) noexcept //
 			requires requires { +invocable; }
 		{
-			dispatcher::register_event(events::EventSuite{.name = SuiteName.operator std::string_view(), .suite = +invocable});
+			dispatcher::register_event(events::EventSuite{.name = SuiteName.template as<events::name_type>(), .suite = +invocable});
 		}
 	};
 

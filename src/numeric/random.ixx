@@ -11,7 +11,7 @@ module;
 export module gal.prometheus.numeric:random;
 
 import std;
-import gal.prometheus.error;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :random_engine;
 
@@ -23,8 +23,8 @@ import :random_engine;
 #include <chrono>
 
 #include <prometheus/macro.hpp>
-#include <error/error.ixx>
 #include <numeric/random_engine.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -346,7 +346,7 @@ namespace gal::prometheus::numeric
 		constexpr static auto get(const double probability = .5) noexcept(noexcept(boolean_distribution_type{probability}(engine()))) -> bool //
 			requires(is_shared_category)
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(probability >= .0 and probability <= 1.);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(probability >= .0 and probability <= 1.);
 			return boolean_distribution_type{probability}(engine());
 		}
 
@@ -365,7 +365,7 @@ namespace gal::prometheus::numeric
 		constexpr auto get(const double probability = .5) noexcept(noexcept(boolean_distribution_type{probability}(engine()))) -> bool //
 			requires(not is_shared_category)
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(probability >= .0 and probability <= 1.);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(probability >= .0 and probability <= 1.);
 			return boolean_distribution_type{probability}(engine());
 		}
 

@@ -20,6 +20,7 @@ import std;
 import gal.prometheus.functional;
 import gal.prometheus.primitive;
 import gal.prometheus.chars;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 #else
 #pragma once
@@ -41,6 +42,7 @@ import gal.prometheus.chars;
 #include <functional/functional.ixx>
 #include <primitive/primitive.ixx>
 #include <chars/chars.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -312,7 +314,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto set_circle_tessellation_max_error(const float max_error) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(max_error > .0f);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(max_error > .0f);
 
 			if (circle_segment_max_error_ == max_error) // NOLINT(clang-diagnostic-float-equal)
 			{
@@ -340,7 +342,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto set_curve_tessellation_tolerance(const float tolerance) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(tolerance > .0f);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(tolerance > .0f);
 
 			curve_tessellation_tolerance_ = tolerance;
 		}
@@ -372,14 +374,14 @@ namespace gal::prometheus::gui
 
 		auto set_default_font(font_type&& font) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(font.texture_data);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(font.texture_data);
 
 			default_font_ = std::move(font);
 		}
 
 		[[nodiscard]] constexpr auto get_default_font() const noexcept -> const font_type&
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(default_font_.texture_data);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(default_font_.texture_data);
 
 			return default_font_;
 		}
@@ -478,7 +480,7 @@ namespace gal::prometheus::gui
 				normalized_x *= (thickness * .5f);
 				normalized_y *= (thickness * .5f);
 
-				GAL_PROMETHEUS_DEBUG_AXIOM(vertex_list.size() + 3 <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(vertex_list.size() + 3 <= std::numeric_limits<index_type>::max());
 
 				const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
 
@@ -636,7 +638,7 @@ namespace gal::prometheus::gui
 				if (is_use_texture)
 				{
 					// todo: get the texture
-					GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED();
+					GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE();
 				}
 				else
 				{
@@ -762,9 +764,9 @@ namespace gal::prometheus::gui
 			std::ranges::transform(path_point, std::back_inserter(vertex_list), [opaque_uv, color](const point_type& point) noexcept -> vertex_type { return {point, opaque_uv, color}; });
 			for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
 			{
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_index + 0 <= std::numeric_limits<index_type>::max());
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_index + i - 1 <= std::numeric_limits<index_type>::max());
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_index + i <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_index + 0 <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_index + i - 1 <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_index + i <= std::numeric_limits<index_type>::max());
 
 				index_list.push_back(static_cast<index_type>(current_vertex_index + 0));
 				index_list.push_back(static_cast<index_type>(current_vertex_index + i - 1));
@@ -796,9 +798,9 @@ namespace gal::prometheus::gui
 			// Add indexes for fill
 			for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
 			{
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + 0 <= std::numeric_limits<index_type>::max());
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + ((i - 1) << 1) <= std::numeric_limits<index_type>::max());
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + (i << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + 0 <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + ((i - 1) << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (i << 1) <= std::numeric_limits<index_type>::max());
 
 				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + 0));
 				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + ((i - 1) << 1)));
@@ -831,12 +833,12 @@ namespace gal::prometheus::gui
 				vertex_list.emplace_back(path_point[n] + point_type{dm_x, dm_y}, opaque_uv, transparent_color);
 
 				// Add indexes for fringes
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + (n << 1) <= std::numeric_limits<index_type>::max());
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + (i << 1) <= std::numeric_limits<index_type>::max());
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_outer_index + (i << 1) <=std::numeric_limits<index_type>::max());
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_outer_index + (i << 1) <= std::numeric_limits<index_type>::max());
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_outer_index + (n << 1) <= std::numeric_limits<index_type>::max());
-				GAL_PROMETHEUS_DEBUG_AXIOM(current_vertex_inner_index + (n << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (n << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (i << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_outer_index + (i << 1) <=std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_outer_index + (i << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_outer_index + (n << 1) <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (n << 1) <= std::numeric_limits<index_type>::max());
 
 				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
 				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + (i << 1)));
@@ -1108,8 +1110,8 @@ namespace gal::prometheus::gui
 
 		constexpr auto path_arc_n(const circle_type& circle, const float from, const float to, const std::uint32_t segments) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(to > from);
-			GAL_PROMETHEUS_DEBUG_AXIOM(from >= 0);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(to > from);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(from >= 0);
 
 			const auto& [center, radius] = circle;
 
@@ -1211,7 +1213,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto path_rect(const rect_type& rect, float rounding, DrawFlag flag) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(rect.valid() and not rect.empty());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(rect.valid() and not rect.empty());
 
 			if (rounding >= .5f)
 			{
@@ -1316,7 +1318,7 @@ namespace gal::prometheus::gui
 			path_pin(p1);
 			if (segments == 0)
 			{
-				GAL_PROMETHEUS_DEBUG_AXIOM(shared_data->get_curve_tessellation_tolerance() > 0);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data->get_curve_tessellation_tolerance() > 0);
 
 				path_reserve_extra(bezier_curve_casteljau_max_level * 2);
 				// auto-tessellated
@@ -1343,7 +1345,7 @@ namespace gal::prometheus::gui
 			path_pin(p1);
 			if (segments == 0)
 			{
-				GAL_PROMETHEUS_DEBUG_AXIOM(shared_data->get_curve_tessellation_tolerance() > 0);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data->get_curve_tessellation_tolerance() > 0);
 
 				path_reserve_extra(bezier_curve_casteljau_max_level * 2);
 				// auto-tessellated
@@ -1366,7 +1368,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto line(const point_type& from, const point_type& to, const color_type& color, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1380,7 +1382,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto triangle(const point_type& a, const point_type& b, const point_type& c, const color_type& color, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1395,7 +1397,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto triangle_filled(const point_type& a, const point_type& b, const point_type& c, const color_type& color) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1410,7 +1412,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto rect(const rect_type& rect, const color_type& color, const float rounding = .0f, const DrawFlag flag = DrawFlag::NONE, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1435,7 +1437,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto rect_filled(const rect_type& rect, const color_type& color, const float rounding = .0f, const DrawFlag flag = DrawFlag::NONE) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1473,7 +1475,7 @@ namespace gal::prometheus::gui
 			const color_type& color_right_bottom
 		) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color_left_top.alpha == 0 or color_right_top.alpha == 0 or color_left_bottom.alpha == 0 or color_right_bottom.alpha == 0)
 			{
@@ -1497,7 +1499,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto quadrilateral(const point_type& p1, const point_type& p2, const point_type& p3, const point_type& p4, const color_type& color, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1510,7 +1512,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto quadrilateral_filled(const point_type& p1, const point_type& p2, const point_type& p3, const point_type& p4, const color_type& color) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1523,7 +1525,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto circle_n(const circle_type& circle, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0 or circle.radius < .5f or segments < 3)
 			{
@@ -1536,14 +1538,14 @@ namespace gal::prometheus::gui
 
 		constexpr auto circle_n(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			return circle_n(circle_type{center, radius}, color, segments, thickness);
 		}
 
 		constexpr auto ellipse_n(const ellipse_type& ellipse, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f or segments < 3)
 			{
@@ -1568,7 +1570,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto circle_n_filled(const circle_type& circle, const color_type& color, const std::uint32_t segments) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0 or circle.radius < .5f or segments < 3)
 			{
@@ -1586,7 +1588,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto ellipse_n_filled(const ellipse_type& ellipse, const color_type& color, const std::uint32_t segments) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f or segments < 3)
 			{
@@ -1610,7 +1612,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto circle(const circle_type& circle, const color_type& color, const std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0 or circle.radius < .5f)
 			{
@@ -1637,7 +1639,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto circle_filled(const circle_type& circle, const color_type& color, const std::uint32_t segments = 0) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0 or circle.radius < .5f)
 			{
@@ -1664,7 +1666,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto ellipse(const ellipse_type& ellipse, const color_type& color, std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f)
 			{
@@ -1694,7 +1696,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto ellipse_filled(const ellipse_type& ellipse, const color_type& color, std::uint32_t segments = 0) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f)
 			{
@@ -1731,7 +1733,7 @@ namespace gal::prometheus::gui
 			const float thickness = 1.f
 		) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1751,7 +1753,7 @@ namespace gal::prometheus::gui
 			const float thickness = 1.f
 		) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1771,7 +1773,7 @@ namespace gal::prometheus::gui
 			const float wrap_width = .0f
 		) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0) { return; }
 
@@ -1786,7 +1788,7 @@ namespace gal::prometheus::gui
 			const float wrap_width = .0f
 		) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
 
 			if (color.alpha == 0) { return; }
 

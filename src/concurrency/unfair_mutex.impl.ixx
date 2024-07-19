@@ -11,7 +11,7 @@ module;
 export module gal.prometheus.concurrency:unfair_mutex.impl;
 
 import std;
-import gal.prometheus.error;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :unfair_mutex;
 
@@ -22,7 +22,7 @@ import :unfair_mutex;
 
 #include <prometheus/macro.hpp>
 #include <concurrency/unfair_mutex.ixx>
-#include <error/error.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -44,7 +44,7 @@ namespace
 	 */
 	auto deadlock_check_graph(const UnfairMutex* const self) noexcept -> const UnfairMutex*
 	{
-		GAL_PROMETHEUS_DEBUG_NOT_NULL(self);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(self != nullptr);
 
 		const auto lock = std::scoped_lock{deadlock_mutex};
 
@@ -83,7 +83,7 @@ namespace
 	 */
 	[[maybe_unused]] auto deadlock_lock(const UnfairMutex* const self) noexcept -> const UnfairMutex*
 	{
-		GAL_PROMETHEUS_DEBUG_NOT_NULL(self);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(self != nullptr);
 
 		if (std::ranges::contains(deadlock_stack, self))
 		{
@@ -108,7 +108,7 @@ namespace
 	 */
 	[[maybe_unused]] auto deadlock_unlock(const UnfairMutex* const self) noexcept -> bool
 	{
-		GAL_PROMETHEUS_DEBUG_NOT_NULL(self);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(self != nullptr);
 
 		if (deadlock_stack.empty())
 		{
@@ -132,7 +132,7 @@ namespace
 	 */
 	[[maybe_unused]] auto deadlock_remove(const UnfairMutex* const self) noexcept -> bool
 	{
-		GAL_PROMETHEUS_DEBUG_NOT_NULL(self);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(self != nullptr);
 
 		const auto lock = std::scoped_lock{deadlock_mutex};
 		const auto sub_range =
@@ -157,7 +157,7 @@ namespace gal::prometheus::concurrency
 
 	auto UnfairMutex::lock_contended(semaphore_value_type expected) noexcept -> void
 	{
-		GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(holds_invariant());
 
 		do
 		{
@@ -166,11 +166,11 @@ namespace gal::prometheus::concurrency
 			expected = std::to_underlying(SemaphoreValue::LOCKED_NO_WAITER);
 			if (should_wait or semaphore_.compare_exchange_strong(expected, std::to_underlying(SemaphoreValue::LOCKED)))
 			{
-				GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(holds_invariant());
 				semaphore_.wait(std::to_underlying(SemaphoreValue::LOCKED));
 			}
 
-			GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(holds_invariant());
 			expected = std::to_underlying(SemaphoreValue::UNLOCKED);
 		} while (not semaphore_.compare_exchange_strong(expected, std::to_underlying(SemaphoreValue::LOCKED)));
 	}
@@ -179,13 +179,13 @@ namespace gal::prometheus::concurrency
 
 	UnfairMutex::~UnfairMutex() noexcept
 	{
-		GAL_PROMETHEUS_DEBUG_ASSUME(not is_locked());
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not is_locked());
 		if constexpr (check_deadlock) { deadlock_remove(this); }
 	}
 
 	auto UnfairMutex::is_locked() const noexcept -> bool
 	{
-		GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(holds_invariant());
 		return semaphore_.load(std::memory_order::relaxed) != std::to_underlying(SemaphoreValue::UNLOCKED);
 	}
 
@@ -194,11 +194,11 @@ namespace gal::prometheus::concurrency
 		if constexpr (check_deadlock)
 		{
 			const auto deadlock_other = deadlock_lock(this);
-			GAL_PROMETHEUS_DEBUG_ASSUME(deadlock_other != this, "this mutex is already locked");
-			GAL_PROMETHEUS_DEBUG_ASSUME(deadlock_other == nullptr, "Potential deadlock because of different lock ordering of mutexes");
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(deadlock_other != this, "this mutex is already locked");
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(deadlock_other == nullptr, "Potential deadlock because of different lock ordering of mutexes");
 		}
 
-		GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(holds_invariant());
 
 		if (auto expected = std::to_underlying(SemaphoreValue::UNLOCKED);
 			not semaphore_.compare_exchange_strong(expected, std::to_underlying(SemaphoreValue::LOCKED_NO_WAITER), std::memory_order::acquire))
@@ -207,7 +207,7 @@ namespace gal::prometheus::concurrency
 			lock_contended(expected);
 		}
 
-		GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(holds_invariant());
 	}
 
 	auto UnfairMutex::try_lock() noexcept -> bool
@@ -217,33 +217,39 @@ namespace gal::prometheus::concurrency
 			if constexpr (check_deadlock)
 			{
 				const auto deadlock_other = deadlock_lock(this);
-				GAL_PROMETHEUS_DEBUG_ASSUME(deadlock_other != this, "this mutex is already locked");
-				GAL_PROMETHEUS_DEBUG_ASSUME(deadlock_other == nullptr, "Potential deadlock because of different lock ordering of mutexes");
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(deadlock_other != this, "this mutex is already locked");
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(deadlock_other == nullptr, "Potential deadlock because of different lock ordering of mutexes");
 			}
 		}
 
-		GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(holds_invariant());
 
 		if (auto expected = std::to_underlying(SemaphoreValue::UNLOCKED);
 			not semaphore_.compare_exchange_strong(expected, std::to_underlying(SemaphoreValue::LOCKED_NO_WAITER), std::memory_order::acquire))
 		[[unlikely]]
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(holds_invariant());
 
-			if constexpr (check_deadlock) { GAL_PROMETHEUS_DEBUG_ASSUME(deadlock_unlock(this), "Unlock failed in reverse order"); }
+			if constexpr (check_deadlock)
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(deadlock_unlock(this), "Unlock failed in reverse order");
+			}
 
 			return false;
 		}
 
-		GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(holds_invariant());
 		return true;
 	}
 
 	auto UnfairMutex::unlock() noexcept -> void
 	{
-		if constexpr (check_deadlock) { GAL_PROMETHEUS_DEBUG_ASSUME(deadlock_unlock(this), "Unlock failed in reverse order"); }
+		if constexpr (check_deadlock)
+		{
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(deadlock_unlock(this), "Unlock failed in reverse order");
+		}
 
-		GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(holds_invariant());
 
 		if (semaphore_.exchange(
 			    std::to_underlying(SemaphoreValue::UNLOCKED),
@@ -255,7 +261,7 @@ namespace gal::prometheus::concurrency
 		}
 		else { std::atomic_thread_fence(std::memory_order::release); }
 
-		GAL_PROMETHEUS_DEBUG_AXIOM(holds_invariant());
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(holds_invariant());
 	}
 
 	UnfairRecursiveMutex::UnfairRecursiveMutex() noexcept
@@ -273,7 +279,7 @@ namespace gal::prometheus::concurrency
 		if (const auto id = this_thread::get_id(); owner_.load(std::memory_order::acquire) == id)
 		{
 			// owned by current thread
-			GAL_PROMETHEUS_DEBUG_AXIOM(count_ != 0);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(count_ != 0);
 			count_ += 1;
 		}
 		else
@@ -281,10 +287,10 @@ namespace gal::prometheus::concurrency
 			mutex_.lock();
 
 			// first lock
-			GAL_PROMETHEUS_DEBUG_AXIOM(count_ == 0);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(count_ == 0);
 			count_ = 1;
 
-			GAL_PROMETHEUS_DEBUG_AXIOM(owner_.load(std::memory_order::relaxed) == invalid_thread_id);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(owner_.load(std::memory_order::relaxed) == invalid_thread_id);
 			owner_.store(id, std::memory_order::release);
 		}
 	}
@@ -294,7 +300,7 @@ namespace gal::prometheus::concurrency
 		if (const auto id = this_thread::get_id(); owner_.load(std::memory_order::acquire) == id)
 		{
 			// owned by current thread
-			GAL_PROMETHEUS_DEBUG_AXIOM(count_ != 0);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(count_ != 0);
 			count_ += 1;
 
 			return true;
@@ -302,10 +308,10 @@ namespace gal::prometheus::concurrency
 		else if (mutex_.try_lock())
 		{
 			// first lock
-			GAL_PROMETHEUS_DEBUG_AXIOM(count_ == 0);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(count_ == 0);
 			count_ = 1;
 
-			GAL_PROMETHEUS_DEBUG_AXIOM(owner_.load(std::memory_order::relaxed) == invalid_thread_id);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(owner_.load(std::memory_order::relaxed) == invalid_thread_id);
 			owner_.store(id, std::memory_order::release);
 
 			return true;
@@ -317,7 +323,7 @@ namespace gal::prometheus::concurrency
 
 	auto UnfairRecursiveMutex::unlock() noexcept -> void
 	{
-		GAL_PROMETHEUS_DEBUG_AXIOM(count_ != 0);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(count_ != 0);
 
 		count_ -= 1;
 		if (count_ == 0)

@@ -13,9 +13,9 @@ module;
 export module gal.prometheus.chars:scalar.utf8;
 
 import std;
-import gal.prometheus.error;
 import gal.prometheus.meta;
 import gal.prometheus.memory;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :encoding;
 
@@ -25,9 +25,10 @@ import :encoding;
 
 #include <prometheus/macro.hpp>
 #include <chars/encoding.ixx>
-#include <error/error.ixx>
 #include <meta/meta.ixx>
 #include <memory/memory.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #endif
 
 namespace gal::prometheus::chars
@@ -47,7 +48,7 @@ namespace gal::prometheus::chars
 			template<bool ReturnResultType = false>
 			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 				const auto input_length = input.size();
 
@@ -305,10 +306,10 @@ namespace gal::prometheus::chars
 				const pointer_type end
 			) noexcept -> result_type
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(begin);
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(current);
-				GAL_PROMETHEUS_DEBUG_ASSUME(end >= current);
-				GAL_PROMETHEUS_DEBUG_ASSUME(current >= begin);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(begin != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(end >= current);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current >= begin);
 
 				// First check that we start with a leading byte
 				if ((begin[0] & 0b1100'0000) == 0b1000'0000) { return {.error = ErrorCode::TOO_LONG, .count = 0}; }
@@ -336,7 +337,7 @@ namespace gal::prometheus::chars
 			template<CharsCategory OutputCategory>
 			[[nodiscard]] constexpr static auto length(const input_type input) noexcept -> size_type
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 				if constexpr (OutputCategory == CharsCategory::ASCII) { return code_points(input); } // NOLINT(bugprone-branch-clone)
 				else if constexpr (OutputCategory == CharsCategory::UTF8_CHAR or OutputCategory == CharsCategory::UTF8) { return input.size(); }
@@ -380,11 +381,11 @@ namespace gal::prometheus::chars
 				typename output_type<OutputCategory>::pointer output
 			) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
 				if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
 				{
-					GAL_PROMETHEUS_DEBUG_ASSUME(validate(input));
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(validate(input));
 				}
 
 				using output_pointer_type = typename output_type<OutputCategory>::pointer;
@@ -876,12 +877,12 @@ namespace gal::prometheus::chars
 				typename output_type<OutputCategory>::pointer output
 			) noexcept -> result_type
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(furthest_possible_begin);
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
-				GAL_PROMETHEUS_DEBUG_ASSUME(input.data() >= furthest_possible_begin);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(furthest_possible_begin != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() >= furthest_possible_begin);
 				// fixme
-				GAL_PROMETHEUS_DEBUG_ASSUME(furthest_possible_begin - input.data() <= 3);
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(furthest_possible_begin - input.data() <= 3);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
 
 				// using output_pointer_type = typename output_type<OutputCategory>::pointer;
 				// using output_char_type = typename output_type<OutputCategory>::value_type;
@@ -913,7 +914,7 @@ namespace gal::prometheus::chars
 
 			[[nodiscard]] constexpr static auto code_points(const input_type input) noexcept -> std::size_t
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 				return std::ranges::count_if(
 					input,

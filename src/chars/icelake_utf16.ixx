@@ -19,9 +19,9 @@ module;
 export module gal.prometheus.chars:icelake.utf16;
 
 import std;
-import gal.prometheus.error;
 import gal.prometheus.meta;
 import gal.prometheus.memory;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :encoding;
 import :scalar.utf16;
@@ -37,8 +37,9 @@ import :scalar.utf16;
 
 #include <prometheus/macro.hpp>
 #include <chars/encoding.ixx>
-#include <error/error.ixx>
 #include <meta/meta.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #endif
 
 // ReSharper disable once CppRedundantNamespaceDefinition
@@ -59,7 +60,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		template<std::endian Endian, bool ReturnResultType = false>
 		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 			const auto input_length = input.size();
 
@@ -81,10 +82,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			{
 				const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-				const auto in = [&byte_flip](const auto c) noexcept
+				const auto in = [byte_flip](const auto c) noexcept
 				{
 					if constexpr (Endian == std::endian::native)
 					{
+						#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+						// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+						(void)byte_flip;
+						#endif
+
 						return _mm512_loadu_si512(c);
 					}
 					else { return _mm512_shuffle_epi8(_mm512_loadu_si512(c), byte_flip); }
@@ -123,10 +129,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			{
 				const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-				const auto in = [&byte_flip](const auto c, const auto e) noexcept
+				const auto in = [byte_flip](const auto c, const auto e) noexcept
 				{
 					if constexpr (Endian == std::endian::native)
 					{
+						#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+						// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+						(void)byte_flip;
+						#endif
+
 						return _mm512_maskz_loadu_epi16((__mmask32{1} << (e - c)) - 1, c);
 					}
 					else { return _mm512_shuffle_epi8(_mm512_maskz_loadu_epi16((__mmask32{1} << (e - c)) - 1, c), byte_flip); }
@@ -167,7 +178,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		template<CharsCategory OutputCategory, std::endian Endian = std::endian::native>
 		[[nodiscard]] constexpr static auto length(const input_type input) noexcept -> size_type
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 			const auto input_length = input.size();
 
@@ -198,10 +209,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 				for (; it_input_current + 32 <= it_input_end; it_input_current += 32)
 				{
-					const auto in = [&byte_flip](const auto c) noexcept
+					const auto in = [byte_flip](const auto c) noexcept
 					{
 						if constexpr (Endian == std::endian::native)
 						{
+							#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+							// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+							(void)byte_flip;
+							#endif
+
 							return _mm512_loadu_si512(c);
 						}
 						else
@@ -239,10 +255,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 				for (; it_input_current + 32 <= it_input_end; it_input_current += 32)
 				{
-					const auto in = [&byte_flip](const auto c) noexcept
+					const auto in = [byte_flip](const auto c) noexcept
 					{
 						if constexpr (Endian == std::endian::native)
 						{
+							#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+							// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+							(void)byte_flip;
+							#endif
+
 							return _mm512_loadu_si512(c);
 						}
 						else { return _mm512_shuffle_epi8(_mm512_loadu_si512(c), byte_flip); }
@@ -278,11 +299,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			typename output_type<OutputCategory>::pointer output
 		) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
 			if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
 			{
-				GAL_PROMETHEUS_DEBUG_ASSUME(validate<Endian>(input));
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(validate<Endian>(input));
 			}
 
 			using output_pointer_type = typename output_type<OutputCategory>::pointer;
@@ -383,10 +404,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 				{
 					const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-					const auto in = [&byte_flip](const auto c) noexcept
+					const auto in = [byte_flip](const auto c) noexcept
 					{
 						if constexpr ((Endian == std::endian::little) == (OutputCategory == CharsCategory::UTF16_LE))
 						{
+							#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+							// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+							(void)byte_flip;
+							#endif
+
 							return _mm512_loadu_si512(c);
 						}
 						else { return _mm512_shuffle_epi8(_mm512_loadu_si512(c), byte_flip); }
@@ -434,10 +460,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 					const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
 					const auto mask = static_cast<__mmask16>((1 << remaining) - 1);
-					const auto in = [&byte_flip, mask](const auto c) noexcept
+					const auto in = [byte_flip, mask](const auto c) noexcept
 					{
 						if constexpr ((Endian == std::endian::little) == (OutputCategory == CharsCategory::UTF16_LE))
 						{
+							#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+							// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+							(void)byte_flip;
+							#endif
+
 							return _mm512_maskz_loadu_epi16(mask, c);
 						}
 						else { return _mm512_shuffle_epi8(_mm512_maskz_loadu_epi16(mask, c), byte_flip); }
@@ -647,10 +678,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 				for (; it_input_current + 32 <= it_input_end; it_input_current += 31)
 				{
-					const auto in = [&byte_flip](const auto c) noexcept
+					const auto in = [byte_flip](const auto c) noexcept
 					{
 						if constexpr (Endian == std::endian::native)
 						{
+							#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+							// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+							(void)byte_flip;
+							#endif
+
 							return _mm512_loadu_si512(c);
 						}
 						else
@@ -668,10 +704,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 					remaining != 0)
 				{
 					const auto in_mask = _cvtu32_mask32((1 << remaining) - 1);
-					const auto in = [&byte_flip, in_mask](const auto c) noexcept
+					const auto in = [byte_flip, in_mask](const auto c) noexcept
 					{
 						if constexpr (Endian == std::endian::native)
 						{
+							#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+							// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+							(void)byte_flip;
+							#endif
+
 							return _mm512_maskz_loadu_epi16(in_mask, c);
 						}
 						else { return _mm512_shuffle_epi8(_mm512_maskz_loadu_epi16(in_mask, c), byte_flip); }
@@ -710,10 +751,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 
 					while (it_input_current + 32 <= it_input_end)
 					{
-						const auto in = [&byte_flip](const auto c) noexcept
+						const auto in = [byte_flip](const auto c) noexcept
 						{
 							if constexpr (Endian == std::endian::native)
 							{
+								#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+								// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+								(void)byte_flip;
+								#endif
+
 								return _mm512_loadu_si512(c);
 							}
 							else { return _mm512_shuffle_epi8(_mm512_loadu_si512(c), byte_flip); }
@@ -948,8 +994,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 		/*constexpr*/
 		static auto flip_endian(const input_type input, const output_type<input_category>::pointer output) noexcept -> void
 		{
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
-			GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
 
 			const auto input_length = input.size();
 

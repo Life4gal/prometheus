@@ -21,8 +21,6 @@ import std;
 import :font;
 
 #else
-#pragma once
-
 #include <algorithm>
 #include <ranges>
 #include <numeric>

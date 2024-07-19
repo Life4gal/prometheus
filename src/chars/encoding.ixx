@@ -11,7 +11,7 @@ export module gal.prometheus.chars:encoding;
 
 import std;
 import gal.prometheus.meta;
-import gal.prometheus.error;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 #else
 #pragma once
@@ -20,7 +20,7 @@ import gal.prometheus.error;
 
 #include <prometheus/macro.hpp>
 #include <meta/meta.ixx>
-#include <error/error.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -52,7 +52,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
 			case EncodingType::UTF16_BE: { return 2; }
 			case EncodingType::UTF32_LE:
 			case EncodingType::UTF32_BE: { return 4; }
-			default: { GAL_PROMETHEUS_DEBUG_UNREACHABLE(); } // NOLINT(clang-diagnostic-covered-switch-default)
+			default: { GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE(); } // NOLINT(clang-diagnostic-covered-switch-default)
 		}
 	}
 

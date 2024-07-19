@@ -19,9 +19,9 @@ module;
 export module gal.prometheus.chars:icelake.utf8;
 
 import std;
-import gal.prometheus.error;
 import gal.prometheus.meta;
 import gal.prometheus.memory;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :encoding;
 import :scalar.utf8;
@@ -37,9 +37,10 @@ import :scalar.utf8;
 
 #include <prometheus/macro.hpp>
 #include <chars/encoding.ixx>
-#include <error/error.ixx>
 #include <meta/meta.ixx>
 #include <memory/memory.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #endif
 
 namespace gal::prometheus::chars
@@ -269,7 +270,7 @@ namespace gal::prometheus::chars
 		template<bool IsBigEndian, bool Masked>
 		[[nodiscard]] auto utf32_to_utf16(const data_type input, const data_type byte_flip, const int count, auto it_output_current) noexcept -> std::size_t
 		{
-			GAL_PROMETHEUS_DEBUG_AXIOM(count > 0);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(count > 0);
 
 			const auto v_0000_ffff = _mm512_set1_epi32(0x0000'ffff);
 			const auto v_0001_0000 = _mm512_set1_epi32(0x0001'0000);
@@ -284,7 +285,15 @@ namespace gal::prometheus::chars
 			const auto surrogate_pair_mask = [input, v_0000_ffff, count_mask]
 			{
 				if constexpr (Masked) { return _mm512_mask_cmpgt_epu32_mask(count_mask, input, v_0000_ffff); }
-				else { return _mm512_cmpgt_epu32_mask(input, v_0000_ffff); }
+				else
+				{
+					#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+					// error : lambda capture 'count_mask' is not used [-Werror,-Wunused-lambda-capture]
+					(void)count_mask;
+					#endif
+
+					return _mm512_cmpgt_epu32_mask(input, v_0000_ffff);
+				}
 			}();
 			if (surrogate_pair_mask == 0)
 			{
@@ -342,7 +351,15 @@ namespace gal::prometheus::chars
 			const auto t5 = [t4, byte_flip]
 			{
 				if constexpr (IsBigEndian) { return _mm512_shuffle_epi8(_mm512_ror_epi32(t4, 16), byte_flip); }
-				else { return _mm512_ror_epi32(t4, 16); }
+				else
+				{
+					#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+					// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+					(void)byte_flip;
+					#endif
+
+					return _mm512_ror_epi32(t4, 16);
+				}
 			}();
 
 			const auto non_zero = _kor_mask32(0xaaaa'aaaa, _mm512_cmpneq_epi16_mask(t5, _mm512_setzero_si512()));
@@ -611,7 +628,7 @@ namespace gal::prometheus::chars
 			template<bool ReturnResultType = false>
 			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 				const auto input_length = input.size();
 
@@ -678,7 +695,7 @@ namespace gal::prometheus::chars
 			template<CharsCategory OutputCategory>
 			[[nodiscard]] constexpr static auto length(const input_type input) noexcept -> size_type
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
 				const auto input_length = input.size();
 
@@ -801,11 +818,11 @@ namespace gal::prometheus::chars
 				typename output_type<OutputCategory>::pointer output
 			) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 			{
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(input.data());
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(output);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
 				if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
 				{
-					GAL_PROMETHEUS_DEBUG_ASSUME(validate(input));
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(validate(input));
 				}
 
 				using output_pointer_type = typename output_type<OutputCategory>::pointer;
@@ -894,7 +911,15 @@ namespace gal::prometheus::chars
 						{
 							return result_type{result.error, result.count + static_cast<std::size_t>(it_output_current - it_output_begin)};
 						}
-						else { return result; }
+						else
+						{
+							#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+							// error : lambda capture 'it_output_begin' is not used [-Werror,-Wunused-lambda-capture]
+							(void)it_output_begin;
+							#endif
+
+							return result;
+						}
 					};
 
 					__mmask64 next_leading = 0;
@@ -904,7 +929,7 @@ namespace gal::prometheus::chars
 					{
 						const auto process_result = process.template operator()<false>({it_input_current, 64}, next_leading, next_bit6);
 
-						if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT) { GAL_PROMETHEUS_DEBUG_ASSUME(process_result == true); }
+						if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT) { GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(process_result == true); }
 						else { if (not process_result) { return fallback({it_input_current, static_cast<size_type>(it_input_end - it_input_current)}); } }
 					}
 
@@ -913,7 +938,7 @@ namespace gal::prometheus::chars
 					{
 						const auto process_result = process.template operator()<true>({it_input_current, remaining}, next_leading, next_bit6);
 
-						if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT) { GAL_PROMETHEUS_DEBUG_ASSUME(process_result == true); }
+						if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT) { GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(process_result == true); }
 						else { if (not process_result) { return fallback({it_input_current, remaining}); } }
 					}
 				}
@@ -1058,7 +1083,15 @@ namespace gal::prometheus::chars
 											{
 												return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_castsi512_si256(in)), byte_flip);
 											}
-											else { return _mm512_cvtepu8_epi16(_mm512_castsi512_si256(in)); }
+											else
+											{
+												#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+												// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+												(void)byte_flip;
+												#endif
+
+												return _mm512_cvtepu8_epi16(_mm512_castsi512_si256(in));
+											}
 										}();
 
 										if (remaining <= 32)
@@ -1074,7 +1107,15 @@ namespace gal::prometheus::chars
 												{
 													return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1)), byte_flip);
 												}
-												else { return _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1)); }
+												else
+												{
+													#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+													// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+													(void)byte_flip;
+													#endif
+
+													return _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1));
+												}
 											}();
 
 											_mm512_storeu_si512(it_output_current, in_1);
@@ -1094,7 +1135,15 @@ namespace gal::prometheus::chars
 											{
 												return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_castsi512_si256(in)), byte_flip);
 											}
-											else { return _mm512_cvtepu8_epi16(_mm512_castsi512_si256(in)); }
+											else
+											{
+												#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+												// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+												(void)byte_flip;
+												#endif
+
+												return _mm512_cvtepu8_epi16(_mm512_castsi512_si256(in));
+											}
 										}();
 										const auto in_2 = [in, byte_flip]() noexcept -> auto
 										{
@@ -1102,7 +1151,15 @@ namespace gal::prometheus::chars
 											{
 												return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1)), byte_flip);
 											}
-											else { return _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1)); }
+											else
+											{
+												#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+												// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
+												(void)byte_flip;
+												#endif
+
+												return _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1));
+											}
 										}();
 
 										_mm512_storeu_si512(it_output_current, in_1);
@@ -1138,7 +1195,15 @@ namespace gal::prometheus::chars
 									const auto mask_not_ascii = [remaining_mask, mask_byte_1]() noexcept -> auto
 									{
 										if constexpr (MaskOut) { return _kand_mask64(_knot_mask64(mask_byte_1), remaining_mask); }
-										else { return _knot_mask64(mask_byte_1); }
+										else
+										{
+											#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+											// error : lambda capture 'remaining_mask' is not used [-Werror,-Wunused-lambda-capture]
+											(void)remaining_mask;
+											#endif
+
+											return _knot_mask64(mask_byte_1);
+										}
 									}();
 
 									const auto mask_pattern_1 = _kshiftli_mask64(mask_byte_234, 1);
@@ -1164,7 +1229,15 @@ namespace gal::prometheus::chars
 										const auto mend = [mask_byte_1234, remaining]() noexcept -> auto
 										{
 											if constexpr (MaskOut) { return _kor_mask64(_kshiftri_mask64(mask_byte_1234, 1), __mmask64{1} << (remaining - 1)); }
-											else { return _kshiftri_mask64(mask_byte_1234, 1); }
+											else
+											{
+												#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+												// error : lambda capture 'remaining' is not used [-Werror,-Wunused-lambda-capture]
+												(void)remaining;
+												#endif
+
+												return _kshiftri_mask64(mask_byte_1234, 1);
+											}
 										}();
 
 										const auto last_and_third = _mm512_maskz_compress_epi8(mend, mask_identity);
@@ -1214,7 +1287,15 @@ namespace gal::prometheus::chars
 										const auto mask_processed = [mend, remaining_mask]() noexcept -> auto
 										{
 											if constexpr (MaskOut) { return _pdep_u64(0xffff'ffff, _kand_mask64(mend, remaining_mask)); }
-											else { return _pdep_u64(0xffff'ffff, mend); }
+											else
+											{
+												#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+												// error : lambda capture 'remaining_mask' is not used [-Werror,-Wunused-lambda-capture]
+												(void)remaining_mask;
+												#endif
+
+												return _pdep_u64(0xffff'ffff, mend);
+											}
 										}();
 
 										const auto num_out = std::popcount(mask_processed);
@@ -1245,7 +1326,15 @@ namespace gal::prometheus::chars
 												_kor_mask64(_kshiftri_mask64(_kor_mask64(mask_pattern_3, mask_byte_1234), 1), mask_pattern_3),
 												__mmask64{1} << (remaining - 1));
 										}
-										else { return _kor_mask64(_kshiftri_mask64(_kor_mask64(mask_pattern_3, mask_byte_1234), 1), mask_pattern_3); }
+										else
+										{
+											#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+											// error : lambda capture 'remaining' is not used [-Werror,-Wunused-lambda-capture]
+											(void)remaining;
+											#endif
+
+											return _kor_mask64(_kshiftri_mask64(_kor_mask64(mask_pattern_3, mask_byte_1234), 1), mask_pattern_3);
+										}
 									}();
 
 									const auto last_and_third = _mm512_maskz_compress_epi8(mend, mask_identity);
@@ -1322,7 +1411,15 @@ namespace gal::prometheus::chars
 									const auto mask_processed = [m = ~(mask_mp3_high & 0x8000'0000), mend, remaining_mask]() noexcept -> auto
 									{
 										if constexpr (MaskOut) { return _pdep_u64(m, _kand_mask64(mend, remaining_mask)); }
-										else { return _pdep_u64(m, mend); }
+										else
+										{
+											#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+											// error : lambda capture 'remaining_mask' is not used [-Werror,-Wunused-lambda-capture]
+											(void)remaining_mask;
+											#endif
+
+											return _pdep_u64(m, mend);
+										}
 									}();
 
 									const auto num_out = std::popcount(mask_processed);
@@ -1346,7 +1443,15 @@ namespace gal::prometheus::chars
 								const auto continuation_or_ascii = [mask_byte_234, remaining_mask]() noexcept -> auto
 								{
 									if constexpr (MaskOut) { return _kand_mask64(_knot_mask64(mask_byte_234), remaining_mask); }
-									else { return _knot_mask64(mask_byte_234); }
+									else
+									{
+										#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+										// error : lambda capture 'remaining_mask' is not used [-Werror,-Wunused-lambda-capture]
+										(void)remaining_mask;
+										#endif
+
+										return _knot_mask64(mask_byte_234);
+									}
 								}();
 
 								// on top of -0xc0 we subtract -2 which we get back later of the continuation byte tags
@@ -1354,7 +1459,15 @@ namespace gal::prometheus::chars
 								const auto leading_mask = [mask_byte_1, mask_byte_234, remaining_mask]() noexcept -> auto
 								{
 									if constexpr (MaskOut) { return _kand_mask64(_kor_mask64(mask_byte_1, mask_byte_234), remaining_mask); }
-									else { return _kor_mask64(mask_byte_1, mask_byte_234); }
+									else
+									{
+										#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+										// error : lambda capture 'remaining_mask' is not used [-Werror,-Wunused-lambda-capture]
+										(void)remaining_mask;
+										#endif
+
+										return _kor_mask64(mask_byte_1, mask_byte_234);
+									}
 								}();
 
 								if constexpr (MaskOut)

@@ -9,7 +9,7 @@
 // COMPILER
 // =========================================================
 
-#if defined(NDEBUG)
+#if defined(NDEBUG) or defined(_NDEBUG)
 #define GAL_PROMETHEUS_COMPILER_DEBUG 0
 #else
 #define GAL_PROMETHEUS_COMPILER_DEBUG 1
@@ -62,14 +62,14 @@
 #define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #elif defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
 #if __clang_major__ >= 18
-			// https://github.com/llvm/llvm-project/pull/65675
-			// https://github.com/llvm/llvm-project/pull/67199
-			#define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+// https://github.com/llvm/llvm-project/pull/65675
+// https://github.com/llvm/llvm-project/pull/67199
+#define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #else
 #define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS
 #endif
 #else
-	#define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
@@ -85,12 +85,12 @@
 #endif
 
 #if GAL_PROMETHEUS_USE_MODULE
-	#define GAL_PROMETHEUS_COMPILER_MODULE_INLINE
-	#define GAL_PROMETHEUS_COMPILER_MODULE_STATIC
-	#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN export {
-	#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END }
-	#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(n) export namespace n
-	#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD export namespace std
+#define GAL_PROMETHEUS_COMPILER_MODULE_INLINE
+#define GAL_PROMETHEUS_COMPILER_MODULE_STATIC
+#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN export {
+#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END }
+#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(n) export namespace n
+#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD export namespace std
 #else
 #define GAL_PROMETHEUS_COMPILER_MODULE_INLINE inline
 #define GAL_PROMETHEUS_COMPILER_MODULE_STATIC static
@@ -109,8 +109,8 @@
 	std::unreachable()
 
 #if defined(__cpp_if_consteval)
-	#define GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED if consteval
-	#define GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED if not consteval
+#define GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED if consteval
+#define GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED if not consteval
 #else
 #define GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED if (std::is_constant_evaluated())
 #define GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED if (not std::is_constant_evaluated())
@@ -118,14 +118,14 @@
 
 // fixme
 #if defined(__cpp_lib_is_implicit_lifetime)
-	#define GAL_PROMETHEUS_SEMANTIC_IS_IMPLICIT_LIFETIME_V(type) std::is_implicit_lifetime_v<type>
+#define GAL_PROMETHEUS_SEMANTIC_IS_IMPLICIT_LIFETIME_V(type) std::is_implicit_lifetime_v<type>
 #else
 #define GAL_PROMETHEUS_SEMANTIC_IS_IMPLICIT_LIFETIME_V(type) std::is_standard_layout_v<type> and std::is_trivial_v<type>
 #endif
 
 #if defined(__cpp_lib_start_lifetime_as)
-	#define GAL_PROMETHEUS_SEMANTIC_START_LIFETIME_AS(type, ptr) std::start_lifetime_as<type>(ptr)
-	#define GAL_PROMETHEUS_SEMANTIC_START_LIFETIME_AS_ARRAY(type, ptr) std::start_lifetime_as_array<type>(ptr)
+#define GAL_PROMETHEUS_SEMANTIC_START_LIFETIME_AS(type, ptr) std::start_lifetime_as<type>(ptr)
+#define GAL_PROMETHEUS_SEMANTIC_START_LIFETIME_AS_ARRAY(type, ptr) std::start_lifetime_as_array<type>(ptr)
 #else
 #define GAL_PROMETHEUS_SEMANTIC_START_LIFETIME_AS(type, ptr) \
 				[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>(GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE gal_prometheus_start_lifetime_as_p)                                                                           \
@@ -293,140 +293,124 @@
 // MODULE: gal.prometheus.error
 // =========================================================
 
-#define GAL_PROMETHEUS_DEBUG_CALL_DEBUGGER_OR_TERMINATE(message) ::gal::prometheus::error::debug_break("[" __FILE__ ":" GAL_PROMETHEUS_UTILITY_TO_STRING(__LINE__) "] -> " message)
+#if GAL_PROMETHEUS_USE_MODULE
+#define GAL_PROMETHEUS_ERROR_IMPORT_RUNTIME_MODULE import gal.prometheus.error;
 
-#define GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK(debug_type, expression, ...) \
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+#define GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE GAL_PROMETHEUS_ERROR_IMPORT_RUNTIME_MODULE
+#else
+#define GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
+#endif
+
+#else
+#define GAL_PROMETHEUS_ERROR_RUNTIME_MODULE <error/error.ixx>
+
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+#define GAL_PROMETHEUS_ERROR_DEBUG_MODULE GAL_PROMETHEUS_ERROR_RUNTIME_MODULE
+#else
+#define GAL_PROMETHEUS_ERROR_DEBUG_MODULE <prometheus/macro.hpp>
+#endif
+
+#endif
+
+#define GAL_PROMETHEUS_ERROR_CALL_DEBUGGER_OR_TERMINATE(message) ::gal::prometheus::error::debug_break("[" __FILE__ ":" GAL_PROMETHEUS_UTILITY_TO_STRING(__LINE__) "] -> " message)
+
+#define GAL_PROMETHEUS_ERROR_PRIVATE_DO_CHECK(debug_type, expression, ...) \
 	do {                                                                                                                                                \
 			GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED                                                                                                           \
 			{                                                                                                                                               \
 				if (not static_cast<bool>(expression))                                                                                                      \
 				{                                                                                                                                           \
-					GAL_PROMETHEUS_DEBUG_CALL_DEBUGGER_OR_TERMINATE("[" debug_type "]: \"" __VA_ARGS__ "\" --> {" GAL_PROMETHEUS_UTILITY_TO_STRING(expression) "}"); \
+					GAL_PROMETHEUS_ERROR_CALL_DEBUGGER_OR_TERMINATE("[" debug_type "]: \"" __VA_ARGS__ "\" --> {" GAL_PROMETHEUS_UTILITY_TO_STRING(expression) "}"); \
 					GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();                                                                                                            \
 				}                                                                                                                                           \
 			}                                                                                                                                               \
 		} while (false)
 
-#define GAL_PROMETHEUS_DEBUG_ASSUME(expression, ...) GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("ASSUME-CHECK", expression __VA_OPT__(, ) __VA_ARGS__)
+#define GAL_PROMETHEUS_ERROR_UNREACHABLE(...) std::unreachable()
 
 #if __has_cpp_attribute(assume)
-#define GAL_PROMETHEUS_DEBUG_AXIOM_NO_CHECK(expression, ...) [[assume(expression)]]
+#define GAL_PROMETHEUS_ERROR_ASSUME(expression, ...) \
+	do                                                                                \
+	{                                                                                 \
+		GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED { [[assume(expression)]]; } \
+	} while (false)
 #else
-// todo
-#define GAL_PROMETHEUS_DEBUG_AXIOM_NO_CHECK(expression, ...) do { } while(false)
+#define GAL_PROMETHEUS_ERROR_ASSUME(expression, ...) \
+	do                                                                                \
+	{                                                                                 \
+		GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED { if (not static_cast<bool>(expression)) { GAL_PROMETHEUS_ERROR_UNREACHABLE(); } } \
+	} while (false)
 #endif
+
+#define GAL_PROMETHEUS_ERROR_RUNTIME_ASSUME_TRAP(expression, ...) GAL_PROMETHEUS_ERROR_PRIVATE_DO_CHECK("ASSUME", expression __VA_OPT__(, ) __VA_ARGS__)
+
+#define GAL_PROMETHEUS_ERROR_RUNTIME_ASSUME_THROW(error_type, expression, message, ...) \
+	do                                                                                  \
+	{                                                                                   \
+		if (not static_cast<bool>(expression))                                          \
+		{                                                                               \
+			if constexpr (__VA_OPT__(not ) false)                                       \
+			{                                                                           \
+				throw error_type{std::format(message __VA_OPT__(, ) __VA_ARGS__)};      \
+			}                                                                           \
+			else                                                                        \
+			{                                                                           \
+				throw error_type{message};                                              \
+			}                                                                           \
+		}                                                                               \
+	} while (false)
+
+#define GAL_PROMETHEUS_ERROR_RUNTIME_ASSUME_PANIC(error_type, expression, message, ...) \
+	do                                                                                                          \
+	{                                                                                                           \
+		if (not static_cast<bool>(expression))                                                                  \
+		{                                                                                                       \
+			if constexpr (__VA_OPT__(not ) false)                                                               \
+			{                                                                                                   \
+				if constexpr (requires { error_type::panic(std::format(message __VA_OPT__(, ) __VA_ARGS__)); }) \
+				{                                                                                               \
+					error_type::panic(std::format(message __VA_OPT__(, ) __VA_ARGS__));                         \
+				}                                                                                               \
+				else                                                                                            \
+				{                                                                                               \
+					error::panic<error_type>(std::format(message __VA_OPT__(, ) __VA_ARGS__));                  \
+				}                                                                                               \
+			}                                                                                                   \
+			else                                                                                                \
+			{                                                                                                   \
+				if constexpr (requires { error_type::panic(message); })                                         \
+				{                                                                                               \
+					error_type::panic(message);                                                                 \
+				}                                                                                               \
+				else                                                                                            \
+				{                                                                                               \
+					error::panic<error_type>(message);                                                          \
+				}                                                                                               \
+			}                                                                                                   \
+		}                                                                                                       \
+	} while (false)
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) GAL_PROMETHEUS_DEBUG_ASSUME(expression __VA_OPT__(, ) __VA_ARGS__)
+// ========================
+// DEBUG
+// DEBUG => DO_CHECK
+// RELEASE => DO_ASSUME
+
+#define GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE(...) \
+	GAL_PROMETHEUS_ERROR_PRIVATE_DO_CHECK("UNRECHABLE", false __VA_OPT__(, ) __VA_ARGS__); \
+	GAL_PROMETHEUS_ERROR_UNREACHABLE()
+
+#define GAL_PROMETHEUS_ERROR_DEBUG_ASSUME GAL_PROMETHEUS_ERROR_RUNTIME_ASSUME_TRAP
+
 #else
-#define GAL_PROMETHEUS_DEBUG_AXIOM(expression, ...) GAL_PROMETHEUS_DEBUG_AXIOM_NO_CHECK(expression)
-#endif
+// ========================
+// RELEASE
+// DEBUG => DO_CHECK
+// RELEASE => DO_ASSUME
 
-#define GAL_PROMETHEUS_DEBUG_NOT_NULL(pointer, ...) GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("NOT-NULL-CHECK", pointer != nullptr __VA_OPT__(, ) __VA_ARGS__)
+#define GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE GAL_PROMETHEUS_ERROR_UNREACHABLE
 
-#define GAL_PROMETHEUS_DEBUG_NOT_IMPLEMENTED(...) GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("NOT-IMPLEMENTED", false __VA_OPT__(, )__VA_ARGS__)
+#define GAL_PROMETHEUS_ERROR_DEBUG_ASSUME GAL_PROMETHEUS_ERROR_ASSUME
 
-#define GAL_PROMETHEUS_DEBUG_UNREACHABLE(...) \
-		GAL_PROMETHEUS_DEBUG_PRIVATE_DO_CHECK("UNRECHABLE-CHECK", false __VA_OPT__(, ) __VA_ARGS__); \
-		std::unreachable()
-
-#define GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW(error_type, expression, message, ...) \
-	do \
-	{ \
-		if (not static_cast<bool>(expression)) \
-		{ \
-			if constexpr (__VA_OPT__(not) false) { throw error_type{std::format(message __VA_OPT__(, ) __VA_ARGS__)}; } \
-			else { throw error_type{message}; } \
-		} \
-	} while (false)
-
-#define GAL_PROMETHEUS_RUNTIME_THROW(error_type, message, ...) \
-	do                                                                                                                   \
-	{                                                                                                                    \
-		if constexpr (__VA_OPT__(not) false) { throw error_type{std::format(message __VA_OPT__(, ) __VA_ARGS__)}; } \
-		else { throw error_type{message}; }                                                                          \
-	} while (false)
-
-#define GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW_STRING_PARSE_ERROR(expression, message, ...) GAL_PROMETHEUS_RUNTIME_ASSUME_OR_THROW(::gal::prometheus::error::StringParseError, expression, message __VA_OPT__(, ) __VA_ARGS__)
-#define GAL_PROMETHEUS_RUNTIME_THROW_STRING_PARSE_ERROR(message, ...) GAL_PROMETHEUS_RUNTIME_THROW(::gal::prometheus::error::StringParseError, message __VA_OPT__(, ) __VA_ARGS__)
-
-// =========================================================
-// MODULE: gal.prometheus.simd
-// =========================================================
-
-// AVX512F
-#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512F)
-#if defined(__AVX512F__) && __AVX512F__ == 1
-		#define GAL_PROMETHEUS_SIMD_HAS_AVX512F 1
-#endif
-#endif
-
-// AVX512DQ
-#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512DQ)
-#if defined(__AVX512DQ__) && __AVX512DQ__ == 1
-		#define GAL_PROMETHEUS_SIMD_HAS_AVX512DQ 1
-#endif
-#endif
-
-// AVX512IFMA
-#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512IFMA)
-#if defined(__AVX512IFMA__) && __AVX512IFMA__ == 1
-		#define GAL_PROMETHEUS_SIMD_HAS_AVX512IFMA 1
-#endif
-#endif
-
-// AVX512CD
-#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512CD)
-#if defined(__AVX512CD__) && __AVX512CD__ == 1
-		#define GAL_PROMETHEUS_SIMD_HAS_AVX512CD 1
-#endif
-#endif
-
-// AVX512BW
-#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512BW)
-#if defined(__AVX512BW__) && __AVX512BW__ == 1
-		#define GAL_PROMETHEUS_SIMD_HAS_AVX512BW 1
-#endif
-#endif
-
-// AVX512VL
-#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512VL)
-#if defined(__AVX512VL__) && __AVX512VL__ == 1
-		#define GAL_PROMETHEUS_SIMD_HAS_AVX512VL 1
-#endif
-#endif
-
-// AVX512VBMI
-#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512VBMI)
-#if defined(__AVX512VBMI__) && __AVX512VBMI__ == 1
-		#define GAL_PROMETHEUS_SIMD_HAS_AVX512VBMI 1
-#endif
-#endif
-
-// AVX512VBMI2
-#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512VBMI2)
-#if defined(__AVX512VBMI2__) && __AVX512VBMI2__ == 1
-		#define GAL_PROMETHEUS_SIMD_HAS_AVX512VBMI2 1
-#endif
-#endif
-
-// AVX512VNNI
-#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512VNNI)
-#if defined(__AVX512VNNI__) && __AVX512VNNI__ == 1
-		#define GAL_PROMETHEUS_SIMD_HAS_AVX512VNNI 1
-#endif
-#endif
-
-// AVX512BITALG
-#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512BITALG)
-#if defined(__AVX512BITALG__) && __AVX512BITALG__ == 1
-		#define GAL_PROMETHEUS_SIMD_HAS_AVX512BITALG 1
-#endif
-#endif
-
-// AVX512VPOPCNTDQ
-#if not defined(GAL_PROMETHEUS_SIMD_HAS_AVX512VPOPCNTDQ)
-#if defined(__AVX512VPOPCNTDQ__) && __AVX512VPOPCNTDQ__ == 1
-		#define GAL_PROMETHEUS_SIMD_HAS_AVX512VPOPCNTDQ 1
-#endif
 #endif
