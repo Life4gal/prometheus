@@ -12,8 +12,8 @@ export module gal.prometheus.primitive:point;
 
 import std;
 import gal.prometheus.functional;
-import gal.prometheus.error;
 import gal.prometheus.meta;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :multidimensional;
 
@@ -25,9 +25,9 @@ import :multidimensional;
 
 #include <prometheus/macro.hpp>
 #include <functional/functional.ixx>
-#include <error/error.ixx>
 #include <meta/meta.ixx>
 #include <primitive/multidimensional.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -42,15 +42,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		ALL,
 	};
 
-	template<typename T, std::size_t N>
+	template<std::size_t N, typename T>
 		requires std::is_arithmetic_v<T>
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point;
 
 	template<typename>
 	struct is_basic_point : std::false_type {};
 
-	template<typename T, std::size_t N>
-	struct is_basic_point<basic_point<T, N>> : std::true_type {};
+	template<std::size_t N, typename T>
+	struct is_basic_point<basic_point<N, T>> : std::true_type {};
 
 	template<typename T>
 	constexpr auto is_basic_point_v = is_basic_point<T>::value;
@@ -68,17 +68,17 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename T>
 	struct is_point_compatible<T, T> : std::false_type {};
 
-	template<typename PointValueType, member_gettable_but_not_same_t<basic_point<PointValueType, 2>> U>
+	template<typename PointValueType, member_gettable_but_not_same_t<basic_point<2, PointValueType>> U>
 		requires(meta::member_size<U>() == 2)
-	struct is_point_compatible<U, basic_point<PointValueType, 2>> :
+	struct is_point_compatible<U, basic_point<2, PointValueType>> :
 			std::bool_constant<
 				std::convertible_to<meta::member_type_of_index_t<0, U>, PointValueType> and
 				std::convertible_to<meta::member_type_of_index_t<1, U>, PointValueType>
 			> {};
 
-	template<typename PointValueType, member_gettable_but_not_same_t<basic_point<PointValueType, 3>> U>
+	template<typename PointValueType, member_gettable_but_not_same_t<basic_point<3, PointValueType>> U>
 		requires(meta::member_size<PointValueType>() == 3)
-	struct is_point_compatible<U, basic_point<PointValueType, 3>> :
+	struct is_point_compatible<U, basic_point<3, PointValueType>> :
 			std::bool_constant<
 				std::convertible_to<meta::member_type_of_index_t<0, U>, PointValueType> and
 				std::convertible_to<meta::member_type_of_index_t<1, U>, PointValueType> and
@@ -91,27 +91,52 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename OtherType, typename PointType>
 	concept point_compatible_t = is_point_compatible_v<OtherType, PointType>;
 
-	template<typename L, typename R, std::size_t N>
-	[[nodiscard]] constexpr auto operator==(const basic_point<L, N>& lhs, const basic_point<R, N>& rhs) noexcept -> bool
+	template<std::size_t N, typename L, typename R>
+	[[nodiscard]] constexpr auto operator==(const basic_point<N, L>& lhs, const basic_point<N, R>& rhs) noexcept -> bool
 	{
-		return lhs.x == rhs.x and lhs.y == rhs.y;
+		if constexpr (N == 2)
+		{
+			return lhs.x == rhs.x and lhs.y == rhs.y;
+		}
+		else if constexpr (N == 3)
+		{
+			return lhs.x == rhs.x and lhs.y == rhs.y and lhs.z == rhs.z;
+		}
+		else
+		{
+			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+		}
 	}
 
-	template<typename T, std::size_t N, point_compatible_t<basic_point<T, N>> R>
-	[[nodiscard]] constexpr auto operator==(const basic_point<T, N>& lhs, const R& rhs) noexcept -> bool
+	template<std::size_t N, typename T, point_compatible_t<basic_point<N, T>> R>
+	[[nodiscard]] constexpr auto operator==(const basic_point<N, T>& lhs, const R& rhs) noexcept -> bool
 	{
-		return lhs.x == meta::member_of_index<0>(rhs) and lhs.y == meta::member_of_index<1>(rhs);
+		if constexpr (N == 2)
+		{
+			return lhs.x == meta::member_of_index<0>(rhs) and lhs.y == meta::member_of_index<1>(rhs);
+		}
+		else if constexpr (N == 3)
+		{
+			return
+					lhs.x == meta::member_of_index<0>(rhs) and
+					lhs.y == meta::member_of_index<1>(rhs) and
+					lhs.z == meta::member_of_index<2>(rhs);
+		}
+		else
+		{
+			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+		}
 	}
 
-	template<typename T, std::size_t N, point_compatible_t<basic_point<T, N>> L>
-	[[nodiscard]] constexpr auto operator==(const L& lhs, const basic_point<T, N>& rhs) noexcept -> bool
+	template<std::size_t N, typename T, point_compatible_t<basic_point<N, T>> L>
+	[[nodiscard]] constexpr auto operator==(const L& lhs, const basic_point<N, T>& rhs) noexcept -> bool
 	{
-		return rhs.x == meta::member_of_index<0>(lhs) and rhs.y == meta::member_of_index<1>(lhs);
+		return rhs == lhs;
 	}
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point<T, 2> final : multidimensional<T, basic_point<T, 2>>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point<2, T> final : multidimensional<basic_point<2, T>, T>
 	{
 		using value_type = T;
 
@@ -169,17 +194,19 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
+		[[nodiscard]] constexpr explicit operator basic_point<3, value_type>() const noexcept { return {x, y, 0}; }
+
 		template<std::convertible_to<value_type> U = value_type>
-		[[nodiscard]] constexpr auto distance(const basic_point<U, 2>& other) const noexcept -> value_type //
+		[[nodiscard]] constexpr auto distance(const basic_point<2, U>& other) const noexcept -> value_type //
 		{
 			return functional::hypot(x - static_cast<value_type>(other.x), y - static_cast<value_type>(other.y));
 		}
 
 		template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
-		[[nodiscard]] constexpr auto clamp(const basic_point<Low, 2>& low, const basic_point<High, 2>& high) noexcept -> basic_point&
+		[[nodiscard]] constexpr auto clamp(const basic_point<2, Low>& low, const basic_point<2, High>& high) noexcept -> basic_point&
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(low.x < high.x);
-			GAL_PROMETHEUS_DEBUG_ASSUME(low.y < high.y);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.x < high.x);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.y < high.y);
 
 			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 			{
@@ -198,8 +225,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
 		[[nodiscard]] friend constexpr auto clamp(
 			const basic_point& point,
-			const basic_point<Low, 2>& low,
-			const basic_point<High, 2>& high
+			const basic_point<2, Low>& low,
+			const basic_point<2, High>& high
 		) noexcept -> basic_point
 		{
 			auto result{point};
@@ -209,7 +236,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		}
 
 		template<DirectionCategory Category, std::convertible_to<value_type> T1 = value_type, std::convertible_to<value_type> T2 = value_type>
-		[[nodiscard]] constexpr auto between(const basic_point<T1, 2>& left_top, const basic_point<T2, 2>& right_bottom) const noexcept -> bool
+		[[nodiscard]] constexpr auto between(const basic_point<2, T1>& left_top, const basic_point<2, T2>& right_bottom) const noexcept -> bool
 		{
 			if constexpr (Category == DirectionCategory::ALL) //
 			{
@@ -219,13 +246,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			}
 			else if constexpr (Category == DirectionCategory::X)
 			{
-				GAL_PROMETHEUS_DEBUG_ASSUME(static_cast<value_type>(left_top.x) < static_cast<value_type>(right_bottom.x));
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(left_top.x) < static_cast<value_type>(right_bottom.x));
 
 				return x >= static_cast<value_type>(left_top.x) and x < static_cast<value_type>(right_bottom.x);
 			}
 			else if constexpr (Category == DirectionCategory::Y)
 			{
-				GAL_PROMETHEUS_DEBUG_ASSUME(static_cast<value_type>(left_top.y) < static_cast<value_type>(right_bottom.y));
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(left_top.y) < static_cast<value_type>(right_bottom.y));
 
 				return y >= static_cast<value_type>(left_top.y) and y < static_cast<value_type>(right_bottom.y);
 			}
@@ -235,7 +262,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point<T, 3> final : multidimensional<T, basic_point<T, 3>>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point<3, T> final : multidimensional<basic_point<3, T>, T>
 	{
 		using value_type = T;
 
@@ -299,10 +326,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
-		[[nodiscard]] constexpr explicit(false) operator basic_point<value_type, 2>() const noexcept { return {x, y}; }
+		[[nodiscard]] constexpr explicit(false) operator basic_point<2, value_type>() const noexcept { return {x, y}; }
 
 		template<std::convertible_to<value_type> U = value_type>
-		[[nodiscard]] constexpr auto distance(const basic_point<U, 3>& other) const noexcept -> value_type //
+		[[nodiscard]] constexpr auto distance(const basic_point<2, U>& other) const noexcept -> value_type //
 		{
 			return functional::hypot(
 				x - static_cast<value_type>(other.x),
@@ -312,11 +339,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		}
 
 		template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
-		[[nodiscard]] constexpr auto clamp(const basic_point<Low, 3>& low, const basic_point<High, 3>& high) noexcept -> basic_point&
+		[[nodiscard]] constexpr auto clamp(const basic_point<3, Low>& low, const basic_point<3, High>& high) noexcept -> basic_point&
 		{
-			GAL_PROMETHEUS_DEBUG_ASSUME(low.x < high.x);
-			GAL_PROMETHEUS_DEBUG_ASSUME(low.y < high.y);
-			GAL_PROMETHEUS_DEBUG_ASSUME(low.z < high.z);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.x < high.x);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.y < high.y);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.z < high.z);
 
 			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 			{
@@ -337,8 +364,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
 		[[nodiscard]] friend constexpr auto clamp(
 			const basic_point& point,
-			const basic_point<Low, 3>& low,
-			const basic_point<High, 3>& high
+			const basic_point<3, Low>& low,
+			const basic_point<3, High>& high
 		) noexcept -> basic_point
 		{
 			auto result{point};
@@ -348,7 +375,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		}
 
 		template<DirectionCategory Category, std::convertible_to<value_type> T1 = value_type, std::convertible_to<value_type> T2 = value_type>
-		[[nodiscard]] constexpr auto between(const basic_point<T1, 3>& left_top, const basic_point<T2, 3>& right_bottom) const noexcept -> bool
+		[[nodiscard]] constexpr auto between(const basic_point<3, T1>& left_top, const basic_point<3, T2>& right_bottom) const noexcept -> bool
 		{
 			if constexpr (Category == DirectionCategory::ALL) //
 			{
@@ -359,45 +386,51 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			}
 			else if constexpr (Category == DirectionCategory::X)
 			{
-				GAL_PROMETHEUS_DEBUG_ASSUME(static_cast<value_type>(left_top.x) < static_cast<value_type>(right_bottom.x));
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(left_top.x) < static_cast<value_type>(right_bottom.x));
 
 				return x >= static_cast<value_type>(left_top.x) and x < static_cast<value_type>(right_bottom.x);
 			}
 			else if constexpr (Category == DirectionCategory::Y)
 			{
-				GAL_PROMETHEUS_DEBUG_ASSUME(static_cast<value_type>(left_top.y) < static_cast<value_type>(right_bottom.y));
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(left_top.y) < static_cast<value_type>(right_bottom.y));
 
 				return y >= static_cast<value_type>(left_top.y) and y < static_cast<value_type>(right_bottom.y);
 			}
 			else if constexpr (Category == DirectionCategory::Z)
 			{
-				GAL_PROMETHEUS_DEBUG_ASSUME(static_cast<value_type>(left_top.z) < static_cast<value_type>(right_bottom.z));
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(left_top.z) < static_cast<value_type>(right_bottom.z));
 
 				return z >= static_cast<value_type>(left_top.z) and z < static_cast<value_type>(right_bottom.z);
 			}
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 	};
+
+	template<typename T>
+	using basic_point_2d = basic_point<2, T>;
+
+	template<typename T>
+	using basic_point_3d = basic_point<3, T>;
 }
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 {
-	template<std::size_t Index, typename T, std::size_t N>
+	template<std::size_t Index, std::size_t N, typename T>
 	struct
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 			[[msvc::known_semantics]]
 			#endif
-			tuple_element<Index, gal::prometheus::primitive::basic_point<T, N>> // NOLINT(cert-dcl58-cpp)
+			tuple_element<Index, gal::prometheus::primitive::basic_point<N, T>> // NOLINT(cert-dcl58-cpp)
 	{
 		using type = T;
 	};
 
-	template<typename T, std::size_t N>
-	struct tuple_size<gal::prometheus::primitive::basic_point<T, N>> // NOLINT(cert-dcl58-cpp)
+	template<std::size_t N, typename T>
+	struct tuple_size<gal::prometheus::primitive::basic_point<N, T>> // NOLINT(cert-dcl58-cpp)
 			: std::integral_constant<std::size_t, N> {};
 
-	template<typename T, std::size_t N>
-	struct formatter<gal::prometheus::primitive::basic_point<T, N>> // NOLINT(cert-dcl58-cpp)
+	template<std::size_t N, typename T>
+	struct formatter<gal::prometheus::primitive::basic_point<N, T>> // NOLINT(cert-dcl58-cpp)
 	{
 		template<typename ParseContext>
 		constexpr auto parse(ParseContext& context) const noexcept -> auto
@@ -407,7 +440,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 		}
 
 		template<typename FormatContext>
-		auto format(const gal::prometheus::primitive::basic_point<T, N>& point, FormatContext& context) const noexcept -> auto
+		auto format(const gal::prometheus::primitive::basic_point<N, T>& point, FormatContext& context) const noexcept -> auto
 		{
 			if constexpr (N == 2) { return std::format_to(context.out(), "({},{})", point.x, point.y); }
 			else if constexpr (N == 3) { return std::format_to(context.out(), "({},{},{})", point.x, point.y, point.z); }
