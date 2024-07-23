@@ -155,14 +155,14 @@ namespace gal::prometheus::gui
 			return flag;
 		}
 
-		using point_type = primitive::basic_point<float, 2>;
-		using uv_type = primitive::basic_point<float, 2>;
+		using point_type = primitive::basic_point_2d<float>;
+		using uv_type = primitive::basic_point_2d<float>;
 		using color_type = primitive::basic_color<std::uint8_t>;
 
-		using extent_type = primitive::basic_extent<float, 2>;
-		using circle_type = primitive::basic_circle<float, 2>;
-		using ellipse_type = primitive::basic_ellipse<float, 2>;
-		using rect_type = primitive::basic_rect<float, 2>;
+		using extent_type = primitive::basic_extent_2d<float>;
+		using circle_type = primitive::basic_circle_2d<float>;
+		using ellipse_type = primitive::basic_ellipse_2d<float>;
+		using rect_type = primitive::basic_rect_2d<float>;
 
 		using vertex_type = primitive::basic_vertex<point_type, uv_type, color_type>;
 		using index_type = std::uint16_t;
