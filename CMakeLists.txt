@@ -86,6 +86,7 @@ include(${PROJECT_SOURCE_DIR}/cmake_utils/nuget_install.cmake)
 set(${PROJECT_NAME_PREFIX}3RD_PARTY_PATH ${PROJECT_SOURCE_DIR}/3rd-party)
 
 include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/freetype.cmake)
+include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/stb/stb.cmake)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	set(${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS ON)
@@ -617,6 +618,7 @@ target_compile_features(
 )
 
 link_3rd_library_freetype(${PROJECT_NAME})
+link_3rd_library_stb(${PROJECT_NAME})
 
 # SET DEBUG POSTFIX ==> lib${PROJECT_NAME} -> Release lib${PROJECT}d -> Debug
 set(${PROJECT_NAME_PREFIX}DEBUG_POSTFIX d CACHE STRING "Debug library postfix.")
