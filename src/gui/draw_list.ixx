@@ -22,6 +22,8 @@ import gal.prometheus.primitive;
 import gal.prometheus.chars;
 GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
+import :font;
+
 #else
 #pragma once
 
@@ -42,6 +44,7 @@ GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 #include <functional/functional.ixx>
 #include <primitive/primitive.ixx>
 #include <chars/chars.ixx>
+#include <gui/font.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
@@ -153,6 +156,37 @@ namespace gal::prometheus::gui
 			}
 
 			return flag;
+		}
+
+		[[nodiscard]] constexpr auto to_fixed_normal(const float x, const float y) noexcept -> std::pair<float, float>
+		{
+			if (const auto d = functional::pow(x, 2) + functional::pow(y, 2);
+				d > 1e-6f)
+			{
+				// fixme
+				const auto inv_len = [d]
+				{
+					#if defined(__AVX512F__)
+					__m512 d_v = _mm512_set1_ps(d);
+					__m512 inv_len_v = _mm512_rcp14_ps(d_v);
+					return _mm512_cvtss_f32(inv_len_v);
+					#elif defined(__AVX__)
+					__m256 d_v = _mm256_set1_ps(d);
+					__m256 inv_len_v = _mm256_rcp_ps(d_v);
+					return _mm256_cvtss_f32(inv_len_v);
+					#elif defined(__SSE4_1__) or defined(__SSE3__) or defined(__SSE__)
+					__m128 d_v = _mm_set_ss(d);
+					__m128 inv_len_v = _mm_rcp_ss(d_v);
+					return _mm_cvtss_f32(inv_len_v);
+					#else
+					return 1.0f / d;
+					#endif
+				}();
+
+				return {x * inv_len, y * inv_len};
+			}
+
+			return {x, y};
 		}
 
 		using point_type = primitive::basic_point_2d<float>;
@@ -306,7 +340,7 @@ namespace gal::prometheus::gui
 			circle_segment_max_error_{},
 			arc_fast_radius_cutoff_{},
 			curve_tessellation_tolerance_{1.25f},
-			texture_uv_of_white_pixel_{vertex_type::default_uv},
+			texture_uv_of_white_pixel_{0},
 			default_font_{}
 		{
 			set_circle_tessellation_max_error(.3f);
@@ -379,6 +413,13 @@ namespace gal::prometheus::gui
 			default_font_ = std::move(font);
 		}
 
+		[[nodiscard]] constexpr auto get_default_font() noexcept -> font_type&
+		{
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(default_font_.texture_data);
+
+			return default_font_;
+		}
+
 		[[nodiscard]] constexpr auto get_default_font() const noexcept -> const font_type&
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(default_font_.texture_data);
@@ -399,56 +440,141 @@ namespace gal::prometheus::gui
 		using ellipse_type = draw_list_detail::ellipse_type;
 		using rect_type = draw_list_detail::rect_type;
 
+		using texture_id_type = font_type::texture_id_type;
+
 		using vertex_type = draw_list_detail::vertex_type;
 		using index_type = draw_list_detail::index_type;
 
 		template<typename T>
 		using list_type = std::vector<T>;
 
+		using size_type = std::size_t;
+
+		struct command_type
+		{
+			rect_type clip_rect;
+			texture_id_type texture;
+			// there may be additional data
+
+			// =======================
+
+			// set by index_list.size()
+			// start offset in `index_list`
+			size_type index_offset;
+			// set by subsequent draw_xxx
+			// number of indices (multiple of 3) to be rendered as triangles
+			size_type element_count;
+		};
+
+		using command_list_type = list_type<command_type>;
 		using vertex_list_type = list_type<vertex_type>;
 		using index_list_type = list_type<index_type>;
-
-		DrawListFlag draw_list_flag;
-
-		vertex_list_type vertex_list;
-		index_list_type index_list;
-
-		std::shared_ptr<DrawListSharedData> shared_data;
+		using path_list_type = list_type<point_type>;
 
 	private:
-		using path_list_type = list_type<point_type>;
+		DrawListFlag draw_list_flag_;
+		std::shared_ptr<DrawListSharedData> shared_data_;
+
+		// vertex_list: v1-v2-v3-v4 + v5-v6-v7-v8 + v9-v10-v11 => rect0 + rect1(clipped by rect0) + triangle0(clipped by rect1)
+		// index_list: 0/1/2-0/2/3 + 4/5/6-4/6/7 + 8/9/10
+		// command_list: 
+		//	0: .clip_rect = {0, 0, root_window_width, root_window_height}, .index_offset = 0, .element_count = root_window_element_count + 6 (two triangles => 0/1/2-0/2/3)
+		// 1: .clip_rect = {max(rect0.left, rect1.left), max(rect0.top, rect1.top), min(rect0.right, rect1.right), min(rect0.bottom, rect1.bottom)}, .index_offset = root_window_element_count + 6, .element_count = 6 (two triangles => 4/5/6-4/6/7)
+		// 2: .clip_rect = {...}, .index_offset = root_window_element_count + 12, .element_count = 3 (one triangle => 8/9/10)
+		command_list_type command_list_;
+		vertex_list_type vertex_list_;
+		index_list_type index_list_;
+
+		rect_type this_command_clip_rect_;
+		texture_id_type this_command_texture_id_;
+		// there may be additional data
 
 		path_list_type path_list_;
 
-		constexpr static auto get_fixed_normal(const float x, const float y) noexcept -> std::pair<float, float>
+		constexpr auto push_command() noexcept -> void
 		{
-			if (const auto d = functional::pow(x, 2) + functional::pow(y, 2);
-				d > 1e-6f)
-			{
-				// fixme
-				const auto inv_len = [d]
-				{
-					#if defined(__AVX512F__)
-					__m512 d_v = _mm512_set1_ps(d);
-					__m512 inv_len_v = _mm512_rcp14_ps(d_v);
-					return _mm512_cvtss_f32(inv_len_v);
-					#elif defined(__AVX__)
-					__m256 d_v = _mm256_set1_ps(d);
-					__m256 inv_len_v = _mm256_rcp_ps(d_v);
-					return _mm256_cvtss_f32(inv_len_v);
-					#elif defined(__SSE4_1__) or defined(__SSE3__) or defined(__SSE__)
-					__m128 d_v = _mm_set_ss(d);
-					__m128 inv_len_v = _mm_rcp_ss(d_v);
-					return _mm_cvtss_f32(inv_len_v);
-					#else
-					return 1.0f / d;
-					#endif
-				}();
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not this_command_clip_rect_.empty() and this_command_clip_rect_.valid());
 
-				return {x * inv_len, y * inv_len};
+			command_list_.emplace_back(
+				command_type
+				{
+						.clip_rect = this_command_clip_rect_,
+						.texture = this_command_texture_id_,
+						.index_offset = index_list_.size(),
+						// set by subsequent draw_xxx
+						.element_count = 0
+				}
+			);
+		}
+
+		enum class ChangedElement
+		{
+			CLIP_RECT,
+			TEXTURE,
+		};
+
+		template<ChangedElement Element>
+		constexpr auto on_element_changed() noexcept -> void
+		{
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not command_list_.empty());
+
+			const auto& [current_clip_rect, current_texture, current_index_offset, current_element_count] = command_list_.back();
+			if (current_element_count != 0 and current_clip_rect != this_command_clip_rect_)
+			{
+				if constexpr (Element == ChangedElement::CLIP_RECT)
+				{
+					if (current_clip_rect != this_command_clip_rect_)
+					{
+						push_command();
+						return;
+					}
+				}
+				else if constexpr (Element == ChangedElement::TEXTURE)
+				{
+					if (current_texture != this_command_texture_id_)
+					{
+						push_command();
+						return;
+					}
+				}
+				else
+				{
+					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+				}
 			}
 
-			return {x, y};
+			// try to merge with previous command if it matches, else use current command
+			if (command_list_.size() > 1)
+			{
+				if (
+					const auto& [previous_clip_rect, previous_texture, previous_index_offset, previous_element_count] = command_list_[command_list_.size() - 2];
+					current_element_count == 0 and
+					(
+						this_command_clip_rect_ == previous_clip_rect and
+						this_command_texture_id_ == previous_texture
+						// there may be additional data
+					) and
+					// sequential
+					current_index_offset == previous_index_offset + previous_element_count
+				)
+				{
+					command_list_.pop_back();
+					return;
+				}
+			}
+
+			if constexpr (Element == ChangedElement::CLIP_RECT)
+			{
+				command_list_.back().clip_rect = this_command_clip_rect_;
+			}
+			else if constexpr (Element == ChangedElement::TEXTURE)
+			{
+				command_list_.back().texture = this_command_texture_id_;
+			}
+			else
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+			}
 		}
 
 		constexpr auto draw_polygon_line(const color_type& color, const DrawFlag draw_flag, const float thickness) noexcept -> void
@@ -466,8 +592,10 @@ namespace gal::prometheus::gui
 
 			const auto vertex_count = segments_count * 4;
 			const auto index_count = segments_count * 6;
-			vertex_list.reserve(vertex_list.size() + vertex_count);
-			index_list.reserve(index_list.size() + index_count);
+			vertex_list_.reserve(vertex_list_.size() + vertex_count);
+			index_list_.reserve(index_list_.size() + index_count);
+
+			command_list_.back().element_count += index_count;
 
 			for (std::decay_t<decltype(segments_count)> i = 0; i < segments_count; ++i)
 			{
@@ -480,23 +608,23 @@ namespace gal::prometheus::gui
 				normalized_x *= (thickness * .5f);
 				normalized_y *= (thickness * .5f);
 
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(vertex_list.size() + 3 <= std::numeric_limits<index_type>::max());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(vertex_list_.size() + 3 <= std::numeric_limits<index_type>::max());
 
-				const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
+				const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
 
-				const auto& opaque_uv = shared_data->get_texture_uv_of_white_pixel();
+				const auto& opaque_uv = shared_data_->get_texture_uv_of_white_pixel();
 
-				vertex_list.emplace_back(p1 + point_type{normalized_y, -normalized_x}, opaque_uv, color);
-				vertex_list.emplace_back(p2 + point_type{normalized_y, -normalized_x}, opaque_uv, color);
-				vertex_list.emplace_back(p2 + point_type{-normalized_y, normalized_x}, opaque_uv, color);
-				vertex_list.emplace_back(p1 + point_type{-normalized_y, normalized_x}, opaque_uv, color);
+				vertex_list_.emplace_back(p1 + point_type{normalized_y, -normalized_x}, opaque_uv, color);
+				vertex_list_.emplace_back(p2 + point_type{normalized_y, -normalized_x}, opaque_uv, color);
+				vertex_list_.emplace_back(p2 + point_type{-normalized_y, normalized_x}, opaque_uv, color);
+				vertex_list_.emplace_back(p1 + point_type{-normalized_y, normalized_x}, opaque_uv, color);
 
-				index_list.push_back(current_vertex_index + 0);
-				index_list.push_back(current_vertex_index + 1);
-				index_list.push_back(current_vertex_index + 2);
-				index_list.push_back(current_vertex_index + 0);
-				index_list.push_back(current_vertex_index + 2);
-				index_list.push_back(current_vertex_index + 3);
+				index_list_.push_back(current_vertex_index + 0);
+				index_list_.push_back(current_vertex_index + 1);
+				index_list_.push_back(current_vertex_index + 2);
+				index_list_.push_back(current_vertex_index + 0);
+				index_list_.push_back(current_vertex_index + 2);
+				index_list_.push_back(current_vertex_index + 3);
 			}
 		}
 
@@ -510,7 +638,7 @@ namespace gal::prometheus::gui
 				return;
 			}
 
-			const auto& opaque_uv = shared_data->get_texture_uv_of_white_pixel();
+			const auto& opaque_uv = shared_data_->get_texture_uv_of_white_pixel();
 			const auto transparent_color = color.transparent();
 
 			const auto is_closed = not functional::exclude(draw_flag, DrawFlag::CLOSED);
@@ -523,14 +651,16 @@ namespace gal::prometheus::gui
 
 			const auto is_use_texture =
 			(
-				functional::contains<functional::EnumCheckPolicy::ANY_BIT>(draw_list_flag, DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE) and
+				functional::contains<functional::EnumCheckPolicy::ANY_BIT>(draw_list_flag_, DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE) and
 				(thickness_integer < draw_list_detail::draw_list_texture_line_max_width) and
 				(thickness_fractional <= .00001f));
 
 			const auto vertex_cont = is_use_texture ? (path_point_count * 2) : (is_thick_line ? path_point_count * 4 : path_point_count * 3);
 			const auto index_count = is_use_texture ? (segments_count * 6) : (is_thick_line ? segments_count * 18 : segments_count * 12);
-			vertex_list.reserve(vertex_list.size() + vertex_cont);
-			index_list.reserve(index_list.size() + index_count);
+			vertex_list_.reserve(vertex_list_.size() + vertex_cont);
+			index_list_.reserve(index_list_.size() + index_count);
+
+			command_list_.back().element_count += index_count;
 
 			// The first <path_point_count> items are normals at each line point, then after that there are either 2 or 4 temp points for each line point
 			list_type<point_type> temp_buffer{};
@@ -571,7 +701,7 @@ namespace gal::prometheus::gui
 					temp_buffer_points[(path_point_count - 1) * 2 + 1] = path_point[path_point_count - 1] - temp_buffer_normals[path_point_count - 1] * half_draw_size;
 				}
 
-				const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
+				const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
 
 				// Generate the indices to form a number of triangles for each line segment, and the vertices for the line edges
 				// This takes points n and n+1 and writes into n+1, with the first point in a closed line being generated from the final one (as n+1 wraps)
@@ -588,7 +718,7 @@ namespace gal::prometheus::gui
 					// Average normals
 					const auto d = (temp_buffer_normals[first_point_of_segment] + temp_buffer_normals[second_point_of_segment]) * .5f;
 					// dm_x, dm_y are offset to the outer edge of the AA area
-					auto [dm_x, dm_y] = get_fixed_normal(d.x, d.y);
+					auto [dm_x, dm_y] = draw_list_detail::to_fixed_normal(d.x, d.y);
 					dm_x *= half_draw_size;
 					dm_y *= half_draw_size;
 
@@ -601,34 +731,34 @@ namespace gal::prometheus::gui
 						// Add indices for two triangles
 
 						// right
-						index_list.push_back(vertex_index_for_end + 0);
-						index_list.push_back(vertex_index_for_start + 0);
-						index_list.push_back(vertex_index_for_start + 1);
+						index_list_.push_back(vertex_index_for_end + 0);
+						index_list_.push_back(vertex_index_for_start + 0);
+						index_list_.push_back(vertex_index_for_start + 1);
 						// left
-						index_list.push_back(vertex_index_for_end + 1);
-						index_list.push_back(vertex_index_for_start + 1);
-						index_list.push_back(vertex_index_for_end + 0);
+						index_list_.push_back(vertex_index_for_end + 1);
+						index_list_.push_back(vertex_index_for_start + 1);
+						index_list_.push_back(vertex_index_for_end + 0);
 					}
 					else
 					{
 						// Add indexes for four triangles
 
 						// right 1
-						index_list.push_back(vertex_index_for_end + 0);
-						index_list.push_back(vertex_index_for_start + 0);
-						index_list.push_back(vertex_index_for_start + 2);
+						index_list_.push_back(vertex_index_for_end + 0);
+						index_list_.push_back(vertex_index_for_start + 0);
+						index_list_.push_back(vertex_index_for_start + 2);
 						// right 2
-						index_list.push_back(vertex_index_for_start + 2);
-						index_list.push_back(vertex_index_for_end + 2);
-						index_list.push_back(vertex_index_for_end + 0);
+						index_list_.push_back(vertex_index_for_start + 2);
+						index_list_.push_back(vertex_index_for_end + 2);
+						index_list_.push_back(vertex_index_for_end + 0);
 						// left 1
-						index_list.push_back(vertex_index_for_end + 1);
-						index_list.push_back(vertex_index_for_start + 1);
-						index_list.push_back(vertex_index_for_start + 0);
+						index_list_.push_back(vertex_index_for_end + 1);
+						index_list_.push_back(vertex_index_for_start + 1);
+						index_list_.push_back(vertex_index_for_start + 0);
 						// left 2
-						index_list.push_back(vertex_index_for_start + 0);
-						index_list.push_back(vertex_index_for_end + 0);
-						index_list.push_back(vertex_index_for_end + 1);
+						index_list_.push_back(vertex_index_for_start + 0);
+						index_list_.push_back(vertex_index_for_end + 0);
+						index_list_.push_back(vertex_index_for_end + 1);
 					}
 
 					vertex_index_for_start = vertex_index_for_end;
@@ -646,11 +776,11 @@ namespace gal::prometheus::gui
 					for (std::decay_t<decltype(path_point_count)> i = 0; i < path_point_count; ++i)
 					{
 						// center of line
-						vertex_list.emplace_back(path_point[i], opaque_uv, color);
+						vertex_list_.emplace_back(path_point[i], opaque_uv, color);
 						// left-side outer edge
-						vertex_list.emplace_back(temp_buffer_points[i * 2 + 0], opaque_uv, transparent_color);
+						vertex_list_.emplace_back(temp_buffer_points[i * 2 + 0], opaque_uv, transparent_color);
 						// right-side outer edge
-						vertex_list.emplace_back(temp_buffer_points[i * 2 + 1], opaque_uv, transparent_color);
+						vertex_list_.emplace_back(temp_buffer_points[i * 2 + 1], opaque_uv, transparent_color);
 					}
 				}
 			}
@@ -675,7 +805,7 @@ namespace gal::prometheus::gui
 					temp_buffer_points[point_last * 4 + 3] = path_point[point_last] - temp_buffer_normals[point_last] * (half_inner_thickness + 1.f);
 				}
 
-				const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
+				const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
 
 				// Generate the indices to form a number of triangles for each line segment, and the vertices for the line edges
 				// This takes points n and n+1 and writes into n+1, with the first point in a closed line being generated from the final one (as n+1 wraps)
@@ -691,7 +821,7 @@ namespace gal::prometheus::gui
 
 					// Average normals
 					const auto d = (temp_buffer_normals[first_point_of_segment] + temp_buffer_normals[second_point_of_segment]) * .5f;
-					const auto [dm_x, dm_y] = get_fixed_normal(d.x, d.y);
+					const auto [dm_x, dm_y] = draw_list_detail::to_fixed_normal(d.x, d.y);
 					const auto dm_out_x = dm_x * (half_inner_thickness + 1.f);
 					const auto dm_out_y = dm_y * (half_inner_thickness + 1.f);
 					const auto dm_in_x = dm_x * (half_inner_thickness + 0.f);
@@ -704,29 +834,29 @@ namespace gal::prometheus::gui
 					temp_buffer_points[second_point_of_segment * 4 + 3] = path_point[second_point_of_segment] - point_type{dm_out_x, dm_out_y};
 
 					// Add indexes
-					index_list.push_back(vertex_index_for_end + 1);
-					index_list.push_back(vertex_index_for_end + 1);
-					index_list.push_back(vertex_index_for_start + 2);
+					index_list_.push_back(vertex_index_for_end + 1);
+					index_list_.push_back(vertex_index_for_end + 1);
+					index_list_.push_back(vertex_index_for_start + 2);
 
-					index_list.push_back(vertex_index_for_start + 2);
-					index_list.push_back(vertex_index_for_end + 2);
-					index_list.push_back(vertex_index_for_end + 1);
+					index_list_.push_back(vertex_index_for_start + 2);
+					index_list_.push_back(vertex_index_for_end + 2);
+					index_list_.push_back(vertex_index_for_end + 1);
 
-					index_list.push_back(vertex_index_for_end + 1);
-					index_list.push_back(vertex_index_for_start + 1);
-					index_list.push_back(vertex_index_for_start + 0);
+					index_list_.push_back(vertex_index_for_end + 1);
+					index_list_.push_back(vertex_index_for_start + 1);
+					index_list_.push_back(vertex_index_for_start + 0);
 
-					index_list.push_back(vertex_index_for_start + 0);
-					index_list.push_back(vertex_index_for_end + 0);
-					index_list.push_back(vertex_index_for_end + 1);
+					index_list_.push_back(vertex_index_for_start + 0);
+					index_list_.push_back(vertex_index_for_end + 0);
+					index_list_.push_back(vertex_index_for_end + 1);
 
-					index_list.push_back(vertex_index_for_end + 2);
-					index_list.push_back(vertex_index_for_start + 2);
-					index_list.push_back(vertex_index_for_start + 3);
+					index_list_.push_back(vertex_index_for_end + 2);
+					index_list_.push_back(vertex_index_for_start + 2);
+					index_list_.push_back(vertex_index_for_start + 3);
 
-					index_list.push_back(vertex_index_for_start + 3);
-					index_list.push_back(vertex_index_for_end + 3);
-					index_list.push_back(vertex_index_for_end + 2);
+					index_list_.push_back(vertex_index_for_start + 3);
+					index_list_.push_back(vertex_index_for_end + 3);
+					index_list_.push_back(vertex_index_for_end + 2);
 
 					vertex_index_for_start = vertex_index_for_end;
 				}
@@ -734,10 +864,10 @@ namespace gal::prometheus::gui
 				// Add vertices
 				for (std::decay_t<decltype(path_point_count)> i = 0; i < path_point_count; ++i)
 				{
-					vertex_list.emplace_back(temp_buffer_points[i * 4 + 0], opaque_uv, transparent_color);
-					vertex_list.emplace_back(temp_buffer_points[i * 4 + 1], opaque_uv, color);
-					vertex_list.emplace_back(temp_buffer_points[i * 4 + 2], opaque_uv, color);
-					vertex_list.emplace_back(temp_buffer_points[i * 4 + 2], opaque_uv, transparent_color);
+					vertex_list_.emplace_back(temp_buffer_points[i * 4 + 0], opaque_uv, transparent_color);
+					vertex_list_.emplace_back(temp_buffer_points[i * 4 + 1], opaque_uv, color);
+					vertex_list_.emplace_back(temp_buffer_points[i * 4 + 2], opaque_uv, color);
+					vertex_list_.emplace_back(temp_buffer_points[i * 4 + 2], opaque_uv, transparent_color);
 				}
 			}
 		}
@@ -754,23 +884,25 @@ namespace gal::prometheus::gui
 
 			const auto vertex_count = path_point_count;
 			const auto index_count = (path_point_count - 2) * 3;
-			vertex_list.reserve(vertex_list.size() + vertex_count);
-			index_list.reserve(index_list.size() + index_count);
+			vertex_list_.reserve(vertex_list_.size() + vertex_count);
+			index_list_.reserve(index_list_.size() + index_count);
 
-			const auto current_vertex_index = vertex_list.size();
+			command_list_.back().element_count += index_count;
 
-			const auto& opaque_uv = shared_data->get_texture_uv_of_white_pixel();
+			const auto current_vertex_index = vertex_list_.size();
 
-			std::ranges::transform(path_point, std::back_inserter(vertex_list), [opaque_uv, color](const point_type& point) noexcept -> vertex_type { return {point, opaque_uv, color}; });
+			const auto& opaque_uv = shared_data_->get_texture_uv_of_white_pixel();
+
+			std::ranges::transform(path_point, std::back_inserter(vertex_list_), [opaque_uv, color](const point_type& point) noexcept -> vertex_type { return {point, opaque_uv, color}; });
 			for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
 			{
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_index + 0 <= std::numeric_limits<index_type>::max());
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_index + i - 1 <= std::numeric_limits<index_type>::max());
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_index + i <= std::numeric_limits<index_type>::max());
 
-				index_list.push_back(static_cast<index_type>(current_vertex_index + 0));
-				index_list.push_back(static_cast<index_type>(current_vertex_index + i - 1));
-				index_list.push_back(static_cast<index_type>(current_vertex_index + i));
+				index_list_.push_back(static_cast<index_type>(current_vertex_index + 0));
+				index_list_.push_back(static_cast<index_type>(current_vertex_index + i - 1));
+				index_list_.push_back(static_cast<index_type>(current_vertex_index + i));
 			}
 		}
 
@@ -784,16 +916,18 @@ namespace gal::prometheus::gui
 				return;
 			}
 
-			const auto& opaque_uv = shared_data->get_texture_uv_of_white_pixel();
+			const auto& opaque_uv = shared_data_->get_texture_uv_of_white_pixel();
 			const auto transparent_color = color.transparent();
 
 			const auto vertex_count = path_point_count * 2;
 			const auto index_count = (path_point_count - 2) * 3 + path_point_count * 6;
-			vertex_list.reserve(vertex_list.size() + vertex_count);
-			index_list.reserve(index_list.size() + index_count);
+			vertex_list_.reserve(vertex_list_.size() + vertex_count);
+			index_list_.reserve(index_list_.size() + index_count);
 
-			const auto current_vertex_inner_index = vertex_list.size();
-			const auto current_vertex_outer_index = vertex_list.size() + 1;
+			command_list_.back().element_count += index_count;
+
+			const auto current_vertex_inner_index = vertex_list_.size();
+			const auto current_vertex_outer_index = vertex_list_.size() + 1;
 
 			// Add indexes for fill
 			for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
@@ -802,9 +936,9 @@ namespace gal::prometheus::gui
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + ((i - 1) << 1) <= std::numeric_limits<index_type>::max());
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (i << 1) <= std::numeric_limits<index_type>::max());
 
-				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + 0));
-				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + ((i - 1) << 1)));
-				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + (i << 1)));
+				index_list_.push_back(static_cast<index_type>(current_vertex_inner_index + 0));
+				index_list_.push_back(static_cast<index_type>(current_vertex_inner_index + ((i - 1) << 1)));
+				index_list_.push_back(static_cast<index_type>(current_vertex_inner_index + (i << 1)));
 			}
 
 			list_type<point_type> temp_buffer{};
@@ -823,14 +957,14 @@ namespace gal::prometheus::gui
 			{
 				// Average normals
 				const auto d = (temp_buffer_normals[n] + temp_buffer_normals[i]) * .5f;
-				auto [dm_x, dm_y] = get_fixed_normal(d.x, d.y);
+				auto [dm_x, dm_y] = draw_list_detail::to_fixed_normal(d.x, d.y);
 				dm_x *= .5f;
 				dm_y *= .5f;
 
 				// inner
-				vertex_list.emplace_back(path_point[n] - point_type{dm_x, dm_y}, opaque_uv, color);
+				vertex_list_.emplace_back(path_point[n] - point_type{dm_x, dm_y}, opaque_uv, color);
 				// outer
-				vertex_list.emplace_back(path_point[n] + point_type{dm_x, dm_y}, opaque_uv, transparent_color);
+				vertex_list_.emplace_back(path_point[n] + point_type{dm_x, dm_y}, opaque_uv, transparent_color);
 
 				// Add indexes for fringes
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (n << 1) <= std::numeric_limits<index_type>::max());
@@ -840,12 +974,12 @@ namespace gal::prometheus::gui
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_outer_index + (n << 1) <= std::numeric_limits<index_type>::max());
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (n << 1) <= std::numeric_limits<index_type>::max());
 
-				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
-				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + (i << 1)));
-				index_list.push_back(static_cast<index_type>(current_vertex_outer_index + (i << 1)));
-				index_list.push_back(static_cast<index_type>(current_vertex_outer_index + (i << 1)));
-				index_list.push_back(static_cast<index_type>(current_vertex_outer_index + (n << 1)));
-				index_list.push_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
+				index_list_.push_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
+				index_list_.push_back(static_cast<index_type>(current_vertex_inner_index + (i << 1)));
+				index_list_.push_back(static_cast<index_type>(current_vertex_outer_index + (i << 1)));
+				index_list_.push_back(static_cast<index_type>(current_vertex_outer_index + (i << 1)));
+				index_list_.push_back(static_cast<index_type>(current_vertex_outer_index + (n << 1)));
+				index_list_.push_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
 			}
 		}
 
@@ -860,24 +994,26 @@ namespace gal::prometheus::gui
 			// two triangle without path
 			constexpr auto vertex_count = 4;
 			constexpr auto index_count = 6;
-			vertex_list.reserve(vertex_list.size() + vertex_count);
-			index_list.reserve(index_list.size() + index_count);
+			vertex_list_.reserve(vertex_list_.size() + vertex_count);
+			index_list_.reserve(index_list_.size() + index_count);
 
-			const auto& opaque_uv = shared_data->get_texture_uv_of_white_pixel();
+			command_list_.back().element_count += index_count;
 
-			const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
+			const auto& opaque_uv = shared_data_->get_texture_uv_of_white_pixel();
 
-			vertex_list.emplace_back(rect.left_top(), opaque_uv, color_left_top);
-			vertex_list.emplace_back(rect.right_top(), opaque_uv, color_right_top);
-			vertex_list.emplace_back(rect.right_bottom(), opaque_uv, color_right_bottom);
-			vertex_list.emplace_back(rect.left_bottom(), opaque_uv, color_left_bottom);
+			const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
 
-			index_list.push_back(current_vertex_index + 0);
-			index_list.push_back(current_vertex_index + 1);
-			index_list.push_back(current_vertex_index + 2);
-			index_list.push_back(current_vertex_index + 0);
-			index_list.push_back(current_vertex_index + 2);
-			index_list.push_back(current_vertex_index + 3);
+			vertex_list_.emplace_back(rect.left_top(), opaque_uv, color_left_top);
+			vertex_list_.emplace_back(rect.right_top(), opaque_uv, color_right_top);
+			vertex_list_.emplace_back(rect.right_bottom(), opaque_uv, color_right_bottom);
+			vertex_list_.emplace_back(rect.left_bottom(), opaque_uv, color_left_bottom);
+
+			index_list_.push_back(current_vertex_index + 0);
+			index_list_.push_back(current_vertex_index + 1);
+			index_list_.push_back(current_vertex_index + 2);
+			index_list_.push_back(current_vertex_index + 0);
+			index_list_.push_back(current_vertex_index + 2);
+			index_list_.push_back(current_vertex_index + 3);
 		}
 
 		constexpr auto draw_text(
@@ -893,8 +1029,10 @@ namespace gal::prometheus::gui
 
 			const auto vertex_count = 4 * utf32_text.size();
 			const auto index_count = 6 * utf32_text.size();
-			vertex_list.reserve(vertex_list.size() + vertex_count);
-			index_list.reserve(index_list.size() + index_count);
+			vertex_list_.reserve(vertex_list_.size() + vertex_count);
+			index_list_.reserve(index_list_.size() + index_count);
+
+			command_list_.back().element_count += index_count;
 
 			const float scale = font_size / font.pixel_height;
 
@@ -914,6 +1052,7 @@ namespace gal::prometheus::gui
 					cursor.y += font.pixel_height * scale;
 					if (c == U'\n')
 					{
+						command_list_.back().element_count -= 6;
 						continue;
 					}
 				}
@@ -936,19 +1075,162 @@ namespace gal::prometheus::gui
 				};
 				cursor.x += advance_x;
 
-				const auto current_vertex_index = static_cast<index_type>(vertex_list.size());
+				const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
 
-				vertex_list.emplace_back(char_rect.left_top(), glyph_uv.left_top(), color);
-				vertex_list.emplace_back(char_rect.right_top(), glyph_uv.right_top(), color);
-				vertex_list.emplace_back(char_rect.right_bottom(), glyph_uv.right_bottom(), color);
-				vertex_list.emplace_back(char_rect.left_bottom(), glyph_uv.left_bottom(), color);
+				vertex_list_.emplace_back(char_rect.left_top(), glyph_uv.left_top(), color);
+				vertex_list_.emplace_back(char_rect.right_top(), glyph_uv.right_top(), color);
+				vertex_list_.emplace_back(char_rect.right_bottom(), glyph_uv.right_bottom(), color);
+				vertex_list_.emplace_back(char_rect.left_bottom(), glyph_uv.left_bottom(), color);
 
-				index_list.push_back(current_vertex_index + 0);
-				index_list.push_back(current_vertex_index + 1);
-				index_list.push_back(current_vertex_index + 2);
-				index_list.push_back(current_vertex_index + 0);
-				index_list.push_back(current_vertex_index + 2);
-				index_list.push_back(current_vertex_index + 3);
+				index_list_.push_back(current_vertex_index + 0);
+				index_list_.push_back(current_vertex_index + 1);
+				index_list_.push_back(current_vertex_index + 2);
+				index_list_.push_back(current_vertex_index + 0);
+				index_list_.push_back(current_vertex_index + 2);
+				index_list_.push_back(current_vertex_index + 3);
+			}
+		}
+
+		constexpr auto draw_image(
+			const texture_id_type texture_id,
+			const point_type& display_p1,
+			const point_type& display_p2,
+			const point_type& display_p3,
+			const point_type& display_p4,
+			const uv_type& uv_p1,
+			const uv_type& uv_p2,
+			const uv_type& uv_p3,
+			const uv_type& uv_p4,
+			const color_type& color
+		) noexcept -> void
+		{
+			const auto new_texture = this_command_texture_id_ != texture_id;
+
+			if (new_texture)
+			{
+				push_texture_id(texture_id);
+			}
+
+			// two triangle without path
+			constexpr auto vertex_count = 4;
+			constexpr auto index_count = 6;
+			vertex_list_.reserve(vertex_list_.size() + vertex_count);
+			index_list_.reserve(index_list_.size() + index_count);
+
+			command_list_.back().element_count += index_count;
+
+			const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
+
+			vertex_list_.emplace_back(display_p1, uv_p1, color);
+			vertex_list_.emplace_back(display_p2, uv_p2, color);
+			vertex_list_.emplace_back(display_p3, uv_p3, color);
+			vertex_list_.emplace_back(display_p4, uv_p4, color);
+
+			index_list_.push_back(current_vertex_index + 0);
+			index_list_.push_back(current_vertex_index + 1);
+			index_list_.push_back(current_vertex_index + 2);
+			index_list_.push_back(current_vertex_index + 0);
+			index_list_.push_back(current_vertex_index + 2);
+			index_list_.push_back(current_vertex_index + 3);
+
+			if (new_texture)
+			{
+				pop_texture_id();
+			}
+		}
+
+		constexpr auto draw_image_rounded(
+			const texture_id_type texture_id,
+			const rect_type& display_rect,
+			const rect_type& uv_rect,
+			const color_type& color,
+			float rounding,
+			DrawFlag flag
+		) noexcept -> void
+		{
+			// @see `path_rect`
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(display_rect.valid() and not display_rect.empty());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(uv_rect.valid() and not uv_rect.empty());
+
+			if (rounding >= .5f)
+			{
+				flag = draw_list_detail::to_fixed_rect_corner_flag(flag);
+
+				const auto v = functional::contains<functional::EnumCheckPolicy::ALL_BITS, functional::EnumFoldPolicy::LOGICAL_OR>(flag, DrawFlag::ROUND_CORNER_TOP, DrawFlag::ROUND_CORNER_BOTTOM);
+				const auto h = functional::contains<functional::EnumCheckPolicy::ALL_BITS, functional::EnumFoldPolicy::LOGICAL_OR>(flag, DrawFlag::ROUND_CORNER_LEFT, DrawFlag::ROUND_CORNER_RIGHT);
+
+				rounding = std::ranges::min(rounding, display_rect.width() * (v ? .5f : 1.f) - 1.f);
+				rounding = std::ranges::min(rounding, display_rect.height() * (h ? .5f : 1.f) - 1.f);
+			}
+
+			using functional::operators::operator&;
+			if (rounding < .5f or (DrawFlag::ROUND_CORNER_MASK & flag) == DrawFlag::ROUND_CORNER_NONE)
+			{
+				draw_image(
+					texture_id,
+					display_rect.left_top(),
+					display_rect.right_top(),
+					display_rect.right_bottom(),
+					display_rect.left_bottom(),
+					uv_rect.left_top(),
+					uv_rect.right_top(),
+					uv_rect.right_bottom(),
+					uv_rect.left_bottom(),
+					color
+				);
+			}
+			else
+			{
+				const auto new_texture = this_command_texture_id_ != texture_id;
+
+				if (new_texture)
+				{
+					push_texture_id(texture_id);
+				}
+
+				const auto rounding_left_top = functional::contains<functional::EnumCheckPolicy::ANY_BIT>(flag, DrawFlag::ROUND_CORNER_LEFT_TOP) ? rounding : 0;
+				const auto rounding_right_top = functional::contains<functional::EnumCheckPolicy::ANY_BIT>(flag, DrawFlag::ROUND_CORNER_RIGHT_TOP) ? rounding : 0;
+				const auto rounding_left_bottom = functional::contains<functional::EnumCheckPolicy::ANY_BIT>(flag, DrawFlag::ROUND_CORNER_LEFT_BOTTOM) ? rounding : 0;
+				const auto rounding_right_bottom = functional::contains<functional::EnumCheckPolicy::ANY_BIT>(flag, DrawFlag::ROUND_CORNER_RIGHT_BOTTOM) ? rounding : 0;
+
+				path_arc_fast({display_rect.left_top() + point_type{rounding_left_top, rounding_left_top}, rounding_left_top}, ArcQuadrant::Q2_CLOCK_WISH);
+				path_arc_fast({display_rect.right_top() + point_type{-rounding_right_top, rounding_right_top}, rounding_right_top}, ArcQuadrant::Q1_CLOCK_WISH);
+				path_arc_fast({display_rect.right_bottom() + point_type{-rounding_right_bottom, -rounding_right_bottom}, rounding_right_bottom}, ArcQuadrant::Q4_CLOCK_WISH);
+				path_arc_fast({display_rect.left_bottom() + point_type{rounding_left_bottom, -rounding_left_bottom}, rounding_left_bottom}, ArcQuadrant::Q3_CLOCK_WISH);
+
+				const auto before_vertex_count = vertex_list_.size();
+				path_stroke(color);
+				const auto after_vertex_count = vertex_list_.size();
+
+				const auto display_size = display_rect.size();
+				const auto uv_size = uv_rect.size();
+				const auto scale = uv_size / display_size;
+				
+				auto it = vertex_list_.begin() + static_cast<vertex_list_type::difference_type>(before_vertex_count);
+				const auto end = vertex_list_.begin() + static_cast<vertex_list_type::difference_type>(after_vertex_count);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it < end);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(end == vertex_list_.end());
+				
+				// note: linear uv
+				const auto uv_min = uv_rect.left_top();
+				// const auto uv_max = uv_rect.right_bottom();
+				while (it != end)
+				{
+					const auto v = uv_min + (it->position - display_rect.left_top()) * scale;
+				
+					it->uv =
+					{
+							// std::ranges::clamp(v.x, uv_min.x, uv_max.x),
+							v.x,
+							// std::ranges::clamp(v.y, uv_min.y, uv_max.y)
+							v.y
+					};
+				}
+
+				if (new_texture)
+				{
+					pop_texture_id();
+				}
 			}
 		}
 
@@ -982,7 +1264,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto path_stroke(const color_type& color, const DrawFlag flag, const float thickness) noexcept -> void
 		{
-			if (functional::contains<functional::EnumCheckPolicy::ANY_BIT>(draw_list_flag, DrawListFlag::ANTI_ALIASED_LINE))
+			if (functional::contains<functional::EnumCheckPolicy::ANY_BIT>(draw_list_flag_, DrawListFlag::ANTI_ALIASED_LINE))
 			{
 				draw_polygon_line_aa(color, flag, thickness);
 			}
@@ -996,7 +1278,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto path_stroke(const color_type& color) noexcept -> void
 		{
-			if (functional::contains<functional::EnumCheckPolicy::ANY_BIT>(draw_list_flag, DrawListFlag::ANTI_ALIASED_FILL))
+			if (functional::contains<functional::EnumCheckPolicy::ANY_BIT>(draw_list_flag_, DrawListFlag::ANTI_ALIASED_FILL))
 			{
 				draw_convex_polygon_line_filled_aa(color);
 			}
@@ -1019,7 +1301,7 @@ namespace gal::prometheus::gui
 			}
 
 			// Calculate arc auto segment step size
-			auto step = DrawListSharedData::vertex_sample_points_count / shared_data->get_circle_auto_segment_count(radius);
+			auto step = DrawListSharedData::vertex_sample_points_count / shared_data_->get_circle_auto_segment_count(radius);
 			// Make sure we never do steps larger than one quarter of the circle
 			step = std::clamp(step, static_cast<decltype(step)>(1), DrawListSharedData::vertex_sample_points_count / 4);
 
@@ -1140,7 +1422,7 @@ namespace gal::prometheus::gui
 			}
 
 			// Automatic segment count
-			if (radius <= shared_data->get_arc_fast_radius_cutoff())
+			if (radius <= shared_data_->get_arc_fast_radius_cutoff())
 			{
 				const auto is_reversed = to < from;
 
@@ -1177,7 +1459,7 @@ namespace gal::prometheus::gui
 			else
 			{
 				const auto arc_length = to - from;
-				const auto circle_segment_count = shared_data->get_circle_auto_segment_count(radius);
+				const auto circle_segment_count = shared_data_->get_circle_auto_segment_count(radius);
 				const auto arc_segment_count = std::ranges::max(
 					static_cast<unsigned>(functional::ceil(static_cast<float>(circle_segment_count) * arc_length / (std::numbers::pi_v<float> * 2))),
 					static_cast<unsigned>(std::numbers::pi_v<float> * 2 / arc_length)
@@ -1318,11 +1600,11 @@ namespace gal::prometheus::gui
 			path_pin(p1);
 			if (segments == 0)
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data->get_curve_tessellation_tolerance() > 0);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_->get_curve_tessellation_tolerance() > 0);
 
 				path_reserve_extra(bezier_curve_casteljau_max_level * 2);
 				// auto-tessellated
-				path_bezier_cubic_curve_casteljau(p1, p2, p3, p4, shared_data->get_curve_tessellation_tolerance(), 0);
+				path_bezier_cubic_curve_casteljau(p1, p2, p3, p4, shared_data_->get_curve_tessellation_tolerance(), 0);
 			}
 			else
 			{
@@ -1345,11 +1627,11 @@ namespace gal::prometheus::gui
 			path_pin(p1);
 			if (segments == 0)
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data->get_curve_tessellation_tolerance() > 0);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_->get_curve_tessellation_tolerance() > 0);
 
 				path_reserve_extra(bezier_curve_casteljau_max_level * 2);
 				// auto-tessellated
-				path_bezier_quadratic_curve_casteljau(p1, p2, p3, shared_data->get_curve_tessellation_tolerance(), 0);
+				path_bezier_quadratic_curve_casteljau(p1, p2, p3, shared_data_->get_curve_tessellation_tolerance(), 0);
 			}
 			else
 			{
@@ -1364,11 +1646,107 @@ namespace gal::prometheus::gui
 
 	public:
 		constexpr DrawList() noexcept
-			: draw_list_flag{DrawListFlag::NONE} {}
+			: draw_list_flag_{DrawListFlag::NONE},
+			  this_command_texture_id_{0} {}
+
+		constexpr auto draw_list_flag(const DrawListFlag flag) noexcept -> void
+		{
+			draw_list_flag_ = flag;
+		}
+
+		constexpr auto draw_list_flag(const std::underlying_type_t<DrawListFlag> flag) noexcept -> void
+		{
+			draw_list_flag(static_cast<DrawListFlag>(flag));
+		}
+
+		auto shared_data(const std::shared_ptr<DrawListSharedData>& shared_data) noexcept -> void
+		{
+			shared_data_ = shared_data;
+		}
+
+		constexpr auto reset() noexcept -> void
+		{
+			command_list_.resize(0);
+			vertex_list_.resize(0);
+			index_list_.resize(0);
+
+			this_command_clip_rect_ = {};
+			this_command_texture_id_ = 0;
+
+			// we always have a command ready in the buffer
+			command_list_.emplace_back(
+				command_type
+				{
+						.clip_rect = this_command_clip_rect_,
+						.texture = this_command_texture_id_,
+						.index_offset = index_list_.size(),
+						// set by subsequent draw_xxx
+						.element_count = 0
+				}
+			);
+		}
+
+		[[nodiscard]] constexpr auto command_list() const noexcept -> auto
+		{
+			return command_list_ | std::views::all;
+		}
+
+		[[nodiscard]] constexpr auto vertex_list() const noexcept -> auto
+		{
+			return vertex_list_ | std::views::all;
+		}
+
+		[[nodiscard]] constexpr auto index_list() const noexcept -> auto
+		{
+			return index_list_ | std::views::all;
+		}
+
+		constexpr auto push_clip_rect(const rect_type& rect, const bool intersect_with_current_clip_rect) noexcept -> rect_type&
+		{
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not command_list_.empty());
+
+			auto& [current_clip_rect, current_texture, current_index_offset, current_element_count] = command_list_.back();
+
+			this_command_clip_rect_ = intersect_with_current_clip_rect ? rect.combine_min(current_clip_rect) : rect;
+
+			on_element_changed<ChangedElement::CLIP_RECT>();
+			return command_list_.back().clip_rect;
+		}
+
+		constexpr auto push_clip_rect(const point_type& left_top, const point_type& right_bottom, const bool intersect_with_current_clip_rect) noexcept -> rect_type&
+		{
+			return push_clip_rect({left_top, right_bottom}, intersect_with_current_clip_rect);
+		}
+
+		constexpr auto pop_clip_rect() noexcept -> void
+		{
+			// todo
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(command_list_.size() > 1);
+			this_command_clip_rect_ = command_list_[command_list_.size() - 2].clip_rect;
+
+			on_element_changed<ChangedElement::CLIP_RECT>();
+		}
+
+		constexpr auto push_texture_id(const texture_id_type texture) noexcept -> void
+		{
+			this_command_texture_id_ = texture;
+
+			on_element_changed<ChangedElement::TEXTURE>();
+		}
+
+		constexpr auto pop_texture_id() noexcept -> void
+		{
+			// todo
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not command_list_.empty());
+			this_command_texture_id_ = command_list_.back().texture;
+
+			on_element_changed<ChangedElement::TEXTURE>();
+		}
 
 		constexpr auto line(const point_type& from, const point_type& to, const color_type& color, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1382,7 +1760,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto triangle(const point_type& a, const point_type& b, const point_type& c, const color_type& color, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1397,7 +1775,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto triangle_filled(const point_type& a, const point_type& b, const point_type& c, const color_type& color) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1412,7 +1790,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto rect(const rect_type& rect, const color_type& color, const float rounding = .0f, const DrawFlag flag = DrawFlag::NONE, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1437,7 +1815,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto rect_filled(const rect_type& rect, const color_type& color, const float rounding = .0f, const DrawFlag flag = DrawFlag::NONE) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1475,7 +1853,7 @@ namespace gal::prometheus::gui
 			const color_type& color_right_bottom
 		) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color_left_top.alpha == 0 or color_right_top.alpha == 0 or color_left_bottom.alpha == 0 or color_right_bottom.alpha == 0)
 			{
@@ -1499,7 +1877,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto quadrilateral(const point_type& p1, const point_type& p2, const point_type& p3, const point_type& p4, const color_type& color, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1512,7 +1890,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto quadrilateral_filled(const point_type& p1, const point_type& p2, const point_type& p3, const point_type& p4, const color_type& color) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1525,7 +1903,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto circle_n(const circle_type& circle, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0 or circle.radius < .5f or segments < 3)
 			{
@@ -1538,14 +1916,14 @@ namespace gal::prometheus::gui
 
 		constexpr auto circle_n(const point_type& center, const float radius, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			return circle_n(circle_type{center, radius}, color, segments, thickness);
 		}
 
 		constexpr auto ellipse_n(const ellipse_type& ellipse, const color_type& color, const std::uint32_t segments, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f or segments < 3)
 			{
@@ -1570,7 +1948,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto circle_n_filled(const circle_type& circle, const color_type& color, const std::uint32_t segments) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0 or circle.radius < .5f or segments < 3)
 			{
@@ -1588,7 +1966,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto ellipse_n_filled(const ellipse_type& ellipse, const color_type& color, const std::uint32_t segments) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f or segments < 3)
 			{
@@ -1612,7 +1990,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto circle(const circle_type& circle, const color_type& color, const std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0 or circle.radius < .5f)
 			{
@@ -1639,7 +2017,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto circle_filled(const circle_type& circle, const color_type& color, const std::uint32_t segments = 0) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0 or circle.radius < .5f)
 			{
@@ -1666,7 +2044,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto ellipse(const ellipse_type& ellipse, const color_type& color, std::uint32_t segments = 0, const float thickness = 1.f) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f)
 			{
@@ -1676,7 +2054,7 @@ namespace gal::prometheus::gui
 			if (segments == 0)
 			{
 				// fixme: maybe there's a better computation to do here
-				segments = shared_data->get_circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
+				segments = shared_data_->get_circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
 			}
 
 			ellipse_n(ellipse, color, segments, thickness);
@@ -1696,7 +2074,7 @@ namespace gal::prometheus::gui
 
 		constexpr auto ellipse_filled(const ellipse_type& ellipse, const color_type& color, std::uint32_t segments = 0) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f)
 			{
@@ -1706,7 +2084,7 @@ namespace gal::prometheus::gui
 			if (segments == 0)
 			{
 				// fixme: maybe there's a better computation to do here
-				segments = shared_data->get_circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
+				segments = shared_data_->get_circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
 			}
 
 			ellipse_n_filled(ellipse, color, segments);
@@ -1733,7 +2111,7 @@ namespace gal::prometheus::gui
 			const float thickness = 1.f
 		) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1753,7 +2131,7 @@ namespace gal::prometheus::gui
 			const float thickness = 1.f
 		) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0)
 			{
@@ -1773,7 +2151,7 @@ namespace gal::prometheus::gui
 			const float wrap_width = .0f
 		) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0) { return; }
 
@@ -1788,11 +2166,101 @@ namespace gal::prometheus::gui
 			const float wrap_width = .0f
 		) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data != nullptr);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
 
 			if (color.alpha == 0) { return; }
 
-			draw_text(shared_data->get_default_font(), font_size, p, color, text, wrap_width);
+			draw_text(shared_data_->get_default_font(), font_size, p, color, text, wrap_width);
+		}
+
+		//p1 ________ p2
+		//     |          |
+		//     |          |
+		//p4 |__ ____| p3
+		constexpr auto image(
+			const texture_id_type texture_id,
+			const point_type& display_p1,
+			const point_type& display_p2,
+			const point_type& display_p3,
+			const point_type& display_p4,
+			const uv_type& uv_p1 = {0, 0},
+			const uv_type& uv_p2 = {1, 0},
+			const uv_type& uv_p3 = {1, 1},
+			const uv_type& uv_p4 = {0, 1},
+			const color_type& color = primitive::colors::white
+		) noexcept -> void
+		{
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+			if (color.alpha == 0) { return; }
+
+			draw_image(texture_id, display_p1, display_p2, display_p3, display_p4, uv_p1, uv_p2, uv_p3, uv_p4, color);
+		}
+
+		constexpr auto image(
+			const texture_id_type texture_id,
+			const rect_type& display_rect,
+			const rect_type& uv_rect = {0, 0, 1, 1},
+			const color_type& color = primitive::colors::white
+		) noexcept -> void
+		{
+			image(
+				texture_id,
+				display_rect.left_top(),
+				display_rect.right_top(),
+				display_rect.right_bottom(),
+				display_rect.left_bottom(),
+				uv_rect.left_top(),
+				uv_rect.right_top(),
+				uv_rect.right_bottom(),
+				uv_rect.left_bottom(),
+				color
+			);
+		}
+
+		constexpr auto image(
+			const texture_id_type texture_id,
+			const point_type& display_left_top,
+			const point_type& display_right_bottom,
+			const uv_type& uv_left_top = {0, 0},
+			const uv_type& uv_right_bottom = {1, 1},
+			const color_type& color = primitive::colors::white
+		) noexcept -> void
+		{
+			image(texture_id, {display_left_top, display_right_bottom}, {uv_left_top, uv_right_bottom}, color);
+		}
+
+		constexpr auto image_rounded(
+			const texture_id_type texture_id,
+			const rect_type& display_rect,
+			const float rounding = .0f,
+			const DrawFlag flag = DrawFlag::NONE,
+			const rect_type& uv_rect = {0, 0, 1, 1},
+			const color_type& color = primitive::colors::white
+		) noexcept -> void
+		{
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+			if (color.alpha == 0)
+			{
+				return;
+			}
+
+			draw_image_rounded(texture_id, display_rect, uv_rect, color, rounding, flag);
+		}
+
+		constexpr auto image_rounded(
+			const texture_id_type texture_id,
+			const point_type& display_left_top,
+			const point_type& display_right_bottom,
+			const float rounding = .0f,
+			const DrawFlag flag = DrawFlag::NONE,
+			const uv_type& uv_left_top = {0, 0},
+			const uv_type& uv_right_bottom = {1, 1},
+			const color_type& color = primitive::colors::white
+		) noexcept -> void
+		{
+			image_rounded(texture_id, {display_left_top, display_right_bottom}, rounding, flag, {uv_left_top, uv_right_bottom}, color);
 		}
 	};
 
