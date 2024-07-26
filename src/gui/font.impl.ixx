@@ -284,6 +284,7 @@ namespace gal::prometheus::gui
 				.pixel_height = static_cast<float>(pixel_height),
 				.texture_size = {static_cast<std::uint32_t>(atlas_width), static_cast<std::uint32_t>(atlas_height)},
 				.texture_data = std::make_unique_for_overwrite<std::uint32_t[]>(static_cast<std::size_t>(atlas_width * atlas_height)),
+				.texture_id = 0,
 				.glyphs = {},
 				.fallback_glyph = {}
 		};
