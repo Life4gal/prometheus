@@ -1741,8 +1741,8 @@ namespace gal::prometheus::gui
 		constexpr auto pop_texture_id() noexcept -> void
 		{
 			// todo
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not command_list_.empty());
-			this_command_texture_id_ = command_list_.back().texture;
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(command_list_.size() > 1);
+			this_command_texture_id_ = command_list_[command_list_.size() - 2].texture;
 
 			on_element_changed<ChangedElement::TEXTURE>();
 		}
