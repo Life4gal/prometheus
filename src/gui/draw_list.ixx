@@ -519,7 +519,7 @@ namespace gal::prometheus::gui
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not command_list_.empty());
 
 			const auto& [current_clip_rect, current_texture, current_index_offset, current_element_count] = command_list_.back();
-			if (current_element_count != 0 and current_clip_rect != this_command_clip_rect_)
+			if (current_element_count != 0)
 			{
 				if constexpr (Element == ChangedElement::CLIP_RECT)
 				{
@@ -1671,8 +1671,10 @@ namespace gal::prometheus::gui
 			vertex_list_.resize(0);
 			index_list_.resize(0);
 
+			// we don't know the size of the clip rect, so we need the user to set it
 			this_command_clip_rect_ = {};
-			this_command_texture_id_ = 0;
+			// the first texture is always the (default) font texture
+			this_command_texture_id_ = shared_data_->get_default_font().texture_id;
 
 			// we always have a command ready in the buffer
 			command_list_.emplace_back(
