@@ -1210,7 +1210,7 @@ namespace gal::prometheus::gui
 				const auto end = vertex_list_.begin() + static_cast<vertex_list_type::difference_type>(after_vertex_count);
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it < end);
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(end == vertex_list_.end());
-				
+
 				// note: linear uv
 				const auto uv_min = uv_rect.left_top();
 				// const auto uv_max = uv_rect.right_bottom();
@@ -1225,6 +1225,7 @@ namespace gal::prometheus::gui
 							// std::ranges::clamp(v.y, uv_min.y, uv_max.y)
 							v.y
 					};
+					it += 1;
 				}
 
 				if (new_texture)
