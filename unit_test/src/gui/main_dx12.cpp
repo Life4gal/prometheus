@@ -29,6 +29,9 @@ import gal.prometheus;
 #pragma comment(lib, "dxguid.lib")
 #endif
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 namespace
 {
 	using namespace gal::prometheus;
@@ -235,7 +238,7 @@ int main(int, char**)
 	}
 
 	const auto range = gui::glyph_range_simplified_chinese_common();
-	g_draw_list_shared_data->set_default_font(gui::load_font(R"(C:\Windows\Fonts\msyh.ttc)", 48, range));
+	g_draw_list_shared_data->set_default_font(gui::load_font(R"(C:\Windows\Fonts\msyh.ttc)", 18, range));
 
 	// Setup Platform/Renderer backends
 	win32_init(window);
@@ -343,6 +346,18 @@ int main(int, char**)
 
 namespace
 {
+	INT64 g_ticks_per_second = 0;
+	INT64 g_last_time = 0;
+	INT64 g_frame_count = 0;
+	float g_fps = 0;
+
+	static_assert(sizeof(gui::DrawList::vertex_type) == sizeof(d3d_vertex_type));
+	static_assert(sizeof(gui::DrawList::index_type) == sizeof(d3d_vertex_index_type));
+
+	gui::DrawList g_draw_list;
+	ComPtr<ID3D12Resource> g_pic_texture_resource;
+	D3D12_GPU_DESCRIPTOR_HANDLE g_pic_texture_handle;
+
 	auto create_device(const_window_type window) -> bool
 	{
 		// Setup swap chain
@@ -440,7 +455,9 @@ namespace
 		{
 			constexpr D3D12_DESCRIPTOR_HEAP_DESC desc{
 					.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-					.NumDescriptors = 1,
+					// note: default font + extra pic
+					// @see load_texture_from_file
+					.NumDescriptors = 1 + 1,
 					.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 					.NodeMask = 0
 			};
@@ -582,11 +599,6 @@ namespace
 
 		return frame_context;
 	}
-
-	INT64 g_ticks_per_second = 0;
-	INT64 g_last_time = 0;
-	INT64 g_frame_count = 0;
-	float g_fps = 0;
 
 	auto win32_init(const_window_type window) -> void
 	{
@@ -817,6 +829,8 @@ namespace
 
 		g_device->CreateShaderResourceView(texture.Get(), &resource_view_desc, g_font_cpu_descriptor);
 		g_font_texture_resource = texture;
+
+		g_draw_list_shared_data->get_default_font().texture_id = static_cast<gui::font_type::texture_id_type>(g_font_gpu_descriptor.ptr);
 
 		return true;
 	}
@@ -1138,29 +1152,245 @@ namespace
 		d3d_destroy_device_objects();
 	}
 
-	static_assert(sizeof(gui::DrawList::vertex_type) == sizeof(d3d_vertex_type));
-	static_assert(sizeof(gui::DrawList::index_type) == sizeof(d3d_vertex_index_type));
+	[[nodiscard]] auto load_texture_from_file(const std::string_view filename) -> bool
+	{
+		int image_width;
+		int image_height;
 
-	gui::DrawList g_draw_list;
+		auto* data = stbi_load(filename.data(), &image_width, &image_height, nullptr, 4);
+		if (data == nullptr)
+		{
+			return false;
+		}
+
+		constexpr D3D12_HEAP_PROPERTIES heap_properties{
+				.Type = D3D12_HEAP_TYPE_DEFAULT,
+				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+				.CreationNodeMask = 0,
+				.VisibleNodeMask = 0
+		};
+
+		const D3D12_RESOURCE_DESC resource_desc{
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(image_width),
+				.Height = static_cast<UINT>(image_height),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+				.SampleDesc = {.Count = 1, .Quality = 0},
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_NONE
+		};
+
+		ComPtr<ID3D12Resource> texture;
+		check_hr_error(
+			g_device->CreateCommittedResource(
+				&heap_properties,
+				D3D12_HEAP_FLAG_NONE,
+				&resource_desc,
+				D3D12_RESOURCE_STATE_COPY_DEST,
+				nullptr,
+				IID_PPV_ARGS(texture.GetAddressOf())
+			)
+		);
+
+		const auto upload_pitch = (static_cast<UINT>(image_width * 4) + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u);
+		const auto upload_size = static_cast<UINT>(image_height) * upload_pitch;
+
+		constexpr D3D12_HEAP_PROPERTIES upload_heap_properties{
+				.Type = D3D12_HEAP_TYPE_UPLOAD,
+				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+				.CreationNodeMask = 0,
+				.VisibleNodeMask = 0
+		};
+
+		const D3D12_RESOURCE_DESC upload_resource_desc{
+				.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(upload_size),
+				.Height = 1,
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_UNKNOWN,
+				.SampleDesc = {.Count = 1, .Quality = 0},
+				.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+				.Flags = D3D12_RESOURCE_FLAG_NONE
+		};
+
+		ComPtr<ID3D12Resource> upload_buffer;
+		check_hr_error(
+			g_device->CreateCommittedResource(
+				&upload_heap_properties,
+				D3D12_HEAP_FLAG_NONE,
+				&upload_resource_desc,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(upload_buffer.GetAddressOf())
+			)
+		);
+
+		void* mapped_data = nullptr;
+		const D3D12_RANGE range{.Begin = 0, .End = upload_size};
+		check_hr_error(upload_buffer->Map(0, &range, &mapped_data));
+		for (UINT i = 0; i < static_cast<UINT>(image_height); ++i)
+		{
+			auto* dest = static_cast<std::uint8_t*>(mapped_data) + static_cast<std::ptrdiff_t>(upload_pitch * i);
+			auto* source = reinterpret_cast<std::uint8_t*>(data) + static_cast<std::ptrdiff_t>(image_width * i * 4);
+			const auto size = image_width * 4;
+			std::memcpy(dest, source, size);
+		}
+		upload_buffer->Unmap(0, &range);
+
+		const D3D12_TEXTURE_COPY_LOCATION source_location{
+				.pResource = upload_buffer.Get(),
+				.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
+				.PlacedFootprint =
+				{
+						.Offset = 0,
+						.Footprint =
+						{
+								.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+								.Width = static_cast<UINT>(image_width),
+								.Height = static_cast<UINT>(image_height),
+								.Depth = 1,
+								.RowPitch = upload_pitch
+						}
+				}
+		};
+
+		const D3D12_TEXTURE_COPY_LOCATION dest_location{
+				.pResource = texture.Get(),
+				.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+				.SubresourceIndex = 0
+		};
+
+		const D3D12_RESOURCE_BARRIER barrier{
+				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+				.Transition =
+				{
+						.pResource = texture.Get(),
+						.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+						.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
+						.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+				}
+		};
+
+		ComPtr<ID3D12CommandAllocator> command_allocator;
+		check_hr_error(
+			g_device->CreateCommandAllocator(
+				D3D12_COMMAND_LIST_TYPE_DIRECT,
+				IID_PPV_ARGS(command_allocator.GetAddressOf())
+			)
+		);
+
+		ComPtr<ID3D12GraphicsCommandList> command_list;
+		check_hr_error(
+			g_device->CreateCommandList(
+				0,
+				D3D12_COMMAND_LIST_TYPE_DIRECT,
+				command_allocator.Get(),
+				nullptr,
+				IID_PPV_ARGS(command_list.GetAddressOf())
+			)
+		);
+
+		command_list->CopyTextureRegion(&dest_location, 0, 0, 0, &source_location, nullptr);
+		command_list->ResourceBarrier(1, &barrier);
+		check_hr_error(command_list->Close());
+
+		constexpr D3D12_COMMAND_QUEUE_DESC command_queue_desc{
+				.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
+				.Priority = 0,
+				.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
+				.NodeMask = 1
+		};
+
+		ComPtr<ID3D12CommandQueue> command_queue;
+		check_hr_error(
+			g_device->CreateCommandQueue(
+				&command_queue_desc,
+				IID_PPV_ARGS(command_queue.GetAddressOf())
+			)
+		);
+
+		ID3D12CommandList* command_lists[]{command_list.Get()};
+		command_queue->ExecuteCommandLists(1, command_lists);
+
+		ComPtr<ID3D12Fence> fence;
+		check_hr_error(
+			g_device->CreateFence(
+				0,
+				D3D12_FENCE_FLAG_NONE,
+				IID_PPV_ARGS(fence.GetAddressOf())
+			)
+		);
+
+		constexpr UINT64 fence_value = 1;
+		check_hr_error(command_queue->Signal(fence.Get(), fence_value));
+		if (fence->GetCompletedValue() < fence_value)
+		{
+			HANDLE event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+			check_hr_error(fence->SetEventOnCompletion(fence_value, event));
+			WaitForSingleObject(event, INFINITE);
+			CloseHandle(event);
+		}
+
+		// Create texture view
+		const D3D12_SHADER_RESOURCE_VIEW_DESC resource_view_desc{
+				.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Texture2D = {.MostDetailedMip = 0, .MipLevels = resource_desc.MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = .0f}
+		};
+
+		// note:
+		// We set `NumDescriptors` to 2 at `create_device => g_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(g_shader_resource_view_descriptor_heap.GetAddressOf()))`.
+		// where g_shader_resource_view_descriptor_heap[0] is used for our default font texture, and g_shader_resource_view_descriptor_heap[1] is used for the additional image
+		const auto increment_size = g_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE extra_pic_handle = g_shader_resource_view_descriptor_heap->GetCPUDescriptorHandleForHeapStart();
+		extra_pic_handle.ptr += increment_size;
+
+		g_device->CreateShaderResourceView(texture.Get(), &resource_view_desc, extra_pic_handle);
+
+		g_pic_texture_resource = texture;
+		g_pic_texture_handle = g_shader_resource_view_descriptor_heap->GetGPUDescriptorHandleForHeapStart();
+		g_pic_texture_handle.ptr += increment_size;
+
+		stbi_image_free(data);
+
+		return true;
+	}
 
 	auto prometheus_init() -> void
 	{
-		g_draw_list.shared_data = g_draw_list_shared_data;
-		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_LINE;
-		g_draw_list.draw_list_flag = gui::DrawListFlag::ANTI_ALIASED_FILL;
+		using functional::operators::operator|;
+		g_draw_list.draw_list_flag(gui::DrawListFlag::ANTI_ALIASED_LINE | gui::DrawListFlag::ANTI_ALIASED_FILL);
+		g_draw_list.shared_data(g_draw_list_shared_data);
+
+		// load extra texture
+		assert(load_texture_from_file(ASSETS_PATH_PIC));
 	}
 
 	auto prometheus_new_frame() -> void //
 	{
-		g_draw_list.vertex_list.clear();
-		g_draw_list.index_list.clear();
+		g_draw_list.reset();
+		g_draw_list.push_clip_rect(
+			{static_cast<float>(g_window_position_left), static_cast<float>(g_window_position_top)},
+			{static_cast<float>(g_window_position_left + g_window_width), static_cast<float>(g_window_position_top + g_window_height)},
+			false
+		);
 	}
 
 	auto prometheus_render() -> void
 	{
 		g_draw_list.text(24.f, {10, 10}, primitive::colors::blue, std::format("FPS: {:.3f}", g_fps));
 
-		g_draw_list.text(24.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n", 200.f);
+		g_draw_list.text(24.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n");
 
 		g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
 		g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
@@ -1213,6 +1443,23 @@ namespace
 		g_draw_list.circle_filled({700, 650}, 5, primitive::colors::red);
 		g_draw_list.circle_filled({550, 800}, 5, primitive::colors::red);
 		g_draw_list.bezier_quadratic({600, 600}, {700, 650}, {550, 800}, primitive::colors::green, 5);
+
+		// push bound
+		// [800,350] => [1000, 550] (200 x 200)
+		g_draw_list.push_clip_rect({800, 350}, {1000, 550}, true);
+		g_draw_list.rect({800, 350}, {1000, 550}, primitive::colors::red);
+		// out-of-bound
+		g_draw_list.triangle_filled({700, 250}, {900, 400}, {850, 450}, primitive::colors::green);
+		// in-bound
+		g_draw_list.triangle_filled({900, 450}, {1000, 450}, {950, 550}, primitive::colors::blue);
+		// pop bound
+		g_draw_list.pop_clip_rect();
+
+		g_draw_list.triangle_filled({800, 450}, {700, 750}, {850, 800}, primitive::colors::gold);
+
+		// font texture
+		g_draw_list.image(g_draw_list_shared_data->get_default_font().texture_id, {900, 20, 1200, 320});
+		g_draw_list.image_rounded(static_cast<gui::DrawList::texture_id_type>(g_pic_texture_handle.ptr), {900, 350, 1200, 650}, 10);
 	}
 
 	auto prometheus_draw() -> void
@@ -1222,6 +1469,10 @@ namespace
 		auto& this_frame = g_frame_resource[this_frame_index];
 		auto& [this_frame_index_buffer, this_frame_index_count, this_frame_vertex_buffer, this_frame_vertex_count] = this_frame;
 
+		const auto command_list = g_draw_list.command_list();
+		const auto vertex_list = g_draw_list.vertex_list();
+		const auto index_list = g_draw_list.index_list();
+
 		constexpr D3D12_HEAP_PROPERTIES heap_properties{
 				.Type = D3D12_HEAP_TYPE_UPLOAD,
 				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
@@ -1230,10 +1481,10 @@ namespace
 				.VisibleNodeMask = 0
 		};
 		// Create and grow vertex/index buffers if needed
-		if (this_frame_vertex_buffer == nullptr or this_frame_vertex_count < g_draw_list.vertex_list.size())
+		if (this_frame_vertex_buffer == nullptr or this_frame_vertex_count < vertex_list.size())
 		{
 			// todo: grow factor
-			this_frame_vertex_count = static_cast<UINT>(g_draw_list.vertex_list.size()) + 5000;
+			this_frame_vertex_count = static_cast<UINT>(vertex_list.size()) + 5000;
 
 			const D3D12_RESOURCE_DESC resource_desc{
 					.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -1258,10 +1509,10 @@ namespace
 				)
 			);
 		}
-		if (this_frame_index_buffer == nullptr or this_frame_index_count < g_draw_list.index_list.size())
+		if (this_frame_index_buffer == nullptr or this_frame_index_count < index_list.size())
 		{
 			// todo: grow factor
-			this_frame_index_count = static_cast<UINT>(g_draw_list.index_list.size()) + 10000;
+			this_frame_index_count = static_cast<UINT>(index_list.size()) + 10000;
 
 			const D3D12_RESOURCE_DESC resource_desc{
 					.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -1299,7 +1550,7 @@ namespace
 			auto* mapped_index = static_cast<d3d_vertex_index_type*>(mapped_index_resource);
 
 			std::ranges::transform(
-				g_draw_list.vertex_list,
+				vertex_list,
 				mapped_vertex,
 				[](const gui::DrawList::vertex_type& vertex) -> d3d_vertex_type
 				{
@@ -1310,7 +1561,7 @@ namespace
 					};
 				}
 			);
-			std::ranges::copy(g_draw_list.index_list, mapped_index);
+			std::ranges::copy(index_list, mapped_index);
 
 			this_frame_vertex_buffer->Unmap(0, &range);
 			this_frame_index_buffer->Unmap(0, &range);
@@ -1371,19 +1622,32 @@ namespace
 			g_command_list->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
 		}
 
-		// Bind font texture
-		{
-			g_command_list->SetGraphicsRootDescriptorTable(1, g_font_gpu_descriptor);
-		}
-
 		// Setup blend factor
 		constexpr float blend_factor[4]{.0f, .0f, .0f, .0f};
 		g_command_list->OMSetBlendFactor(blend_factor);
 
-		const D3D12_RECT rect{g_window_position_left, g_window_position_top, g_window_position_left + g_window_width, g_window_position_top + g_window_height};
-		g_command_list->RSSetScissorRects(1, &rect);
+		// The following code is no longer needed, because we bind the handle based on the command.
+		// Bind font texture
+		// {
+		// 	g_command_list->SetGraphicsRootDescriptorTable(1, g_font_gpu_descriptor);
+		// }
 
-		g_command_list->DrawIndexedInstanced(static_cast<UINT>(g_draw_list.index_list.size()), 1, 0, 0, 0);
+		// const D3D12_RECT rect{g_window_position_left, g_window_position_top, g_window_position_left + g_window_width, g_window_position_top + g_window_height};
+		// g_command_list->RSSetScissorRects(1, &rect);
+
+		// g_command_list->DrawIndexedInstanced(static_cast<UINT>(index_list.size()), 1, 0, 0, 0);
+		for (const auto& [clip_rect, texture, index_offset, element_count]: command_list)
+		{
+			const auto [point, extent] = clip_rect;
+			const D3D12_RECT rect{static_cast<LONG>(point.x), static_cast<LONG>(point.y), static_cast<LONG>(point.x + extent.width), static_cast<LONG>(point.y + extent.height)};
+			g_command_list->RSSetScissorRects(1, &rect);
+
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture != 0, "push_texture_id when create texture view");
+			const D3D12_GPU_DESCRIPTOR_HANDLE texture_handle{.ptr = static_cast<UINT64>(texture)};
+			g_command_list->SetGraphicsRootDescriptorTable(1, texture_handle);
+
+			g_command_list->DrawIndexedInstanced(static_cast<UINT>(element_count), 1, static_cast<UINT>(index_offset), 0, 0);
+		}
 	}
 
 	auto prometheus_shutdown() -> void //

@@ -41,6 +41,9 @@ add_test(
 		COMMAND ${PROJECT_NAME}
 )
 
+# assets path
+set(ASSETS_PATH_PIC ${CMAKE_SOURCE_DIR}/assets/pic.jpg)
+
 #find_package(Vulkan)
 #
 #if (Vulkan_FOUND)
@@ -99,6 +102,14 @@ target_link_libraries(
 		PUBLIC
 		prometheus
 )
+link_3rd_library_stb(${PROJECT_NAME}-gui-dx12)
+
+target_compile_definitions(
+		${PROJECT_NAME}-gui-dx12
+		PUBLIC
+
+		ASSETS_PATH_PIC="${ASSETS_PATH_PIC}"
+)
 
 add_executable(
 		${PROJECT_NAME}-gui-dx11
@@ -116,4 +127,12 @@ target_link_libraries(
 		${PROJECT_NAME}-gui-dx11
 		PUBLIC
 		prometheus
+)
+link_3rd_library_stb(${PROJECT_NAME}-gui-dx11)
+
+target_compile_definitions(
+		${PROJECT_NAME}-gui-dx11
+		PUBLIC
+
+		ASSETS_PATH_PIC="${ASSETS_PATH_PIC}"
 )
