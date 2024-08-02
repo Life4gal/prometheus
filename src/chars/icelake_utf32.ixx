@@ -600,25 +600,21 @@ namespace gal::prometheus::chars
 					const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
 					const auto in = _mm512_loadu_si512(it_input_current);
-					if (const auto outside_range = _mm512_cmp_epu32_mask(
-							in,
-							_mm512_set1_epi32(0x0010'ffff),
-							_MM_CMPINT_GT
-						);
-						outside_range)
-					{
-						return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error + std::countr_zero(outside_range)};
-					}
-
 					const auto offset = _mm512_add_epi32(in, _mm512_set1_epi32(static_cast<int>(0xffff'2000)));
-					if (const auto surrogate_range = _mm512_cmp_epu32_mask(
-							offset,
-							_mm512_set1_epi32(static_cast<int>(0xffff'f7ff)),
-							_MM_CMPINT_GT
-						);
-						surrogate_range)
+
+					const auto outside_range = _mm512_cmp_epu32_mask(in, _mm512_set1_epi32(0x0010'ffff), _MM_CMPINT_GT);
+					const auto surrogate_range = _mm512_cmp_epu32_mask(offset, _mm512_set1_epi32(static_cast<int>(0xffff'f7ff)), _MM_CMPINT_GT);
+
+					if (outside_range | surrogate_range)
 					{
-						return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error + std::countr_zero(surrogate_range)};
+						const auto outside_index = std::countr_zero(outside_range);
+						const auto surrogate_index = std::countr_zero(surrogate_range);
+
+						if (outside_range < surrogate_range)
+						{
+							return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error + outside_index};
+						}
+						return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error + surrogate_index};
 					}
 				}
 
@@ -630,20 +626,21 @@ namespace gal::prometheus::chars
 						static_cast<__mmask16>((__mmask16{1} << (it_input_end - it_input_current)) - 1),
 						it_input_current
 					);
-					if (const auto outside_range = _mm512_cmp_epu32_mask(in, _mm512_set1_epi32(0x10'ffff), _MM_CMPINT_GT);
-						outside_range)
-					{
-						return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error + std::countr_zero(outside_range)};
-					}
-
 					const auto offset = _mm512_add_epi32(in, _mm512_set1_epi32(static_cast<int>(0xffff'2000)));
-					if (const auto surrogate_range = _mm512_cmp_epu32_mask(
-							offset,
-							_mm512_set1_epi32(static_cast<int>(0xffff'f7ff)),
-							_MM_CMPINT_GT);
-						surrogate_range)
+
+					const auto outside_range = _mm512_cmp_epu32_mask(in, _mm512_set1_epi32(0x10'ffff), _MM_CMPINT_GT);
+					const auto surrogate_range = _mm512_cmp_epu32_mask(offset, _mm512_set1_epi32(static_cast<int>(0xffff'f7ff)), _MM_CMPINT_GT);
+
+					if (outside_range | surrogate_range)
 					{
-						return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error + std::countr_zero(surrogate_range)};
+						const auto outside_index = std::countr_zero(outside_range);
+						const auto surrogate_index = std::countr_zero(surrogate_range);
+
+						if (outside_range < surrogate_range)
+						{
+							return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error + outside_index};
+						}
+						return result_type{.error = ErrorCode::SURROGATE, .count = length_if_error + surrogate_index};
 					}
 				}
 
