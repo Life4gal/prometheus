@@ -74,22 +74,22 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		using value_type = T;
 		constexpr static auto is_integral_value = std::is_integral_v<value_type>;
 
-		value_type alpha;
-		value_type blue;
-		value_type green;
 		value_type red;
+		value_type green;
+		value_type blue;
+		value_type alpha;
 
 		constexpr explicit(false) basic_color(const value_type value = value_type{0}) noexcept
-			: alpha{0},
-			  blue{value},
+			: red{value},
 			  green{value},
-			  red{value} {}
+			  blue{value},
+			  alpha{0} {}
 
 		constexpr basic_color(const value_type red, const value_type green, const value_type blue, const value_type alpha) noexcept
-			: alpha{alpha},
-			  blue{blue},
+			: red{red},
 			  green{green},
-			  red{red} {}
+			  blue{blue},
+			  alpha{alpha} {}
 
 		template<ColorFormat Format>
 		constexpr basic_color(const universal_32_bit_color_type color, const color_format_type<Format>) noexcept
