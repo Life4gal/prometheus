@@ -110,8 +110,8 @@ namespace
 				{
 					g_window_resize_width = static_cast<LONG>(LOWORD(l_param));
 					g_window_resize_height = static_cast<LONG>(HIWORD(l_param));
-					return 0;
 				}
+				return 0;
 			}
 			case WM_DESTROY:
 			{
