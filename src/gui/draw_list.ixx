@@ -129,7 +129,7 @@ namespace gal::prometheus::gui
 		Q2_CLOCK_WISH = 0x0010'0000,
 		// [9, 6)
 		Q3_CLOCK_WISH = 0x0100'0000,
-		// [12, 9_)
+		// [12, 9)
 		Q4_CLOCK_WISH = 0x1000'0000,
 
 		RIGHT_TOP_CLOCK_WISH = Q1_CLOCK_WISH,
@@ -453,7 +453,7 @@ namespace gal::prometheus::gui
 		struct command_type
 		{
 			rect_type clip_rect;
-			texture_id_type texture;
+			texture_id_type texture_id;
 			// there may be additional data
 
 			// =======================
@@ -493,13 +493,14 @@ namespace gal::prometheus::gui
 
 		constexpr auto push_command() noexcept -> void
 		{
+			// fixme: If the window boundary is smaller than the rect boundary, the rect will no longer be valid.
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not this_command_clip_rect_.empty() and this_command_clip_rect_.valid());
 
 			command_list_.emplace_back(
 				command_type
 				{
 						.clip_rect = this_command_clip_rect_,
-						.texture = this_command_texture_id_,
+						.texture_id = this_command_texture_id_,
 						.index_offset = index_list_.size(),
 						// set by subsequent draw_xxx
 						.element_count = 0
@@ -569,7 +570,7 @@ namespace gal::prometheus::gui
 			}
 			else if constexpr (Element == ChangedElement::TEXTURE)
 			{
-				command_list_.back().texture = this_command_texture_id_;
+				command_list_.back().texture_id = this_command_texture_id_;
 			}
 			else
 			{
@@ -1025,6 +1026,13 @@ namespace gal::prometheus::gui
 			const float wrap_width
 		) noexcept -> void
 		{
+			const auto new_texture = this_command_texture_id_ != font.texture_id;
+
+			if (new_texture)
+			{
+				push_texture_id(font.texture_id);
+			}
+
 			const auto utf32_text = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(text);
 
 			const auto vertex_count = 4 * utf32_text.size();
@@ -1088,6 +1096,11 @@ namespace gal::prometheus::gui
 				index_list_.push_back(current_vertex_index + 0);
 				index_list_.push_back(current_vertex_index + 2);
 				index_list_.push_back(current_vertex_index + 3);
+			}
+
+			if (new_texture)
+			{
+				pop_texture_id();
 			}
 		}
 
@@ -1205,7 +1218,7 @@ namespace gal::prometheus::gui
 				const auto display_size = display_rect.size();
 				const auto uv_size = uv_rect.size();
 				const auto scale = uv_size / display_size;
-				
+
 				auto it = vertex_list_.begin() + static_cast<vertex_list_type::difference_type>(before_vertex_count);
 				const auto end = vertex_list_.begin() + static_cast<vertex_list_type::difference_type>(after_vertex_count);
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it < end);
@@ -1217,7 +1230,7 @@ namespace gal::prometheus::gui
 				while (it != end)
 				{
 					const auto v = uv_min + (it->position - display_rect.left_top()) * scale;
-				
+
 					it->uv =
 					{
 							// std::ranges::clamp(v.x, uv_min.x, uv_max.x),
@@ -1681,7 +1694,7 @@ namespace gal::prometheus::gui
 				command_type
 				{
 						.clip_rect = this_command_clip_rect_,
-						.texture = this_command_texture_id_,
+						.texture_id = this_command_texture_id_,
 						.index_offset = index_list_.size(),
 						// set by subsequent draw_xxx
 						.element_count = 0
@@ -1742,7 +1755,7 @@ namespace gal::prometheus::gui
 		{
 			// todo
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(command_list_.size() > 1);
-			this_command_texture_id_ = command_list_[command_list_.size() - 2].texture;
+			this_command_texture_id_ = command_list_[command_list_.size() - 2].texture_id;
 
 			on_element_changed<ChangedElement::TEXTURE>();
 		}
