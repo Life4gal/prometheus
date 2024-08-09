@@ -173,6 +173,7 @@ int main(int, char**)
 			// Handle window being minimized or screen locked
 			if (g_swap_chain_occluded and g_swap_chain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
 			{
+				print_time();
 				Sleep(10);
 				continue;
 			}
@@ -224,18 +225,20 @@ namespace
 {
 	auto create_device(const_window_type window) -> bool
 	{
-		PRINT_TIME();
+		print_time();
 
 		// device and swap chain
 		{
 			const DXGI_SWAP_CHAIN_DESC swap_chain_desc{
 					.BufferDesc =
-					{.Width = 0,
-					 .Height = 0,
-					 .RefreshRate = {.Numerator = 60, .Denominator = 1},
-					 .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
-					 .ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
-					 .Scaling = DXGI_MODE_SCALING_UNSPECIFIED},
+					{
+							.Width = 0,
+							.Height = 0,
+							.RefreshRate = {.Numerator = 60, .Denominator = 1},
+							.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+							.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
+							.Scaling = DXGI_MODE_SCALING_UNSPECIFIED
+					},
 					.SampleDesc = {.Count = 1, .Quality = 0},
 					.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
 					.BufferCount = 2,
@@ -304,7 +307,7 @@ namespace
 
 	auto cleanup_device() -> void
 	{
-		PRINT_TIME();
+		print_time();
 
 		cleanup_render_target();
 
@@ -314,7 +317,7 @@ namespace
 
 	auto create_render_target() -> void
 	{
-		PRINT_TIME();
+		print_time();
 
 		ComPtr<ID3D11Texture2D> back_buffer;
 		check_hr_error(g_swap_chain->GetBuffer(0, IID_PPV_ARGS(back_buffer.GetAddressOf())));
@@ -323,14 +326,14 @@ namespace
 
 	auto cleanup_render_target() -> void //
 	{
-		PRINT_TIME();
+		print_time();
 
 		g_render_target_view.Reset();
 	}
 
 	auto win32_init(const_window_type window) -> void //
 	{
-		PRINT_TIME();
+		print_time();
 
 		(void)window;
 
@@ -362,12 +365,12 @@ namespace
 
 	auto win32_shutdown() -> void
 	{
-		PRINT_TIME();
+		print_time();
 	}
 
 	auto d3d_init() -> void //
 	{
-		PRINT_TIME();
+		print_time();
 	}
 
 	auto d3d_new_frame() -> void
@@ -377,6 +380,6 @@ namespace
 
 	auto d3d_shutdown() -> void //
 	{
-		PRINT_TIME();
+		print_time();
 	}
 }

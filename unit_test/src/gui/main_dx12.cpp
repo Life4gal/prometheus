@@ -287,7 +287,7 @@ namespace
 {
 	auto create_device(const_window_type window) -> bool
 	{
-		PRINT_TIME();
+		print_time();
 
 		// Setup swap chain
 		constexpr DXGI_SWAP_CHAIN_DESC1 swap_chain_desc{
@@ -434,7 +434,7 @@ namespace
 
 	auto cleanup_device() -> void
 	{
-		PRINT_TIME();
+		print_time();
 
 		cleanup_render_target();
 		if (g_swap_chain)
@@ -457,7 +457,7 @@ namespace
 
 	auto create_render_target() -> void
 	{
-		PRINT_TIME();
+		print_time();
 
 		for (UINT i = 0; i < num_back_buffers; i++)
 		{
@@ -470,7 +470,7 @@ namespace
 
 	auto cleanup_render_target() -> void
 	{
-		PRINT_TIME();
+		print_time();
 
 		wait_for_last_submitted_frame();
 
@@ -527,7 +527,7 @@ namespace
 
 	auto win32_init(const_window_type window) -> void
 	{
-		PRINT_TIME();
+		print_time();
 
 		(void)window;
 
@@ -559,12 +559,12 @@ namespace
 
 	auto win32_shutdown() -> void
 	{
-		PRINT_TIME();
+		print_time();
 	}
 
 	auto d3d_init() -> void
 	{
-		PRINT_TIME();
+		print_time();
 	}
 
 	auto d3d_new_frame() -> void
@@ -574,6 +574,6 @@ namespace
 
 	auto d3d_shutdown() -> void
 	{
-		PRINT_TIME();
+		print_time();
 	}
 }

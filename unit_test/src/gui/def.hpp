@@ -24,4 +24,7 @@ using d3d_projection_matrix_type = float[4][4];
 static_assert(sizeof(gal::prometheus::gui::DrawList::vertex_type) == sizeof(d3d_vertex_type));
 static_assert(sizeof(gal::prometheus::gui::DrawList::index_type) == sizeof(d3d_index_type));
 
-#define PRINT_TIME() std::println(stdout, "[{:%r}] {}", std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now()), std::source_location::current().function_name())
+inline auto print_time(const std::source_location& location = std::source_location::current()) noexcept -> void
+{
+	std::println(stdout, "[{:%r}] {}", std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now()), location.function_name());
+}

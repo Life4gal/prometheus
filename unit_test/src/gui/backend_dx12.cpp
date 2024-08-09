@@ -279,7 +279,7 @@ namespace
 
 auto prometheus_init() -> void
 {
-	PRINT_TIME();
+	print_time();
 
 	using functional::operators::operator|;
 	g_draw_list.draw_list_flag(gui::DrawListFlag::ANTI_ALIASED_LINE | gui::DrawListFlag::ANTI_ALIASED_FILL);
@@ -622,28 +622,28 @@ auto prometheus_render() -> void
 	g_draw_list.text(24.f, {10, 10}, primitive::colors::blue, std::format("FPS: {:.3f}", g_fps));
 
 	g_draw_list.text(24.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n");
-	
+
 	g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
 	g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
-	
+
 	g_draw_list.rect({100, 100}, {300, 300}, primitive::colors::blue);
 	g_draw_list.rect({150, 150}, {250, 250}, primitive::colors::blue, 30);
-	
+
 	g_draw_list.triangle({120, 120}, {120, 150}, {150, 120}, primitive::colors::green);
 	g_draw_list.triangle_filled({130, 130}, {130, 150}, {150, 130}, primitive::colors::red);
-	
+
 	g_draw_list.rect_filled({300, 100}, {400, 200}, primitive::colors::pink);
 	g_draw_list.rect_filled({300, 200}, {400, 300}, primitive::colors::pink, 20);
 	g_draw_list.rect_filled({300, 300}, {400, 400}, primitive::colors::pink, primitive::colors::gold, primitive::colors::azure, primitive::colors::lavender);
-	
+
 	g_draw_list.quadrilateral({100, 500}, {200, 500}, {250, 550}, {50, 550}, primitive::colors::red);
 	g_draw_list.quadrilateral_filled({100, 500}, {200, 500}, {250, 450}, {50, 450}, primitive::colors::red);
-	
+
 	g_draw_list.circle({100, 600}, 50, primitive::colors::green);
 	g_draw_list.circle({200, 600}, 50, primitive::colors::red, 8);
 	g_draw_list.circle_filled({100, 700}, 50, primitive::colors::green);
 	g_draw_list.circle_filled({200, 700}, 50, primitive::colors::red, 8);
-	
+
 	g_draw_list.ellipse({500, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 8);
 	g_draw_list.ellipse_filled({500, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 8);
 	g_draw_list.ellipse({600, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 16);
@@ -652,29 +652,29 @@ auto prometheus_render() -> void
 	g_draw_list.ellipse_filled({700, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 24);
 	g_draw_list.ellipse({800, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red);
 	g_draw_list.ellipse_filled({800, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red);
-	
+
 	g_draw_list.circle_filled({500, 300}, 5, primitive::colors::red);
 	g_draw_list.circle_filled({600, 350}, 5, primitive::colors::red);
 	g_draw_list.circle_filled({450, 500}, 5, primitive::colors::red);
 	g_draw_list.circle_filled({550, 550}, 5, primitive::colors::red);
 	g_draw_list.bezier_cubic({500, 300}, {600, 350}, {450, 500}, {550, 550}, primitive::colors::green);
-	
+
 	g_draw_list.circle_filled({600, 300}, 5, primitive::colors::red);
 	g_draw_list.circle_filled({700, 350}, 5, primitive::colors::red);
 	g_draw_list.circle_filled({550, 500}, 5, primitive::colors::red);
 	g_draw_list.circle_filled({650, 550}, 5, primitive::colors::red);
 	g_draw_list.bezier_cubic({600, 300}, {700, 350}, {550, 500}, {650, 550}, primitive::colors::green, 5);
-	
+
 	g_draw_list.circle_filled({500, 600}, 5, primitive::colors::red);
 	g_draw_list.circle_filled({600, 650}, 5, primitive::colors::red);
 	g_draw_list.circle_filled({450, 800}, 5, primitive::colors::red);
 	g_draw_list.bezier_quadratic({500, 600}, {600, 650}, {450, 800}, primitive::colors::green);
-	
+
 	g_draw_list.circle_filled({600, 600}, 5, primitive::colors::red);
 	g_draw_list.circle_filled({700, 650}, 5, primitive::colors::red);
 	g_draw_list.circle_filled({550, 800}, 5, primitive::colors::red);
 	g_draw_list.bezier_quadratic({600, 600}, {700, 650}, {550, 800}, primitive::colors::green, 5);
-	
+
 	// push bound
 	// [800,350] => [1000, 550] (200 x 200)
 	g_draw_list.push_clip_rect({800, 350}, {1000, 550}, true);
@@ -685,9 +685,9 @@ auto prometheus_render() -> void
 	g_draw_list.triangle_filled({900, 450}, {1000, 450}, {950, 550}, primitive::colors::blue);
 	// pop bound
 	g_draw_list.pop_clip_rect();
-	
+
 	g_draw_list.triangle_filled({800, 450}, {700, 750}, {850, 800}, primitive::colors::gold);
-	
+
 	// font texture
 	g_draw_list.image(g_draw_list_shared_data->get_default_font().texture_id, {900, 20, 1200, 320});
 	g_draw_list.image_rounded(static_cast<gui::DrawList::texture_id_type>(g_additional_picture_handle.ptr), {900, 350, 1200, 650}, 10);
@@ -881,5 +881,5 @@ auto prometheus_draw() -> void
 
 auto prometheus_shutdown() -> void
 {
-	PRINT_TIME();
+	print_time();
 }

@@ -106,7 +106,7 @@ namespace
 
 auto prometheus_init() -> void //
 {
-	PRINT_TIME();
+	print_time();
 
 	using functional::operators::operator|;
 	g_draw_list.draw_list_flag(gui::DrawListFlag::ANTI_ALIASED_LINE | gui::DrawListFlag::ANTI_ALIASED_FILL);
@@ -630,5 +630,5 @@ auto prometheus_draw() -> void
 
 auto prometheus_shutdown() -> void
 {
-	PRINT_TIME();
+	print_time();
 }
