@@ -88,6 +88,7 @@ set(ASSETS_PATH_PIC ${CMAKE_SOURCE_DIR}/assets/pic.jpg)
 add_executable(
 		${PROJECT_NAME}-gui-dx12
 
+		${PROJECT_SOURCE_DIR}/src/gui/backend_dx12.cpp
 		${PROJECT_SOURCE_DIR}/src/gui/main_dx12.cpp
 )
 
@@ -114,6 +115,7 @@ target_compile_definitions(
 add_executable(
 		${PROJECT_NAME}-gui-dx11
 
+		${PROJECT_SOURCE_DIR}/src/gui/backend_dx11.cpp
 		${PROJECT_SOURCE_DIR}/src/gui/main_dx11.cpp
 )
 
