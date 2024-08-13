@@ -87,6 +87,7 @@ set(${PROJECT_NAME_PREFIX}3RD_PARTY_PATH ${PROJECT_SOURCE_DIR}/3rd-party)
 
 include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/freetype.cmake)
 include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/stb/stb.cmake)
+include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/glfw/glfw.cmake)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	set(${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS ON)
