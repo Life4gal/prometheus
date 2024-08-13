@@ -104,6 +104,7 @@ target_link_libraries(
 		prometheus
 )
 link_3rd_library_stb(${PROJECT_NAME}-gui-dx12)
+link_3rd_library_glfw(${PROJECT_NAME}-gui-dx12)
 
 target_compile_definitions(
 		${PROJECT_NAME}-gui-dx12
@@ -131,6 +132,7 @@ target_link_libraries(
 		prometheus
 )
 link_3rd_library_stb(${PROJECT_NAME}-gui-dx11)
+link_3rd_library_glfw(${PROJECT_NAME}-gui-dx11)
 
 target_compile_definitions(
 		${PROJECT_NAME}-gui-dx11

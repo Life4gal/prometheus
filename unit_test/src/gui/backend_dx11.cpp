@@ -19,10 +19,10 @@ namespace
 extern ComPtr<ID3D11Device> g_device;
 extern ComPtr<ID3D11DeviceContext> g_device_immediate_context;
 
-extern LONG g_window_position_left;
-extern LONG g_window_position_top;
-extern LONG g_window_width;
-extern LONG g_window_height;
+extern int g_window_position_left;
+extern int g_window_position_top;
+extern int g_window_width;
+extern int g_window_height;
 
 extern INT64 g_ticks_per_second;
 extern INT64 g_last_time;
@@ -480,6 +480,10 @@ auto prometheus_render() -> void
 	// font texture
 	g_draw_list.image(g_draw_list_shared_data->get_default_font().texture_id, {900, 20, 1200, 320});
 	g_draw_list.image_rounded(reinterpret_cast<gui::DrawList::texture_id_type>(g_additional_picture_texture.Get()), {900, 350, 1200, 650}, 10);
+
+	#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+	g_draw_list.bind_debug_info();
+	#endif
 }
 
 auto prometheus_draw() -> void
