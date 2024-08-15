@@ -10,7 +10,7 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:unit_test;
+export module gal.prometheus.unit_test;
 
 import std;
 import gal.prometheus.functional;
