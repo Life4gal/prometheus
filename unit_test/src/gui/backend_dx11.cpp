@@ -19,14 +19,11 @@ namespace
 extern ComPtr<ID3D11Device> g_device;
 extern ComPtr<ID3D11DeviceContext> g_device_immediate_context;
 
-extern int g_window_position_left;
-extern int g_window_position_top;
 extern int g_window_width;
 extern int g_window_height;
 
-extern INT64 g_ticks_per_second;
-extern INT64 g_last_time;
-extern INT64 g_frame_count;
+extern double g_last_time;
+extern std::uint64_t g_frame_count;
 extern float g_fps;
 
 extern std::shared_ptr<gui::DrawListSharedData> g_draw_list_shared_data;
@@ -399,11 +396,7 @@ auto prometheus_init() -> void //
 auto prometheus_new_frame() -> void //
 {
 	g_draw_list.reset();
-	g_draw_list.push_clip_rect(
-		{static_cast<float>(g_window_position_left), static_cast<float>(g_window_position_top)},
-		{static_cast<float>(g_window_position_left + g_window_width), static_cast<float>(g_window_position_top + g_window_height)},
-		false
-	);
+	g_draw_list.push_clip_rect({0, 0},{static_cast<float>(g_window_width), static_cast<float>(g_window_height)},false);
 }
 
 auto prometheus_render() -> void
@@ -561,10 +554,10 @@ auto prometheus_draw() -> void
 
 		auto* mapped_projection_matrix = static_cast<d3d_projection_matrix_type*>(mapped_resource.pData);
 
-		const auto left = static_cast<float>(g_window_position_left);
-		const auto right = static_cast<float>(g_window_position_left + g_window_width);
-		const auto top = static_cast<float>(g_window_position_top);
-		const auto bottom = static_cast<float>(g_window_position_top + g_window_height);
+		constexpr auto left = .0f;
+		const auto right = static_cast<float>(g_window_width);
+		constexpr auto top = .0f;
+		const auto bottom = static_cast<float>(g_window_height);
 
 		const d3d_projection_matrix_type mvp{
 				{2.0f / (right - left), 0.0f, 0.0f, 0.0f},
@@ -580,8 +573,8 @@ auto prometheus_draw() -> void
 	// Setup viewport
 	{
 		const D3D11_VIEWPORT viewport{
-				.TopLeftX = static_cast<FLOAT>(g_window_position_left),
-				.TopLeftY = static_cast<FLOAT>(g_window_position_top),
+				.TopLeftX = .0f,
+				.TopLeftY = .0f,
 				.Width = static_cast<FLOAT>(g_window_width),
 				.Height = static_cast<FLOAT>(g_window_height),
 				.MinDepth = 0,

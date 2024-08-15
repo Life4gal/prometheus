@@ -25,8 +25,6 @@ namespace
 ComPtr<ID3D11Device> g_device = nullptr;
 ComPtr<ID3D11DeviceContext> g_device_immediate_context = nullptr;
 
-int g_window_position_left = 100;
-int g_window_position_top = 100;
 int g_window_width = 1280;
 int g_window_height = 960;
 
@@ -45,8 +43,10 @@ extern auto prometheus_shutdown() -> void;
 
 namespace
 {
-	LONG g_window_resize_width = 0;
-	LONG g_window_resize_height = 0;
+	int g_window_position_left = 200;
+	int g_window_position_top = 200;
+	int g_window_resize_width = 0;
+	int g_window_resize_height = 0;
 
 	ComPtr<IDXGISwapChain> g_swap_chain = nullptr;
 	bool g_swap_chain_occluded = false;
@@ -293,10 +293,7 @@ namespace
 
 	auto win32_new_frame(GLFWwindow& window) -> void
 	{
-		// We're not ready to deal with "relative coordinates" yet, so for now [left, top] must be [0, 0].
-		g_window_position_left = 0;
-		g_window_position_top = 0;
-		// glfwGetWindowPos(&window, &g_window_position_left, &g_window_position_top);
+		glfwGetWindowPos(&window, &g_window_position_left, &g_window_position_top);
 		glfwGetFramebufferSize(&window, &g_window_width, &g_window_height);
 
 		const auto current_time = glfwGetTime();
