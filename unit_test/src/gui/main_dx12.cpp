@@ -46,6 +46,8 @@ float g_fps = 0;
 auto g_draw_list_shared_data = std::make_shared<gui::DrawListSharedData>();
 gui::DrawList g_draw_list;
 
+extern auto glfw_callback_setup(GLFWwindow& w) -> void;
+
 extern auto prometheus_init() -> void;
 extern auto prometheus_new_frame() -> void;
 extern auto prometheus_render() -> void;
@@ -141,6 +143,8 @@ int main(int, char**)
 	win32_init(*window);
 	d3d_init();
 	prometheus_init();
+
+	glfw_callback_setup(*window);
 
 	glfwSetWindowPos(window, g_window_position_left, g_window_position_top);
 	glfwShowWindow(window);
