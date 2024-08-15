@@ -6,11 +6,15 @@
 #include <dxgi1_4.h>
 #include <wrl/client.h>
 
+#include <GLFW/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+
+#include <cassert>
+
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxgi.lib")
-
-#include <type_traits>
 
 #ifdef _DEBUG
 #define DX12_ENABLE_DEBUG_LAYER
@@ -25,7 +29,6 @@ namespace
 {
 	using namespace gal::prometheus;
 	using Microsoft::WRL::ComPtr;
-	using const_window_type = std::add_const_t<HWND>;
 }
 
 extern constexpr std::size_t num_frames_in_flight = 3;
@@ -33,14 +36,11 @@ extern constexpr std::size_t num_frames_in_flight = 3;
 ComPtr<ID3D12Device> g_device = nullptr;
 ComPtr<ID3D12GraphicsCommandList> g_command_list = nullptr;
 
-LONG g_window_position_left = 100;
-LONG g_window_position_top = 100;
-LONG g_window_width = 1280;
-LONG g_window_height = 960;
+int g_window_width = 1280;
+int g_window_height = 960;
 
-INT64 g_ticks_per_second = 0;
-INT64 g_last_time = 0;
-INT64 g_frame_count = 0;
+double g_last_time = 0;
+std::uint64_t g_frame_count = 0;
 float g_fps = 0;
 
 auto g_draw_list_shared_data = std::make_shared<gui::DrawListSharedData>();
@@ -54,8 +54,10 @@ extern auto prometheus_shutdown() -> void;
 
 namespace
 {
-	LONG g_window_resize_width = 0;
-	LONG g_window_resize_height = 0;
+	int g_window_position_left = 200;
+	int g_window_position_top = 200;
+	int g_window_resize_width = 0;
+	int g_window_resize_height = 0;
 
 	struct frame_context_type
 	{
@@ -83,7 +85,12 @@ namespace
 	bool g_swap_chain_occluded = false;
 	HANDLE g_swap_chain_waitable_object = nullptr;
 
-	auto create_device(HWND window) -> bool;
+	auto glfw_error_callback(const int error, const char* description) -> void
+	{
+		std::println("GLFW ERROR({}): {}", error, description);
+	}
+
+	auto create_device(GLFWwindow& window) -> bool;
 	auto cleanup_device() -> void;
 
 	auto create_render_target() -> void;
@@ -92,78 +99,38 @@ namespace
 	auto wait_for_last_submitted_frame() -> void;
 	auto wait_for_next_frame_resources() -> frame_context_type&;
 
-	auto win32_init(const_window_type window) -> void;
-	auto win32_new_frame(const_window_type window) -> void;
+	auto win32_init(GLFWwindow& window) -> void;
+	auto win32_new_frame(GLFWwindow& window) -> void;
 	auto win32_shutdown() -> void;
 
 	auto d3d_init() -> void;
 	auto d3d_new_frame() -> void;
 	auto d3d_shutdown() -> void;
-
-	auto WINAPI window_procedure(const_window_type window, const UINT msg, const WPARAM w_param, const LPARAM l_param) -> LRESULT
-	{
-		switch (msg)
-		{
-			case WM_SIZE:
-			{
-				if (g_device != nullptr and w_param != SIZE_MINIMIZED)
-				{
-					g_window_resize_width = static_cast<LONG>(LOWORD(l_param));
-					g_window_resize_height = static_cast<LONG>(HIWORD(l_param));
-				}
-				return 0;
-			}
-			case WM_DESTROY:
-			{
-				PostQuitMessage(0);
-				return 0;
-			}
-			default:
-			{
-				return DefWindowProc(window, msg, w_param, l_param);
-			}
-		}
-	}
 }
 
 int main(int, char**)
 {
-	// Register the window class
-	const WNDCLASSEX window_class{
-			.cbSize = sizeof(WNDCLASSEXW),
-			.style = CS_CLASSDC,
-			.lpfnWndProc = window_procedure,
-			.cbClsExtra = 0,
-			.cbWndExtra = 0,
-			.hInstance = GetModuleHandle(nullptr),
-			.hIcon = nullptr,
-			.hCursor = nullptr,
-			.hbrBackground = nullptr,
-			.lpszMenuName = nullptr,
-			.lpszClassName = "GUI Playground",
-			.hIconSm = nullptr
-	};
-	RegisterClassEx(&window_class);
+	glfwSetErrorCallback(glfw_error_callback);
 
-	const auto window = CreateWindow(
-		window_class.lpszClassName,
-		"GUI Playground Example(DX12)",
-		WS_OVERLAPPEDWINDOW,
-		g_window_position_left,
-		g_window_position_top,
-		g_window_width,
-		g_window_height,
-		nullptr,
-		nullptr,
-		window_class.hInstance,
-		nullptr
-	);
+	if (not glfwInit())
+	{
+		return -1;
+	}
+
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	auto* window = glfwCreateWindow(g_window_width, g_window_height, "GUI Playground Example(DX12)", nullptr, nullptr);
+	if (window == nullptr)
+	{
+		glfwTerminate();
+		return -1;
+	}
 
 	// Initialize Direct3D
-	if (not create_device(window))
+	if (not create_device(*window))
 	{
 		cleanup_device();
-		UnregisterClass(window_class.lpszClassName, window_class.hInstance);
+		glfwDestroyWindow(window);
+		glfwTerminate();
 		return 1;
 	}
 
@@ -171,103 +138,85 @@ int main(int, char**)
 	g_draw_list_shared_data->set_default_font(gui::load_font(R"(C:\Windows\Fonts\msyh.ttc)", 18, range));
 
 	// Setup Platform/Renderer backends
-	win32_init(window);
+	win32_init(*window);
 	d3d_init();
 	prometheus_init();
 
-	// Show the window
-	ShowWindow(window, SW_SHOWDEFAULT);
-	UpdateWindow(window);
+	glfwSetWindowPos(window, g_window_position_left, g_window_position_top);
+	glfwShowWindow(window);
 
-	// Main loop
+	while (not glfwWindowShouldClose(window))
 	{
-		bool done = false;
-		while (not done)
+		glfwPollEvents();
+
+		// Handle window screen locked
+		if (g_swap_chain_occluded && g_swap_chain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
 		{
-			MSG msg;
-			while (PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
-			{
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-				if (msg.message == WM_QUIT)
-				{
-					done = true;
-				}
-			}
-			if (done)
-			{
-				break;
-			}
-
-			// Handle window screen locked
-			if (g_swap_chain_occluded && g_swap_chain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
-			{
-				Sleep(10);
-				continue;
-			}
-			g_swap_chain_occluded = false;
-
-			// Handle window resize (we don't resize directly in the WM_SIZE handler)
-			if (g_window_resize_width != 0 and g_window_resize_height != 0)
-			{
-				wait_for_last_submitted_frame();
-				cleanup_render_target();
-				check_hr_error(g_swap_chain->ResizeBuffers(0, g_window_resize_width, g_window_resize_height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
-				g_window_resize_width = 0;
-				g_window_resize_height = 0;
-				create_render_target();
-			}
-
-			win32_new_frame(window);
-			d3d_new_frame();
-			prometheus_new_frame();
-
-			// Rendering
-			prometheus_render();
-
-			auto& [frame_command_allocator, frame_fence_value] = wait_for_next_frame_resources();
-			const auto back_buffer_index = g_swap_chain->GetCurrentBackBufferIndex();
-			check_hr_error(frame_command_allocator->Reset());
-
-			D3D12_RESOURCE_BARRIER barrier{
-					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.Transition =
-					{
-							.pResource = g_render_target_resource[back_buffer_index].Get(),
-							.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-							.StateBefore = D3D12_RESOURCE_STATE_PRESENT,
-							.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET
-					}
-			};
-			check_hr_error(g_command_list->Reset(frame_command_allocator.Get(), nullptr));
-			g_command_list->ResourceBarrier(1, &barrier);
-
-			constexpr float clear_color_with_alpha[4]{.45f, .55f, .6f, 1.f};
-
-			g_command_list->ClearRenderTargetView(g_render_target_descriptor[back_buffer_index], clear_color_with_alpha, 0, nullptr);
-			g_command_list->OMSetRenderTargets(1, &g_render_target_descriptor[back_buffer_index], FALSE, nullptr);
-
-			prometheus_draw();
-
-			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-			g_command_list->ResourceBarrier(1, &barrier);
-			check_hr_error(g_command_list->Close());
-
-			ID3D12CommandList* command_lists[]{g_command_list.Get()};
-			g_command_queue->ExecuteCommandLists(1, command_lists);
-
-			// Present
-			const auto hr = g_swap_chain->Present(1, 0); // Present with vsync
-			// const auto hr = g_pSwapChain->Present(0, 0); // Present without vsync
-			g_swap_chain_occluded = (hr == DXGI_STATUS_OCCLUDED);
-
-			const auto fence_value = g_fence_last_signaled_value + 1;
-			(void)g_command_queue->Signal(g_fence.Get(), fence_value);
-			g_fence_last_signaled_value = fence_value;
-			frame_fence_value = fence_value;
+			Sleep(10);
+			continue;
 		}
+		g_swap_chain_occluded = false;
+
+		// Handle window resize (we don't resize directly in the WM_SIZE handler)
+		if (g_window_resize_width != 0 and g_window_resize_height != 0)
+		{
+			wait_for_last_submitted_frame();
+			cleanup_render_target();
+			check_hr_error(g_swap_chain->ResizeBuffers(0, g_window_resize_width, g_window_resize_height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
+			g_window_resize_width = 0;
+			g_window_resize_height = 0;
+			create_render_target();
+		}
+
+		win32_new_frame(*window);
+		d3d_new_frame();
+		prometheus_new_frame();
+
+		// Rendering
+		prometheus_render();
+
+		auto& [frame_command_allocator, frame_fence_value] = wait_for_next_frame_resources();
+		const auto back_buffer_index = g_swap_chain->GetCurrentBackBufferIndex();
+		check_hr_error(frame_command_allocator->Reset());
+
+		D3D12_RESOURCE_BARRIER barrier{
+				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+				.Transition =
+				{
+						.pResource = g_render_target_resource[back_buffer_index].Get(),
+						.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+						.StateBefore = D3D12_RESOURCE_STATE_PRESENT,
+						.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET
+				}
+		};
+		check_hr_error(g_command_list->Reset(frame_command_allocator.Get(), nullptr));
+		g_command_list->ResourceBarrier(1, &barrier);
+
+		constexpr float clear_color_with_alpha[4]{.45f, .55f, .6f, 1.f};
+
+		g_command_list->ClearRenderTargetView(g_render_target_descriptor[back_buffer_index], clear_color_with_alpha, 0, nullptr);
+		g_command_list->OMSetRenderTargets(1, &g_render_target_descriptor[back_buffer_index], FALSE, nullptr);
+
+		prometheus_draw();
+
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+		g_command_list->ResourceBarrier(1, &barrier);
+		check_hr_error(g_command_list->Close());
+
+		ID3D12CommandList* command_lists[]{g_command_list.Get()};
+		g_command_queue->ExecuteCommandLists(1, command_lists);
+
+		// Present
+		const auto hr = g_swap_chain->Present(1, 0); // Present with vsync
+		// const auto hr = g_pSwapChain->Present(0, 0); // Present without vsync
+		g_swap_chain_occluded = (hr == DXGI_STATUS_OCCLUDED);
+
+		const auto fence_value = g_fence_last_signaled_value + 1;
+		(void)g_command_queue->Signal(g_fence.Get(), fence_value);
+		g_fence_last_signaled_value = fence_value;
+		frame_fence_value = fence_value;
 	}
 
 	wait_for_last_submitted_frame();
@@ -277,15 +226,15 @@ int main(int, char**)
 	prometheus_shutdown();
 
 	cleanup_device();
-	DestroyWindow(window);
-	UnregisterClass(window_class.lpszClassName, window_class.hInstance);
+	glfwDestroyWindow(window);
+	glfwTerminate();
 
 	return 0;
 }
 
 namespace
 {
-	auto create_device(const_window_type window) -> bool
+	auto create_device(GLFWwindow& window) -> bool
 	{
 		print_time();
 
@@ -420,10 +369,10 @@ namespace
 			return false;
 		}
 
-		ComPtr<IDXGIFactory4> dxgi_factory = nullptr;
-		ComPtr<IDXGISwapChain1> swap_chain1 = nullptr;
+		ComPtr<IDXGIFactory4> dxgi_factory;
+		ComPtr<IDXGISwapChain1> swap_chain1;
 		check_hr_error(CreateDXGIFactory1(IID_PPV_ARGS(dxgi_factory.GetAddressOf())));
-		check_hr_error(dxgi_factory->CreateSwapChainForHwnd(g_command_queue.Get(), window, &swap_chain_desc, nullptr, nullptr, swap_chain1.GetAddressOf()));
+		check_hr_error(dxgi_factory->CreateSwapChainForHwnd(g_command_queue.Get(), glfwGetWin32Window(&window), &swap_chain_desc, nullptr, nullptr, swap_chain1.GetAddressOf()));
 		check_hr_error(swap_chain1->QueryInterface(IID_PPV_ARGS(g_swap_chain.GetAddressOf())));
 		check_hr_error(g_swap_chain->SetMaximumFrameLatency(num_back_buffers));
 		g_swap_chain_waitable_object = g_swap_chain->GetFrameLatencyWaitableObject();
@@ -525,33 +474,36 @@ namespace
 		return frame_context;
 	}
 
-	auto win32_init(const_window_type window) -> void
+	auto win32_init(GLFWwindow& window) -> void
 	{
 		print_time();
 
-		(void)window;
+		glfwSetFramebufferSizeCallback(
+			&window,
+			// ReSharper disable once CppParameterMayBeConstPtrOrRef
+			[](GLFWwindow* w, const int width, const int height) -> void
+			{
+				(void)w;
+				g_window_resize_width = width;
+				g_window_resize_height = height;
+			}
+		);
 
-		QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&g_ticks_per_second));
-		QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&g_last_time));
+		g_last_time = glfwGetTime();
 	}
 
-	auto win32_new_frame(const_window_type window) -> void
+	auto win32_new_frame(GLFWwindow& window) -> void
 	{
-		RECT rect;
-		GetClientRect(window, &rect);
-		g_window_position_left = rect.left;
-		g_window_position_top = rect.top;
-		g_window_width = rect.right - rect.left;
-		g_window_height = rect.bottom - rect.top;
+		glfwGetWindowPos(&window, &g_window_position_left, &g_window_position_top);
+		glfwGetFramebufferSize(&window, &g_window_width, &g_window_height);
 
-		INT64 current_time;
-		QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&current_time));
-		const auto elapsed = static_cast<float>(current_time - g_last_time) / static_cast<float>(g_ticks_per_second);
+		const auto current_time = glfwGetTime();
+		const auto elapsed = current_time - g_last_time;
 		g_frame_count += 1;
 
 		if (elapsed > .5f)
 		{
-			g_fps = static_cast<float>(g_frame_count) / elapsed;
+			g_fps = static_cast<float>(static_cast<double>(g_frame_count) / elapsed);
 			g_frame_count = 0;
 			g_last_time = current_time;
 		}

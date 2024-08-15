@@ -21,14 +21,11 @@ extern const std::size_t num_frames_in_flight;
 extern ComPtr<ID3D12Device> g_device;
 extern ComPtr<ID3D12GraphicsCommandList> g_command_list;
 
-extern LONG g_window_position_left;
-extern LONG g_window_position_top;
-extern LONG g_window_width;
-extern LONG g_window_height;
+extern int g_window_width;
+extern int g_window_height;
 
-extern INT64 g_ticks_per_second;
-extern INT64 g_last_time;
-extern INT64 g_frame_count;
+extern double g_last_time;
+extern std::uint64_t g_frame_count;
 extern float g_fps;
 
 extern std::shared_ptr<gui::DrawListSharedData> g_draw_list_shared_data;
@@ -610,11 +607,7 @@ auto prometheus_init() -> void
 auto prometheus_new_frame() -> void //
 {
 	g_draw_list.reset();
-	g_draw_list.push_clip_rect(
-		{static_cast<float>(g_window_position_left), static_cast<float>(g_window_position_top)},
-		{static_cast<float>(g_window_position_left + g_window_width), static_cast<float>(g_window_position_top + g_window_height)},
-		false
-	);
+	g_draw_list.push_clip_rect({0, 0}, {static_cast<float>(g_window_width), static_cast<float>(g_window_height)}, false);
 }
 
 auto prometheus_render() -> void
@@ -691,6 +684,10 @@ auto prometheus_render() -> void
 	// font texture
 	g_draw_list.image(g_draw_list_shared_data->get_default_font().texture_id, {900, 20, 1200, 320});
 	g_draw_list.image_rounded(static_cast<gui::DrawList::texture_id_type>(g_additional_picture_handle.ptr), {900, 350, 1200, 650}, 10);
+
+	#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+	g_draw_list.bind_debug_info();
+	#endif
 }
 
 auto prometheus_draw() -> void
@@ -803,10 +800,10 @@ auto prometheus_draw() -> void
 	// Setup orthographic projection matrix into our constant buffer
 	d3d_projection_matrix_type projection_matrix;
 	{
-		const auto left = static_cast<float>(g_window_position_left);
-		const auto right = static_cast<float>(g_window_position_left + g_window_width);
-		const auto top = static_cast<float>(g_window_position_top);
-		const auto bottom = static_cast<float>(g_window_position_top + g_window_height);
+		constexpr auto left = .0f;
+		const auto right = static_cast<float>(g_window_width);
+		constexpr auto top = .0f;
+		const auto bottom = static_cast<float>(g_window_height);
 
 		const float mvp[4][4]{
 				{2.0f / (right - left), 0.0f, 0.0f, 0.0f},
@@ -820,12 +817,9 @@ auto prometheus_draw() -> void
 
 	// Setup viewport
 	{
-		const auto left = static_cast<float>(g_window_position_left);
-		const auto top = static_cast<float>(g_window_position_top);
-
 		const D3D12_VIEWPORT viewport{
-				.TopLeftX = left,
-				.TopLeftY = top,
+				.TopLeftX = .0f,
+				.TopLeftY = .0f,
 				.Width = static_cast<FLOAT>(g_window_width),
 				.Height = static_cast<FLOAT>(g_window_height),
 				.MinDepth = .0f,
