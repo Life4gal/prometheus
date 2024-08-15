@@ -6,13 +6,11 @@
 #if GAL_PROMETHEUS_USE_MODULE
 export module gal.prometheus.infrastructure;
 
-export import :state_machine;
 export import :command_line_parser;
 
 #else
 #pragma once
 
-#include <infrastructure/state_machine.ixx>
 #include <infrastructure/command_line_parser.ixx>
 
 #endif
