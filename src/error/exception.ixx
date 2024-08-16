@@ -72,11 +72,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 	public:
 		template<typename StringType, typename DataType>
 		constexpr Exception(
-				StringType&& message,
-				DataType&& data,
-				const std::source_location location,
-				std::stacktrace&& stacktrace
-				) noexcept
+			StringType&& message,
+			DataType&& data,
+			const std::source_location location,
+			std::stacktrace&& stacktrace
+		) noexcept
 			: AbstractException{},
 			  message_{std::forward<StringType>(message)},
 			  location_{location},
@@ -107,10 +107,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 	public:
 		template<typename StringType>
 		constexpr Exception(
-				StringType&& message,
-				const std::source_location location,
-				std::stacktrace&& stacktrace
-				) noexcept
+			StringType&& message,
+			const std::source_location location,
+			std::stacktrace&& stacktrace
+		) noexcept
 			: AbstractException{},
 			  message_{std::forward<StringType>(message)},
 			  location_{location},
@@ -126,10 +126,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 	template<typename ExceptionType, typename StringType, typename DataType>
 		requires std::derived_from<ExceptionType, Exception<DataType>>
 	[[noreturn]] constexpr auto panic(
-			StringType&& message,
-			DataType&& data,
-			const std::source_location& location = std::source_location::current(),
-			std::stacktrace stacktrace = std::stacktrace::current()) noexcept(false) -> ExceptionType //
+		StringType&& message,
+		DataType&& data,
+		const std::source_location& location = std::source_location::current(),
+		std::stacktrace stacktrace = std::stacktrace::current()) noexcept(false) -> ExceptionType //
 	{
 		throw ExceptionType{
 				std::forward<StringType>(message),
@@ -142,10 +142,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 	template<typename ExceptionType, typename StringType>
 		requires std::derived_from<ExceptionType, Exception<void>>
 	[[noreturn]] constexpr auto panic(
-			StringType&& message,
-			const std::source_location& location = std::source_location::current(),
-			std::stacktrace stacktrace = std::stacktrace::current()
-			) noexcept(false) -> ExceptionType //
+		StringType&& message,
+		const std::source_location& location = std::source_location::current(),
+		std::stacktrace stacktrace = std::stacktrace::current()
+	) noexcept(false) -> ExceptionType //
 	{
 		throw ExceptionType{
 				std::forward<StringType>(message),
@@ -153,4 +153,87 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 				std::move(stacktrace)
 		};
 	}
+
+	template<bool>
+	struct panic_selector;
+
+	template<>
+	struct panic_selector<true>
+	{
+		template<typename E, typename StringType>
+			requires (std::derived_from<E, Exception<typename E::data_type>> and std::is_same_v<typename E::data_type, void>)
+		[[noreturn]] constexpr static auto invoke(
+			StringType&& message,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> E
+		{
+			E::panic(
+				std::forward<StringType>(message),
+				location,
+				std::move(stacktrace)
+			);
+			GAL_PROMETHEUS_ERROR_UNREACHABLE();
+		}
+
+		template<typename E, typename StringType>
+			requires (std::derived_from<E, Exception<typename E::data_type>> and not std::is_same_v<typename E::data_type, void>)
+		[[noreturn]] constexpr static auto invoke(
+			StringType&& message,
+			typename E::data_type&& data,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> E
+		{
+			E::panic(
+				std::forward<StringType>(message),
+				std::forward<typename E::data_type>(data),
+				location,
+				std::move(stacktrace)
+			);
+			GAL_PROMETHEUS_ERROR_UNREACHABLE();
+		}
+	};
+
+	template<>
+	struct panic_selector<false>
+	{
+		template<typename E, typename StringType>
+			requires (std::derived_from<E, Exception<typename E::data_type>> and std::is_same_v<typename E::data_type, void>)
+		[[noreturn]] constexpr static auto invoke(
+			StringType&& message,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> E
+		{
+			error::panic<E>(
+				std::forward<StringType>(message),
+				location,
+				std::move(stacktrace)
+			);
+		}
+
+		template<typename E, typename StringType>
+			requires (std::derived_from<E, Exception<typename E::data_type>> and not std::is_same_v<typename E::data_type, void>)
+		[[noreturn]] constexpr static auto invoke(
+			StringType&& message,
+			typename E::data_type&& data,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> E
+		{
+			error::panic<E>(
+				std::forward<StringType>(message),
+				std::forward<typename E::data_type>(data),
+				location,
+				std::move(stacktrace)
+			);
+		}
+	};
+
+	template<typename E>
+	using mob = panic_selector<
+		requires { E::panic(std::declval<std::string>()); } or
+		requires { E::panic(std::declval<std::string>(), std::declval<typename E::data_type>()); }
+	>;
 } // namespace gal::prometheus::error
