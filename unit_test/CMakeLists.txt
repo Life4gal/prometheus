@@ -18,10 +18,16 @@ add_executable(
 		${PROJECT_SOURCE_DIR}/src/chars/utf32.cpp
 
 		# =================================
-		# STRING
+		# META
 		# =================================
 
-		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.cpp
+		${PROJECT_SOURCE_DIR}/src/meta/enumeration.cpp
+
+		# =================================
+		# WILDCARD
+		# =================================
+
+		${PROJECT_SOURCE_DIR}/src/wildcard/wildcard.cpp
 )
 
 target_compile_features(
@@ -88,6 +94,7 @@ set(ASSETS_PATH_PIC ${CMAKE_SOURCE_DIR}/assets/pic.jpg)
 add_executable(
 		${PROJECT_NAME}-gui-dx12
 
+		${PROJECT_SOURCE_DIR}/src/gui/glfw_callback_handler.cpp
 		${PROJECT_SOURCE_DIR}/src/gui/backend_dx12.cpp
 		${PROJECT_SOURCE_DIR}/src/gui/main_dx12.cpp
 )
@@ -116,6 +123,7 @@ target_compile_definitions(
 add_executable(
 		${PROJECT_NAME}-gui-dx11
 
+		${PROJECT_SOURCE_DIR}/src/gui/glfw_callback_handler.cpp
 		${PROJECT_SOURCE_DIR}/src/gui/backend_dx11.cpp
 		${PROJECT_SOURCE_DIR}/src/gui/main_dx11.cpp
 )
