@@ -17,7 +17,6 @@ import std;
 
 #include <string_view>
 #include <source_location>
-#include <optional>
 #include <limits>
 #include <type_traits>
 #include <vector>
@@ -91,7 +90,17 @@ namespace gal::prometheus::meta
 			constexpr auto full_function_name_suffix_size = full_function_name_size - full_function_name_prefix_size - dummy_struct_name_size;
 			#endif
 
+			#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(-Wenum-constexpr-conversion)
+			#endif
+
 			auto full_name = get_full_function_name<EnumValue>();
+
+			#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
+			#endif
+
 			full_name.remove_prefix(full_function_name_prefix_size);
 			full_name.remove_suffix(full_function_name_suffix_size);
 			return full_name;
@@ -101,16 +110,50 @@ namespace gal::prometheus::meta
 			requires std::is_enum_v<std::decay_t<decltype(EnumValue)>>
 		[[nodiscard]] constexpr auto is_valid_enum() noexcept -> bool
 		{
-			// fixme: check it
+			#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(-Wenum-constexpr-conversion)
+			#endif
+
+			constexpr auto name = name_of<EnumValue>();
+
+			// MSVC
 			// (enum MyEnum)0x1
-			return not name_of<EnumValue>().starts_with('(');
+			// `anonymous-namespace'::(enum MyEnum)0x1
+			// CLANG
+			// (MyEnum)1
+			// (anonymous namespace)::(MyEnum)1
+			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+			return not name.starts_with('(');
+			#elif defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+			if (name.starts_with("(anonymous namespace)"))
+			{
+				return not name.starts_with("(anonymous namespace)::(");
+			}
+			return not name.starts_with('(');
+			#else
+			#error "fixme"
+			#endif
+
+			#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
+			#endif
 		}
 
 		template<typename EnumType, std::integral auto EnumValue>
 			requires std::is_enum_v<EnumType>
 		[[nodiscard]] constexpr auto is_valid_enum() noexcept -> bool //
 		{
+			#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(-Wenum-constexpr-conversion)
+			#endif
+
 			return is_valid_enum<static_cast<EnumType>(EnumValue)>();
+
+			#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
+			#endif
 		}
 
 		template<typename EnumType>
@@ -239,7 +282,7 @@ namespace gal::prometheus::meta
 			constexpr auto index_chunk = index_sequence | std::views::chunk(Count);
 
 			constexpr auto indices = index_chunk[Index];
-			constexpr auto bits = std::ranges::fold_left(indices, static_cast<type>(0), [](const auto total, const auto current) noexcept -> auto { return total | (1 << current); });
+			constexpr auto bits = std::ranges::fold_left(indices, static_cast<type>(0), [](const auto total, const auto current) noexcept -> auto { return total | (type{1} << current); });
 
 			return bits;
 		}
@@ -260,7 +303,7 @@ namespace gal::prometheus::meta
 
 			[&values]<std::size_t... Count>(std::index_sequence<Count...>) noexcept -> void
 			{
-				const auto traversal = [&values]<std::size_t ThisCount, std::size_t... Index>(std::index_sequence<Index...>) noexcept -> void
+				const auto traversal = [&values]<std::size_t ThisCount>() noexcept -> void
 				{
 					const auto check = [&values]<std::size_t ThisIndex>() noexcept -> void
 					{
@@ -271,15 +314,14 @@ namespace gal::prometheus::meta
 						}
 					};
 
-					(check.template operator()<Index>(), ...);
+					constexpr auto indices_count = digits / ThisCount + (digits % ThisCount == 0 ? 0 : 1);
+					return [check]<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> void
+					{
+						(check.template operator()<Index>(), ...);
+					}(std::make_index_sequence<indices_count>{});
 				};
 
-				constexpr auto this_range = []<std::size_t ThisCount>() noexcept -> std::size_t
-				{
-					return digits / ThisCount + (digits % ThisCount == 0 ? 0 : 1);
-				};
-
-				(traversal.template operator()<Count + 1>(std::make_index_sequence<this_range.template operator()<Count + 1>()>{}), ...);
+				(traversal.template operator()<Count + 1>(), ...);
 			}(std::make_index_sequence<digits>{});
 
 			return values;
@@ -335,46 +377,61 @@ namespace gal::prometheus::meta
 		>
 		[[nodiscard]] constexpr auto enum_value_min() noexcept -> std::underlying_type_t<EnumType>
 		{
-			if constexpr (Min > Max)
+			if constexpr (is_valid_enum<EnumType, Min>())
 			{
-				return enum_value_min<
-					EnumType,
-					user_defined::enum_range<EnumType>::min,
-					user_defined::enum_range<EnumType>::max,
-					StrideShift - 1,
-					Found
-				>();
+				if constexpr (
+					StrideShift == 0 or
+					// [0, 255] => 0 is a valid flag
+					Min == user_defined::enum_range<EnumType>::min
+				)
+				{
+					return Min;
+				}
+				else
+				{
+					return enum_value_min<EnumType, Min - (std::underlying_type_t<EnumType>{1} << StrideShift), Min, StrideShift, true>();
+				}
 			}
 			else
 			{
-				if constexpr (is_valid_enum<EnumType, Min>())
+				if constexpr (Found)
 				{
 					if constexpr (StrideShift == 0)
 					{
-						return Min;
+						return enum_value_min<EnumType, Max, Max, 0, true>();
 					}
 					else
 					{
-						return enum_value_min<EnumType, Min - (1 << StrideShift), Min, StrideShift, true>();
+						constexpr auto s = StrideShift - 1;
+						return enum_value_min<EnumType, Max - (std::underlying_type_t<EnumType>{1} << s), Max, s, true>();
 					}
 				}
 				else
 				{
-					if constexpr (Found)
+					if constexpr (constexpr auto new_min = Min + (std::underlying_type_t<EnumType>{1} << StrideShift);
+						// overflow
+						new_min < Min or
+						new_min > Max
+					)
 					{
 						if constexpr (StrideShift == 0)
 						{
-							return enum_value_min<EnumType, Max, Max, 0, true>();
+							GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("test `meta::enumeration_detail::name_of` and check `is_valid_enum`");
 						}
 						else
 						{
-							constexpr auto s = StrideShift - 1;
-							return enum_value_min<EnumType, Max - (1 << s), Max, s, true>();
+							return enum_value_min<
+								EnumType,
+								user_defined::enum_range<EnumType>::min,
+								Max,
+								StrideShift - 1,
+								false
+							>();
 						}
 					}
 					else
 					{
-						return enum_value_min<EnumType, Min + (1 << StrideShift), Max, StrideShift, false>();
+						return enum_value_min<EnumType, new_min, Max, StrideShift, false>();
 					}
 				}
 			}
@@ -387,48 +444,64 @@ namespace gal::prometheus::meta
 			std::size_t StrideShift = 5,
 			bool Found = false
 		>
+			requires(StrideShift <= 5)
 		[[nodiscard]] constexpr auto enum_value_max() noexcept -> std::underlying_type_t<EnumType>
 		{
-			if constexpr (Min > Max)
+			if constexpr (is_valid_enum<EnumType, Max>())
 			{
-				return enum_value_max<
-					EnumType,
-					user_defined::enum_range<EnumType>::min,
-					user_defined::enum_range<EnumType>::max,
-					StrideShift - 1,
-					Found
-				>();
+				if constexpr (
+					StrideShift == 0 or
+					// [0, 255] => 255 is a valid flag
+					Max == user_defined::enum_range<EnumType>::max
+				)
+				{
+					return Max;
+				}
+				else
+				{
+					return enum_value_max<EnumType, Max, Max + (std::underlying_type_t<EnumType>{1} << StrideShift), StrideShift, true>();
+				}
 			}
 			else
 			{
-				if constexpr (is_valid_enum<EnumType, Max>())
+				if constexpr (Found)
 				{
 					if constexpr (StrideShift == 0)
 					{
-						return Max;
+						return enum_value_max<EnumType, Min, Min, 0, true>();
 					}
 					else
 					{
-						return enum_value_max<EnumType, Max, Max + (1 << StrideShift), StrideShift, true>();
+						constexpr auto s = StrideShift - 1;
+						return enum_value_max<EnumType, Min, Min + (std::underlying_type_t<EnumType>{1} << s), s, true>();
 					}
 				}
 				else
 				{
-					if constexpr (Found)
+					if constexpr (constexpr auto new_max = Max - (std::underlying_type_t<EnumType>{1} << StrideShift);
+						// underflow
+						new_max > Max or
+						new_max < Min
+					)
 					{
 						if constexpr (StrideShift == 0)
 						{
-							return enum_value_max<EnumType, Min, Min, 0, true>();
+							GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("test `meta::enumeration_detail::name_of` and check `is_valid_enum`");
 						}
 						else
 						{
-							constexpr auto s = StrideShift - 1;
-							return enum_value_max<EnumType, Min, Min + (1 << s), s, true>();
+							return enum_value_max<
+								EnumType,
+								Min,
+								user_defined::enum_range<EnumType>::max,
+								StrideShift - 1,
+								false
+							>();
 						}
 					}
 					else
 					{
-						return enum_value_max<EnumType, Min, Max - (1 << StrideShift), StrideShift, false>();
+						return enum_value_max<EnumType, Min, new_max, StrideShift, false>();
 					}
 				}
 			}
@@ -779,8 +852,8 @@ namespace gal::prometheus::meta
 	// value_of("E1") => E1
 	// value_of("E2") => E2
 	// value_of("E1|E2") => E1|E2
-	// value_of("E1|E4") => null[Strict] / E1
-	// value_of("?") => null
+	// value_of("E1|E4") => empty[Strict] / E1
+	// value_of("?") => empty
 	//
 	// enum class MyFlag
 	// {
@@ -794,22 +867,25 @@ namespace gal::prometheus::meta
 	// value_of("F1") => F1
 	// value_of("F2") => F2
 	// value_of("F1|F2") => F1|F2
-	// value_of("F1|F0") => null[Strict] / F1
+	// value_of("F1|F0") => empty[Strict] / F1
 	// value_of("F5") => F5
-	// value_of("?") => null
+	// value_of("?") => empty
 
 	template<typename EnumType, EnumNamePolicy Policy = user_defined::enum_name_policy<EnumType>::value, bool Strict = true>
 		requires std::is_enum_v<EnumType>
 	[[nodiscard]] constexpr auto value_of(
 		const std::string_view enum_name,
-		const std::string_view split = "|"
-	) noexcept -> std::optional<EnumType>
+		const EnumType empty,
+		const std::string_view split
+	) noexcept -> EnumType
 	{
 		constexpr auto list = names_of<EnumType, Policy>();
 
-		std::underlying_type_t<EnumType> result{};
+		// ReSharper disable once CppLocalVariableMayBeConst
+		auto names = enum_name | std::views::split(split);
+		auto result = std::to_underlying(empty);
 
-		for (const auto& each: enum_name | std::views::split(split))
+		for (const auto each: names)
 		{
 			const std::string_view s{each};
 
@@ -822,12 +898,52 @@ namespace gal::prometheus::meta
 			{
 				if constexpr (Strict)
 				{
-					return std::nullopt;
+					return empty;
 				}
 			}
 		}
 
 		return static_cast<EnumType>(result);
+	}
+
+	template<typename EnumType, EnumNamePolicy Policy = user_defined::enum_name_policy<EnumType>::value, bool Strict = true>
+		requires std::is_enum_v<EnumType>
+	[[nodiscard]] constexpr auto value_of(
+		const std::string_view enum_name,
+		const std::string_view split,
+		const EnumType empty
+	) noexcept -> EnumType
+	{
+		return meta::value_of<EnumType, Policy, Strict>(enum_name, empty, split);
+	}
+
+	template<typename EnumType, EnumNamePolicy Policy = user_defined::enum_name_policy<EnumType>::value, bool Strict = true>
+		requires std::is_enum_v<EnumType>
+	[[nodiscard]] constexpr auto value_of(
+		const std::string_view enum_name,
+		const std::string_view split
+	) noexcept -> EnumType
+	{
+		return meta::value_of<EnumType, Policy, Strict>(enum_name, static_cast<EnumType>(0), split);
+	}
+
+	template<typename EnumType, EnumNamePolicy Policy = user_defined::enum_name_policy<EnumType>::value, bool Strict = true>
+		requires std::is_enum_v<EnumType>
+	[[nodiscard]] constexpr auto value_of(
+		const std::string_view enum_name,
+		const EnumType empty
+	) noexcept -> EnumType
+	{
+		return meta::value_of<EnumType, Policy, Strict>(enum_name, empty, "|");
+	}
+
+	template<typename EnumType, EnumNamePolicy Policy = user_defined::enum_name_policy<EnumType>::value, bool Strict = true>
+		requires std::is_enum_v<EnumType>
+	[[nodiscard]] constexpr auto value_of(
+		const std::string_view enum_name
+	) noexcept -> EnumType
+	{
+		return meta::value_of<EnumType, Policy, Strict>(enum_name, static_cast<EnumType>(0), "|");
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END

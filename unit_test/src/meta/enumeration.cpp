@@ -285,116 +285,128 @@ namespace
 		{
 			"FreeEnum0"_test = []
 			{
-				static_assert(meta::value_of<FreeEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE0_E1").value() == FE0_E1);
-				static_assert(meta::value_of<FreeEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE0_E2").value() == FE0_E2);
-				static_assert(meta::value_of<FreeEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE0_E3").value() == FE0_E3);
-				static_assert(meta::value_of<FreeEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE0_E4").value() == FE0_E4);
-				static_assert(not meta::value_of<FreeEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE0_E5").has_value());
+				static_assert(meta::value_of<FreeEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE0_E1") == FE0_E1);
+				static_assert(meta::value_of<FreeEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE0_E2") == FE0_E2);
+				static_assert(meta::value_of<FreeEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE0_E3") == FE0_E3);
+				static_assert(meta::value_of<FreeEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE0_E4") == FE0_E4);
+				static_assert(meta::value_of<FreeEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE0_E5", static_cast<FreeEnum0>(42)) == 42);
 			};
 
 			"FreeEnum1"_test = []
 			{
-				static_assert(meta::value_of<FreeEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE1_E1").value() == FE1_E1);
-				static_assert(meta::value_of<FreeEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE1_E2").value() == FE1_E2);
-				static_assert(meta::value_of<FreeEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE1_E3").value() == FE1_E3);
-				static_assert(meta::value_of<FreeEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE1_E4").value() == FE1_E4);
-				static_assert(not meta::value_of<FreeEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE1_E5").has_value());
+				static_assert(meta::value_of<FreeEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE1_E1") == FE1_E1);
+				static_assert(meta::value_of<FreeEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE1_E2") == FE1_E2);
+				static_assert(meta::value_of<FreeEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE1_E3") == FE1_E3);
+				static_assert(meta::value_of<FreeEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE1_E4") == FE1_E4);
+				static_assert(meta::value_of<FreeEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FE1_E5", static_cast<FreeEnum1>(42)) == 42);
 			};
 
 			"ScopedEnum0"_test = []
 			{
-				static_assert(meta::value_of<ScopedEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum0::E1").value() == ScopedEnum0::E1);
-				static_assert(meta::value_of<ScopedEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum0::E2").value() == ScopedEnum0::E2);
-				static_assert(meta::value_of<ScopedEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum0::E3").value() == ScopedEnum0::E3);
-				static_assert(meta::value_of<ScopedEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum0::E4").value() == ScopedEnum0::E4);
-				static_assert(not meta::value_of<ScopedEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum0::E5").has_value());
+				static_assert(meta::value_of<ScopedEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum0::E1") == ScopedEnum0::E1);
+				static_assert(meta::value_of<ScopedEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum0::E2") == ScopedEnum0::E2);
+				static_assert(meta::value_of<ScopedEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum0::E3") == ScopedEnum0::E3);
+				static_assert(meta::value_of<ScopedEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum0::E4") == ScopedEnum0::E4);
+				static_assert(meta::value_of<ScopedEnum0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum0::E5") == static_cast<ScopedEnum0>(0));
 			};
 
 			"ScopedEnum1"_test = []
 			{
-				static_assert(meta::value_of<ScopedEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum1::E1").value() == ScopedEnum1::E1);
-				static_assert(meta::value_of<ScopedEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum1::E2").value() == ScopedEnum1::E2);
-				static_assert(meta::value_of<ScopedEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum1::E3").value() == ScopedEnum1::E3);
-				static_assert(meta::value_of<ScopedEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum1::E4").value() == ScopedEnum1::E4);
-				static_assert(not meta::value_of<ScopedEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum1::E5").has_value());
+				static_assert(meta::value_of<ScopedEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum1::E1") == ScopedEnum1::E1);
+				static_assert(meta::value_of<ScopedEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum1::E2") == ScopedEnum1::E2);
+				static_assert(meta::value_of<ScopedEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum1::E3") == ScopedEnum1::E3);
+				static_assert(meta::value_of<ScopedEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum1::E4") == ScopedEnum1::E4);
+				static_assert(meta::value_of<ScopedEnum1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedEnum1::E5") == static_cast<ScopedEnum1>(0));
 			};
 
 			"FreeFlag0"_test = []
 			{
-				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F0").value() == FF0_F0);
-				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F1").value() == FF0_F1);
-				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F2").value() == FF0_F2);
-				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F3").value() == FF0_F3);
-				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F4").value() == FF0_F4);
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F0") == FF0_F0);
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F1") == FF0_F1);
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F2") == FF0_F2);
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F3") == FF0_F3);
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F4") == FF0_F4);
 
-				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F5").value() == FF0_F5);
-				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F1|FF0_F2").value() == FF0_F5);
-				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F6").value() == FF0_F6);
-				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F3|FF0_F4").value() == FF0_F6);
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F5") == FF0_F5);
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F1|FF0_F2") == FF0_F5);
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F6") == FF0_F6);
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F3|FF0_F4") == FF0_F6);
 
-				static_assert(not meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME, true>("FF0_F3|FF0_F1337").has_value());
-				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME, false>("FF0_F3|FF0_F1337").value() == FF0_F3);
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME, true>("FF0_F3|FF0_F1337", static_cast<FreeFlag0>(42)) == 42);
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME, false>("FF0_F3|FF0_F1337") == FF0_F3);
 
-				static_assert(not meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F7").has_value());
+				static_assert(meta::value_of<FreeFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF0_F7", static_cast<FreeFlag0>(42)) == 42);
 			};
 
 			"FreeFlag1"_test = []
 			{
-				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F1").value() == FF1_F1);
-				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F2").value() == FF1_F2);
-				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F3").value() == FF1_F3);
-				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F4").value() == FF1_F4);
+				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F1") == FF1_F1);
+				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F2") == FF1_F2);
+				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F3") == FF1_F3);
+				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F4") == FF1_F4);
 
-				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F5").value() == FF1_F5);
-				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F1|FF1_F2").value() == FF1_F5);
-				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F6").value() == FF1_F6);
-				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F3|FF1_F4").value() == FF1_F6);
+				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F5") == FF1_F5);
+				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F1|FF1_F2") == FF1_F5);
+				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F6") == FF1_F6);
+				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F3|FF1_F4") == FF1_F6);
 
-				static_assert(not meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME, true>("FF1_F3|FF1_F1337").has_value());
-				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME, false>("FF1_F3|FF1_F1337").value() == FF1_F3);
+				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME, true>("FF1_F3|FF1_F1337", static_cast<FreeFlag1>(42)) == 42);
+				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME, false>("FF1_F3|FF1_F1337") == FF1_F3);
 
-				static_assert(not meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F7").has_value());
+				static_assert(meta::value_of<FreeFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("FF1_F7", static_cast<FreeFlag1>(42)) == 42);
 			};
 
 			"ScopedFlag0"_test = []
 			{
 				constexpr std::string_view split{"+"};
 
-				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F0", split).value() == ScopedFlag0::F0);
-				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F1", split).value() == ScopedFlag0::F1);
-				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F2", split).value() == ScopedFlag0::F2);
-				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F3", split).value() == ScopedFlag0::F3);
-				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F4", split).value() == ScopedFlag0::F4);
+				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F0", split) == ScopedFlag0::F0);
+				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F1", split) == ScopedFlag0::F1);
+				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F2", split) == ScopedFlag0::F2);
+				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F3", split) == ScopedFlag0::F3);
+				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F4", split) == ScopedFlag0::F4);
 
-				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F5", split).value() == ScopedFlag0::F5);
-				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F1+ScopedFlag0::F2", split).value() == ScopedFlag0::F5);
-				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F6", split).value() == ScopedFlag0::F6);
-				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F3+ScopedFlag0::F4", split).value() == ScopedFlag0::F6);
+				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F5", split) == ScopedFlag0::F5);
+				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F1+ScopedFlag0::F2", split) == ScopedFlag0::F5);
+				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F6", split) == ScopedFlag0::F6);
+				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F3+ScopedFlag0::F4", split) == ScopedFlag0::F6);
 
-				static_assert(not meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME, true>("ScopedFlag0::F3+ScopedFlag0::F1337", split).has_value());
-				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME, false>("ScopedFlag0::F3+ScopedFlag0::F1337", split).value() == ScopedFlag0::F3);
+				static_assert(
+					meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME, true>("ScopedFlag0::F3+ScopedFlag0::F1337", split, static_cast<ScopedFlag0>(42)) ==
+					static_cast<ScopedFlag0>(42)
+				);
+				static_assert(meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME, false>("ScopedFlag0::F3+ScopedFlag0::F1337", split) == ScopedFlag0::F3);
 
-				static_assert(not meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F7", split).has_value());
+				static_assert(
+					meta::value_of<ScopedFlag0, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag0::F7", split, static_cast<ScopedFlag0>(42)) ==
+					static_cast<ScopedFlag0>(42)
+				);
 			};
 
 			"ScopedFlag1"_test = []
 			{
 				constexpr std::string_view split{"-"};
 
-				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F1", split).value() == ScopedFlag1::F1);
-				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F2", split).value() == ScopedFlag1::F2);
-				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F3", split).value() == ScopedFlag1::F3);
-				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F4", split).value() == ScopedFlag1::F4);
+				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F1", split) == ScopedFlag1::F1);
+				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F2", split) == ScopedFlag1::F2);
+				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F3", split) == ScopedFlag1::F3);
+				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F4", split) == ScopedFlag1::F4);
 
-				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F5", split).value() == ScopedFlag1::F5);
-				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F1-ScopedFlag1::F2", split).value() == ScopedFlag1::F5);
-				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F6", split).value() == ScopedFlag1::F6);
-				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F3-ScopedFlag1::F4", split).value() == ScopedFlag1::F6);
+				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F5", split) == ScopedFlag1::F5);
+				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F1-ScopedFlag1::F2", split) == ScopedFlag1::F5);
+				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F6", split) == ScopedFlag1::F6);
+				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F3-ScopedFlag1::F4", split) == ScopedFlag1::F6);
 
-				static_assert(not meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME, true>("ScopedFlag1::F3-ScopedFlag1::F1337", split).has_value());
-				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME, false>("ScopedFlag1::F3-ScopedFlag1::F1337", split).value() == ScopedFlag1::F3);
+				static_assert(
+					meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME, true>("ScopedFlag1::F3-ScopedFlag1::F1337", split, static_cast<ScopedFlag1>(42)) ==
+					static_cast<ScopedFlag1>(42)
+				);
+				static_assert(meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME, false>("ScopedFlag1::F3-ScopedFlag1::F1337", split) == ScopedFlag1::F3);
 
-				static_assert(not meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F7", split).has_value());
+				static_assert(
+					meta::value_of<ScopedFlag1, meta::EnumNamePolicy::WITH_SCOPED_NAME>("ScopedFlag1::F7", split, static_cast<ScopedFlag1>(42)) ==
+					static_cast<ScopedFlag1>(42)
+				);
 			};
 		};
 	};
