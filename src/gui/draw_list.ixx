@@ -623,7 +623,9 @@ namespace gal::prometheus::gui
 				)
 				{
 					command_list_.pop_back();
+					#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
 					command_message_.pop_back();
+					#endif
 					return;
 				}
 			}
