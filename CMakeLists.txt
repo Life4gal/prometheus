@@ -24,7 +24,7 @@ set(
 
 set(
 		${PROJECT_NAME_PREFIX}MINOR_VERSION
-		5
+		6
 )
 
 set(
@@ -365,6 +365,12 @@ set(
 		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
 
 		# =========================
+		# COMMAND_LINE_PARSER
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/command_line_parser/command_line_parser.ixx
+
+		# =========================
 		# CONCURRENCY
 		# =========================
 
@@ -419,16 +425,6 @@ set(
 		${PROJECT_SOURCE_DIR}/src/gui/gui.ixx
 
 		# =========================
-		# INFRASTRUCTURE
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/infrastructure/state_machine.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/unit_test.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/command_line_parser.ixx
-
-		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
-
-		# =========================
 		# MEMORY
 		# =========================
 
@@ -473,14 +469,31 @@ set(
 		${PROJECT_SOURCE_DIR}/src/primitive/primitive.ixx
 
 		# =========================
+		# STATE_MACHINE
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/state_machine/state_machine.ixx
+
+		# =========================
 		# STRING
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.ixx
 		${PROJECT_SOURCE_DIR}/src/string/charconv.ixx
 		${PROJECT_SOURCE_DIR}/src/string/string_pool.ixx
 
 		${PROJECT_SOURCE_DIR}/src/string/string.ixx
+
+		# =========================
+		# UNIT_TEST
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/unit_test/unit_test.ixx
+
+		# =========================
+		# WILDCARD
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/wildcard/wildcard.ixx
 
 		# =========================
 		# ROOT
