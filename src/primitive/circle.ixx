@@ -146,7 +146,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		constexpr basic_circle(const point_value_type x, const point_value_type y, const radius_type radius_value) noexcept
 			: center{x, y},
-			  radius{radius} {}
+			  radius{radius_value} {}
 
 		constexpr basic_circle(const point_type& point_value, const radius_type radius_value) noexcept
 			: center{point_value},
