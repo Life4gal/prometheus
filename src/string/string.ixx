@@ -6,14 +6,12 @@
 #if GAL_PROMETHEUS_USE_MODULE
 export module gal.prometheus.string;
 
-export import :wildcard_match;
 export import :charconv;
 export import :string_pool;
 
 #else
 #pragma once
 
-#include <string/wildcard_match.ixx>
 #include <string/charconv.ixx>
 #include <string/string_pool.ixx>
 

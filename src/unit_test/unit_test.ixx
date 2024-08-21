@@ -10,7 +10,7 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:unit_test;
+export module gal.prometheus.unit_test;
 
 import std;
 import gal.prometheus.functional;
@@ -1973,9 +1973,18 @@ namespace gal::prometheus::unit_test
 			concept dispatched_expression_t = is_dispatched_expression_v<T>;
 
 			template<typename T, typename RequiredType>
+			struct is_type : std::bool_constant<std::is_same_v<std::remove_cvref_t<T>, std::remove_cvref_t<RequiredType>>> {};
+
+			template<typename T, typename RequiredType>
+			constexpr auto is_type_v = is_type<T, RequiredType>::value;
+
+			template<typename T, typename RequiredType>
+			concept type_t = is_type_v<T, RequiredType>;
+
+			template<typename T, typename RequiredType>
 			struct is_type_or_dispatched_type : std::bool_constant<
 						// In most cases the following line will already fulfill the requirement
-						std::is_same_v<std::remove_cvref_t<T>, std::remove_cvref_t<RequiredType>> or
+						is_type_v<T, RequiredType> or
 						// The next two lines allow us to support more complex expressions, such as `(xxx == xxx) == "same!"_b)`
 						// implicit
 						std::is_convertible_v<std::remove_cvref_t<T>, std::remove_cvref_t<RequiredType>> or
@@ -2445,7 +2454,9 @@ namespace gal::prometheus::unit_test
 			// bool == operands::OperandIdentity::message_type{...}
 			template<
 				type_or_dispatched_type_t<bool> L,
-				type_or_dispatched_type_t<operands::OperandIdentity::message_type> R>
+				// not allowed to be a candidate for an expression such as `xxx == "xxx"`, must be `xxx == "xxx"_b`
+				type_t<operands::OperandIdentity::message_type> R
+			>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
 			[[nodiscard]] constexpr auto operator==(const L& lhs, const R& rhs) noexcept -> auto //
@@ -2467,7 +2478,8 @@ namespace gal::prometheus::unit_test
 
 			// operands::OperandIdentity::message_type{...} == bool
 			template<
-				type_or_dispatched_type_t<operands::OperandIdentity::message_type> L,
+				// not allowed to be a candidate for an expression such as `"xxx" == xxx`, must be `"xxx"_b == xxx`
+				type_t<operands::OperandIdentity::message_type> L,
 				type_or_dispatched_type_t<bool> R>
 			// can we trust users not to (inadvertently) mess up the ADL? vvv
 				requires(is_dispatched_expression_v<L> or is_dispatched_expression_v<R>)
@@ -4613,6 +4625,7 @@ namespace gal::prometheus::unit_test
 	{
 		return operands::OperandValueRef{v};
 	}
+
 	template<typename T>
 	[[nodiscard]] constexpr auto ref(const T& v) noexcept -> auto
 	{

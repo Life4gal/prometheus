@@ -24,7 +24,7 @@ set(
 
 set(
 		${PROJECT_NAME_PREFIX}MINOR_VERSION
-		5
+		6
 )
 
 set(
@@ -86,6 +86,8 @@ include(${PROJECT_SOURCE_DIR}/cmake_utils/nuget_install.cmake)
 set(${PROJECT_NAME_PREFIX}3RD_PARTY_PATH ${PROJECT_SOURCE_DIR}/3rd-party)
 
 include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/freetype.cmake)
+include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/stb/stb.cmake)
+include(${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/glfw/glfw.cmake)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	set(${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS ON)
@@ -363,6 +365,12 @@ set(
 		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
 
 		# =========================
+		# COMMAND_LINE_PARSER
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/command_line_parser/command_line_parser.ixx
+
+		# =========================
 		# CONCURRENCY
 		# =========================
 
@@ -417,16 +425,6 @@ set(
 		${PROJECT_SOURCE_DIR}/src/gui/gui.ixx
 
 		# =========================
-		# INFRASTRUCTURE
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/infrastructure/state_machine.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/unit_test.ixx
-		${PROJECT_SOURCE_DIR}/src/infrastructure/command_line_parser.ixx
-
-		${PROJECT_SOURCE_DIR}/src/infrastructure/infrastructure.ixx
-
-		# =========================
 		# MEMORY
 		# =========================
 
@@ -471,14 +469,31 @@ set(
 		${PROJECT_SOURCE_DIR}/src/primitive/primitive.ixx
 
 		# =========================
+		# STATE_MACHINE
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/state_machine/state_machine.ixx
+
+		# =========================
 		# STRING
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/string/wildcard_match.ixx
 		${PROJECT_SOURCE_DIR}/src/string/charconv.ixx
 		${PROJECT_SOURCE_DIR}/src/string/string_pool.ixx
 
 		${PROJECT_SOURCE_DIR}/src/string/string.ixx
+
+		# =========================
+		# UNIT_TEST
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/unit_test/unit_test.ixx
+
+		# =========================
+		# WILDCARD
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/wildcard/wildcard.ixx
 
 		# =========================
 		# ROOT
@@ -617,6 +632,7 @@ target_compile_features(
 )
 
 link_3rd_library_freetype(${PROJECT_NAME})
+link_3rd_library_stb(${PROJECT_NAME})
 
 # SET DEBUG POSTFIX ==> lib${PROJECT_NAME} -> Release lib${PROJECT}d -> Debug
 set(${PROJECT_NAME_PREFIX}DEBUG_POSTFIX d CACHE STRING "Debug library postfix.")

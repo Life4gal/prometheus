@@ -361,34 +361,48 @@
 		}                                                                               \
 	} while (false)
 
+#define GAL_PROMETHEUS_ERROR_RUNTIME_PANIC(error_type, message, ...)                                     \
+	do                                                                                                   \
+	{                                                                                                    \
+		if constexpr (__VA_OPT__(not ) false)                                                            \
+		{                                                                                                \
+			error::mob<error_type>::invoke<error_type>(std::format(message __VA_OPT__(, ) __VA_ARGS__)); \
+		}                                                                                                \
+		else                                                                                             \
+		{                                                                                                \
+			error::mob<error_type>::invoke<error_type>(message);                                         \
+		}                                                                                                \
+	} while (false)
+
+#define GAL_PROMETHEUS_ERROR_RUNTIME_PANIC_DATA(error_type, data, message, ...)                    \
+	do                                                                                             \
+	{                                                                                              \
+		if constexpr (__VA_OPT__(not ) false)                                                      \
+		{                                                                                          \
+			error::mob<error_type>::invoke<error_type>(std::format(message __VA_OPT__(, ) __VA_ARGS__), data); \
+		}                                                                                          \
+		else                                                                                       \
+		{                                                                                          \
+			error::mob<error_type>::invoke<error_type>(message, data);                                         \
+		}                                                                                          \
+	} while (false)
+
 #define GAL_PROMETHEUS_ERROR_RUNTIME_ASSUME_PANIC(error_type, expression, message, ...) \
-	do                                                                                                          \
-	{                                                                                                           \
-		if (not static_cast<bool>(expression))                                                                  \
-		{                                                                                                       \
-			if constexpr (__VA_OPT__(not ) false)                                                               \
-			{                                                                                                   \
-				if constexpr (requires { error_type::panic(std::format(message __VA_OPT__(, ) __VA_ARGS__)); }) \
-				{                                                                                               \
-					error_type::panic(std::format(message __VA_OPT__(, ) __VA_ARGS__));                         \
-				}                                                                                               \
-				else                                                                                            \
-				{                                                                                               \
-					error::panic<error_type>(std::format(message __VA_OPT__(, ) __VA_ARGS__));                  \
-				}                                                                                               \
-			}                                                                                                   \
-			else                                                                                                \
-			{                                                                                                   \
-				if constexpr (requires { error_type::panic(message); })                                         \
-				{                                                                                               \
-					error_type::panic(message);                                                                 \
-				}                                                                                               \
-				else                                                                                            \
-				{                                                                                               \
-					error::panic<error_type>(message);                                                          \
-				}                                                                                               \
-			}                                                                                                   \
-		}                                                                                                       \
+	do                                                                                  \
+	{                                                                                   \
+		if (not static_cast<bool>(expression))                                          \
+		{                                                                               \
+			GAL_PROMETHEUS_ERROR_RUNTIME_PANIC(error_type, message, __VA_ARGS__);        \
+		}                                                                               \
+	} while (false)
+
+#define GAL_PROMETHEUS_ERROR_RUNTIME_ASSUME_PANIC_DATA(error_type, expression, data, message, ...) \
+	do                                                                                             \
+	{                                                                                              \
+		if (not static_cast<bool>(expression))                                                     \
+		{                                                                                          \
+			GAL_PROMETHEUS_ERROR_RUNTIME_PANIC_DATA(error_type, data, message, __VA_ARGS__);            \
+		}                                                                                          \
 	} while (false)
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG

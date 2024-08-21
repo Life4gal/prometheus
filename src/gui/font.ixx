@@ -8,7 +8,7 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.primitive:font;
+export module gal.prometheus.gui:font;
 
 import std;
 import gal.prometheus.primitive;
@@ -48,8 +48,8 @@ namespace gal::prometheus::gui
 
 	struct glyph_type
 	{
-		using rect_type = primitive::basic_rect<std::uint32_t, 2>;
-		using uv_type = primitive::basic_rect<float, 2>;
+		using rect_type = primitive::basic_rect_2d<std::int32_t, std::uint32_t>;
+		using uv_type = primitive::basic_rect_2d<float>;
 
 		rect_type rect;
 		uv_type uv;
@@ -58,7 +58,8 @@ namespace gal::prometheus::gui
 
 	struct font_type
 	{
-		using extent_type = primitive::basic_extent<std::uint32_t, 2>;
+		using extent_type = primitive::basic_extent_2d<std::uint32_t>;
+		using texture_id_type = std::uintptr_t;
 		using char_type = char32_t;
 		using glyph_type = glyph_type;
 
@@ -67,6 +68,7 @@ namespace gal::prometheus::gui
 		extent_type texture_size;
 		// texture_size.width * texture_size.height (RGBA)
 		std::unique_ptr<std::uint32_t[]> texture_data;
+		texture_id_type texture_id;
 
 		std::unordered_map<char_type, glyph_type> glyphs;
 		glyph_type fallback_glyph;

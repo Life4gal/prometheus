@@ -72,8 +72,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			requires(Index < element_size)
 		using element_type = std::conditional_t<Index == 0, position_type, std::conditional_t<Index == 1, uv_type, color_type>>;
 
-		constexpr static uv_type default_uv{};
-
 		position_type position;
 		uv_type uv;
 		color_type color;
@@ -84,7 +82,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			  color{color} {}
 
 		constexpr basic_vertex(const position_type position, const color_type color) noexcept
-			: basic_vertex{position, default_uv, color} {}
+			: basic_vertex{position, {}, color} {}
+
+		constexpr basic_vertex() noexcept
+			: basic_vertex{{}, {}, {}} {}
 
 		template<std::size_t Index>
 			requires(Index < element_size)

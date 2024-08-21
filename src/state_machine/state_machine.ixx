@@ -8,7 +8,7 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.infrastructure:state_machine;
+export module gal.prometheus.state_machine;
 
 import std;
 import gal.prometheus.functional;

@@ -33,15 +33,15 @@ import :point;
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 {
-	template<typename T, std::size_t N>
+	template<std::size_t N, typename T>
 		requires std::is_arithmetic_v<T>
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent;
 
 	template<typename>
 	struct is_basic_extent : std::false_type {};
 
-	template<typename T, std::size_t N>
-	struct is_basic_extent<basic_extent<T, N>> : std::true_type {};
+	template<std::size_t N, typename T>
+	struct is_basic_extent<basic_extent<N, T>> : std::true_type {};
 
 	template<typename T>
 	constexpr auto is_basic_extent_v = is_basic_extent<T>::value;
@@ -52,17 +52,17 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename, typename>
 	struct is_extent_compatible : std::false_type {};
 
-	template<typename ExtentValueType, member_gettable_but_not_same_t<basic_extent<ExtentValueType, 2>> OtherType>
+	template<typename ExtentValueType, member_gettable_but_not_same_t<basic_extent<2, ExtentValueType>> OtherType>
 		requires(meta::member_size<OtherType>() == 2)
-	struct is_extent_compatible<OtherType, basic_extent<ExtentValueType, 2>> :
+	struct is_extent_compatible<OtherType, basic_extent<2, ExtentValueType>> :
 			std::bool_constant<
 				std::convertible_to<meta::member_type_of_index_t<0, OtherType>, ExtentValueType> and
 				std::convertible_to<meta::member_type_of_index_t<1, OtherType>, ExtentValueType>
 			> {};
 
-	template<typename ExtentValueType, member_gettable_but_not_same_t<basic_extent<ExtentValueType, 3>> OtherType>
+	template<typename ExtentValueType, member_gettable_but_not_same_t<basic_extent<3, ExtentValueType>> OtherType>
 		requires(meta::member_size<OtherType>() == 3)
-	struct is_extent_compatible<OtherType, basic_extent<ExtentValueType, 3>> :
+	struct is_extent_compatible<OtherType, basic_extent<3, ExtentValueType>> :
 			std::bool_constant<
 				std::convertible_to<meta::member_type_of_index_t<0, OtherType>, ExtentValueType> and
 				std::convertible_to<meta::member_type_of_index_t<1, OtherType>, ExtentValueType> and
@@ -75,27 +75,52 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename T, typename U>
 	concept extent_compatible_t = is_extent_compatible_v<T, U>;
 
-	template<typename L, typename R, std::size_t N>
-	[[nodiscard]] constexpr auto operator==(const basic_extent<L, N>& lhs, const basic_extent<R, N>& rhs) noexcept -> bool
+	template<std::size_t N, typename L, typename R>
+	[[nodiscard]] constexpr auto operator==(const basic_extent<N, L>& lhs, const basic_extent<N, R>& rhs) noexcept -> bool
 	{
-		return lhs.width == rhs.width and lhs.height == rhs.height;
+		if constexpr (N == 2)
+		{
+			return lhs.width == rhs.width and lhs.height == rhs.height;
+		}
+		else if constexpr (N == 3)
+		{
+			return lhs.width == rhs.width and lhs.height == rhs.height and lhs.depth == rhs.depth;
+		}
+		else
+		{
+			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+		}
 	}
 
-	template<typename T, std::size_t N, extent_compatible_t<basic_extent<T, N>> R>
-	[[nodiscard]] constexpr auto operator==(const basic_extent<T, N>& lhs, const R& rhs) noexcept -> bool
+	template<std::size_t N, typename T, extent_compatible_t<basic_extent<N, T>> R>
+	[[nodiscard]] constexpr auto operator==(const basic_extent<N, T>& lhs, const R& rhs) noexcept -> bool
 	{
-		return lhs.width == meta::member_of_index<0>(rhs) and lhs.height == meta::member_of_index<1>(rhs);
+		if constexpr (N == 2)
+		{
+			return lhs.width == meta::member_of_index<0>(rhs) and lhs.height == meta::member_of_index<1>(rhs);
+		}
+		else if constexpr (N == 3)
+		{
+			return
+					lhs.width == meta::member_of_index<0>(rhs) and
+					lhs.height == meta::member_of_index<1>(rhs) and
+					lhs.depth == meta::member_of_index<2>(rhs);
+		}
+		else
+		{
+			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+		}
 	}
 
-	template<typename T, std::size_t N, extent_compatible_t<basic_extent<T, N>> L>
-	[[nodiscard]] constexpr auto operator==(const L& lhs, const basic_extent<T, N>& rhs) noexcept -> bool
+	template<std::size_t N, typename T, extent_compatible_t<basic_extent<N, T>> L>
+	[[nodiscard]] constexpr auto operator==(const L& lhs, const basic_extent<N, T>& rhs) noexcept -> bool
 	{
-		return rhs.width == meta::member_of_index<0>(lhs) and rhs.height == meta::member_of_index<1>(lhs);
+		return rhs == lhs;
 	}
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent<T, 2> final : multidimensional<T, basic_extent<T, 2>>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent<2, T> final : multidimensional<basic_extent<2, T>, T>
 	{
 		using value_type = T;
 
@@ -152,11 +177,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			else if constexpr (Index == 1) { return height; }
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
+
+		[[nodiscard]] constexpr explicit operator basic_extent<3, value_type>() const noexcept { return {width, height, 0}; }
 	};
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent<T, 3> final : multidimensional<T, basic_extent<T, 3>>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent<3, T> final : multidimensional<basic_extent<3, T>, T>
 	{
 		using value_type = T;
 
@@ -220,28 +247,34 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
-		[[nodiscard]] constexpr explicit(false) operator basic_extent<value_type, 2>() const noexcept { return {width, height}; }
+		[[nodiscard]] constexpr explicit(false) operator basic_extent<2, value_type>() const noexcept { return {width, height}; }
 	};
+
+	template<typename T>
+	using basic_extent_2d = basic_extent<2, T>;
+
+	template<typename T>
+	using basic_extent_3d = basic_extent<3, T>;
 }
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 {
-	template<std::size_t Index, typename T, std::size_t N>
+	template<std::size_t Index, std::size_t N, typename T>
 	struct
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 			[[msvc::known_semantics]]
 			#endif
-			tuple_element<Index, gal::prometheus::primitive::basic_extent<T, N>> // NOLINT(cert-dcl58-cpp)
+			tuple_element<Index, gal::prometheus::primitive::basic_extent<N, T>> // NOLINT(cert-dcl58-cpp)
 	{
 		using type = T;
 	};
 
-	template<typename T, std::size_t N>
-	struct tuple_size<gal::prometheus::primitive::basic_extent<T, N>> // NOLINT(cert-dcl58-cpp)
+	template<std::size_t N, typename T>
+	struct tuple_size<gal::prometheus::primitive::basic_extent<N, T>> // NOLINT(cert-dcl58-cpp)
 			: std::integral_constant<std::size_t, N> {};
 
-	template<typename T, std::size_t N>
-	struct formatter<gal::prometheus::primitive::basic_extent<T, N>> // NOLINT(cert-dcl58-cpp)
+	template<std::size_t N, typename T>
+	struct formatter<gal::prometheus::primitive::basic_extent<N, T>> // NOLINT(cert-dcl58-cpp)
 	{
 		template<typename ParseContext>
 		constexpr auto parse(ParseContext& context) const noexcept -> auto
@@ -251,7 +284,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 		}
 
 		template<typename FormatContext>
-		auto format(const gal::prometheus::primitive::basic_extent<T, N>& extent, FormatContext& context) const noexcept -> auto
+		auto format(const gal::prometheus::primitive::basic_extent<N, T>& extent, FormatContext& context) const noexcept -> auto
 		{
 			if constexpr (N == 2)
 			{

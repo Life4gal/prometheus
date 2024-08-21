@@ -37,15 +37,15 @@ import :rect;
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 {
-	template<typename T, std::size_t N>
-		requires std::is_arithmetic_v<T>
+	template<std::size_t N, typename PointValueType, typename RadiusValueType = PointValueType, typename RotationValueType = RadiusValueType>
+		requires(std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<RadiusValueType> and std::is_arithmetic_v<RotationValueType>)
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_ellipse;
 
 	template<typename>
 	struct is_basic_ellipse : std::false_type {};
 
-	template<typename T, std::size_t N>
-	struct is_basic_ellipse<basic_ellipse<T, N>> : std::true_type {};
+	template<std::size_t N, typename PointValueType, typename RadiusValueType, typename RotationValueType>
+	struct is_basic_ellipse<basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>> : std::true_type {};
 
 	template<typename T>
 	constexpr auto is_basic_ellipse_v = is_basic_ellipse<T>::value;
@@ -59,21 +59,49 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename T>
 	struct is_ellipse_compatible<T, T> : std::false_type {};
 
-	template<typename EllipseValueType, std::size_t N, member_gettable_but_not_same_t<basic_ellipse<EllipseValueType, N>> U>
+	// point + radius
+	template<
+		std::size_t N,
+		typename PointValueType,
+		typename RadiusValueType,
+		typename RotationValueType,
+		member_gettable_but_not_same_t<basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>> U
+	>
 		requires(meta::member_size<U>() == 2)
-	struct is_ellipse_compatible<U, basic_ellipse<EllipseValueType, N>> :
+	struct is_ellipse_compatible<U, basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>> :
 			std::bool_constant<
-				is_point_compatible_v<meta::member_type_of_index_t<0, U>, basic_point<EllipseValueType, N>> and
-				is_extent_compatible_v<meta::member_type_of_index_t<1, U>, basic_extent<EllipseValueType, N>>
+				is_point_compatible_v<meta::member_type_of_index_t<0, U>, basic_point<N, PointValueType>> and
+				is_extent_compatible_v<meta::member_type_of_index_t<1, U>, basic_extent<N, RadiusValueType>>
 			> {};
 
-	template<typename EllipseValueType, std::size_t N, member_gettable_but_not_same_t<basic_ellipse<EllipseValueType, N>> U>
+	// point + radius + rotation (2D)
+	template<
+		typename PointValueType,
+		typename RadiusValueType,
+		typename RotationValueType,
+		member_gettable_but_not_same_t<basic_ellipse<2, PointValueType, RadiusValueType, RotationValueType>> U
+	>
 		requires(meta::member_size<U>() == 3)
-	struct is_ellipse_compatible<U, basic_ellipse<EllipseValueType, N>> :
+	struct is_ellipse_compatible<U, basic_ellipse<2, PointValueType, RadiusValueType, RotationValueType>> :
 			std::bool_constant<
-				is_point_compatible_v<meta::member_type_of_index_t<0, U>, basic_point<EllipseValueType, N>> and
-				is_extent_compatible_v<meta::member_type_of_index_t<1, U>, basic_extent<EllipseValueType, N>> and
-				is_extent_compatible_v<meta::member_type_of_index_t<2, U>, basic_extent<float, N>>
+				is_point_compatible_v<meta::member_type_of_index_t<0, U>, basic_point<2, PointValueType>> and
+				is_extent_compatible_v<meta::member_type_of_index_t<1, U>, basic_extent<2, RadiusValueType>> and
+				std::convertible_to<meta::member_type_of_index_t<2, U>, RotationValueType>
+			> {};
+
+	// point + radius + rotation (3D)
+	template<
+		typename PointValueType,
+		typename RadiusValueType,
+		typename RotationValueType,
+		member_gettable_but_not_same_t<basic_ellipse<3, PointValueType, RadiusValueType, RotationValueType>> U
+	>
+		requires(meta::member_size<U>() == 3)
+	struct is_ellipse_compatible<U, basic_ellipse<3, PointValueType, RadiusValueType, RotationValueType>> :
+			std::bool_constant<
+				is_point_compatible_v<meta::member_type_of_index_t<0, U>, basic_point<3, PointValueType>> and
+				is_extent_compatible_v<meta::member_type_of_index_t<1, U>, basic_extent<3, RadiusValueType>> and
+				is_extent_compatible_v<meta::member_type_of_index_t<2, U>, basic_extent<3, RotationValueType>>
 			> {};
 
 	template<typename OtherType, typename EllipseType>
@@ -82,21 +110,40 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename OtherType, typename EllipseType>
 	concept ellipse_compatible_t = is_ellipse_compatible_v<OtherType, EllipseType>;
 
-	template<typename L, typename R, std::size_t N>
-	[[nodiscard]] constexpr auto operator==(const basic_ellipse<L, N>& lhs, const basic_ellipse<R, N>& rhs) noexcept -> bool
+	template<
+		std::size_t N,
+		typename PointValueTypeL,
+		typename RadiusValueTypeL,
+		typename RotationValueTypeL,
+		typename PointValueTypeR,
+		typename RadiusValueTypeR,
+		typename RotationValueTypeR
+	>
+	[[nodiscard]] constexpr auto operator==(
+		const basic_ellipse<N, PointValueTypeL, RadiusValueTypeL, RotationValueTypeL>& lhs,
+		const basic_ellipse<N, PointValueTypeR, RadiusValueTypeR, RotationValueTypeR>& rhs
+	) noexcept -> bool
 	{
 		return lhs.center == rhs.center and lhs.radius == rhs.radius and lhs.rotation == rhs.rotation;
 	}
 
-	template<typename T, std::size_t N, ellipse_compatible_t<basic_ellipse<T, N>> R>
-	[[nodiscard]] constexpr auto operator==(const basic_ellipse<T, N>& lhs, const R& rhs) noexcept -> bool
+	template<
+		std::size_t N,
+		typename PointValueType,
+		typename RadiusValueType,
+		typename RotationValueType,
+		ellipse_compatible_t<basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>> R
+	>
+	[[nodiscard]] constexpr auto operator==(const basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>& lhs, const R& rhs) noexcept -> bool
 	{
 		if constexpr (meta::member_size<R>() == 2)
 		{
+			// point + radius
 			return lhs.center == meta::member_of_index<0>(rhs) and lhs.radius == meta::member_of_index<1>(rhs);
 		}
 		else if constexpr (meta::member_size<R>() == 3)
 		{
+			// point + radius + rotation
 			return
 					lhs.center == meta::member_of_index<0>(rhs) and
 					lhs.radius == meta::member_of_index<1>(rhs) and
@@ -108,35 +155,31 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		}
 	}
 
-	template<typename T, std::size_t N, ellipse_compatible_t<basic_ellipse<T, N>> L>
-	[[nodiscard]] constexpr auto operator==(const L& lhs, const basic_ellipse<T, N>& rhs) noexcept -> bool
+	template<
+		std::size_t N,
+		typename PointValueType,
+		typename RadiusValueType,
+		typename RotationValueType,
+		ellipse_compatible_t<basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>> L
+	>
+	[[nodiscard]] constexpr auto operator==(const L& lhs, const basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>& rhs) noexcept -> bool
 	{
-		if constexpr (meta::member_size<L>() == 2)
-		{
-			return rhs.center == meta::member_of_index<0>(lhs) and rhs.radius == meta::member_of_index<1>(lhs);
-		}
-		else if constexpr (meta::member_size<L>() == 3)
-		{
-			return
-					rhs.center == meta::member_of_index<0>(lhs) and
-					rhs.radius == meta::member_of_index<1>(lhs) and
-					rhs.rotation == meta::member_of_index<2>(lhs);
-		}
-		else
-		{
-			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-		}
+		return rhs == lhs;
 	}
 
-	template<typename T>
-		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_ellipse<T, 2> final : multidimensional<T, basic_ellipse<T, 2>>
+	// 2D
+	template<typename PointValueType, typename RadiusValueType, typename RotationValueType>
+		requires(std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<RadiusValueType> and std::is_arithmetic_v<RotationValueType>)
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_ellipse<2, PointValueType, RadiusValueType, RotationValueType> final
+			: multidimensional<basic_ellipse<2, PointValueType, RadiusValueType, RotationValueType>, PointValueType, RadiusValueType, RotationValueType>
 	{
-		using value_type = T;
+		using point_value_type = PointValueType;
+		using radius_value_type = RadiusValueType;
+		using rotation_value_type = RotationValueType;
 
-		using point_type = basic_point<value_type, 2>;
-		using radius_type = basic_extent<value_type, 2>;
-		using rotation_type = float;
+		using point_type = basic_point<2, point_value_type>;
+		using radius_type = basic_extent<2, radius_value_type>;
+		using rotation_type = rotation_value_type;
 
 		constexpr static auto is_always_equal = true;
 
@@ -147,19 +190,34 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		point_type center;
 		radius_type radius;
-		// Multiples of PI
-		// e.q. .5f * std::numbers::pi_v<rotation_type>
+		// multiples of PI
+		// e.q. .5f * std::numbers::pi_v<rotation_value_type>
 		rotation_type rotation;
 
-		constexpr explicit(false) basic_ellipse(const value_type value = value_type{0}) noexcept
-			: center{value},
-			  radius{value},
-			  rotation{0} {}
+		constexpr explicit(false) basic_ellipse(
+			const point_value_type point_value = point_value_type{0},
+			const radius_value_type radius_value = radius_value_type{0},
+			const rotation_value_type rotation_value = radius_value_type{0}
+		) noexcept
+			: center{point_value},
+			  radius{radius_value},
+			  rotation{rotation_value} {}
 
-		constexpr basic_ellipse(const point_type& p, const radius_type& r, const rotation_type rotation = 0) noexcept
-			: center{p},
-			  radius{r},
-			  rotation{rotation} {}
+		constexpr basic_ellipse(
+			const point_value_type x,
+			const point_value_type y,
+			const radius_value_type radius_x,
+			const radius_value_type radius_y,
+			const rotation_value_type rotation_value = rotation_value_type{0}
+		) noexcept
+			: center{x, y},
+			  radius{radius_x, radius_y},
+			  rotation{rotation_value} {}
+
+		constexpr basic_ellipse(const point_type& point_value, const radius_type& radius_value, const rotation_type rotation_value = rotation_value_type{0}) noexcept
+			: center{point_value},
+			  radius{radius_value},
+			  rotation{rotation_value} {}
 
 		template<ellipse_compatible_t<basic_ellipse> U>
 		constexpr explicit basic_ellipse(const U& value) noexcept
@@ -250,7 +308,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 					<= static_cast<rotation_type>(1);
 		}
 
-		[[nodiscard]] constexpr auto includes(const basic_circle<value_type, 2>& circle) const noexcept -> bool
+		[[nodiscard]] constexpr auto includes(const basic_circle<2, point_value_type, radius_value_type>& circle) const noexcept -> bool
 		{
 			const auto dx = static_cast<rotation_type>(circle.center.x - center.x);
 			const auto dy = static_cast<rotation_type>(circle.center.y - center.y);
@@ -302,26 +360,29 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 			return distance + std::ranges::max(scaled_rx, scaled_ry) <= static_cast<rotation_type>(1);
 		}
 	};
+
+	template<typename PointValueType, typename RadiusValueType = PointValueType, typename RotationValueType = RadiusValueType>
+	using basic_ellipse_2d = basic_ellipse<2, PointValueType, RadiusValueType, RotationValueType>;
 }
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 {
-	template<std::size_t Index, typename T, std::size_t N>
+	template<std::size_t Index, std::size_t N, typename PointValueType, typename RadiusValueType, typename RotationValueType>
 	struct
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 			[[msvc::known_semantics]]
 			#endif
-			tuple_element<Index, gal::prometheus::primitive::basic_ellipse<T, N>> // NOLINT(cert-dcl58-cpp)
+			tuple_element<Index, gal::prometheus::primitive::basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>> // NOLINT(cert-dcl58-cpp)
 	{
-		using type = typename gal::prometheus::primitive::basic_ellipse<T, N>::template element_type<Index>;
+		using type = typename gal::prometheus::primitive::basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>::template element_type<Index>;
 	};
 
-	template<typename T, std::size_t N>
-	struct tuple_size<gal::prometheus::primitive::basic_ellipse<T, N>> // NOLINT(cert-dcl58-cpp)
-			: std::integral_constant<std::size_t, gal::prometheus::primitive::basic_ellipse<T, N>::element_size> {};
+	template<std::size_t N, typename PointValueType, typename RadiusValueType, typename RotationValueType>
+	struct tuple_size<gal::prometheus::primitive::basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>> // NOLINT(cert-dcl58-cpp)
+			: std::integral_constant<std::size_t, gal::prometheus::primitive::basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>::element_size> {};
 
-	template<typename T, std::size_t N>
-	struct formatter<gal::prometheus::primitive::basic_ellipse<T, N>> // NOLINT(cert-dcl58-cpp)
+	template<std::size_t N, typename PointValueType, typename RadiusValueType, typename RotationValueType>
+	struct formatter<gal::prometheus::primitive::basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>> // NOLINT(cert-dcl58-cpp)
 	{
 		template<typename ParseContext>
 		constexpr auto parse(ParseContext& context) const noexcept -> auto
@@ -331,7 +392,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
 		}
 
 		template<typename FormatContext>
-		auto format(const gal::prometheus::primitive::basic_ellipse<T, N>& ellipse, FormatContext& context) const noexcept -> auto
+		auto format(const gal::prometheus::primitive::basic_ellipse<N, PointValueType, RadiusValueType, RotationValueType>& ellipse, FormatContext& context) const noexcept -> auto
 		{
 			return std::format_to(
 				context.out(),

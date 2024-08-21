@@ -12,7 +12,7 @@ module;
 #include <cstdlib>
 #endif
 
-export module gal.prometheus.infrastructure:command_line_parser;
+export module gal.prometheus.command_line_parser;
 
 import std;
 import gal.prometheus.error;

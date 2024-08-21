@@ -2,18 +2,13 @@
 
 #if GAL_PROMETHEUS_USE_MODULE
 import std;
-
-import gal.prometheus.infrastructure;
-import gal.prometheus.chars;
-import gal.prometheus.numeric;
+import gal.prometheus;
 #else
+#include <prometheus.ixx>
+
 #include <algorithm>
 #include <string>
 #include <limits>
-
-#include <infrastructure/infrastructure.ixx>
-#include <chars/chars.ixx>
-#include <numeric/numeric.ixx>
 #endif
 
 namespace
