@@ -6,6 +6,8 @@
 #if not defined(GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG)
 #if defined(DEBUG) or defined(_DEBUG)
 #define GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG 1
+#else
+#define GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG 0
 #endif
 #endif
 
@@ -558,7 +560,9 @@ namespace gal::prometheus::gui
 						.element_count = 0
 				}
 			);
+			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
 			command_message_.emplace_back(std::move(message));
+			#endif
 		}
 
 		enum class ChangedElement
