@@ -17,7 +17,7 @@ module;
 #define STB_RECT_PACK_IMPLEMENTATION
 #include <stb_rect_pack.h>
 
-export module gal.prometheus.gui:font.impl;
+export module gal.prometheus.draw:font.impl;
 
 import std;
 
@@ -38,13 +38,13 @@ import :font;
 #include <stb_rect_pack.h>
 
 #include <prometheus/macro.hpp>
-#include <gui/font.ixx>
+#include <draw/font.ixx>
 
 #endif
 
 namespace
 {
-	using namespace gal::prometheus::gui;
+	using namespace gal::prometheus::draw;
 
 	// ReSharper disable once CppInconsistentNaming
 	constexpr glyph_range_value_type simplified_chinese_common_accumulative_offsets_from_0x4e00[]
@@ -112,7 +112,7 @@ namespace
 	};
 }
 
-namespace gal::prometheus::gui
+namespace gal::prometheus::draw
 {
 	[[nodiscard]] auto glyph_range_latin() noexcept -> glyph_ranges_view_type
 	{

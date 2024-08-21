@@ -45,6 +45,7 @@ target_link_libraries(
 add_test(
 		NAME ${PROJECT_NAME}
 		COMMAND ${PROJECT_NAME}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 # assets path
@@ -91,60 +92,62 @@ set(ASSETS_PATH_PIC ${CMAKE_SOURCE_DIR}/assets/pic.jpg)
 #	)
 #endif (Vulkan_FOUND)
 
-add_executable(
-		${PROJECT_NAME}-gui-dx12
+if (${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)
+	add_executable(
+			${PROJECT_NAME}-dx12
 
-		${PROJECT_SOURCE_DIR}/src/gui/glfw_callback_handler.cpp
-		${PROJECT_SOURCE_DIR}/src/gui/backend_dx12.cpp
-		${PROJECT_SOURCE_DIR}/src/gui/main_dx12.cpp
-)
+			${PROJECT_SOURCE_DIR}/src/draw/glfw_callback_handler.cpp
+			${PROJECT_SOURCE_DIR}/src/draw/backend_dx12.cpp
+			${PROJECT_SOURCE_DIR}/src/draw/main_dx12.cpp
+	)
 
-target_compile_features(
-		${PROJECT_NAME}-gui-dx12
-		PUBLIC
-		cxx_std_23
-)
+	target_compile_features(
+			${PROJECT_NAME}-dx12
+			PUBLIC
+			cxx_std_23
+	)
 
-target_link_libraries(
-		${PROJECT_NAME}-gui-dx12
-		PUBLIC
-		prometheus
-)
-link_3rd_library_stb(${PROJECT_NAME}-gui-dx12)
-link_3rd_library_glfw(${PROJECT_NAME}-gui-dx12)
+	target_link_libraries(
+			${PROJECT_NAME}-dx12
+			PUBLIC
+			prometheus
+	)
+	link_3rd_library_stb(${PROJECT_NAME}-dx12)
+	link_3rd_library_glfw(${PROJECT_NAME}-dx12)
 
-target_compile_definitions(
-		${PROJECT_NAME}-gui-dx12
-		PUBLIC
+	target_compile_definitions(
+			${PROJECT_NAME}-dx12
+			PUBLIC
 
-		ASSETS_PATH_PIC="${ASSETS_PATH_PIC}"
-)
+			ASSETS_PATH_PIC="${ASSETS_PATH_PIC}"
+	)
 
-add_executable(
-		${PROJECT_NAME}-gui-dx11
+	add_executable(
+			${PROJECT_NAME}-dx11
 
-		${PROJECT_SOURCE_DIR}/src/gui/glfw_callback_handler.cpp
-		${PROJECT_SOURCE_DIR}/src/gui/backend_dx11.cpp
-		${PROJECT_SOURCE_DIR}/src/gui/main_dx11.cpp
-)
+			${PROJECT_SOURCE_DIR}/src/draw/glfw_callback_handler.cpp
+			${PROJECT_SOURCE_DIR}/src/draw/backend_dx11.cpp
+			${PROJECT_SOURCE_DIR}/src/draw/main_dx11.cpp
+	)
 
-target_compile_features(
-		${PROJECT_NAME}-gui-dx11
-		PUBLIC
-		cxx_std_23
-)
+	target_compile_features(
+			${PROJECT_NAME}-dx11
+			PUBLIC
+			cxx_std_23
+	)
 
-target_link_libraries(
-		${PROJECT_NAME}-gui-dx11
-		PUBLIC
-		prometheus
-)
-link_3rd_library_stb(${PROJECT_NAME}-gui-dx11)
-link_3rd_library_glfw(${PROJECT_NAME}-gui-dx11)
+	target_link_libraries(
+			${PROJECT_NAME}-dx11
+			PUBLIC
+			prometheus
+	)
+	link_3rd_library_stb(${PROJECT_NAME}-dx11)
+	link_3rd_library_glfw(${PROJECT_NAME}-dx11)
 
-target_compile_definitions(
-		${PROJECT_NAME}-gui-dx11
-		PUBLIC
+	target_compile_definitions(
+			${PROJECT_NAME}-dx11
+			PUBLIC
 
-		ASSETS_PATH_PIC="${ASSETS_PATH_PIC}"
-)
+			ASSETS_PATH_PIC="${ASSETS_PATH_PIC}"
+	)
+endif (${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)

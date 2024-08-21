@@ -26,8 +26,8 @@ extern double g_last_time;
 extern std::uint64_t g_frame_count;
 extern float g_fps;
 
-extern std::shared_ptr<gui::DrawListSharedData> g_draw_list_shared_data;
-extern gui::DrawList g_draw_list;
+extern std::shared_ptr<draw::DrawListSharedData> g_draw_list_shared_data;
+extern draw::DrawList g_draw_list;
 
 namespace
 {
@@ -106,7 +106,7 @@ auto prometheus_init() -> void //
 	print_time();
 
 	using functional::operators::operator|;
-	g_draw_list.draw_list_flag(gui::DrawListFlag::ANTI_ALIASED_LINE | gui::DrawListFlag::ANTI_ALIASED_FILL);
+	g_draw_list.draw_list_flag(draw::DrawListFlag::ANTI_ALIASED_LINE | draw::DrawListFlag::ANTI_ALIASED_FILL);
 	g_draw_list.shared_data(g_draw_list_shared_data);
 
 	// Create the blending setup
@@ -375,7 +375,7 @@ auto prometheus_init() -> void //
 		const auto load_font_texture_result = load_texture(reinterpret_cast<const std::uint8_t*>(font_data), font_width, font_height, g_font_texture);
 		assert(load_font_texture_result);
 
-		g_draw_list_shared_data->get_default_font().texture_id = reinterpret_cast<gui::font_type::texture_id_type>(g_font_texture.Get());
+		g_draw_list_shared_data->get_default_font().texture_id = reinterpret_cast<draw::font_type::texture_id_type>(g_font_texture.Get());
 	}
 
 	// Load additional picture texture
@@ -472,9 +472,9 @@ auto prometheus_render() -> void
 
 	// font texture
 	g_draw_list.image(g_draw_list_shared_data->get_default_font().texture_id, {900, 20, 1200, 320});
-	g_draw_list.image_rounded(reinterpret_cast<gui::DrawList::texture_id_type>(g_additional_picture_texture.Get()), {900, 350, 1200, 650}, 10);
+	g_draw_list.image_rounded(reinterpret_cast<draw::DrawList::texture_id_type>(g_additional_picture_texture.Get()), {900, 350, 1200, 650}, 10);
 
-	#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+	#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 	g_draw_list.bind_debug_info();
 	#endif
 }
@@ -493,7 +493,7 @@ auto prometheus_draw() -> void
 		this_frame_vertex_count = static_cast<UINT>(vertex_list.size()) + 5000;
 
 		const D3D11_BUFFER_DESC buffer_desc{
-				.ByteWidth = static_cast<UINT>(this_frame_vertex_count * sizeof(gui::DrawList::vertex_type)),
+				.ByteWidth = static_cast<UINT>(this_frame_vertex_count * sizeof(draw::DrawList::vertex_type)),
 				.Usage = D3D11_USAGE_DYNAMIC,
 				.BindFlags = D3D11_BIND_VERTEX_BUFFER,
 				.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE,
@@ -508,7 +508,7 @@ auto prometheus_draw() -> void
 		this_frame_index_count = static_cast<UINT>(index_list.size()) + 10000;
 
 		const D3D11_BUFFER_DESC buffer_desc{
-				.ByteWidth = static_cast<UINT>(this_frame_index_count * sizeof(gui::DrawList::index_type)),
+				.ByteWidth = static_cast<UINT>(this_frame_index_count * sizeof(draw::DrawList::index_type)),
 				.Usage = D3D11_USAGE_DYNAMIC,
 				.BindFlags = D3D11_BIND_INDEX_BUFFER,
 				.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE,
@@ -531,7 +531,7 @@ auto prometheus_draw() -> void
 		std::ranges::transform(
 			vertex_list,
 			mapped_vertex,
-			[](const gui::DrawList::vertex_type& vertex) -> d3d_vertex_type
+			[](const draw::DrawList::vertex_type& vertex) -> d3d_vertex_type
 			{
 				// return {
 				// 		.position = {vertex.position.x, vertex.position.y},

@@ -8,7 +8,7 @@ module;
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.gui:font;
+export module gal.prometheus.draw:font;
 
 import std;
 import gal.prometheus.primitive;
@@ -25,7 +25,7 @@ import gal.prometheus.primitive;
 
 #endif
 
-namespace gal::prometheus::gui
+namespace gal::prometheus::draw
 {
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 

@@ -5,9 +5,9 @@ export import gal.prometheus.chars;
 export import gal.prometheus.command_line_parser;
 export import gal.prometheus.concurrency;
 export import gal.prometheus.coroutine;
+export import gal.prometheus.draw;
 export import gal.prometheus.error;
 export import gal.prometheus.functional;
-export import gal.prometheus.gui;
 export import gal.prometheus.memory;
 export import gal.prometheus.meta;
 export import gal.prometheus.numeric;
@@ -24,9 +24,9 @@ export import gal.prometheus.wildcard;
 #include <command_line_parser/command_line_parser.ixx>
 #include <concurrency/concurrency.ixx>
 #include <coroutine/coroutine.ixx>
+#include <draw/draw.ixx>
 #include <error/error.ixx>
 #include <functional/functional.ixx>
-#include <gui/gui.ixx>
 #include <memory/memory.ixx>
 #include <meta/meta.ixx>
 #include <numeric/numeric.ixx>

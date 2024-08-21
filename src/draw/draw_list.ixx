@@ -3,11 +3,11 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if not defined(GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG)
+#if not defined(GAL_PROMETHEUS_DRAW_LIST_DEBUG)
 #if defined(DEBUG) or defined(_DEBUG)
-#define GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG 1
+#define GAL_PROMETHEUS_DRAW_LIST_DEBUG 1
 #else
-#define GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG 0
+#define GAL_PROMETHEUS_DRAW_LIST_DEBUG 0
 #endif
 #endif
 
@@ -48,7 +48,7 @@ import :font;
 #include <limits>
 #include <numbers>
 
-#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 #include <string>
 #include <format>
 #include <span>
@@ -58,12 +58,12 @@ import :font;
 #include <functional/functional.ixx>
 #include <primitive/primitive.ixx>
 #include <chars/chars.ixx>
-#include <gui/font.ixx>
+#include <draw/font.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
-namespace gal::prometheus::gui
+namespace gal::prometheus::draw
 {
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
@@ -486,7 +486,7 @@ namespace gal::prometheus::gui
 		using path_list_type = list_type<point_type>;
 
 	private:
-		#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 		using debug_vertex_range_type = std::pair<vertex_list_type::size_type, vertex_list_type::size_type>;
 		using debug_index_range_type = std::pair<index_list_type::size_type, index_list_type::size_type>;
 
@@ -521,13 +521,13 @@ namespace gal::prometheus::gui
 		// 1: .clip_rect = {max(rect0.left, rect1.left), max(rect0.top, rect1.top), min(rect0.right, rect1.right), min(rect0.bottom, rect1.bottom)}, .index_offset = root_window_element_count + 6, .element_count = 6 (two triangles => 4/5/6-4/6/7)
 		// 2: .clip_rect = {...}, .index_offset = root_window_element_count + 12, .element_count = 3 (one triangle => 8/9/10)
 		command_list_type command_list_;
-		#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 		list_type<std::string> command_message_;
 		#endif
 		vertex_list_type vertex_list_;
 		index_list_type index_list_;
 
-		#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 		debug_range_info_list_type debug_range_info_list_;
 		// If you want to get the exact data (and not just a [begin, end] of range), 
 		// you have to `explicitly` call `bind_debug_info` after `all` operations are finished,
@@ -542,7 +542,7 @@ namespace gal::prometheus::gui
 		path_list_type path_list_;
 
 		constexpr auto push_command(
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			std::string&& message
 			#endif
 		) noexcept -> void
@@ -560,7 +560,7 @@ namespace gal::prometheus::gui
 						.element_count = 0
 				}
 			);
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			command_message_.emplace_back(std::move(message));
 			#endif
 		}
@@ -584,7 +584,7 @@ namespace gal::prometheus::gui
 					if (current_clip_rect != this_command_clip_rect_)
 					{
 						push_command(
-							#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+							#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 							std::format("[PUSH CLIP_RECT] {} -> {}", current_clip_rect, this_command_clip_rect_)
 							#endif
 						);
@@ -597,7 +597,7 @@ namespace gal::prometheus::gui
 					if (current_texture_id != this_command_texture_id_)
 					{
 						push_command(
-							#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+							#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 							std::format("[PUSH TEXTURE_ID] [{}] -> [{}]", current_texture_id, this_command_texture_id_)
 							#endif
 						);
@@ -627,7 +627,7 @@ namespace gal::prometheus::gui
 				)
 				{
 					command_list_.pop_back();
-					#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+					#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 					command_message_.pop_back();
 					#endif
 					return;
@@ -1745,13 +1745,13 @@ namespace gal::prometheus::gui
 		constexpr auto reset() noexcept -> void
 		{
 			command_list_.resize(0);
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			command_message_.resize(0);
 			#endif
 			vertex_list_.resize(0);
 			index_list_.resize(0);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.resize(0);
 			debug_list_info_list_.resize(0);
 			#endif
@@ -1776,7 +1776,7 @@ namespace gal::prometheus::gui
 			);
 		}
 
-		#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 		constexpr auto bind_debug_info() noexcept -> void
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(debug_range_info_list_.size() == debug_list_info_list_.size());
@@ -1861,14 +1861,14 @@ namespace gal::prometheus::gui
 			path_pin(from + point_type{.5f, .5f});
 			path_pin(to + point_type{.5f, .5f});
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color, DrawFlag::NONE, thickness);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -1896,14 +1896,14 @@ namespace gal::prometheus::gui
 			path_pin(b);
 			path_pin(c);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color, DrawFlag::CLOSED, thickness);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -1931,14 +1931,14 @@ namespace gal::prometheus::gui
 			path_pin(b);
 			path_pin(c);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -1964,14 +1964,14 @@ namespace gal::prometheus::gui
 
 			path_rect(rect_type{rect.left_top() + point_type{.5f, .5f}, rect.right_bottom() - point_type{.5f, .5f}}, rounding, flag);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color, DrawFlag::CLOSED, thickness);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2007,7 +2007,7 @@ namespace gal::prometheus::gui
 				return;
 			}
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
@@ -2023,7 +2023,7 @@ namespace gal::prometheus::gui
 				path_stroke(color);
 			}
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2064,14 +2064,14 @@ namespace gal::prometheus::gui
 				return;
 			}
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			draw_rect_filled(rect, color_left_top, color_right_top, color_left_bottom, color_right_bottom);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2109,14 +2109,14 @@ namespace gal::prometheus::gui
 
 			path_quadrilateral(p1, p2, p3, p4);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color, DrawFlag::CLOSED, thickness);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2142,14 +2142,14 @@ namespace gal::prometheus::gui
 
 			path_quadrilateral(p1, p2, p3, p4);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2175,14 +2175,14 @@ namespace gal::prometheus::gui
 
 			path_arc_n(circle, 0, std::numbers::pi_v<float> * 2, segments);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color, DrawFlag::CLOSED, thickness);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2213,14 +2213,14 @@ namespace gal::prometheus::gui
 
 			path_arc_elliptical_n(ellipse, 0, std::numbers::pi_v<float> * 2, segments);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color, DrawFlag::CLOSED, thickness);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2258,14 +2258,14 @@ namespace gal::prometheus::gui
 
 			path_arc_n(circle, 0, std::numbers::pi_v<float> * 2, segments);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2296,14 +2296,14 @@ namespace gal::prometheus::gui
 
 			path_arc_elliptical_n(ellipse, 0, std::numbers::pi_v<float> * 2, segments);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2342,14 +2342,14 @@ namespace gal::prometheus::gui
 			{
 				path_arc_fast(circle, 0, DrawListSharedData::vertex_sample_points_count - 1);
 
-				#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+				#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 				const auto current_vertex_size = vertex_list_.size();
 				const auto current_index_size = index_list_.size();
 				#endif
 
 				path_stroke(color, DrawFlag::CLOSED, thickness);
 
-				#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+				#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 				debug_range_info_list_.emplace_back(
 					debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 					debug_index_range_type{current_index_size, index_list_.size()}
@@ -2389,14 +2389,14 @@ namespace gal::prometheus::gui
 			{
 				path_arc_fast(circle, 0, DrawListSharedData::vertex_sample_points_count - 1);
 
-				#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+				#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 				const auto current_vertex_size = vertex_list_.size();
 				const auto current_index_size = index_list_.size();
 				#endif
 
 				path_stroke(color);
 
-				#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+				#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 				debug_range_info_list_.emplace_back(
 					debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 					debug_index_range_type{current_index_size, index_list_.size()}
@@ -2501,14 +2501,14 @@ namespace gal::prometheus::gui
 
 			path_bezier_curve(p1, p2, p3, p4, segments);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color, DrawFlag::NONE, thickness);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2541,14 +2541,14 @@ namespace gal::prometheus::gui
 
 			path_bezier_quadratic_curve(p1, p2, p3, segments);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			path_stroke(color, DrawFlag::NONE, thickness);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2576,14 +2576,14 @@ namespace gal::prometheus::gui
 
 			if (color.alpha == 0) { return; }
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			draw_text(font, font_size, p, color, text, wrap_width);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2630,14 +2630,14 @@ namespace gal::prometheus::gui
 
 			if (color.alpha == 0) { return; }
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			draw_image(texture_id, display_p1, display_p2, display_p3, display_p4, uv_p1, uv_p2, uv_p3, uv_p4, color);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
@@ -2701,14 +2701,14 @@ namespace gal::prometheus::gui
 				return;
 			}
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
 			const auto current_index_size = index_list_.size();
 			#endif
 
 			draw_image_rounded(texture_id, display_rect, uv_rect, color, rounding, flag);
 
-			#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			debug_range_info_list_.emplace_back(
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}

@@ -43,8 +43,8 @@ double g_last_time = 0;
 std::uint64_t g_frame_count = 0;
 float g_fps = 0;
 
-auto g_draw_list_shared_data = std::make_shared<gui::DrawListSharedData>();
-gui::DrawList g_draw_list;
+auto g_draw_list_shared_data = std::make_shared<draw::DrawListSharedData>();
+draw::DrawList g_draw_list;
 
 extern auto glfw_callback_setup(GLFWwindow& w) -> void;
 
@@ -136,8 +136,8 @@ int main(int, char**)
 		return 1;
 	}
 
-	const auto range = gui::glyph_range_simplified_chinese_common();
-	g_draw_list_shared_data->set_default_font(gui::load_font(R"(C:\Windows\Fonts\msyh.ttc)", 18, range));
+	const auto range = draw::glyph_range_simplified_chinese_common();
+	g_draw_list_shared_data->set_default_font(draw::load_font(R"(C:\Windows\Fonts\msyh.ttc)", 18, range));
 
 	// Setup Platform/Renderer backends
 	win32_init(*window);

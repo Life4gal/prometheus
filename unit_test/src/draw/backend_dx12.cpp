@@ -28,8 +28,8 @@ extern double g_last_time;
 extern std::uint64_t g_frame_count;
 extern float g_fps;
 
-extern std::shared_ptr<gui::DrawListSharedData> g_draw_list_shared_data;
-extern gui::DrawList g_draw_list;
+extern std::shared_ptr<draw::DrawListSharedData> g_draw_list_shared_data;
+extern draw::DrawList g_draw_list;
 
 namespace
 {
@@ -279,7 +279,7 @@ auto prometheus_init() -> void
 	print_time();
 
 	using functional::operators::operator|;
-	g_draw_list.draw_list_flag(gui::DrawListFlag::ANTI_ALIASED_LINE | gui::DrawListFlag::ANTI_ALIASED_FILL);
+	g_draw_list.draw_list_flag(draw::DrawListFlag::ANTI_ALIASED_LINE | draw::DrawListFlag::ANTI_ALIASED_FILL);
 	g_draw_list.shared_data(g_draw_list_shared_data);
 
 	// Create the root signature
@@ -578,7 +578,7 @@ auto prometheus_init() -> void
 		);
 		assert(load_font_texture_result);
 
-		g_draw_list_shared_data->get_default_font().texture_id = static_cast<gui::font_type::texture_id_type>(g_font_handle.ptr);
+		g_draw_list_shared_data->get_default_font().texture_id = static_cast<draw::font_type::texture_id_type>(g_font_handle.ptr);
 	}
 
 	// Load additional picture texture
@@ -683,9 +683,9 @@ auto prometheus_render() -> void
 
 	// font texture
 	g_draw_list.image(g_draw_list_shared_data->get_default_font().texture_id, {900, 20, 1200, 320});
-	g_draw_list.image_rounded(static_cast<gui::DrawList::texture_id_type>(g_additional_picture_handle.ptr), {900, 350, 1200, 650}, 10);
+	g_draw_list.image_rounded(static_cast<draw::DrawList::texture_id_type>(g_additional_picture_handle.ptr), {900, 350, 1200, 650}, 10);
 
-	#if GAL_PROMETHEUS_GUI_DRAW_LIST_DEBUG
+	#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 	g_draw_list.bind_debug_info();
 	#endif
 }
@@ -781,7 +781,7 @@ auto prometheus_draw() -> void
 		std::ranges::transform(
 			vertex_list,
 			mapped_vertex,
-			[](const gui::DrawList::vertex_type& vertex) -> d3d_vertex_type
+			[](const draw::DrawList::vertex_type& vertex) -> d3d_vertex_type
 			{
 				// return {
 				// 		.position = {vertex.position.x, vertex.position.y},

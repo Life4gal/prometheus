@@ -4,7 +4,7 @@
 // found in the top-level directory of this distribution.
 
 #if GAL_PROMETHEUS_USE_MODULE
-export module gal.prometheus.gui;
+export module gal.prometheus.draw;
 
 export import :font;
 export import :draw_list;
@@ -12,7 +12,7 @@ export import :draw_list;
 #else
 #pragma once
 
-#include <gui/font.ixx>
-#include <gui/draw_list.ixx>
+#include <draw/font.ixx>
+#include <draw/draw_list.ixx>
 
 #endif

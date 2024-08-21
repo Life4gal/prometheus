@@ -389,6 +389,15 @@ set(
 		${PROJECT_SOURCE_DIR}/src/coroutine/coroutine.ixx
 
 		# =========================
+		# DRAW
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/draw/draw_list.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/font.ixx
+
+		${PROJECT_SOURCE_DIR}/src/draw/draw.ixx
+
+		# =========================
 		# ERROR
 		# =========================
 
@@ -414,15 +423,6 @@ set(
 		${PROJECT_SOURCE_DIR}/src/functional/function_signature.ixx
 
 		${PROJECT_SOURCE_DIR}/src/functional/functional.ixx
-
-		# =========================
-		# GUI
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/gui/draw_list.ixx
-		${PROJECT_SOURCE_DIR}/src/gui/font.ixx
-
-		${PROJECT_SOURCE_DIR}/src/gui/gui.ixx
 
 		# =========================
 		# MEMORY
@@ -513,6 +513,12 @@ set(
 		${PROJECT_SOURCE_DIR}/src/concurrency/unfair_mutex.impl.ixx
 
 		# =========================
+		# DRAW
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/draw/font.impl.ixx
+
+		# =========================
 		# ERROR
 		# =========================
 
@@ -520,12 +526,6 @@ set(
 		${PROJECT_SOURCE_DIR}/src/error/platform.impl.ixx
 		${PROJECT_SOURCE_DIR}/src/error/command_line.impl.ixx
 		${PROJECT_SOURCE_DIR}/src/error/instruction_set.impl.ixx
-
-		# =========================
-		# GUI
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/gui/font.impl.ixx
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
