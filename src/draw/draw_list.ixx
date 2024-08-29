@@ -22,7 +22,7 @@ module;
 #include <x86intrin.h>
 #endif
 
-export module gal.prometheus.primitive:draw_list;
+export module gal.prometheus.draw:draw_list;
 
 import std;
 import gal.prometheus.functional;
@@ -1740,6 +1740,11 @@ namespace gal::prometheus::draw
 		auto shared_data(const std::shared_ptr<DrawListSharedData>& shared_data) noexcept -> void
 		{
 			shared_data_ = shared_data;
+		}
+
+		[[nodiscard]] auto shared_data() const noexcept -> std::shared_ptr<DrawListSharedData>
+		{
+			return shared_data_;
 		}
 
 		constexpr auto reset() noexcept -> void
