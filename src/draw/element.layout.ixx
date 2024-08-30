@@ -142,6 +142,8 @@ namespace
 
 		auto calculate_requirement(Surface& surface) noexcept -> void override
 		{
+			requirement_.reset();
+
 			std::ranges::for_each(
 				children_,
 				[this, &surface](const auto& child) noexcept -> void
@@ -200,12 +202,88 @@ namespace
 			);
 		}
 	};
+
+	class VerticalBox final : public impl::Element
+	{
+	public:
+		using point_type = rect_type::point_type;
+
+		explicit VerticalBox(elements_type children) noexcept
+			: Element{std::move(children)} {}
+
+		auto calculate_requirement(Surface& surface) noexcept -> void override
+		{
+			requirement_.reset();
+
+			std::ranges::for_each(
+				children_,
+				[this, &surface](const auto& child) noexcept -> void
+				{
+					child->calculate_requirement(surface);
+
+					requirement_.min_height += child->requirement().min_height;
+					requirement_.min_width = std::ranges::max(
+						requirement_.min_width,
+						child->requirement().min_width
+					);
+				}
+			);
+		}
+
+		auto set_rect(const rect_type& rect) noexcept -> void override
+		{
+			Element::set_rect(rect);
+
+			std::vector<element_size> elements{};
+			elements.reserve(children_.size());
+
+			std::ranges::transform(
+				children_,
+				std::back_inserter(elements),
+				[](const auto& child) noexcept -> element_size
+				{
+					const auto& r = child->requirement();
+					return {
+							.min_size = r.min_height,
+							.flex_grow = r.flex_grow_height,
+							.flex_shrink = r.flex_shrink_height,
+							.size = 0
+					};
+				}
+			);
+
+			const auto target_size = rect.width() + 1;
+			calculate(elements, target_size);
+
+			auto y = rect.left_top().y;
+			std::ranges::for_each(
+				std::views::zip(children_, elements),
+				[&y, &rect](std::tuple<element_type&, element_size&> pack) noexcept -> void
+				{
+					auto& [child, element] = pack;
+
+					const rect_type box
+					{
+							point_type{rect.left_top().x, y},
+							point_type{rect.right_bottom().x, y + element.size - 1}
+					};
+					child->set_rect(box);
+					y = box.right_bottom().y + 1;
+				}
+			);
+		}
+	};
 }
 
-namespace gal::prometheus::draw::element
+namespace gal::prometheus::draw::element::impl
 {
 	[[nodiscard]] auto horizontal_box(elements_type elements) noexcept -> element_type
 	{
 		return make_element<HorizontalBox>(std::move(elements));
+	}
+
+	[[nodiscard]] auto vertical_box(elements_type elements) noexcept -> element_type
+	{
+		return make_element<VerticalBox>(std::move(elements));
 	}
 }

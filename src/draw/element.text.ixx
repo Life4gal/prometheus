@@ -113,7 +113,7 @@ namespace
 	};
 }
 
-namespace gal::prometheus::draw::element
+namespace gal::prometheus::draw::element::impl
 {
 	[[nodiscard]] auto text(std::u32string text) noexcept -> element_type
 	{

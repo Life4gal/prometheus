@@ -12,6 +12,7 @@ export module gal.prometheus.draw:element;
 
 import std;
 import gal.prometheus.primitive;
+import gal.prometheus.functional;
 
 #else
 #pragma once
@@ -22,6 +23,7 @@ import gal.prometheus.primitive;
 
 #include <prometheus/macro.hpp>
 #include <primitive/primitive.ixx>
+#include <functional/functional.ixx>
 
 #endif
 
@@ -43,6 +45,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		return std::make_shared<T>(std::forward<Args>(args)...);
 	}
 
+	template<std::derived_from<impl::Element> T>
+	[[nodiscard]] constexpr auto cast_element(const element_type element) noexcept -> std::shared_ptr<T>
+	{
+		return std::static_pointer_cast<T>(element);
+	}
+
 	namespace impl
 	{
 		template<typename T>
@@ -57,6 +65,17 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			float flex_grow_height{0};
 			float flex_shrink_width{0};
 			float flex_shrink_height{0};
+
+			constexpr auto reset() noexcept -> void
+			{
+				min_width = 0;
+				min_height = 0;
+
+				flex_grow_width = 0;
+				flex_grow_height = 0;
+				flex_shrink_width = 0;
+				flex_shrink_height = 0;
+			}
 		};
 
 		class Element
@@ -116,51 +135,119 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		};
 	}
 
-	inline namespace decorator
-	{
-		// element => element
-		template<typename Decorator>
-		concept decorator_t = requires(element_type element, Decorator&& decorator)
-		{
-			{
-				std::invoke(std::forward<Decorator>(decorator), element)
-			} -> impl::derived_element_t;
-		};
-
-		template<decorator_t Decorator>
-		[[nodiscard]] constexpr auto operator|(element_type element, Decorator&& decorator) noexcept -> element_type
-		{
-			return std::invoke(std::forward<Decorator>(decorator), element);
-		}
-	}
-
 	namespace element
 	{
+		template<typename Element, typename Decorator>
+			requires (impl::derived_element_t<Element> and impl::derived_element_t<std::invoke_result_t<Decorator, Element>>)
+		[[nodiscard]] constexpr auto operator|(Element&& element, Decorator&& decorator) noexcept -> decltype(auto)
+		{
+			return std::invoke(std::forward<Decorator>(decorator), std::forward<Element>(element));
+		}
+
+		template<typename Decorator>
+			requires impl::derived_element_t<std::invoke_result_t<Decorator, elements_type::value_type>>
+		[[nodiscard]] constexpr auto operator|(elements_type& elements, Decorator&& decorator) noexcept -> decltype(auto)
+		{
+			return std::invoke(std::forward<Decorator>(decorator), elements);
+		}
+
+		template<typename Decorator>
+			requires impl::derived_element_t<std::invoke_result_t<Decorator, elements_type::value_type>>
+		[[nodiscard]] constexpr auto operator|(elements_type&& elements, Decorator&& decorator) noexcept -> decltype(auto)
+		{
+			return std::invoke(std::forward<Decorator>(decorator), std::move(elements));
+		}
+
 		// ===============================
 		// TEXT
 
-		[[nodiscard]] auto text(std::u32string text) noexcept -> element_type;
-		[[nodiscard]] auto text(std::string text) noexcept -> element_type;
+		namespace impl
+		{
+			[[nodiscard]] auto text(std::u32string text) noexcept -> element_type;
+			[[nodiscard]] auto text(std::string text) noexcept -> element_type;
+		}
+
+		constexpr auto text = functional::overloaded{
+				[](std::u32string string) noexcept -> element_type
+				{
+					return impl::text(std::move(string));
+				},
+				[](std::string string) noexcept -> element_type
+				{
+					return impl::text(std::move(string));
+				},
+		};
 
 		// ===============================
 		// BORDER
 
-		[[nodiscard]] auto border(element_type element) noexcept -> element_type;
+		namespace impl
+		{
+			[[nodiscard]] auto border(elements_type elements, primitive::colors::color_type color) noexcept -> element_type;
+			[[nodiscard]] auto border(element_type element, primitive::colors::color_type color) noexcept -> element_type;
+		}
+
+		constexpr auto border = functional::overloaded{
+				[](elements_type elements) noexcept -> element_type
+				{
+					return impl::border(std::move(elements), primitive::colors::black);
+				},
+				[](element_type element) noexcept -> element_type
+				{
+					return impl::border(std::move(element), primitive::colors::black);
+				},
+				[](primitive::colors::color_type color) noexcept -> auto
+				{
+					return functional::overloaded{
+							[color](elements_type elements) noexcept -> element_type
+							{
+								return impl::border(std::move(elements), color);
+							},
+							[color](element_type element) noexcept -> element_type
+							{
+								return impl::border(std::move(element), color);
+							},
+					};
+				},
+		};
 
 		// ===============================
 		// LAYOUT
 
-		[[nodiscard]] auto horizontal_box(elements_type elements) noexcept -> element_type;
-
-		template<impl::derived_element_t... Element>
-		[[nodiscard]] auto horizontal_box(Element&&... elements) noexcept -> element_type
+		namespace impl
 		{
-			elements_type e{};
-			e.reserve(sizeof...(elements));
-
-			(e.emplace_back(std::forward<Element>(elements)), ...);
-
-			return horizontal_box(std::move(e));
+			[[nodiscard]] auto horizontal_box(elements_type elements) noexcept -> element_type;
+			[[nodiscard]] auto vertical_box(elements_type elements) noexcept -> element_type;
 		}
+
+		constexpr auto horizontal_box = functional::overloaded{
+				[](elements_type elements) noexcept -> element_type
+				{
+					return impl::horizontal_box(std::move(elements));
+				},
+				[](draw::impl::derived_element_t auto... elements) noexcept -> element_type
+				{
+					elements_type es{};
+					es.reserve(sizeof...(elements));
+
+					(es.emplace_back(std::move(elements)), ...);
+					return impl::horizontal_box(std::move(es));
+				},
+		};
+
+		constexpr auto vertical_box = functional::overloaded{
+				[](elements_type elements) noexcept -> element_type
+				{
+					return impl::vertical_box(std::move(elements));
+				},
+				[](draw::impl::derived_element_t auto... elements) noexcept -> element_type
+				{
+					elements_type es{};
+					es.reserve(sizeof...(elements));
+
+					(es.emplace_back(std::move(elements)), ...);
+					return impl::vertical_box(std::move(es));
+				},
+		};
 	}
 }

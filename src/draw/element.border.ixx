@@ -18,8 +18,6 @@ import :surface;
 import :element;
 
 #else
-#include <optional>
-
 #include <prometheus/macro.hpp>
 #include <primitive/primitive.ixx>
 #include <draw/surface.ixx>
@@ -43,10 +41,10 @@ namespace
 		using point_type = rect_type::point_type;
 
 	private:
-		std::optional<color_type> color_;
+		color_type color_;
 
 	public:
-		Border(elements_type children, const std::optional<color_type> color) noexcept
+		Border(elements_type children, const color_type color) noexcept
 			: Element{std::move(children)},
 			  color_{color} {}
 
@@ -98,7 +96,7 @@ namespace
 
 			children_[0]->render(surface);
 
-			surface.draw_list().rect(rect_, color_ ? *color_ : primitive::colors::black, 0, DrawFlag::ROUND_CORNER_ALL, 1);
+			surface.draw_list().rect(rect_, color_, 0, DrawFlag::ROUND_CORNER_ALL, 1);
 
 			if (children_.size() == 2)
 			{
@@ -108,10 +106,15 @@ namespace
 	};
 }
 
-namespace gal::prometheus::draw::element
+namespace gal::prometheus::draw::element::impl
 {
-	[[nodiscard]] auto border(element_type element) noexcept -> element_type
+	[[nodiscard]] auto border(elements_type elements, const primitive::colors::color_type color) noexcept -> element_type
 	{
-		return make_element<Border>(elements_type{std::move(element)}, std::nullopt);
+		return make_element<Border>(std::move(elements), color);
+	}
+
+	[[nodiscard]] auto border(element_type element, const primitive::colors::color_type color) noexcept -> element_type
+	{
+		return border(elements_type{std::move(element)}, color);
 	}
 }
