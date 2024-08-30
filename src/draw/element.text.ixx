@@ -38,19 +38,17 @@ namespace
 	[[nodiscard]] auto calculate_text_area(
 		const font_type& font,
 		const float font_size,
-		const std::string_view text
+		const std::u32string_view text
 	) noexcept -> impl::Element::rect_type::extent_type
 	{
 		using rect_type = impl::Element::rect_type;
 		using point_type = rect_type::point_type;
 		using extent_type = rect_type::extent_type;
 
-		const auto utf32_text = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(text);
-
 		const float scale = font_size / font.pixel_height;
 
-		auto it_input_current = utf32_text.begin();
-		const auto it_input_end = utf32_text.end();
+		auto it_input_current = text.begin();
+		const auto it_input_end = text.end();
 
 		auto area = extent_type{0, 0};
 		auto cursor = point_type{0, font_size};
@@ -90,13 +88,13 @@ namespace
 	class Text final : public impl::Element
 	{
 	public:
-		using text_type = std::string;
+		using text_type = std::u32string;
 
 	private:
 		text_type text_;
 
 	public:
-		explicit Text(text_type&& text) noexcept
+		explicit Text(std::u32string&& text) noexcept
 			: text_{std::move(text)} {}
 
 		auto calculate_requirement(Surface& surface) noexcept -> void override
@@ -117,8 +115,13 @@ namespace
 
 namespace gal::prometheus::draw::element
 {
-	[[nodiscard]] auto text(std::string text) noexcept -> element_type
+	[[nodiscard]] auto text(std::u32string text) noexcept -> element_type
 	{
 		return make_element<Text>(std::move(text));
+	}
+
+	[[nodiscard]] auto text(std::string text) noexcept -> element_type
+	{
+		return element::text(chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(text));
 	}
 }

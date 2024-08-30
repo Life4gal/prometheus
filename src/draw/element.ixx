@@ -139,6 +139,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		// ===============================
 		// TEXT
 
+		[[nodiscard]] auto text(std::u32string text) noexcept -> element_type;
 		[[nodiscard]] auto text(std::string text) noexcept -> element_type;
 
 		// ===============================
