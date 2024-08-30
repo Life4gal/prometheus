@@ -1093,7 +1093,7 @@ namespace gal::prometheus::draw
 			const float font_size,
 			const point_type& p,
 			const color_type& color,
-			const std::string_view text,
+			const std::u32string_view text,
 			const float wrap_width
 		) noexcept -> void
 		{
@@ -1104,10 +1104,8 @@ namespace gal::prometheus::draw
 				push_texture_id(font.texture_id);
 			}
 
-			const auto utf32_text = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(text);
-
-			const auto vertex_count = 4 * utf32_text.size();
-			const auto index_count = 6 * utf32_text.size();
+			const auto vertex_count = 4 * text.size();
+			const auto index_count = 6 * text.size();
 			vertex_list_.reserve(vertex_list_.size() + vertex_count);
 			index_list_.reserve(index_list_.size() + index_count);
 
@@ -1115,8 +1113,8 @@ namespace gal::prometheus::draw
 
 			const float scale = font_size / font.pixel_height;
 
-			auto it_input_current = utf32_text.begin();
-			const auto it_input_end = utf32_text.end();
+			auto it_input_current = text.begin();
+			const auto it_input_end = text.end();
 
 			auto cursor = p + point_type{0, font_size};
 
@@ -2573,7 +2571,7 @@ namespace gal::prometheus::draw
 			const float font_size,
 			const point_type& p,
 			const color_type& color,
-			const std::string_view text,
+			const std::u32string_view text,
 			const float wrap_width = .0f
 		) noexcept -> void
 		{
@@ -2593,14 +2591,39 @@ namespace gal::prometheus::draw
 				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
 				debug_index_range_type{current_index_size, index_list_.size()}
 			);
+			const auto utf8_text = chars::convert<chars::CharsCategory::UTF32, chars::CharsCategory::UTF8_CHAR>(text);
 			debug_list_info_list_.emplace_back(
-				std::format("[TEXT] [{}({:.3f}): {}]({})", p, font_size, text, color),
+				std::format("[TEXT] [{}({:.3f}): {}]({})", p, font_size, utf8_text, color),
 				// the data stored now is unreliable
 				debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
 				// the data stored now is unreliable
 				debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
 			);
 			#endif
+		}
+
+		constexpr auto text(
+			const float font_size,
+			const point_type& p,
+			const color_type& color,
+			const std::u32string_view text,
+			const float wrap_width = .0f
+		) noexcept -> void
+		{
+			this->text(shared_data_->get_default_font(), font_size, p, color, text, wrap_width);
+		}
+
+		constexpr auto text(
+			const font_type& font,
+			const float font_size,
+			const point_type& p,
+			const color_type& color,
+			const std::string_view text,
+			const float wrap_width = .0f
+		) noexcept -> void
+		{
+			const auto utf32_text = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(text);
+			this->text(font, font_size, p, color, utf32_text, wrap_width);
 		}
 
 		constexpr auto text(
