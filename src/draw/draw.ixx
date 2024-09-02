@@ -9,10 +9,20 @@ export module gal.prometheus.draw;
 export import :font;
 export import :draw_list;
 
+export import :surface;
+export import :style;
+
+export import :element;
+
 #else
 #pragma once
 
 #include <draw/font.ixx>
 #include <draw/draw_list.ixx>
+
+#include <draw/surface.ixx>
+#include <draw/style.ixx>
+
+#include <draw/element.ixx>
 
 #endif

@@ -15,12 +15,14 @@ import std;
 import gal.prometheus.primitive;
 
 import :surface;
+import :style;
 import :element;
 
 #else
 #include <prometheus/macro.hpp>
 #include <primitive/primitive.ixx>
 #include <draw/surface.ixx>
+#include <draw/style.ixx>
 #include <draw/element.ixx>
 
 #endif
@@ -30,91 +32,137 @@ namespace
 	using namespace gal::prometheus;
 	using namespace draw;
 
-	// todo
-	constexpr auto pixel_offset_x = 4;
-	constexpr auto pixel_offset_y = 4;
-
 	class Border final : public impl::Element
 	{
 	public:
-		using color_type = Surface::draw_list_type::color_type;
-		using point_type = rect_type::point_type;
+		using color_type = Style::color_type;
 
 	private:
 		color_type color_;
 
 	public:
-		Border(elements_type children, const color_type color) noexcept
-			: Element{std::move(children)},
+		Border(element_type element, const color_type color) noexcept
+			: Element{elements_type{std::move(element)}},
 			  color_{color} {}
 
 		auto calculate_requirement(Surface& surface) noexcept -> void override
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not children_.empty());
-
 			Element::calculate_requirement(surface);
 
 			requirement_ = children_[0]->requirement();
-			requirement_.min_width += 2 * pixel_offset_x;
-			requirement_.min_height += 2 * pixel_offset_y;
-			if (children_.size() == 2)
-			{
-				requirement_.min_width = std::ranges::max(
-					requirement_.min_width,
-					children_[1]->requirement().min_width + 2 * pixel_offset_x
-				);
-			}
+			requirement_.min_width += 2 * Style::instance().line_pixel_width;
+			requirement_.min_height += 2 * Style::instance().line_pixel_width;
 		}
 
 		auto set_rect(const rect_type& rect) noexcept -> void override
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not children_.empty());
-
 			Element::set_rect(rect);
 
-			if (children_.size() == 2)
-			{
-				const rect_type title_box
-				{
-						rect.left_top() + point_type{pixel_offset_x, 0},
-						rect.right_bottom() + point_type{-pixel_offset_x, 0}
-				};
-				children_[1]->set_rect(title_box);
-			}
-
+			const auto& [point, extent] = rect;
 			const rect_type box
 			{
-					rect.left_top() + point_type{pixel_offset_x, pixel_offset_y},
-					rect.right_bottom() + point_type{-pixel_offset_y, -pixel_offset_y}
+					// left
+					point.x + Style::instance().line_pixel_width,
+					// top
+					point.y + Style::instance().line_pixel_width,
+					// right
+					point.x + extent.width - Style::instance().line_pixel_width,
+					// bottom
+					point.y + extent.height - Style::instance().line_pixel_width
 			};
+
 			children_[0]->set_rect(box);
 		}
 
 		auto render(Surface& surface) noexcept -> void override
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not children_.empty());
-
 			children_[0]->render(surface);
 
-			surface.draw_list().rect(rect_, color_, 0, DrawFlag::ROUND_CORNER_ALL, 1);
+			surface.draw_list().rect(rect_, color_, 0, DrawFlag::ROUND_CORNER_ALL, Style::instance().line_pixel_width);
+		}
+	};
 
-			if (children_.size() == 2)
-			{
-				children_[1]->render(surface);
-			}
+	class Window final : public impl::Element
+	{
+	public:
+		using color_type = Style::color_type;
+
+	private:
+		color_type color_;
+
+	public:
+		// title + content(border)
+		Window(elements_type children, const color_type color) noexcept
+			: Element{std::move(children)},
+			  color_{color} {}
+
+		auto calculate_requirement(Surface& surface) noexcept -> void override
+		{
+			Element::calculate_requirement(surface);
+
+			// border
+			requirement_ = children_[1]->requirement();
+			// title
+			requirement_.min_width = std::ranges::max(requirement_.min_width, children_[0]->requirement().min_width);
+			requirement_.min_height += children_[0]->requirement().min_height;
+		}
+
+		auto set_rect(const rect_type& rect) noexcept -> void override
+		{
+			Element::set_rect(rect);
+
+			const auto& [point, extent] = rect;
+
+			// title
+			const rect_type title_box{
+					// left
+					point.x,
+					// top
+					point.y,
+					// right
+					point.x + extent.width,
+					// bottom
+					point.y + children_[0]->requirement().min_height
+			};
+			children_[0]->set_rect(title_box);
+
+			// border
+			const rect_type content_box{
+					// left
+					point.x,
+					// top
+					point.y + title_box.height(),
+					// right
+					point.y + title_box.width(),
+					// bottom
+					point.y + extent.height
+			};
+			children_[1]->set_rect(content_box);
+		}
+
+		auto render(Surface& surface) noexcept -> void override
+		{
+			// title
+			using functional::operators::operator|;
+			surface.draw_list().rect_filled(children_[0]->rect(), color_, 0, DrawFlag::ROUND_CORNER_LEFT_TOP | DrawFlag::ROUND_CORNER_RIGHT_TOP);
+			children_[0]->render(surface);
+
+			// border
+			children_[1]->render(surface);
 		}
 	};
 }
 
 namespace gal::prometheus::draw::element::impl
 {
-	[[nodiscard]] auto border(elements_type elements, const primitive::colors::color_type color) noexcept -> element_type
+	[[nodiscard]] auto border(element_type element, const Style::color_type color) noexcept -> element_type
 	{
-		return make_element<Border>(std::move(elements), color);
+		return make_element<Border>(std::move(element), color);
 	}
 
-	[[nodiscard]] auto border(element_type element, const primitive::colors::color_type color) noexcept -> element_type
+	[[nodiscard]] auto window(element_type title, const Style::color_type title_color, element_type content, const Style::color_type content_color) noexcept -> element_type
 	{
-		return border(elements_type{std::move(element)}, color);
+		auto b = border(std::move(content), content_color);
+		return make_element<Window>(elements_type{std::move(title), std::move(b)}, title_color);
 	}
 }

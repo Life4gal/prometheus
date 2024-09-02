@@ -16,6 +16,7 @@ import gal.prometheus.primitive;
 import gal.prometheus.chars;
 
 import :surface;
+import :style;
 import :element;
 
 #else
@@ -23,6 +24,7 @@ import :element;
 #include <primitive/primitive.ixx>
 #include <chars/chars.ixx>
 #include <draw/surface.ixx>
+#include <draw/style.ixx>
 #include <draw/element.ixx>
 
 #endif
@@ -31,9 +33,6 @@ namespace
 {
 	using namespace gal::prometheus;
 	using namespace draw;
-
-	// todo
-	constexpr auto default_font_size = 18.f;
 
 	[[nodiscard]] auto calculate_text_area(
 		const font_type& font,
@@ -100,15 +99,14 @@ namespace
 		auto calculate_requirement(Surface& surface) noexcept -> void override
 		{
 			const auto& font = surface.draw_list().shared_data()->get_default_font();
-			const auto area = calculate_text_area(font, default_font_size, text_);
+			const auto area = calculate_text_area(font, Style::instance().font_pixel_size, text_);
 			requirement_.min_width = area.width;
 			requirement_.min_height = area.height;
 		}
 
 		auto render(Surface& surface) noexcept -> void override
 		{
-			// todo
-			surface.draw_list().text(default_font_size, rect_.left_top(), primitive::colors::black, text_);
+			surface.draw_list().text(Style::instance().font_pixel_size, rect_.left_top(), primitive::colors::black, text_);
 		}
 	};
 }

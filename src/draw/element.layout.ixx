@@ -15,6 +15,7 @@ import std;
 import gal.prometheus.primitive;
 
 import :surface;
+import :style;
 import :element;
 
 #else
@@ -23,6 +24,7 @@ import :element;
 #include <prometheus/macro.hpp>
 #include <primitive/primitive.ixx>
 #include <draw/surface.ixx>
+#include <draw/style.ixx>
 #include <draw/element.ixx>
 
 #endif
@@ -31,6 +33,71 @@ namespace
 {
 	using namespace gal::prometheus;
 	using namespace draw;
+
+	namespace function
+	{
+		using impl::requirement_type;
+
+		auto flex(requirement_type& requirement) noexcept -> void
+		{
+			requirement.flex_grow_width = Style::instance().flex_pixel_x;
+			requirement.flex_grow_height = Style::instance().flex_pixel_y;
+			requirement.flex_shrink_width = Style::instance().flex_pixel_x;
+			requirement.flex_shrink_height = Style::instance().flex_pixel_y;
+		}
+
+		auto no_flex(requirement_type& requirement) noexcept -> void
+		{
+			requirement.flex_grow_width = 0;
+			requirement.flex_grow_height = 0;
+			requirement.flex_shrink_width = 0;
+			requirement.flex_shrink_height = 0;
+		}
+
+		auto flex_grow(requirement_type& requirement) noexcept -> void
+		{
+			requirement.flex_grow_width = Style::instance().flex_pixel_x;
+			requirement.flex_grow_height = Style::instance().flex_pixel_y;
+		}
+
+		auto flex_shrink(requirement_type& requirement) noexcept -> void
+		{
+			requirement.flex_shrink_width = Style::instance().flex_pixel_x;
+			requirement.flex_shrink_height = Style::instance().flex_pixel_y;
+		}
+
+		auto horizontal_flex(requirement_type& requirement) noexcept -> void
+		{
+			requirement.flex_grow_width = Style::instance().flex_pixel_x;
+			requirement.flex_shrink_width = Style::instance().flex_pixel_x;
+		}
+
+		auto horizontal_flex_grow(requirement_type& requirement) noexcept -> void
+		{
+			requirement.flex_grow_width = Style::instance().flex_pixel_x;
+		}
+
+		auto horizontal_flex_shrink(requirement_type& requirement) noexcept -> void
+		{
+			requirement.flex_shrink_width = Style::instance().flex_pixel_x;
+		}
+
+		auto vertical_flex(requirement_type& requirement) noexcept -> void
+		{
+			requirement.flex_grow_height = Style::instance().flex_pixel_y;
+			requirement.flex_shrink_height = Style::instance().flex_pixel_y;
+		}
+
+		auto vertical_flex_grow(requirement_type& requirement) noexcept -> void
+		{
+			requirement.flex_grow_height = Style::instance().flex_pixel_y;
+		}
+
+		auto vertical_flex_shrink(requirement_type& requirement) noexcept -> void
+		{
+			requirement.flex_shrink_height = Style::instance().flex_pixel_y;
+		}
+	}
 
 	struct element_size
 	{
@@ -132,6 +199,49 @@ namespace
 		}
 	}
 
+	class Flex final : public impl::Element
+	{
+	public:
+		using function_type = void(*)(impl::requirement_type&);
+
+	private:
+		function_type function_;
+
+	public:
+		explicit Flex(const function_type function) noexcept
+			: Element{},
+			  function_{function} {}
+
+		Flex(const function_type function, element_type element) noexcept
+			: Element{elements_type{std::move(element)}},
+			  function_{function} {}
+
+		auto calculate_requirement(Surface& surface) noexcept -> void override
+		{
+			requirement_.reset();
+
+			if (not children_.empty())
+			[[unlikely]]
+			{
+				children_[0]->calculate_requirement(surface);
+				requirement_ = children_[0]->requirement();
+			}
+
+			function_(requirement_);
+		}
+
+		auto set_rect(const rect_type& rect) noexcept -> void override
+		{
+			if (children_.empty())
+			[[unlikely]]
+			{
+				return;
+			}
+
+			children_[0]->set_rect(rect);
+		}
+	};
+
 	class HorizontalBox final : public impl::Element
 	{
 	public:
@@ -181,23 +291,24 @@ namespace
 				}
 			);
 
-			const auto target_size = rect.width() + 1;
+			const auto flex_pixel_x = Style::instance().flex_pixel_x;
+			const auto target_size = rect.width() + flex_pixel_x;
 			calculate(elements, target_size);
 
 			auto x = rect.left_top().x;
 			std::ranges::for_each(
 				std::views::zip(children_, elements),
-				[&x, &rect](std::tuple<element_type&, element_size&> pack) noexcept -> void
+				[&x, &rect, flex_pixel_x](std::tuple<element_type&, const element_size&> pack) noexcept -> void
 				{
 					auto& [child, element] = pack;
 
 					const rect_type box
 					{
 							point_type{x, rect.left_top().y},
-							point_type{x + element.size - 1, rect.right_bottom().y}
+							point_type{x + element.size - flex_pixel_x, rect.right_bottom().y}
 					};
 					child->set_rect(box);
-					x = box.right_bottom().x + 1;
+					x = box.right_bottom().x + flex_pixel_x;
 				}
 			);
 		}
@@ -252,23 +363,66 @@ namespace
 				}
 			);
 
-			const auto target_size = rect.width() + 1;
+			const auto flex_pixel_y = Style::instance().flex_pixel_y;
+			const auto target_size = rect.height() + flex_pixel_y;
 			calculate(elements, target_size);
 
 			auto y = rect.left_top().y;
 			std::ranges::for_each(
 				std::views::zip(children_, elements),
-				[&y, &rect](std::tuple<element_type&, element_size&> pack) noexcept -> void
+				[&y, &rect, flex_pixel_y](std::tuple<element_type&, const element_size&> pack) noexcept -> void
 				{
 					auto& [child, element] = pack;
 
 					const rect_type box
 					{
 							point_type{rect.left_top().x, y},
-							point_type{rect.right_bottom().x, y + element.size - 1}
+							point_type{rect.right_bottom().x, y + element.size - flex_pixel_y}
 					};
 					child->set_rect(box);
-					y = box.right_bottom().y + 1;
+					y = box.right_bottom().y + flex_pixel_y;
+				}
+			);
+		}
+	};
+
+	class StackBox final : public impl::Element
+	{
+	public:
+		explicit StackBox(elements_type children) noexcept
+			: Element{std::move(children)} {}
+
+		auto calculate_requirement(Surface& surface) noexcept -> void override
+		{
+			requirement_.reset();
+
+			std::ranges::for_each(
+				children_,
+				[this, &surface](const auto& child) noexcept -> void
+				{
+					child->calculate_requirement(surface);
+
+					requirement_.min_width = std::ranges::max(
+						requirement_.min_width,
+						child->requirement().min_width
+					);
+					requirement_.min_height = std::ranges::max(
+						requirement_.min_height,
+						child->requirement().min_height
+					);
+				}
+			);
+		}
+
+		auto set_rect(const rect_type& rect) noexcept -> void override
+		{
+			Element::set_rect(rect);
+
+			std::ranges::for_each(
+				children_,
+				[rect](auto& child) noexcept -> void
+				{
+					child->set_rect(rect);
 				}
 			);
 		}
@@ -277,6 +431,61 @@ namespace
 
 namespace gal::prometheus::draw::element::impl
 {
+	[[nodiscard]] auto filler() noexcept -> element_type
+	{
+		return make_element<Flex>(function::flex);
+	}
+
+	[[nodiscard]] auto no_flex(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex>(function::no_flex, std::move(element));
+	}
+
+	[[nodiscard]] auto flex(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex>(function::flex, std::move(element));
+	}
+
+	[[nodiscard]] auto flex_grow(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex>(function::flex_grow, std::move(element));
+	}
+
+	[[nodiscard]] auto flex_shrink(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex>(function::flex_shrink, std::move(element));
+	}
+
+	[[nodiscard]] auto horizontal_flex(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex>(function::horizontal_flex, std::move(element));
+	}
+
+	[[nodiscard]] auto horizontal_flex_grow(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex>(function::horizontal_flex_grow, std::move(element));
+	}
+
+	[[nodiscard]] auto horizontal_flex_shrink(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex>(function::horizontal_flex_shrink, std::move(element));
+	}
+
+	[[nodiscard]] auto vertical_flex(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex>(function::vertical_flex, std::move(element));
+	}
+
+	[[nodiscard]] auto vertical_flex_grow(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex>(function::vertical_flex_grow, std::move(element));
+	}
+
+	[[nodiscard]] auto vertical_flex_shrink(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex>(function::vertical_flex_shrink, std::move(element));
+	}
+
 	[[nodiscard]] auto horizontal_box(elements_type elements) noexcept -> element_type
 	{
 		return make_element<HorizontalBox>(std::move(elements));
@@ -285,5 +494,25 @@ namespace gal::prometheus::draw::element::impl
 	[[nodiscard]] auto vertical_box(elements_type elements) noexcept -> element_type
 	{
 		return make_element<VerticalBox>(std::move(elements));
+	}
+
+	[[nodiscard]] auto stack_box(elements_type elements) noexcept -> element_type
+	{
+		return make_element<StackBox>(std::move(elements));
+	}
+
+	[[nodiscard]] auto horizontal_center(element_type element) noexcept -> element_type
+	{
+		return element::horizontal_box(filler(), std::move(element), filler());
+	}
+
+	[[nodiscard]] auto vertical_center(element_type element) noexcept -> element_type
+	{
+		return element::vertical_box(filler(), std::move(element), filler());
+	}
+
+	[[nodiscard]] auto center(element_type element) noexcept -> element_type
+	{
+		return horizontal_center(vertical_center(std::move(element)));
 	}
 }

@@ -15,11 +15,13 @@ import std;
 GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :surface;
+import :style;
 import :element;
 
 #else
 #include <prometheus/macro.hpp>
 #include <draw/surface.ixx>
+#include <draw/style.ixx>
 #include <draw/element.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
@@ -33,6 +35,20 @@ namespace gal::prometheus::draw
 		element.calculate_requirement(*this);
 		element.set_rect({rect_.point.x, rect_.point.y, rect_.point.x + element.requirement().min_width, rect_.point.y + element.requirement().min_height});
 		element.render(*this);
+	}
+
+	auto Style::instance() noexcept -> Style&
+	{
+		Style style{
+				.font_pixel_size = 18.f,
+				.line_pixel_width = 1.f,
+				.flex_pixel_x = 0.f,
+				.flex_pixel_y = 0.f,
+				.border_default_color = primitive::colors::black,
+				.window_title_default_color = primitive::colors::red
+		};
+
+		return style;
 	}
 
 	namespace impl
