@@ -21,6 +21,7 @@ import :style;
 
 #include <memory>
 #include <vector>
+#include <span>
 #include <algorithm>
 
 #include <prometheus/macro.hpp>
@@ -40,7 +41,18 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 	}
 
 	using element_type = std::shared_ptr<impl::Element>;
+
 	using elements_type = std::vector<element_type>;
+	using elements_view_type = std::span<element_type>;
+
+	using element_matrix_type = std::vector<elements_type>;
+	using element_matrix_view_type = std::span<elements_type>;
+
+	template<typename T>
+	concept derived_element_t = std::derived_from<typename T::element_type, impl::Element>;
+
+	template<typename Range>
+	concept derived_elements_t = std::ranges::range<Range> and std::derived_from<typename Range::value_type::element_type, impl::Element>;
 
 	template<std::derived_from<impl::Element> T, typename... Args>
 	[[nodiscard]] constexpr auto make_element(Args&&... args) noexcept -> element_type
@@ -137,9 +149,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 
 	namespace element
 	{
-		template<typename T>
-		concept derived_element_t = std::derived_from<typename T::element_type, impl::Element>;
-
 		template<typename Element, typename Decorator>
 			requires (derived_element_t<Element> and derived_element_t<std::invoke_result_t<Decorator, Element>>)
 		[[nodiscard]] constexpr auto operator|(Element&& element, Decorator&& decorator) noexcept -> element_type //
@@ -236,13 +245,16 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 
 		namespace impl
 		{
-			// todo
-			#define LAMBDA_DEDUCING_THIS_WORKAROUND 1
+			enum class BoxOption : std::uint32_t
+			{
+				HORIZONTAL = 0b0000'0001,
+				VERTICAL = 0b0000'0010,
+				GRID = 0b0000'0100,
+			};
 
 			enum class FlexOption : std::uint32_t
 			{
 				NONE = 0b0000'0000,
-				ALL = 0b0001'0000'0000,
 
 				GROW = 0b0000'0001,
 				SHRINK = 0b0000'0010,
@@ -251,228 +263,291 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 				VERTICAL = 0b0010'0000,
 			};
 
-			template<FlexOption... Os>
-			struct flex_option : std::integral_constant<std::underlying_type_t<FlexOption>, (... + std::to_underlying(Os))> {};
-
-			#if LAMBDA_DEDUCING_THIS_WORKAROUND
-			template<>
-			struct flex_option<> : std::integral_constant<std::underlying_type_t<FlexOption>, std::to_underlying(FlexOption::NONE)> {};
-			#endif
-
 			enum class CenterOption : std::uint32_t
 			{
-				ALL = 0b0000,
-				HORIZONTAL = 0b0001,
-				VERTICAL = 0b0010,
+				HORIZONTAL = 0b0000'0001,
+				VERTICAL = 0b0000'0010,
 			};
 
-			template<CenterOption... Os>
-			struct center_option : std::integral_constant<std::underlying_type_t<CenterOption>, (... + std::to_underlying(Os))> {};
+			template<auto... Os>
+			struct options : std::integral_constant<std::common_type_t<std::underlying_type_t<std::decay_t<decltype(Os)>>...>, (0 | ... | std::to_underlying(Os))> {};
 
-			#if LAMBDA_DEDUCING_THIS_WORKAROUND
-			template<>
-			struct center_option<> : std::integral_constant<std::underlying_type_t<CenterOption>, std::to_underlying(CenterOption::ALL)> {};
-			#endif
+			[[nodiscard]] auto box_horizontal(elements_type elements) noexcept -> element_type;
+			[[nodiscard]] auto box_vertical(elements_type elements) noexcept -> element_type;
+			[[nodiscard]] auto box_grid(element_matrix_type elements_grid) noexcept -> element_type;
 
-			[[nodiscard]] auto filler() noexcept -> element_type;
-			[[nodiscard]] auto no_flex(element_type element) noexcept -> element_type;
+			[[nodiscard]] auto flex_filler() noexcept -> element_type;
+			[[nodiscard]] auto flex_none(element_type element) noexcept -> element_type;
 
 			[[nodiscard]] auto flex(element_type element) noexcept -> element_type;
 			[[nodiscard]] auto flex_grow(element_type element) noexcept -> element_type;
 			[[nodiscard]] auto flex_shrink(element_type element) noexcept -> element_type;
 
-			[[nodiscard]] auto horizontal_flex(element_type element) noexcept -> element_type;
-			[[nodiscard]] auto horizontal_flex_grow(element_type element) noexcept -> element_type;
-			[[nodiscard]] auto horizontal_flex_shrink(element_type element) noexcept -> element_type;
+			[[nodiscard]] auto flex_horizontal(element_type element) noexcept -> element_type;
+			[[nodiscard]] auto flex_horizontal_grow(element_type element) noexcept -> element_type;
+			[[nodiscard]] auto flex_horizontal_shrink(element_type element) noexcept -> element_type;
 
-			[[nodiscard]] auto vertical_flex(element_type element) noexcept -> element_type;
-			[[nodiscard]] auto vertical_flex_grow(element_type element) noexcept -> element_type;
-			[[nodiscard]] auto vertical_flex_shrink(element_type element) noexcept -> element_type;
+			[[nodiscard]] auto flex_vertical(element_type element) noexcept -> element_type;
+			[[nodiscard]] auto flex_vertical_grow(element_type element) noexcept -> element_type;
+			[[nodiscard]] auto flex_vertical_shrink(element_type element) noexcept -> element_type;
 
-			[[nodiscard]] auto horizontal_box(elements_type elements) noexcept -> element_type;
-			[[nodiscard]] auto vertical_box(elements_type elements) noexcept -> element_type;
-			[[nodiscard]] auto stack_box(elements_type elements) noexcept -> element_type;
-
-			[[nodiscard]] auto horizontal_center(element_type element) noexcept -> element_type;
-			[[nodiscard]] auto vertical_center(element_type element) noexcept -> element_type;
+			[[nodiscard]] auto center_horizontal(element_type element) noexcept -> element_type;
+			[[nodiscard]] auto center_vertical(element_type element) noexcept -> element_type;
 			[[nodiscard]] auto center(element_type element) noexcept -> element_type;
 		}
 
-		#if LAMBDA_DEDUCING_THIS_WORKAROUND
-		constexpr auto flex_option_none = impl::flex_option{};
-		#else
-		constexpr auto flex_option_none = impl::flex_option<impl::FlexOption::NONE>{};
-		#endif
-		constexpr auto flex_option_all = impl::flex_option<impl::FlexOption::ALL>{};
-		constexpr auto flex_option_grow = impl::flex_option<impl::FlexOption::GROW>{};
-		constexpr auto flex_option_shrink = impl::flex_option<impl::FlexOption::SHRINK>{};
-		constexpr auto flex_option_horizontal_grow = impl::flex_option<impl::FlexOption::HORIZONTAL, impl::FlexOption::GROW>{};
-		constexpr auto flex_option_horizontal_shrink = impl::flex_option<impl::FlexOption::HORIZONTAL, impl::FlexOption::SHRINK>{};
-		constexpr auto flex_option_vertical_grow = impl::flex_option<impl::FlexOption::VERTICAL, impl::FlexOption::GROW>{};
-		constexpr auto flex_option_vertical_shrink = impl::flex_option<impl::FlexOption::VERTICAL, impl::FlexOption::SHRINK>{};
+		constexpr auto option_box_horizontal = impl::options<impl::BoxOption::HORIZONTAL>{};
+		constexpr auto option_box_vertical = impl::options<impl::BoxOption::VERTICAL>{};
+		constexpr auto option_box_grid = impl::options<impl::BoxOption::GRID>{};
 
-		#if LAMBDA_DEDUCING_THIS_WORKAROUND
-		constexpr auto center_option_all = impl::center_option{};
-		#else
-		constexpr auto center_option_all = impl::center_option<impl::CenterOption::ALL>{};
-		#endif
-		constexpr auto center_option_horizontal = impl::center_option<impl::CenterOption::HORIZONTAL>{};
-		constexpr auto center_option_vertical = impl::center_option<impl::CenterOption::VERTICAL>{};
+		constexpr auto option_flex_none = impl::options<impl::FlexOption::NONE>{};
+		constexpr auto option_flex_grow = impl::options<impl::FlexOption::GROW>{};
+		constexpr auto option_flex_shrink = impl::options<impl::FlexOption::SHRINK>{};
+		constexpr auto option_flex_horizontal_grow = impl::options<impl::FlexOption::GROW, impl::FlexOption::HORIZONTAL>{};
+		constexpr auto option_flex_horizontal_shrink = impl::options<impl::FlexOption::SHRINK, impl::FlexOption::HORIZONTAL>{};
+		constexpr auto option_flex_vertical_grow = impl::options<impl::FlexOption::GROW, impl::FlexOption::VERTICAL>{};
+		constexpr auto option_flex_vertical_shrink = impl::options<impl::FlexOption::SHRINK, impl::FlexOption::VERTICAL>{};
+		constexpr auto option_flex_all = impl::options<impl::FlexOption::GROW, impl::FlexOption::SHRINK, impl::FlexOption::HORIZONTAL, impl::FlexOption::VERTICAL>{};
 
-		constexpr auto flex = functional::overloaded{
-				[]<impl::FlexOption... Os>(
-			element_type element,
-			const impl::flex_option<Os...>
-			#if LAMBDA_DEDUCING_THIS_WORKAROUND
-			 = flex_option_none
-			#endif
-		) noexcept -> element_type
+		constexpr auto option_center_horizontal = impl::options<impl::CenterOption::HORIZONTAL>{};
+		constexpr auto option_center_vertical = impl::options<impl::CenterOption::VERTICAL>{};
+		constexpr auto option_center_all = impl::options<impl::CenterOption::HORIZONTAL, impl::CenterOption::VERTICAL>{};
+
+		constexpr auto layout = functional::overloaded{
+				// BOX
+				[]<impl::BoxOption... Os>(impl::options<Os...>, elements_type elements) noexcept -> element_type
 				{
-					#if LAMBDA_DEDUCING_THIS_WORKAROUND
-					constexpr auto value = std::conditional_t<sizeof...(Os) == 0, impl::flex_option<impl::FlexOption::NONE>, impl::flex_option<Os...>>::value;
-					#else
-					constexpr auto value = impl::flex_option<Os...>::value;
-					#endif
-					if constexpr (value & std::to_underlying(impl::FlexOption::GROW))
+					if constexpr (constexpr auto value = impl::options<Os...>::value;
+						value == option_box_horizontal)
 					{
-						if constexpr (value & std::to_underlying(impl::FlexOption::HORIZONTAL))
-						{
-							return impl::horizontal_flex_grow(std::move(element));
-						}
-						else if constexpr (value & std::to_underlying(impl::FlexOption::VERTICAL))
-						{
-							return impl::vertical_flex_grow(std::move(element));
-						}
-						else
-						{
-							static_assert(value == std::to_underlying(impl::FlexOption::GROW));
-							return impl::flex_grow(std::move(element));
-						}
+						return impl::box_horizontal(std::move(elements));
 					}
-					else if constexpr (value & std::to_underlying(impl::FlexOption::SHRINK))
+					else if constexpr (value == option_box_vertical)
 					{
-						if constexpr (value & std::to_underlying(impl::FlexOption::HORIZONTAL))
-						{
-							return impl::horizontal_flex_shrink(std::move(element));
-						}
-						else if constexpr (value & std::to_underlying(impl::FlexOption::VERTICAL))
-						{
-							return impl::vertical_flex_shrink(std::move(element));
-						}
-						else
-						{
-							static_assert(value == std::to_underlying(impl::FlexOption::SHRINK));
-							return impl::flex_shrink(std::move(element));
-						}
+						return impl::box_vertical(std::move(elements));
 					}
-					else if constexpr (value == std::to_underlying(impl::FlexOption::ALL))
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
+				},
+				[]<impl::BoxOption... Os>(impl::options<Os...>, element_matrix_type elements_matrix) noexcept -> element_type
+				{
+					if constexpr (constexpr auto value = impl::options<Os...>::value;
+						value == option_box_grid)
+					{
+						return impl::box_grid(std::move(elements_matrix));
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
+				},
+				[]<typename Self, impl::BoxOption... Os>(this const Self& self, impl::options<Os...> options, derived_element_t auto... elements) noexcept -> element_type
+				{
+					elements_type es{};
+					es.reserve(sizeof...(elements));
+
+					(es.emplace_back(std::move(elements)), ...);
+
+					return self(options, std::move(es));
+				},
+				// (options, element...) => (options, elements)
+				// (options, element...) !=> (options, elements...)
+				[]<typename Self, impl::BoxOption... Os>(this const Self& self, impl::options<Os...> options, derived_elements_t auto... elements) noexcept -> element_type //
+					requires (sizeof...(elements) != 1)
+				{
+					element_matrix_type es{};
+					es.reserve(sizeof...(elements));
+
+					(es.emplace_back(std::move(elements)), ...);
+
+					return self(options, std::move(es));
+				},
+				[]<typename Self, impl::BoxOption... Os>(this const Self& self, impl::options<Os...> options) noexcept -> auto
+				{
+					return functional::overloaded{
+							[self, options](elements_type elements) noexcept -> element_type
+							{
+								return self(std::move(elements), options);
+							},
+							[self, options](derived_element_t auto... elements) noexcept -> element_type
+							{
+								return self(options, std::move(elements)...);
+							},
+							[self, options](derived_elements_t auto... elements) noexcept -> element_type
+							{
+								return self(options, std::move(elements)...);
+							}
+					};
+				},
+				// FLEX
+				[]<impl::FlexOption... Os>(impl::options<Os...>, element_type element) noexcept -> element_type
+				{
+					if constexpr (constexpr auto value = impl::options<Os...>::value;
+						value == option_flex_none)
+					{
+						return impl::flex_none(std::move(element));
+					}
+					else if constexpr (value == option_flex_grow)
+					{
+						return impl::flex_grow(std::move(element));
+					}
+					else if constexpr (value == option_flex_shrink)
+					{
+						return impl::flex_shrink(std::move(element));
+					}
+					else if constexpr (value == option_flex_horizontal_grow)
+					{
+						return impl::flex_horizontal_grow(std::move(element));
+					}
+					else if constexpr (value == option_flex_horizontal_shrink)
+					{
+						return impl::flex_horizontal_shrink(std::move(element));
+					}
+					else if constexpr (value == option_flex_vertical_grow)
+					{
+						return impl::flex_vertical_grow(std::move(element));
+					}
+					else if constexpr (value == option_flex_vertical_shrink)
+					{
+						return impl::flex_vertical_shrink(std::move(element));
+					}
+					else if constexpr (value == option_flex_all)
 					{
 						return impl::flex(std::move(element));
 					}
 					else
 					{
-						static_assert(value == std::to_underlying(impl::FlexOption::NONE));
-						return impl::no_flex(std::move(element));
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 					}
 				},
-				#if not LAMBDA_DEDUCING_THIS_WORKAROUND
-				[]<typename Self>(this Self&& self, element_type element) noexcept -> element_type
+				[]<typename Self, impl::FlexOption... Os>(this const Self& self, impl::options<Os...> options) noexcept -> auto
 				{
-					return std::forward<Self>(self)(std::move(element), flex_option_none);
-				},
-				#endif
-				[]<typename Self, impl::FlexOption... Os>(this Self&& self, const impl::flex_option<Os...> options) noexcept -> auto
-				{
-					return [s = std::forward<Self>(self), options](element_type element) noexcept -> element_type
+					return [self, options](element_type element) noexcept -> element_type
 					{
-						return s(std::move(element), options);
+						return self(options, std::move(element));
 					};
 				},
-		};
-
-		constexpr auto horizontal_box = functional::overloaded{
-				[](elements_type elements) noexcept -> element_type
+				// CENTER
+				[]<impl::CenterOption... Os>(impl::options<Os...>, element_type element) noexcept -> element_type
 				{
-					return impl::horizontal_box(std::move(elements));
-				},
-				[](derived_element_t auto... elements) noexcept -> element_type
-				{
-					elements_type es{};
-					es.reserve(sizeof...(elements));
-
-					(es.emplace_back(std::move(elements)), ...);
-					return impl::horizontal_box(std::move(es));
-				},
-		};
-
-		constexpr auto vertical_box = functional::overloaded{
-				[](elements_type elements) noexcept -> element_type
-				{
-					return impl::vertical_box(std::move(elements));
-				},
-				[](derived_element_t auto... elements) noexcept -> element_type
-				{
-					elements_type es{};
-					es.reserve(sizeof...(elements));
-
-					(es.emplace_back(std::move(elements)), ...);
-					return impl::vertical_box(std::move(es));
-				},
-		};
-
-		constexpr auto stack_box = functional::overloaded{
-				[](elements_type elements) noexcept -> element_type
-				{
-					return impl::stack_box(std::move(elements));
-				},
-				[](derived_element_t auto... elements) noexcept -> element_type
-				{
-					elements_type es{};
-					es.reserve(sizeof...(elements));
-
-					(es.emplace_back(std::move(elements)), ...);
-					return impl::stack_box(std::move(es));
-				},
-		};
-
-		constexpr auto center = functional::overloaded
-		{
-				[]<impl::CenterOption... Os>(
-			element_type element,
-			const impl::center_option<Os...>
-			#if LAMBDA_DEDUCING_THIS_WORKAROUND
-			 = center_option_all
-			#endif
-		) noexcept -> element_type
-				{
-					constexpr auto value = std::conditional_t<sizeof...(Os) == 0, impl::center_option<impl::CenterOption::ALL>, impl::center_option<Os...>>::value;
-					if constexpr (value == std::to_underlying(impl::CenterOption::ALL))
+					if constexpr (constexpr auto value = impl::options<Os...>::value;
+						value == option_center_horizontal)
+					{
+						return impl::center_horizontal(std::move(element));
+					}
+					else if constexpr (value == option_center_vertical)
+					{
+						return impl::center_vertical(std::move(element));
+					}
+					else if constexpr (value == option_center_all)
 					{
 						return impl::center(std::move(element));
 					}
-					else if constexpr (value == std::to_underlying(impl::CenterOption::HORIZONTAL))
-					{
-						return impl::horizontal_center(std::move(element));
-					}
 					else
 					{
-						static_assert(value == std::to_underlying(impl::CenterOption::VERTICAL));
-						return impl::vertical_center(std::move(element));
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 					}
 				},
-				#if not LAMBDA_DEDUCING_THIS_WORKAROUND
-				[]<typename Self>(this Self&& self, element_type element) noexcept -> element_type
+				[]<typename Self, impl::CenterOption... Os>(this const Self& self, impl::options<Os...> options) noexcept -> auto
 				{
-					return std::forward<Self>(self)(std::move(element), center_option_all);
-				},
-				#endif
-				[]<typename Self, impl::CenterOption... Os>(this Self&& self, const impl::center_option<Os...> options) noexcept -> auto
-				{
-					return [s = std::forward<Self>(self), options](element_type element) noexcept -> element_type
+					return [self, options](element_type element) noexcept -> element_type
 					{
-						return s(std::move(element), options);
+						return self(options, std::move(element));
 					};
 				},
+		};
+
+		// ----------------------
+		// ALIAS
+
+		constexpr auto box_horizontal = functional::overloaded{
+				[](elements_type elements) noexcept -> element_type
+				{
+					return layout(option_box_horizontal, std::move(elements));
+				},
+				[](derived_element_t auto... elements) noexcept -> element_type
+				{
+					return layout(option_box_horizontal, std::move(elements)...);
+				},
+		};
+
+		constexpr auto box_vertical = functional::overloaded{
+				[](elements_type elements) noexcept -> element_type
+				{
+					return layout(option_box_vertical, std::move(elements));
+				},
+				[](derived_element_t auto... elements) noexcept -> element_type
+				{
+					return layout(option_box_vertical, std::move(elements)...);
+				},
+		};
+
+		constexpr auto box_grid = functional::overloaded{
+				[](element_matrix_type elements) noexcept -> element_type
+				{
+					return layout(option_box_grid, std::move(elements));
+				},
+				[](derived_elements_t auto... elements) noexcept -> element_type
+				{
+					return layout(option_box_grid, std::move(elements)...);
+				},
+		};
+
+		constexpr auto flex_none = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_flex_none, std::move(element));
+		};
+
+		constexpr auto flex_grow = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_flex_grow, std::move(element));
+		};
+
+		constexpr auto flex_shrink = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_flex_shrink, std::move(element));
+		};
+
+		constexpr auto flex_horizontal_grow = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_flex_horizontal_grow, std::move(element));
+		};
+
+		constexpr auto flex_horizontal_shrink = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_flex_horizontal_shrink, std::move(element));
+		};
+
+		constexpr auto flex_vertical_grow = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_flex_vertical_grow, std::move(element));
+		};
+
+		constexpr auto flex_vertical_shrink = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_flex_vertical_shrink, std::move(element));
+		};
+
+		constexpr auto flex_all = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_flex_all, std::move(element));
+		};
+
+		constexpr auto center_horizontal = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_center_horizontal, std::move(element));
+		};
+
+		constexpr auto center_vertical = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_center_vertical, std::move(element));
+		};
+
+		constexpr auto center_all = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_center_all, std::move(element));
 		};
 	}
 }

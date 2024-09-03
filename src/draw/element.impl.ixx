@@ -39,7 +39,7 @@ namespace gal::prometheus::draw
 
 	auto Style::instance() noexcept -> Style&
 	{
-		Style style{
+		static Style style{
 				.font_pixel_size = 18.f,
 				.line_pixel_width = 1.f,
 				.flex_pixel_x = 3.f,
