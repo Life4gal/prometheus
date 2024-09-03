@@ -50,25 +50,29 @@ namespace
 			Element::calculate_requirement(surface);
 
 			requirement_ = children_[0]->requirement();
-			requirement_.min_width += 2 * Style::instance().line_pixel_width;
-			requirement_.min_height += 2 * Style::instance().line_pixel_width;
+
+			const auto line_pixel_width = Style::instance().line_pixel_width;
+			requirement_.min_width += 2 * line_pixel_width;
+			requirement_.min_height += 2 * line_pixel_width;
 		}
 
 		auto set_rect(const rect_type& rect) noexcept -> void override
 		{
 			Element::set_rect(rect);
 
+			const auto line_pixel_width = Style::instance().line_pixel_width;
 			const auto& [point, extent] = rect;
+
 			const rect_type box
 			{
 					// left
-					point.x + Style::instance().line_pixel_width,
+					point.x + line_pixel_width,
 					// top
-					point.y + Style::instance().line_pixel_width,
+					point.y + line_pixel_width,
 					// right
-					point.x + extent.width - Style::instance().line_pixel_width,
+					point.x + extent.width - 2 * line_pixel_width,
 					// bottom
-					point.y + extent.height - Style::instance().line_pixel_width
+					point.y + extent.height - 2 * line_pixel_width
 			};
 
 			children_[0]->set_rect(box);
@@ -133,7 +137,7 @@ namespace
 					// top
 					point.y + title_box.height(),
 					// right
-					point.y + title_box.width(),
+					point.x + title_box.width(),
 					// bottom
 					point.y + extent.height
 			};

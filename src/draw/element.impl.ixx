@@ -42,8 +42,8 @@ namespace gal::prometheus::draw
 		Style style{
 				.font_pixel_size = 18.f,
 				.line_pixel_width = 1.f,
-				.flex_pixel_x = 0.f,
-				.flex_pixel_y = 0.f,
+				.flex_pixel_x = 3.f,
+				.flex_pixel_y = 3.f,
 				.border_default_color = primitive::colors::black,
 				.window_title_default_color = primitive::colors::red
 		};

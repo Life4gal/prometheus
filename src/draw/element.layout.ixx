@@ -245,8 +245,6 @@ namespace
 	class HorizontalBox final : public impl::Element
 	{
 	public:
-		using point_type = rect_type::point_type;
-
 		explicit HorizontalBox(elements_type children) noexcept
 			: Element{std::move(children)} {}
 
@@ -256,11 +254,11 @@ namespace
 
 			std::ranges::for_each(
 				children_,
-				[this, &surface](const auto& child) noexcept -> void
+				[this, &surface, flex_pixel_x = Style::instance().flex_pixel_x](const auto& child) noexcept -> void
 				{
 					child->calculate_requirement(surface);
 
-					requirement_.min_width += child->requirement().min_width;
+					requirement_.min_width += child->requirement().min_width + 2 * flex_pixel_x;
 					requirement_.min_height = std::ranges::max(
 						requirement_.min_height,
 						child->requirement().min_height
@@ -291,24 +289,30 @@ namespace
 				}
 			);
 
-			const auto flex_pixel_x = Style::instance().flex_pixel_x;
-			const auto target_size = rect.width() + flex_pixel_x;
-			calculate(elements, target_size);
+			calculate(elements, rect.width());
 
-			auto x = rect.left_top().x;
+			const auto& [point, extent] = rect;
+
+			auto x = point.x;
 			std::ranges::for_each(
 				std::views::zip(children_, elements),
-				[&x, &rect, flex_pixel_x](std::tuple<element_type&, const element_size&> pack) noexcept -> void
+				[&x, y = point.y, b = point.y + extent.height, flex_pixel_x= Style::instance().flex_pixel_x](std::tuple<element_type&, const element_size&> pack) noexcept -> void
 				{
 					auto& [child, element] = pack;
 
 					const rect_type box
 					{
-							point_type{x, rect.left_top().y},
-							point_type{x + element.size - flex_pixel_x, rect.right_bottom().y}
+							// left
+							x + flex_pixel_x,
+							// top
+							y,
+							// right
+							x + flex_pixel_x + element.size + flex_pixel_x,
+							// bottom
+							b
 					};
 					child->set_rect(box);
-					x = box.right_bottom().x + flex_pixel_x;
+					x = x + flex_pixel_x + element.size + flex_pixel_x;
 				}
 			);
 		}
@@ -317,8 +321,6 @@ namespace
 	class VerticalBox final : public impl::Element
 	{
 	public:
-		using point_type = rect_type::point_type;
-
 		explicit VerticalBox(elements_type children) noexcept
 			: Element{std::move(children)} {}
 
@@ -328,11 +330,11 @@ namespace
 
 			std::ranges::for_each(
 				children_,
-				[this, &surface](const auto& child) noexcept -> void
+				[this, &surface, flex_pixel_y = Style::instance().flex_pixel_y](const auto& child) noexcept -> void
 				{
 					child->calculate_requirement(surface);
 
-					requirement_.min_height += child->requirement().min_height;
+					requirement_.min_height += child->requirement().min_height + 2 * flex_pixel_y;
 					requirement_.min_width = std::ranges::max(
 						requirement_.min_width,
 						child->requirement().min_width
@@ -363,24 +365,30 @@ namespace
 				}
 			);
 
-			const auto flex_pixel_y = Style::instance().flex_pixel_y;
-			const auto target_size = rect.height() + flex_pixel_y;
-			calculate(elements, target_size);
+			calculate(elements, rect.height());
 
-			auto y = rect.left_top().y;
+			const auto& [point, extent] = rect;
+
+			auto y = point.y;
 			std::ranges::for_each(
 				std::views::zip(children_, elements),
-				[&y, &rect, flex_pixel_y](std::tuple<element_type&, const element_size&> pack) noexcept -> void
+				[&y, x = point.x, r = point.x + extent.width, flex_pixel_y = Style::instance().flex_pixel_y](std::tuple<element_type&, const element_size&> pack) noexcept -> void
 				{
 					auto& [child, element] = pack;
 
 					const rect_type box
 					{
-							point_type{rect.left_top().x, y},
-							point_type{rect.right_bottom().x, y + element.size - flex_pixel_y}
+							// left
+							x,
+							// top
+							y + flex_pixel_y,
+							// right
+							r,
+							// bottom
+							y + flex_pixel_y + element.size + flex_pixel_y
 					};
 					child->set_rect(box);
-					y = box.right_bottom().y + flex_pixel_y;
+					y = y + flex_pixel_y + element.size + flex_pixel_y;
 				}
 			);
 		}

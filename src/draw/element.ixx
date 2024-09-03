@@ -381,6 +381,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 					return std::forward<Self>(self)(std::move(element), flex_option_none);
 				},
 				#endif
+				[]<typename Self, impl::FlexOption... Os>(this Self&& self, const impl::flex_option<Os...> options) noexcept -> auto
+				{
+					return [s = std::forward<Self>(self), options](element_type element) noexcept -> element_type
+					{
+						return s(std::move(element), options);
+					};
+				},
 		};
 
 		constexpr auto horizontal_box = functional::overloaded{
@@ -459,6 +466,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 					return std::forward<Self>(self)(std::move(element), center_option_all);
 				},
 				#endif
+				[]<typename Self, impl::CenterOption... Os>(this Self&& self, const impl::center_option<Os...> options) noexcept -> auto
+				{
+					return [s = std::forward<Self>(self), options](element_type element) noexcept -> element_type
+					{
+						return s(std::move(element), options);
+					};
+				},
 		};
 	}
 }
