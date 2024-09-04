@@ -13,6 +13,7 @@ export module gal.prometheus.draw:element.border;
 import std;
 
 import gal.prometheus.primitive;
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :surface;
 import :style;
@@ -24,6 +25,7 @@ import :element;
 #include <draw/surface.ixx>
 #include <draw/style.ixx>
 #include <draw/element.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -80,9 +82,13 @@ namespace
 
 		auto render(Surface& surface) noexcept -> void override
 		{
-			children_[0]->render(surface);
+			render(surface, DrawFlag::ROUND_CORNER_ALL);
+		}
 
-			surface.draw_list().rect(rect_, color_, 0, DrawFlag::ROUND_CORNER_ALL, Style::instance().line_pixel_width);
+		auto render(Surface& surface, const DrawFlag flag) const noexcept -> void
+		{
+			surface.draw_list().rect(rect_, color_, Style::instance().border_round, flag, Style::instance().line_pixel_width);
+			children_[0]->render(surface);
 		}
 	};
 
@@ -147,12 +153,13 @@ namespace
 		auto render(Surface& surface) noexcept -> void override
 		{
 			// title
-			using functional::operators::operator|;
-			surface.draw_list().rect_filled(children_[0]->rect(), color_, 0, DrawFlag::ROUND_CORNER_LEFT_TOP | DrawFlag::ROUND_CORNER_RIGHT_TOP);
+			surface.draw_list().rect_filled(children_[0]->rect(), color_, Style::instance().border_round, DrawFlag::ROUND_CORNER_TOP);
 			children_[0]->render(surface);
 
 			// border
-			children_[1]->render(surface);
+			const auto border = cast_element_unchecked<Border>(children_[1]);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(border != nullptr);
+			border->render(surface, DrawFlag::ROUND_CORNER_BOTTOM);
 		}
 	};
 }

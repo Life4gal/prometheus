@@ -63,6 +63,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 	template<std::derived_from<impl::Element> T>
 	[[nodiscard]] constexpr auto cast_element(const element_type element) noexcept -> std::shared_ptr<T>
 	{
+		return std::dynamic_pointer_cast<T>(element);
+	}
+
+	template<std::derived_from<impl::Element> T>
+	[[nodiscard]] constexpr auto cast_element_unchecked(const element_type element) noexcept -> std::shared_ptr<T>
+	{
 		return std::static_pointer_cast<T>(element);
 	}
 

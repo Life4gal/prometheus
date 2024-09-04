@@ -12,8 +12,6 @@ export module gal.prometheus.draw:element.impl;
 
 import std;
 
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
-
 import :surface;
 import :style;
 import :element;
@@ -23,7 +21,6 @@ import :element;
 #include <draw/surface.ixx>
 #include <draw/style.ixx>
 #include <draw/element.ixx>
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -44,6 +41,7 @@ namespace gal::prometheus::draw
 				.line_pixel_width = 1.f,
 				.flex_pixel_x = 3.f,
 				.flex_pixel_y = 3.f,
+				.border_round = 2.f,
 				.border_default_color = primitive::colors::black,
 				.window_title_default_color = primitive::colors::red
 		};
