@@ -42,6 +42,16 @@ namespace
 	private:
 		color_type color_;
 
+		[[nodiscard]] static auto extra_offset() noexcept -> Style::extern_type
+		{
+			const auto line_width = Style::instance().line_width;
+			const auto& border_padding = Style::instance().border_padding;
+			const auto offset_x = line_width + border_padding.width;
+			const auto offset_y = line_width + border_padding.height;
+
+			return {offset_x, offset_y};
+		}
+
 	public:
 		Border(element_type element, const color_type color) noexcept
 			: Element{elements_type{std::move(element)}},
@@ -53,28 +63,29 @@ namespace
 
 			requirement_ = children_[0]->requirement();
 
-			const auto line_pixel_width = Style::instance().line_pixel_width;
-			requirement_.min_width += 2 * line_pixel_width;
-			requirement_.min_height += 2 * line_pixel_width;
+			const auto [offset_x, offset_y] = extra_offset();
+
+			requirement_.min_width += 2 * offset_x;
+			requirement_.min_height += 2 * offset_y;
 		}
 
 		auto set_rect(const rect_type& rect) noexcept -> void override
 		{
 			Element::set_rect(rect);
 
-			const auto line_pixel_width = Style::instance().line_pixel_width;
+			const auto [offset_x, offset_y] = extra_offset();
 			const auto& [point, extent] = rect;
 
 			const rect_type box
 			{
 					// left
-					point.x + line_pixel_width,
+					point.x + offset_x,
 					// top
-					point.y + line_pixel_width,
+					point.y + offset_y,
 					// right
-					point.x + extent.width - 2 * line_pixel_width,
+					point.x + extent.width - offset_x,
 					// bottom
-					point.y + extent.height - 2 * line_pixel_width
+					point.y + extent.height - offset_y
 			};
 
 			children_[0]->set_rect(box);
@@ -87,7 +98,7 @@ namespace
 
 		auto render(Surface& surface, const DrawFlag flag) const noexcept -> void
 		{
-			surface.draw_list().rect(rect_, color_, Style::instance().border_round, flag, Style::instance().line_pixel_width);
+			surface.draw_list().rect(rect_, color_, Style::instance().border_rounding, flag, Style::instance().line_width);
 			children_[0]->render(surface);
 		}
 	};
@@ -153,7 +164,7 @@ namespace
 		auto render(Surface& surface) noexcept -> void override
 		{
 			// title
-			surface.draw_list().rect_filled(children_[0]->rect(), color_, Style::instance().border_round, DrawFlag::ROUND_CORNER_TOP);
+			surface.draw_list().rect_filled(children_[0]->rect(), color_, Style::instance().border_rounding, DrawFlag::ROUND_CORNER_TOP);
 			children_[0]->render(surface);
 
 			// border

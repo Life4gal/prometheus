@@ -28,7 +28,6 @@ namespace gal::prometheus::draw
 {
 	auto Surface::render(impl::Element& element) noexcept -> void
 	{
-		// todo
 		element.calculate_requirement(*this);
 		element.set_rect({rect_.point.x, rect_.point.y, rect_.point.x + element.requirement().min_width, rect_.point.y + element.requirement().min_height});
 		element.render(*this);
@@ -37,13 +36,17 @@ namespace gal::prometheus::draw
 	auto Style::instance() noexcept -> Style&
 	{
 		static Style style{
-				.font_pixel_size = 18.f,
-				.line_pixel_width = 1.f,
-				.flex_pixel_x = 3.f,
-				.flex_pixel_y = 3.f,
-				.border_round = 2.f,
+				.font_size = 18.f,
+				.line_width = 1.f,
+				.separator_color = primitive::colors::red,
+				.flex_x = 3.f,
+				.flex_y = 3.f,
+				.container_padding = {1.f, 1.f},
+				.container_spacing = {2.f, 2.f},
+				.border_rounding = 2.f,
+				.border_padding = {3.f, 3.f},
 				.border_default_color = primitive::colors::black,
-				.window_title_default_color = primitive::colors::red
+				.window_title_default_color = primitive::colors::blue_violet
 		};
 
 		return style;

@@ -26,17 +26,33 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 	class Style final
 	{
 	public:
+		using extern_type = primitive::basic_extent_2d<float>;
 		using color_type = primitive::colors::color_type;
 
 		[[nodiscard]] static auto instance() noexcept -> Style&;
 
-		float font_pixel_size;
-		float line_pixel_width;
+		// Default font size used when drawing text
+		float font_size;
+		// Default width when drawing line
+		float line_width;
 
-		float flex_pixel_x;
-		float flex_pixel_y;
+		color_type separator_color;
 
+		float flex_x;
+		float flex_y;
+
+		// Padding of the first/last element from the container boundary
+		extern_type container_padding;
+		// Spacing between elements in the container
+		extern_type container_spacing;
+
+		// Corner rounding when drawing borders
+		float border_rounding;
+		// Padding of the elements within the boundary from the border
+		extern_type border_padding;
+		// Default color of the border when drawing the border
 		color_type border_default_color;
+		// Default color of the title when drawing the window
 		color_type window_title_default_color;
 	};
 }

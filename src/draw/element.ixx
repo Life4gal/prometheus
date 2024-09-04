@@ -49,10 +49,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 	using element_matrix_view_type = std::span<elements_type>;
 
 	template<typename T>
-	concept derived_element_t = std::derived_from<typename T::element_type, impl::Element>;
+	concept derived_element_t = std::is_base_of_v<impl::Element, typename T::element_type>;
 
 	template<typename Range>
-	concept derived_elements_t = std::ranges::range<Range> and std::derived_from<typename Range::value_type::element_type, impl::Element>;
+	concept derived_elements_t = std::ranges::range<Range> and derived_element_t<typename Range::value_type>;
 
 	template<std::derived_from<impl::Element> T, typename... Args>
 	[[nodiscard]] constexpr auto make_element(Args&&... args) noexcept -> element_type
@@ -129,7 +129,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			{
 				std::ranges::for_each(
 					children_,
-					[&surface](auto& node) noexcept -> void { node->calculate_requirement(surface); }
+					[&surface](auto& child) noexcept -> void { child->calculate_requirement(surface); }
 				);
 			}
 
@@ -147,7 +147,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			{
 				std::ranges::for_each(
 					children_,
-					[&surface](auto& element) noexcept -> void { element->render(surface); }
+					[&surface](auto& child) noexcept -> void { child->render(surface); }
 				);
 			}
 		};
@@ -156,7 +156,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 	namespace element
 	{
 		template<typename Element, typename Decorator>
-			requires (derived_element_t<Element> and derived_element_t<std::invoke_result_t<Decorator, Element>>)
+			requires (derived_element_t<std::decay_t<Element>> and derived_element_t<std::invoke_result_t<Decorator, Element>>)
 		[[nodiscard]] constexpr auto operator|(Element&& element, Decorator&& decorator) noexcept -> element_type //
 		{
 			return std::invoke(std::forward<Decorator>(decorator), std::forward<Element>(element));
@@ -203,6 +203,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		{
 			[[nodiscard]] auto separator() noexcept -> element_type;
 		}
+
+		constexpr auto separator = functional::overloaded{
+				[]() noexcept -> element_type
+				{
+					return impl::separator();
+				},
+		};
 
 		// ===============================
 		// BORDER & WINDOW

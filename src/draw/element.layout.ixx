@@ -146,17 +146,25 @@ namespace
 
 			std::ranges::for_each(
 				children_,
-				[this, &surface, flex_pixel_x = Style::instance().flex_pixel_x](const auto& child) noexcept -> void
+				[this, &surface](const auto& child) noexcept -> void
 				{
 					child->calculate_requirement(surface);
 
-					requirement_.min_width += child->requirement().min_width + 2 * flex_pixel_x;
+					requirement_.min_width += child->requirement().min_width;
 					requirement_.min_height = std::ranges::max(
 						requirement_.min_height,
 						child->requirement().min_height
 					);
 				}
 			);
+
+			const auto& container_padding = Style::instance().container_padding;
+			const auto& container_spacing = Style::instance().container_spacing;
+			const auto extra_x = 2 * container_padding.width + (children_.size() - 1) * container_spacing.width;
+			const auto extra_y = 2 * container_padding.height;
+
+			requirement_.min_width += extra_x;
+			requirement_.min_height += extra_y;
 		}
 
 		auto set_rect(const rect_type& rect) noexcept -> void override
@@ -181,30 +189,38 @@ namespace
 				}
 			);
 
-			calculate(elements, rect.width());
+			const auto& container_padding = Style::instance().container_padding;
+			const auto& container_spacing = Style::instance().container_spacing;
+			const auto extra_x = 2 * container_padding.width + (children_.size() - 1) * container_spacing.width;
+
+			calculate(elements, rect.width() - extra_x);
 
 			const auto& [point, extent] = rect;
 
-			auto x = point.x;
 			std::ranges::for_each(
 				std::views::zip(children_, elements),
-				[&x, y = point.y, b = point.y + extent.height, flex_pixel_x = Style::instance().flex_pixel_x](std::tuple<element_type&, const element_size&> pack) noexcept -> void
+				[
+					current_x = point.x + container_padding.width,
+					current_y = point.y + container_padding.height,
+					current_bottom = point.y + extent.height - container_padding.height,
+					container_spacing = container_spacing.width
+				](std::tuple<element_type&, const element_size&> pack) mutable noexcept -> void
 				{
 					auto& [child, element] = pack;
 
 					const rect_type box
 					{
 							// left
-							x + flex_pixel_x,
+							current_x,
 							// top
-							y,
+							current_y,
 							// right
-							x + flex_pixel_x + element.size + flex_pixel_x,
+							current_x + element.size,
 							// bottom
-							b
+							current_bottom
 					};
 					child->set_rect(box);
-					x = x + flex_pixel_x + element.size + flex_pixel_x;
+					current_x = current_x + element.size + container_spacing;
 				}
 			);
 		}
@@ -222,17 +238,25 @@ namespace
 
 			std::ranges::for_each(
 				children_,
-				[this, &surface, flex_pixel_y = Style::instance().flex_pixel_y](const auto& child) noexcept -> void
+				[this, &surface](const auto& child) noexcept -> void
 				{
 					child->calculate_requirement(surface);
 
-					requirement_.min_height += child->requirement().min_height + 2 * flex_pixel_y;
+					requirement_.min_height += child->requirement().min_height;
 					requirement_.min_width = std::ranges::max(
 						requirement_.min_width,
 						child->requirement().min_width
 					);
 				}
 			);
+
+			const auto& container_padding = Style::instance().container_padding;
+			const auto& container_spacing = Style::instance().container_spacing;
+			const auto extra_x = 2 * container_padding.width;
+			const auto extra_y = 2 * container_padding.height + (children_.size() - 1) * container_spacing.height;
+
+			requirement_.min_width += extra_x;
+			requirement_.min_height += extra_y;
 		}
 
 		auto set_rect(const rect_type& rect) noexcept -> void override
@@ -257,30 +281,38 @@ namespace
 				}
 			);
 
-			calculate(elements, rect.height());
+			const auto& container_padding = Style::instance().container_padding;
+			const auto& container_spacing = Style::instance().container_spacing;
+			const auto extra_y = 2 * container_padding.height + (children_.size() - 1) * container_spacing.height;
+
+			calculate(elements, rect.height() - extra_y);
 
 			const auto& [point, extent] = rect;
 
-			auto y = point.y;
 			std::ranges::for_each(
 				std::views::zip(children_, elements),
-				[&y, x = point.x, r = point.x + extent.width, flex_pixel_y = Style::instance().flex_pixel_y](std::tuple<element_type&, const element_size&> pack) noexcept -> void
+				[
+					current_x = point.x + container_padding.width,
+					current_y = point.y + container_padding.height,
+					current_right = point.x + extent.width - container_padding.width,
+					container_spacing = container_spacing.height
+				](std::tuple<element_type&, const element_size&> pack) mutable noexcept -> void
 				{
 					auto& [child, element] = pack;
 
 					const rect_type box
 					{
 							// left
-							x,
+							current_x,
 							// top
-							y + flex_pixel_y,
+							current_y,
 							// right
-							r,
+							current_right,
 							// bottom
-							y + flex_pixel_y + element.size + flex_pixel_y
+							current_y + element.size
 					};
 					child->set_rect(box);
-					y = y + flex_pixel_y + element.size + flex_pixel_y;
+					current_y = current_y + element.size + container_spacing;
 				}
 			);
 		}
@@ -345,19 +377,22 @@ namespace
 
 			std::ranges::for_each(
 				element_grid_,
-				[&size_x, &size_y, flex_pixel_x = Style::instance().flex_pixel_x, flex_pixel_y = Style::instance().flex_pixel_y](const auto& line) noexcept -> void
+				[
+					&size_x,
+					&size_y
+				](const auto& line) noexcept -> void
 				{
 					const auto view = line | std::views::transform([](const auto& element) noexcept -> const auto& { return element->requirement(); });
 					const auto& max_y = std::ranges::max_element(view, {}, &impl::requirement_type::min_height);
 
-					size_y.emplace_back(max_y.base()->get()->requirement().min_height + 2 * flex_pixel_y);
+					size_y.emplace_back(max_y.base()->get()->requirement().min_height);
 
 					std::ranges::for_each(
 						std::views::zip(size_x, line),
-						[flex_pixel_x](std::tuple<float&, const element_type&> pack) noexcept -> void
+						[](std::tuple<float&, const element_type&> pack) noexcept -> void
 						{
 							auto& [x, element] = pack;
-							x = std::ranges::max(x, element->requirement().min_width + 2 * flex_pixel_x);
+							x = std::ranges::max(x, element->requirement().min_width);
 						}
 					);
 				}
@@ -377,8 +412,13 @@ namespace
 				return accumulate;
 			};
 
-			requirement_.min_width = integrate(size_x);
-			requirement_.min_height = integrate(size_y);
+			const auto& container_padding = Style::instance().container_padding;
+			const auto& container_spacing = Style::instance().container_spacing;
+			const auto extra_x = 2 * container_padding.width + (width_ - 1) * container_spacing.width;
+			const auto extra_y = 2 * container_padding.height + (height_ - 1) * container_spacing.height;
+
+			requirement_.min_width = integrate(size_x) + extra_x;
+			requirement_.min_height = integrate(size_y) + extra_y;
 		}
 
 		auto set_rect(const rect_type& rect) noexcept -> void override
@@ -414,21 +454,24 @@ namespace
 				}
 			);
 
-			calculate(elements_x, rect.width());
-			calculate(elements_y, rect.height());
+			const auto& container_padding = Style::instance().container_padding;
+			const auto& container_spacing = Style::instance().container_spacing;
+			const auto extra_x = 2 * container_padding.width + (width_ - 1) * container_spacing.width;
+			const auto extra_y = 2 * container_padding.height + (height_ - 1) * container_spacing.height;
+
+			calculate(elements_x, rect.width() - extra_x);
+			calculate(elements_y, rect.height() - extra_y);
 
 			const auto& [point, extent] = rect;
 
-			auto [x, y] = point;
 			std::ranges::for_each(
 				std::views::zip(elements_y, element_grid_),
 				[
 					&elements_x ,
-					x,
-					&y,
-					flex_pixel_x = Style::instance().flex_pixel_x,
-					flex_pixel_y = Style::instance().flex_pixel_y
-				](std::tuple<const element_size&, elements_type&> pack) noexcept -> void
+					x = point.x + container_padding.width,
+					y = point.y + container_padding.height,
+					container_spacing = container_spacing
+				](std::tuple<const element_size&, elements_type&> pack) mutable noexcept -> void
 				{
 					auto& [element_y, line] = pack;
 
@@ -437,9 +480,8 @@ namespace
 						[
 							current_x = x,
 							current_y = y,
-							&element_y,
-							flex_pixel_x,
-							flex_pixel_y
+							current_height = element_y.size,
+							container_spacing
 						](std::tuple<const element_size&, element_type&> inner_pack) mutable noexcept -> void
 						{
 							auto& [element_x, element] = inner_pack;
@@ -447,20 +489,20 @@ namespace
 							const rect_type box
 							{
 									// left
-									current_x + flex_pixel_x,
+									current_x,
 									// top
-									current_y + flex_pixel_y,
+									current_y,
 									// right
-									current_x + flex_pixel_x + element_x.size + flex_pixel_x,
+									current_x + element_x.size,
 									// bottom
-									current_y + flex_pixel_y + element_y.size + flex_pixel_y
+									current_y + current_height
 							};
 							element->set_rect(box);
-							current_x = current_x + flex_pixel_x + element_x.size + flex_pixel_x;
+							current_x = current_x + element_x.size + container_spacing.width;
 						}
 					);
 
-					y = y + flex_pixel_y + element_y.size + flex_pixel_y;
+					y = y + element_y.size + container_spacing.height;
 				}
 			);
 		}
@@ -489,10 +531,10 @@ namespace
 
 		auto flex(requirement_type& requirement) noexcept -> void
 		{
-			requirement.flex_grow_width = Style::instance().flex_pixel_x;
-			requirement.flex_grow_height = Style::instance().flex_pixel_y;
-			requirement.flex_shrink_width = Style::instance().flex_pixel_x;
-			requirement.flex_shrink_height = Style::instance().flex_pixel_y;
+			requirement.flex_grow_width = Style::instance().flex_x;
+			requirement.flex_grow_height = Style::instance().flex_y;
+			requirement.flex_shrink_width = Style::instance().flex_x;
+			requirement.flex_shrink_height = Style::instance().flex_y;
 		}
 
 		auto no_flex(requirement_type& requirement) noexcept -> void
@@ -505,46 +547,46 @@ namespace
 
 		auto flex_grow(requirement_type& requirement) noexcept -> void
 		{
-			requirement.flex_grow_width = Style::instance().flex_pixel_x;
-			requirement.flex_grow_height = Style::instance().flex_pixel_y;
+			requirement.flex_grow_width = Style::instance().flex_x;
+			requirement.flex_grow_height = Style::instance().flex_y;
 		}
 
 		auto flex_shrink(requirement_type& requirement) noexcept -> void
 		{
-			requirement.flex_shrink_width = Style::instance().flex_pixel_x;
-			requirement.flex_shrink_height = Style::instance().flex_pixel_y;
+			requirement.flex_shrink_width = Style::instance().flex_x;
+			requirement.flex_shrink_height = Style::instance().flex_y;
 		}
 
 		auto horizontal_flex(requirement_type& requirement) noexcept -> void
 		{
-			requirement.flex_grow_width = Style::instance().flex_pixel_x;
-			requirement.flex_shrink_width = Style::instance().flex_pixel_x;
+			requirement.flex_grow_width = Style::instance().flex_x;
+			requirement.flex_shrink_width = Style::instance().flex_x;
 		}
 
 		auto horizontal_flex_grow(requirement_type& requirement) noexcept -> void
 		{
-			requirement.flex_grow_width = Style::instance().flex_pixel_x;
+			requirement.flex_grow_width = Style::instance().flex_x;
 		}
 
 		auto horizontal_flex_shrink(requirement_type& requirement) noexcept -> void
 		{
-			requirement.flex_shrink_width = Style::instance().flex_pixel_x;
+			requirement.flex_shrink_width = Style::instance().flex_x;
 		}
 
 		auto vertical_flex(requirement_type& requirement) noexcept -> void
 		{
-			requirement.flex_grow_height = Style::instance().flex_pixel_y;
-			requirement.flex_shrink_height = Style::instance().flex_pixel_y;
+			requirement.flex_grow_height = Style::instance().flex_y;
+			requirement.flex_shrink_height = Style::instance().flex_y;
 		}
 
 		auto vertical_flex_grow(requirement_type& requirement) noexcept -> void
 		{
-			requirement.flex_grow_height = Style::instance().flex_pixel_y;
+			requirement.flex_grow_height = Style::instance().flex_y;
 		}
 
 		auto vertical_flex_shrink(requirement_type& requirement) noexcept -> void
 		{
-			requirement.flex_shrink_height = Style::instance().flex_pixel_y;
+			requirement.flex_shrink_height = Style::instance().flex_y;
 		}
 	}
 
