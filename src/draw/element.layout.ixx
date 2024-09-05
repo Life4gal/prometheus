@@ -13,6 +13,8 @@ export module gal.prometheus.draw:element.layout;
 import std;
 
 import gal.prometheus.primitive;
+import gal.prometheus.functional;
+// GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :surface;
 import :style;
@@ -23,9 +25,11 @@ import :element;
 
 #include <prometheus/macro.hpp>
 #include <primitive/primitive.ixx>
+#include <functional/functional.ixx>
 #include <draw/surface.ixx>
 #include <draw/style.ixx>
 #include <draw/element.ixx>
+// #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
@@ -134,11 +138,19 @@ namespace
 		}
 	}
 
-	class HorizontalBox final : public impl::Element
+	template<element::impl::BoxOption Option>
+		requires (Option == element::impl::BoxOption::HORIZONTAL or Option == element::impl::BoxOption::VERTICAL)
+	class Box final : public impl::Element
 	{
 	public:
-		explicit HorizontalBox(elements_type children) noexcept
+		using option_type = element::impl::BoxOption;
+
+		constexpr static auto option = Option;
+
+		explicit Box(elements_type children) noexcept
 			: Element{std::move(children)} {}
+
+		~Box() noexcept override = default;
 
 		auto calculate_requirement(Surface& surface) noexcept -> void override
 		{
@@ -150,110 +162,53 @@ namespace
 				{
 					child->calculate_requirement(surface);
 
-					requirement_.min_width += child->requirement().min_width;
-					requirement_.min_height = std::ranges::max(
-						requirement_.min_height,
-						child->requirement().min_height
-					);
-				}
-			);
-
-			const auto& container_padding = Style::instance().container_padding;
-			const auto& container_spacing = Style::instance().container_spacing;
-			const auto extra_x = 2 * container_padding.width + (children_.size() - 1) * container_spacing.width;
-			const auto extra_y = 2 * container_padding.height;
-
-			requirement_.min_width += extra_x;
-			requirement_.min_height += extra_y;
-		}
-
-		auto set_rect(const rect_type& rect) noexcept -> void override
-		{
-			Element::set_rect(rect);
-
-			std::vector<element_size> elements{};
-			elements.reserve(children_.size());
-
-			std::ranges::transform(
-				children_,
-				std::back_inserter(elements),
-				[](const auto& child) noexcept -> element_size
-				{
-					const auto& r = child->requirement();
-					return {
-							.min_size = r.min_width,
-							.flex_grow = r.flex_grow_width,
-							.flex_shrink = r.flex_shrink_width,
-							.size = 0
-					};
-				}
-			);
-
-			const auto& container_padding = Style::instance().container_padding;
-			const auto& container_spacing = Style::instance().container_spacing;
-			const auto extra_x = 2 * container_padding.width + (children_.size() - 1) * container_spacing.width;
-
-			calculate(elements, rect.width() - extra_x);
-
-			const auto& [point, extent] = rect;
-
-			std::ranges::for_each(
-				std::views::zip(children_, elements),
-				[
-					current_x = point.x + container_padding.width,
-					current_y = point.y + container_padding.height,
-					current_bottom = point.y + extent.height - container_padding.height,
-					container_spacing = container_spacing.width
-				](std::tuple<element_type&, const element_size&> pack) mutable noexcept -> void
-				{
-					auto& [child, element] = pack;
-
-					const rect_type box
+					using functional::operators::operator|;
+					if constexpr (option == option_type::HORIZONTAL)
 					{
-							// left
-							current_x,
-							// top
-							current_y,
-							// right
-							current_x + element.size,
-							// bottom
-							current_bottom
-					};
-					child->set_rect(box);
-					current_x = current_x + element.size + container_spacing;
-				}
-			);
-		}
-	};
-
-	class VerticalBox final : public impl::Element
-	{
-	public:
-		explicit VerticalBox(elements_type children) noexcept
-			: Element{std::move(children)} {}
-
-		auto calculate_requirement(Surface& surface) noexcept -> void override
-		{
-			requirement_.reset();
-
-			std::ranges::for_each(
-				children_,
-				[this, &surface](const auto& child) noexcept -> void
-				{
-					child->calculate_requirement(surface);
-
-					requirement_.min_height += child->requirement().min_height;
-					requirement_.min_width = std::ranges::max(
-						requirement_.min_width,
-						child->requirement().min_width
-					);
+						requirement_.min_width += child->requirement().min_width;
+						requirement_.min_height = std::ranges::max(
+							requirement_.min_height,
+							child->requirement().min_height
+						);
+					}
+					else if constexpr (option == element::impl::BoxOption::VERTICAL)
+					{
+						requirement_.min_height += child->requirement().min_height;
+						requirement_.min_width = std::ranges::max(
+							requirement_.min_width,
+							child->requirement().min_width
+						);
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
 				}
 			);
 
 			const auto& container_padding = Style::instance().container_padding;
 			const auto& container_spacing = Style::instance().container_spacing;
-			const auto extra_x = 2 * container_padding.width;
-			const auto extra_y = 2 * container_padding.height + (children_.size() - 1) * container_spacing.height;
+			const auto [extra_x, extra_y] = [&]() noexcept -> std::pair<float, float>
+			{
+				if constexpr (option == option_type::HORIZONTAL)
+				{
+					return std::make_pair(
+						2 * container_padding.width + (children_.size() - 1) * container_spacing.width,
+						2 * container_padding.height
+					);
+				}
+				else if constexpr (option == element::impl::BoxOption::VERTICAL)
+				{
+					return std::make_pair(
+						2 * container_padding.width,
+						2 * container_padding.height + (children_.size() - 1) * container_spacing.height
+					);
+				}
+				else
+				{
+					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+				}
+			}();
 
 			requirement_.min_width += extra_x;
 			requirement_.min_height += extra_y;
@@ -272,20 +227,49 @@ namespace
 				[](const auto& child) noexcept -> element_size
 				{
 					const auto& r = child->requirement();
-					return {
-							.min_size = r.min_height,
-							.flex_grow = r.flex_grow_height,
-							.flex_shrink = r.flex_shrink_height,
-							.size = 0
-					};
+
+					if constexpr (option == option_type::HORIZONTAL)
+					{
+						return {
+								.min_size = r.min_width,
+								.flex_grow = r.flex_grow_width,
+								.flex_shrink = r.flex_shrink_width,
+								.size = 0
+						};
+					}
+					else if constexpr (option == element::impl::BoxOption::VERTICAL)
+					{
+						return {
+								.min_size = r.min_height,
+								.flex_grow = r.flex_grow_height,
+								.flex_shrink = r.flex_shrink_height,
+								.size = 0
+						};
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
 				}
 			);
 
 			const auto& container_padding = Style::instance().container_padding;
 			const auto& container_spacing = Style::instance().container_spacing;
-			const auto extra_y = 2 * container_padding.height + (children_.size() - 1) * container_spacing.height;
 
-			calculate(elements, rect.height() - extra_y);
+			if constexpr (option == option_type::HORIZONTAL)
+			{
+				const auto extra_x = 2 * container_padding.width + (children_.size() - 1) * container_spacing.width;
+				calculate(elements, rect.width() - extra_x);
+			}
+			else if constexpr (option == element::impl::BoxOption::VERTICAL)
+			{
+				const auto extra_y = 2 * container_padding.height + (children_.size() - 1) * container_spacing.height;
+				calculate(elements, rect.height() - extra_y);
+			}
+			else
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+			}
 
 			const auto& [point, extent] = rect;
 
@@ -295,24 +279,48 @@ namespace
 					current_x = point.x + container_padding.width,
 					current_y = point.y + container_padding.height,
 					current_right = point.x + extent.width - container_padding.width,
-					container_spacing = container_spacing.height
+					current_bottom = point.y + extent.height - container_padding.height,
+					container_spacing
 				](std::tuple<element_type&, const element_size&> pack) mutable noexcept -> void
 				{
 					auto& [child, element] = pack;
 
-					const rect_type box
+					if constexpr (option == option_type::HORIZONTAL)
 					{
-							// left
-							current_x,
-							// top
-							current_y,
-							// right
-							current_right,
-							// bottom
-							current_y + element.size
-					};
-					child->set_rect(box);
-					current_y = current_y + element.size + container_spacing;
+						const rect_type box
+						{
+								// left
+								current_x,
+								// top
+								current_y,
+								// right
+								current_x + element.size,
+								// bottom
+								current_bottom
+						};
+						child->set_rect(box);
+						current_x = current_x + element.size + container_spacing.width;
+					}
+					else if constexpr (option == element::impl::BoxOption::VERTICAL)
+					{
+						const rect_type box
+						{
+								// left
+								current_x,
+								// top
+								current_y,
+								// right
+								current_right,
+								// bottom
+								current_y + element.size
+						};
+						child->set_rect(box);
+						current_y = current_y + element.size + container_spacing.height;
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
 				}
 			);
 		}
@@ -525,87 +533,156 @@ namespace
 		}
 	};
 
-	namespace function
+	template<element::impl::FixedOption Option>
+	struct fixed_value;
+
+	template<element::impl::FixedOption Option>
+		requires (
+			((std::to_underlying(Option) & std::to_underlying(element::impl::FixedOption::WIDTH)) != 0) and
+			((std::to_underlying(Option) & std::to_underlying(element::impl::FixedOption::HEIGHT)) == 0)
+		)
+	struct fixed_value<Option>
 	{
-		using impl::requirement_type;
+		float width;
+	};
 
-		auto flex(requirement_type& requirement) noexcept -> void
+	template<element::impl::FixedOption Option>
+		requires (
+			((std::to_underlying(Option) & std::to_underlying(element::impl::FixedOption::WIDTH)) == 0) and
+			((std::to_underlying(Option) & std::to_underlying(element::impl::FixedOption::HEIGHT)) != 0)
+		)
+	struct fixed_value<Option>
+	{
+		float height;
+	};
+
+	template<element::impl::FixedOption Option>
+		requires (
+			((std::to_underlying(Option) & std::to_underlying(element::impl::FixedOption::WIDTH)) != 0) and
+			((std::to_underlying(Option) & std::to_underlying(element::impl::FixedOption::HEIGHT)) != 0)
+		)
+	struct fixed_value<Option>
+	{
+		float width;
+		float height;
+	};
+
+	template<element::impl::FixedOption Option>
+	class Fixed final : public impl::Element
+	{
+	public:
+		using option_type = element::impl::FixedOption;
+		using value_type = fixed_value<Option>;
+
+		constexpr static auto option = Option;
+
+	private:
+		value_type value_;
+
+	public:
+		Fixed(const value_type value, element_type element) noexcept
+			: Element{elements_type{std::move(element)}},
+			  value_{value} {}
+
+		~Fixed() noexcept override = default;
+
+		auto calculate_requirement(Surface& surface) noexcept -> void override
 		{
-			requirement.flex_grow_width = Style::instance().flex_x;
-			requirement.flex_grow_height = Style::instance().flex_y;
-			requirement.flex_shrink_width = Style::instance().flex_x;
-			requirement.flex_shrink_height = Style::instance().flex_y;
+			Element::calculate_requirement(surface);
+
+			requirement_ = children_[0]->requirement();
+
+			constexpr auto option_value = std::to_underlying(option);
+
+			if constexpr (option_value & std::to_underlying(option_type::WIDTH))
+			{
+				requirement_.flex_grow_width = 0;
+				requirement_.flex_shrink_width = 0;
+
+				if constexpr (option_value & std::to_underlying(option_type::LESS_THAN))
+				{
+					requirement_.min_width = std::ranges::min(requirement_.min_width, value_.width);
+				}
+				else if constexpr (option_value & std::to_underlying(option_type::EQUAL))
+				{
+					requirement_.min_width = value_.width;
+				}
+				else if constexpr (option_value & std::to_underlying(option_type::GREATER_THAN))
+				{
+					requirement_.min_width = std::ranges::max(requirement_.min_width, value_.width);
+				}
+				else
+				{
+					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+				}
+			}
+
+			if constexpr (option_value & std::to_underlying(option_type::HEIGHT))
+			{
+				requirement_.flex_grow_height = 0;
+				requirement_.flex_shrink_height = 0;
+
+				if constexpr (option_value & std::to_underlying(option_type::LESS_THAN))
+				{
+					requirement_.min_height = std::ranges::min(requirement_.min_height, value_.height);
+				}
+				else if constexpr (option_value & std::to_underlying(option_type::EQUAL))
+				{
+					requirement_.min_height = value_.height;
+				}
+				else if constexpr (option_value & std::to_underlying(option_type::GREATER_THAN))
+				{
+					requirement_.min_height = std::ranges::max(requirement_.min_height, value_.height);
+				}
+				else
+				{
+					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+				}
+			}
 		}
 
-		auto no_flex(requirement_type& requirement) noexcept -> void
+		auto set_rect(const rect_type& rect) noexcept -> void override
 		{
-			requirement.flex_grow_width = 0;
-			requirement.flex_grow_height = 0;
-			requirement.flex_shrink_width = 0;
-			requirement.flex_shrink_height = 0;
-		}
+			Element::set_rect(rect);
 
-		auto flex_grow(requirement_type& requirement) noexcept -> void
-		{
-			requirement.flex_grow_width = Style::instance().flex_x;
-			requirement.flex_grow_height = Style::instance().flex_y;
-		}
+			constexpr auto option_value = std::to_underlying(option);
 
-		auto flex_shrink(requirement_type& requirement) noexcept -> void
-		{
-			requirement.flex_shrink_width = Style::instance().flex_x;
-			requirement.flex_shrink_height = Style::instance().flex_y;
-		}
+			auto box = rect;
+			if constexpr (
+				(option_value & std::to_underlying(option_type::LESS_THAN)) or
+				(option_value & std::to_underlying(option_type::EQUAL))
+			)
+			{
+				if constexpr (option_value & std::to_underlying(option_type::WIDTH))
+				{
+					box.extent.width = std::ranges::min(box.extent.width, value_.width);
+				}
 
-		auto horizontal_flex(requirement_type& requirement) noexcept -> void
-		{
-			requirement.flex_grow_width = Style::instance().flex_x;
-			requirement.flex_shrink_width = Style::instance().flex_x;
-		}
+				if constexpr (option_value & std::to_underlying(option_type::HEIGHT))
+				{
+					box.extent.height = std::ranges::min(box.extent.height, value_.height);
+				}
+			}
 
-		auto horizontal_flex_grow(requirement_type& requirement) noexcept -> void
-		{
-			requirement.flex_grow_width = Style::instance().flex_x;
+			children_[0]->set_rect(box);
 		}
+	};
 
-		auto horizontal_flex_shrink(requirement_type& requirement) noexcept -> void
-		{
-			requirement.flex_shrink_width = Style::instance().flex_x;
-		}
-
-		auto vertical_flex(requirement_type& requirement) noexcept -> void
-		{
-			requirement.flex_grow_height = Style::instance().flex_y;
-			requirement.flex_shrink_height = Style::instance().flex_y;
-		}
-
-		auto vertical_flex_grow(requirement_type& requirement) noexcept -> void
-		{
-			requirement.flex_grow_height = Style::instance().flex_y;
-		}
-
-		auto vertical_flex_shrink(requirement_type& requirement) noexcept -> void
-		{
-			requirement.flex_shrink_height = Style::instance().flex_y;
-		}
-	}
-
+	template<element::impl::FlexOption Option>
 	class Flex final : public impl::Element
 	{
 	public:
-		using function_type = void(*)(impl::requirement_type&);
+		using option_type = element::impl::FlexOption;
 
-	private:
-		function_type function_;
+		constexpr static auto option = Option;
 
-	public:
-		explicit Flex(const function_type function) noexcept
-			: Element{},
-			  function_{function} {}
+		explicit Flex() noexcept
+			: Element{} {}
 
-		Flex(const function_type function, element_type element) noexcept
-			: Element{elements_type{std::move(element)}},
-			  function_{function} {}
+		explicit Flex(element_type element) noexcept
+			: Element{elements_type{std::move(element)}} {}
+
+		~Flex() noexcept override = default;
 
 		auto calculate_requirement(Surface& surface) noexcept -> void override
 		{
@@ -618,18 +695,39 @@ namespace
 				requirement_ = children_[0]->requirement();
 			}
 
-			function_(requirement_);
-		}
-
-		auto set_rect(const rect_type& rect) noexcept -> void override
-		{
-			if (children_.empty())
-			[[unlikely]]
+			if constexpr (option == option_type::NONE)
 			{
-				return;
+				requirement_.flex_grow_width = 0;
+				requirement_.flex_grow_height = 0;
+				requirement_.flex_shrink_width = 0;
+				requirement_.flex_shrink_height = 0;
 			}
+			else
+			{
+				constexpr auto option_value = std::to_underlying(option);
 
-			children_[0]->set_rect(rect);
+				constexpr auto horizontal = option_value & std::to_underlying(option_type::HORIZONTAL);
+				constexpr auto vertical = option_value & std::to_underlying(option_type::VERTICAL);
+
+				constexpr auto grow = option_value & std::to_underlying(option_type::GROW);
+				constexpr auto shrink = option_value & std::to_underlying(option_type::SHRINK);
+
+				const auto set_gw = [this]() noexcept -> void { requirement_.flex_grow_width = 1; };
+				const auto set_gh = [this]() noexcept -> void { requirement_.flex_grow_height = 1; };
+				const auto set_sw = [this]() noexcept -> void { requirement_.flex_shrink_width = 1; };
+				const auto set_sh = [this]() noexcept -> void { requirement_.flex_shrink_height = 1; };
+
+				if constexpr (grow)
+				{
+					if constexpr (horizontal) { set_gw(); }
+					if constexpr (vertical) { set_gh(); }
+				}
+				if constexpr (shrink)
+				{
+					if constexpr (horizontal) { set_sw(); }
+					if constexpr (vertical) { set_sh(); }
+				}
+			}
 		}
 	};
 }
@@ -638,12 +736,18 @@ namespace gal::prometheus::draw::element::impl
 {
 	[[nodiscard]] auto box_horizontal(elements_type elements) noexcept -> element_type
 	{
-		return make_element<HorizontalBox>(std::move(elements));
+		return make_element<Box<static_cast<BoxOption>(option_box_horizontal.value)>>(std::move(elements));
 	}
 
 	[[nodiscard]] auto box_vertical(elements_type elements) noexcept -> element_type
 	{
-		return make_element<VerticalBox>(std::move(elements));
+		return make_element<Box<static_cast<BoxOption>(option_box_vertical.value)>>(std::move(elements));
+	}
+
+	[[nodiscard]] auto box_flex(elements_type elements_grid) noexcept -> element_type
+	{
+		// todo
+		return nullptr;
 	}
 
 	[[nodiscard]] auto box_grid(element_matrix_type elements_grid) noexcept -> element_type
@@ -651,59 +755,113 @@ namespace gal::prometheus::draw::element::impl
 		return make_element<GridBox>(std::move(elements_grid));
 	}
 
+	[[nodiscard]] auto fixed_less_than(const float width, const float height, element_type element) noexcept -> element_type
+	{
+		using fixed_type = Fixed<static_cast<FixedOption>(option_fixed_less_than.value)>;
+		return make_element<fixed_type>(fixed_type::value_type{width, height}, std::move(element));
+	}
+
+	[[nodiscard]] auto fixed_width_less_than(const float width, element_type element) noexcept -> element_type
+	{
+		using fixed_type = Fixed<static_cast<FixedOption>(option_fixed_width_less_than.value)>;
+		return make_element<fixed_type>(fixed_type::value_type{width}, std::move(element));
+	}
+
+	[[nodiscard]] auto fixed_height_less_than(const float height, element_type element) noexcept -> element_type
+	{
+		using fixed_type = Fixed<static_cast<FixedOption>(option_fixed_height_less_than.value)>;
+		return make_element<fixed_type>(fixed_type::value_type{height}, std::move(element));
+	}
+
+	[[nodiscard]] auto fixed_equal(const float width, const float height, element_type element) noexcept -> element_type
+	{
+		using fixed_type = Fixed<static_cast<FixedOption>(option_fixed_equal.value)>;
+		return make_element<fixed_type>(fixed_type::value_type{width, height}, std::move(element));
+	}
+
+	[[nodiscard]] auto fixed_width_equal(const float width, element_type element) noexcept -> element_type
+	{
+		using fixed_type = Fixed<static_cast<FixedOption>(option_fixed_width_equal.value)>;
+		return make_element<fixed_type>(fixed_type::value_type{width}, std::move(element));
+	}
+
+	[[nodiscard]] auto fixed_height_equal(const float height, element_type element) noexcept -> element_type
+	{
+		using fixed_type = Fixed<static_cast<FixedOption>(option_fixed_height_equal.value)>;
+		return make_element<fixed_type>(fixed_type::value_type{height}, std::move(element));
+	}
+
+	[[nodiscard]] auto fixed_greater_than(const float width, const float height, element_type element) noexcept -> element_type
+	{
+		using fixed_type = Fixed<static_cast<FixedOption>(option_fixed_greater_than.value)>;
+		return make_element<fixed_type>(fixed_type::value_type{width, height}, std::move(element));
+	}
+
+	[[nodiscard]] auto fixed_width_greater_than(const float width, element_type element) noexcept -> element_type
+	{
+		using fixed_type = Fixed<static_cast<FixedOption>(option_fixed_width_greater_than.value)>;
+		return make_element<fixed_type>(fixed_type::value_type{width}, std::move(element));
+	}
+
+	[[nodiscard]] auto fixed_height_greater_than(const float height, element_type element) noexcept -> element_type
+	{
+		using fixed_type = Fixed<static_cast<FixedOption>(option_fixed_height_greater_than.value)>;
+		return make_element<fixed_type>(fixed_type::value_type{height}, std::move(element));
+	}
+
 	[[nodiscard]] auto flex_filler() noexcept -> element_type
 	{
-		return make_element<Flex>(function::flex);
+		return make_element<Flex<static_cast<FlexOption>(option_flex_all.value)>>();
 	}
 
 	[[nodiscard]] auto flex_none(element_type element) noexcept -> element_type
 	{
-		return make_element<Flex>(function::no_flex, std::move(element));
+		return make_element<Flex<static_cast<FlexOption>(option_flex_none.value)>>(std::move(element));
 	}
 
 	[[nodiscard]] auto flex(element_type element) noexcept -> element_type
 	{
-		return make_element<Flex>(function::flex, std::move(element));
+		return make_element<Flex<static_cast<FlexOption>(option_flex_all.value)>>(std::move(element));
 	}
 
 	[[nodiscard]] auto flex_grow(element_type element) noexcept -> element_type
 	{
-		return make_element<Flex>(function::flex_grow, std::move(element));
+		return make_element<Flex<static_cast<FlexOption>(option_flex_grow.value)>>(std::move(element));
 	}
 
 	[[nodiscard]] auto flex_shrink(element_type element) noexcept -> element_type
 	{
-		return make_element<Flex>(function::flex_shrink, std::move(element));
+		return make_element<Flex<static_cast<FlexOption>(option_flex_shrink.value)>>(std::move(element));
 	}
 
 	[[nodiscard]] auto flex_horizontal(element_type element) noexcept -> element_type
 	{
-		return make_element<Flex>(function::horizontal_flex, std::move(element));
-	}
-
-	[[nodiscard]] auto flex_horizontal_grow(element_type element) noexcept -> element_type
-	{
-		return make_element<Flex>(function::horizontal_flex_grow, std::move(element));
-	}
-
-	[[nodiscard]] auto flex_horizontal_shrink(element_type element) noexcept -> element_type
-	{
-		return make_element<Flex>(function::horizontal_flex_shrink, std::move(element));
+		return make_element<Flex<static_cast<FlexOption>(option_flex_horizontal.value)>>(std::move(element));
 	}
 
 	[[nodiscard]] auto flex_vertical(element_type element) noexcept -> element_type
 	{
-		return make_element<Flex>(function::vertical_flex, std::move(element));
+		return make_element<Flex<static_cast<FlexOption>(option_flex_vertical.value)>>(std::move(element));
+	}
+
+	[[nodiscard]] auto flex_horizontal_grow(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex<static_cast<FlexOption>(option_flex_horizontal_grow.value)>>(std::move(element));
+	}
+
+	[[nodiscard]] auto flex_horizontal_shrink(element_type element) noexcept -> element_type
+	{
+		return make_element<Flex<static_cast<FlexOption>(option_flex_horizontal_shrink.value)>>(std::move(element));
 	}
 
 	[[nodiscard]] auto flex_vertical_grow(element_type element) noexcept -> element_type
 	{
-		return make_element<Flex>(function::vertical_flex_grow, std::move(element));
+		return make_element<Flex<static_cast<FlexOption>(option_flex_vertical_grow.value)>>(std::move(element));
 	}
 
 	[[nodiscard]] auto flex_vertical_shrink(element_type element) noexcept -> element_type
 	{
-		return make_element<Flex>(function::vertical_flex_shrink, std::move(element));
+		return make_element<Flex<static_cast<FlexOption>(option_flex_vertical_shrink.value)>>(std::move(element));
 	}
 
 	[[nodiscard]] auto center_horizontal(element_type element) noexcept -> element_type

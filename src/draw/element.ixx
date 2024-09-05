@@ -55,19 +55,19 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 	concept derived_elements_t = std::ranges::range<Range> and derived_element_t<typename Range::value_type>;
 
 	template<std::derived_from<impl::Element> T, typename... Args>
-	[[nodiscard]] constexpr auto make_element(Args&&... args) noexcept -> element_type
+	[[nodiscard]] auto make_element(Args&&... args) noexcept -> element_type
 	{
 		return std::make_shared<T>(std::forward<Args>(args)...);
 	}
 
 	template<std::derived_from<impl::Element> T>
-	[[nodiscard]] constexpr auto cast_element(const element_type element) noexcept -> std::shared_ptr<T>
+	[[nodiscard]] constexpr auto cast_element(const element_type& element) noexcept -> std::shared_ptr<T>
 	{
 		return std::dynamic_pointer_cast<T>(element);
 	}
 
 	template<std::derived_from<impl::Element> T>
-	[[nodiscard]] constexpr auto cast_element_unchecked(const element_type element) noexcept -> std::shared_ptr<T>
+	[[nodiscard]] constexpr auto cast_element_unchecked(const element_type& element) noexcept -> std::shared_ptr<T>
 	{
 		return std::static_pointer_cast<T>(element);
 	}
@@ -262,7 +262,19 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			{
 				HORIZONTAL = 0b0000'0001,
 				VERTICAL = 0b0000'0010,
-				GRID = 0b0000'0100,
+				FLEX = 0b0000'0100,
+
+				GRID = 0b0001'0000,
+			};
+
+			enum class FixedOption : std::uint32_t
+			{
+				WIDTH = 0b0000'0001,
+				HEIGHT = 0b0000'0010,
+
+				LESS_THAN = 0b0001'0000,
+				EQUAL = 0b0010'0000,
+				GREATER_THAN = 0b0100'0000,
 			};
 
 			enum class FlexOption : std::uint32_t
@@ -287,20 +299,30 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 
 			[[nodiscard]] auto box_horizontal(elements_type elements) noexcept -> element_type;
 			[[nodiscard]] auto box_vertical(elements_type elements) noexcept -> element_type;
+			[[nodiscard]] auto box_flex(elements_type elements) noexcept -> element_type;
 			[[nodiscard]] auto box_grid(element_matrix_type elements_grid) noexcept -> element_type;
+
+			[[nodiscard]] auto fixed_less_than(float width, float height, element_type element) noexcept -> element_type;
+			[[nodiscard]] auto fixed_width_less_than(float width, element_type element) noexcept -> element_type;
+			[[nodiscard]] auto fixed_height_less_than(float height, element_type element) noexcept -> element_type;
+			[[nodiscard]] auto fixed_equal(float width, float height, element_type element) noexcept -> element_type;
+			[[nodiscard]] auto fixed_width_equal(float width, element_type element) noexcept -> element_type;
+			[[nodiscard]] auto fixed_height_equal(float height, element_type element) noexcept -> element_type;
+			[[nodiscard]] auto fixed_greater_than(float width, float height, element_type element) noexcept -> element_type;
+			[[nodiscard]] auto fixed_width_greater_than(float width, element_type element) noexcept -> element_type;
+			[[nodiscard]] auto fixed_height_greater_than(float height, element_type element) noexcept -> element_type;
 
 			[[nodiscard]] auto flex_filler() noexcept -> element_type;
 			[[nodiscard]] auto flex_none(element_type element) noexcept -> element_type;
-
 			[[nodiscard]] auto flex(element_type element) noexcept -> element_type;
+
 			[[nodiscard]] auto flex_grow(element_type element) noexcept -> element_type;
 			[[nodiscard]] auto flex_shrink(element_type element) noexcept -> element_type;
-
 			[[nodiscard]] auto flex_horizontal(element_type element) noexcept -> element_type;
+			[[nodiscard]] auto flex_vertical(element_type element) noexcept -> element_type;
+
 			[[nodiscard]] auto flex_horizontal_grow(element_type element) noexcept -> element_type;
 			[[nodiscard]] auto flex_horizontal_shrink(element_type element) noexcept -> element_type;
-
-			[[nodiscard]] auto flex_vertical(element_type element) noexcept -> element_type;
 			[[nodiscard]] auto flex_vertical_grow(element_type element) noexcept -> element_type;
 			[[nodiscard]] auto flex_vertical_shrink(element_type element) noexcept -> element_type;
 
@@ -311,20 +333,33 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 
 		constexpr auto option_box_horizontal = impl::options<impl::BoxOption::HORIZONTAL>{};
 		constexpr auto option_box_vertical = impl::options<impl::BoxOption::VERTICAL>{};
+		constexpr auto option_box_flex = impl::options<impl::BoxOption::FLEX>{};
 		constexpr auto option_box_grid = impl::options<impl::BoxOption::GRID>{};
 
+		constexpr auto option_fixed_less_than = impl::options<impl::FixedOption::WIDTH, impl::FixedOption::HEIGHT, impl::FixedOption::LESS_THAN>{};
+		constexpr auto option_fixed_width_less_than = impl::options<impl::FixedOption::WIDTH, impl::FixedOption::LESS_THAN>{};
+		constexpr auto option_fixed_height_less_than = impl::options<impl::FixedOption::HEIGHT, impl::FixedOption::LESS_THAN>{};
+		constexpr auto option_fixed_equal = impl::options<impl::FixedOption::WIDTH, impl::FixedOption::HEIGHT, impl::FixedOption::EQUAL>{};
+		constexpr auto option_fixed_width_equal = impl::options<impl::FixedOption::WIDTH, impl::FixedOption::EQUAL>{};
+		constexpr auto option_fixed_height_equal = impl::options<impl::FixedOption::HEIGHT, impl::FixedOption::EQUAL>{};
+		constexpr auto option_fixed_greater_than = impl::options<impl::FixedOption::WIDTH, impl::FixedOption::HEIGHT, impl::FixedOption::GREATER_THAN>{};
+		constexpr auto option_fixed_width_greater_than = impl::options<impl::FixedOption::WIDTH, impl::FixedOption::GREATER_THAN>{};
+		constexpr auto option_fixed_height_greater_than = impl::options<impl::FixedOption::HEIGHT, impl::FixedOption::GREATER_THAN>{};
+
 		constexpr auto option_flex_none = impl::options<impl::FlexOption::NONE>{};
-		constexpr auto option_flex_grow = impl::options<impl::FlexOption::GROW>{};
-		constexpr auto option_flex_shrink = impl::options<impl::FlexOption::SHRINK>{};
+		constexpr auto option_flex_all = impl::options<impl::FlexOption::GROW, impl::FlexOption::SHRINK, impl::FlexOption::HORIZONTAL, impl::FlexOption::VERTICAL>{};
+		constexpr auto option_flex_grow = impl::options<impl::FlexOption::GROW, impl::FlexOption::HORIZONTAL, impl::FlexOption::VERTICAL>{};
+		constexpr auto option_flex_shrink = impl::options<impl::FlexOption::SHRINK, impl::FlexOption::HORIZONTAL, impl::FlexOption::VERTICAL>{};
+		constexpr auto option_flex_horizontal = impl::options<impl::FlexOption::GROW, impl::FlexOption::SHRINK, impl::FlexOption::HORIZONTAL>{};
+		constexpr auto option_flex_vertical = impl::options<impl::FlexOption::GROW, impl::FlexOption::SHRINK, impl::FlexOption::VERTICAL>{};
 		constexpr auto option_flex_horizontal_grow = impl::options<impl::FlexOption::GROW, impl::FlexOption::HORIZONTAL>{};
 		constexpr auto option_flex_horizontal_shrink = impl::options<impl::FlexOption::SHRINK, impl::FlexOption::HORIZONTAL>{};
 		constexpr auto option_flex_vertical_grow = impl::options<impl::FlexOption::GROW, impl::FlexOption::VERTICAL>{};
 		constexpr auto option_flex_vertical_shrink = impl::options<impl::FlexOption::SHRINK, impl::FlexOption::VERTICAL>{};
-		constexpr auto option_flex_all = impl::options<impl::FlexOption::GROW, impl::FlexOption::SHRINK, impl::FlexOption::HORIZONTAL, impl::FlexOption::VERTICAL>{};
 
 		constexpr auto option_center_horizontal = impl::options<impl::CenterOption::HORIZONTAL>{};
 		constexpr auto option_center_vertical = impl::options<impl::CenterOption::VERTICAL>{};
-		constexpr auto option_center_all = impl::options<impl::CenterOption::HORIZONTAL, impl::CenterOption::VERTICAL>{};
+		constexpr auto option_center = impl::options<impl::CenterOption::HORIZONTAL, impl::CenterOption::VERTICAL>{};
 
 		constexpr auto layout = functional::overloaded{
 				// BOX
@@ -338,6 +373,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 					else if constexpr (value == option_box_vertical)
 					{
 						return impl::box_vertical(std::move(elements));
+					}
+					else if constexpr (value == option_box_flex)
+					{
+						return impl::box_flex(std::move(elements));
 					}
 					else
 					{
@@ -394,6 +433,93 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 							}
 					};
 				},
+				// FIXED
+				[]<impl::FixedOption... Os>(impl::options<Os...>, const float width, const float height, element_type element) noexcept -> element_type //
+					requires (
+						impl::options<Os...>::value == option_fixed_less_than or
+						impl::options<Os...>::value == option_fixed_equal or
+						impl::options<Os...>::value == option_fixed_greater_than
+					)
+				{
+					if constexpr (constexpr auto option_value = impl::options<Os...>::value;
+						option_value == option_fixed_less_than)
+					{
+						return impl::fixed_less_than(width, height, std::move(element));
+					}
+					else if constexpr (option_value == option_fixed_equal)
+					{
+						return impl::fixed_equal(width, height, std::move(element));
+					}
+					else if constexpr (option_value == option_fixed_greater_than)
+					{
+						return impl::fixed_greater_than(width, height, std::move(element));
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
+				},
+				[]<impl::FixedOption... Os>(impl::options<Os...>, const float value, element_type element) noexcept -> element_type //
+					requires (
+						impl::options<Os...>::value != option_fixed_less_than and
+						impl::options<Os...>::value != option_fixed_equal and
+						impl::options<Os...>::value != option_fixed_greater_than
+					)
+				{
+					if constexpr (constexpr auto option_value = impl::options<Os...>::value;
+						option_value == option_fixed_width_less_than)
+					{
+						return impl::fixed_width_less_than(value, std::move(element));
+					}
+					else if constexpr (option_value == option_fixed_height_less_than)
+					{
+						return impl::fixed_height_less_than(value, std::move(element));
+					}
+					else if constexpr (option_value == option_fixed_width_equal)
+					{
+						return impl::fixed_width_equal(value, std::move(element));
+					}
+					else if constexpr (option_value == option_fixed_height_equal)
+					{
+						return impl::fixed_height_equal(value, std::move(element));
+					}
+					else if constexpr (option_value == option_fixed_width_greater_than)
+					{
+						return impl::fixed_width_greater_than(value, std::move(element));
+					}
+					else if constexpr (option_value == option_fixed_height_greater_than)
+					{
+						return impl::fixed_height_greater_than(value, std::move(element));
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
+				},
+				[]<typename Self, impl::FixedOption... Os>(this const Self& self, impl::options<Os...> options, const float width, const float height) noexcept -> auto //
+					requires (
+						impl::options<Os...>::value == option_fixed_less_than or
+						impl::options<Os...>::value == option_fixed_equal or
+						impl::options<Os...>::value == option_fixed_greater_than
+					)
+				{
+					return [self, options, width, height](element_type element) noexcept -> element_type
+					{
+						return self(options, width, height, std::move(element));
+					};
+				},
+				[]<typename Self, impl::FixedOption... Os>(this const Self& self, impl::options<Os...> options, const float value) noexcept -> auto //
+					requires (
+						impl::options<Os...>::value != option_fixed_less_than and
+						impl::options<Os...>::value != option_fixed_equal and
+						impl::options<Os...>::value != option_fixed_greater_than
+					)
+				{
+					return [self, options, value](element_type element) noexcept -> element_type
+					{
+						return self(options, value, std::move(element));
+					};
+				},
 				// FLEX
 				[]<impl::FlexOption... Os>(impl::options<Os...>, element_type element) noexcept -> element_type
 				{
@@ -402,6 +528,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 					{
 						return impl::flex_none(std::move(element));
 					}
+					else if constexpr (value == option_flex_all)
+					{
+						return impl::flex(std::move(element));
+					}
 					else if constexpr (value == option_flex_grow)
 					{
 						return impl::flex_grow(std::move(element));
@@ -409,6 +539,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 					else if constexpr (value == option_flex_shrink)
 					{
 						return impl::flex_shrink(std::move(element));
+					}
+					else if constexpr (value == option_flex_horizontal)
+					{
+						return impl::flex_horizontal(std::move(element));
+					}
+					else if constexpr (value == option_flex_vertical)
+					{
+						return impl::flex_vertical(std::move(element));
 					}
 					else if constexpr (value == option_flex_horizontal_grow)
 					{
@@ -425,10 +563,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 					else if constexpr (value == option_flex_vertical_shrink)
 					{
 						return impl::flex_vertical_shrink(std::move(element));
-					}
-					else if constexpr (value == option_flex_all)
-					{
-						return impl::flex(std::move(element));
 					}
 					else
 					{
@@ -454,7 +588,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 					{
 						return impl::center_vertical(std::move(element));
 					}
-					else if constexpr (value == option_center_all)
+					else if constexpr (value == option_center)
 					{
 						return impl::center(std::move(element));
 					}
@@ -497,6 +631,17 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 				},
 		};
 
+		constexpr auto box_flex = functional::overloaded{
+				[](elements_type elements) noexcept -> element_type
+				{
+					return layout(option_box_flex, std::move(elements));
+				},
+				[](derived_element_t auto... elements) noexcept -> element_type
+				{
+					return layout(option_box_flex, std::move(elements)...);
+				},
+		};
+
 		constexpr auto box_grid = functional::overloaded{
 				[](element_matrix_type elements) noexcept -> element_type
 				{
@@ -508,9 +653,140 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 				},
 		};
 
+		constexpr auto fixed_less_than = functional::overloaded{
+				[](const float width, const float height, element_type element) noexcept -> element_type
+				{
+					return layout(option_fixed_less_than, width, height, std::move(element));
+				},
+				[]<typename Self>(this const Self& self, const float width, const float height) noexcept -> auto
+				{
+					return [self, width, height](element_type element) noexcept -> element_type
+					{
+						return self(width, height, std::move(element));
+					};
+				},
+		};
+
+		constexpr auto fixed_width_less_than = functional::overloaded{
+				[](const float value, element_type element) noexcept -> element_type
+				{
+					return layout(option_fixed_width_less_than, value, std::move(element));
+				},
+				[]<typename Self>(this const Self& self, const float value) noexcept -> auto
+				{
+					return [self, value](element_type element) noexcept -> element_type
+					{
+						return self(value, std::move(element));
+					};
+				},
+		};
+
+		constexpr auto fixed_height_less_than = functional::overloaded{
+				[](const float value, element_type element) noexcept -> element_type
+				{
+					return layout(option_fixed_height_less_than, value, std::move(element));
+				},
+				[]<typename Self>(this const Self& self, const float value) noexcept -> auto
+				{
+					return [self, value](element_type element) noexcept -> element_type
+					{
+						return self(value, std::move(element));
+					};
+				},
+		};
+
+		constexpr auto fixed_equal = functional::overloaded{
+				[](const float width, const float height, element_type element) noexcept -> element_type
+				{
+					return layout(option_fixed_equal, width, height, std::move(element));
+				},
+				[]<typename Self>(this const Self& self, const float width, const float height) noexcept -> auto
+				{
+					return [self, width, height](element_type element) noexcept -> element_type
+					{
+						return self(width, height, std::move(element));
+					};
+				},
+		};
+
+		constexpr auto fixed_width_equal = functional::overloaded{
+				[](const float value, element_type element) noexcept -> element_type
+				{
+					return layout(option_fixed_width_equal, value, std::move(element));
+				},
+				[]<typename Self>(this const Self& self, const float value) noexcept -> auto
+				{
+					return [self, value](element_type element) noexcept -> element_type
+					{
+						return self(value, std::move(element));
+					};
+				},
+		};
+
+		constexpr auto fixed_height_equal = functional::overloaded{
+				[](const float value, element_type element) noexcept -> element_type
+				{
+					return layout(option_fixed_height_equal, value, std::move(element));
+				},
+				[]<typename Self>(this const Self& self, const float value) noexcept -> auto
+				{
+					return [self, value](element_type element) noexcept -> element_type
+					{
+						return self(value, std::move(element));
+					};
+				},
+		};
+
+		constexpr auto fixed_greater_than = functional::overloaded{
+				[](const float width, const float height, element_type element) noexcept -> element_type
+				{
+					return layout(option_fixed_greater_than, width, height, std::move(element));
+				},
+				[]<typename Self>(this const Self& self, const float width, const float height) noexcept -> auto
+				{
+					return [self, width, height](element_type element) noexcept -> element_type
+					{
+						return self(width, height, std::move(element));
+					};
+				},
+		};
+
+		constexpr auto fixed_width_greater_than = functional::overloaded{
+				[](const float value, element_type element) noexcept -> element_type
+				{
+					return layout(option_fixed_width_greater_than, value, std::move(element));
+				},
+				[]<typename Self>(this const Self& self, const float value) noexcept -> auto
+				{
+					return [self, value](element_type element) noexcept -> element_type
+					{
+						return self(value, std::move(element));
+					};
+				},
+		};
+
+		constexpr auto fixed_height_greater_than = functional::overloaded{
+				[](const float value, element_type element) noexcept -> element_type
+				{
+					return layout(option_fixed_height_greater_than, value, std::move(element));
+				},
+				[]<typename Self>(this const Self& self, const float value) noexcept -> auto
+				{
+					return [self, value](element_type element) noexcept -> element_type
+					{
+						return self(value, std::move(element));
+					};
+				},
+		};
+
 		constexpr auto flex_none = [](element_type element) noexcept -> element_type
 		{
 			return layout(option_flex_none, std::move(element));
+		};
+
+		constexpr auto flex_all = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_flex_all, std::move(element));
 		};
 
 		constexpr auto flex_grow = [](element_type element) noexcept -> element_type
@@ -521,6 +797,16 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		constexpr auto flex_shrink = [](element_type element) noexcept -> element_type
 		{
 			return layout(option_flex_shrink, std::move(element));
+		};
+
+		constexpr auto flex_horizontal = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_flex_horizontal, std::move(element));
+		};
+
+		constexpr auto flex_vertical = [](element_type element) noexcept -> element_type
+		{
+			return layout(option_flex_vertical, std::move(element));
 		};
 
 		constexpr auto flex_horizontal_grow = [](element_type element) noexcept -> element_type
@@ -543,11 +829,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			return layout(option_flex_vertical_shrink, std::move(element));
 		};
 
-		constexpr auto flex_all = [](element_type element) noexcept -> element_type
-		{
-			return layout(option_flex_all, std::move(element));
-		};
-
 		constexpr auto center_horizontal = [](element_type element) noexcept -> element_type
 		{
 			return layout(option_center_horizontal, std::move(element));
@@ -558,9 +839,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			return layout(option_center_vertical, std::move(element));
 		};
 
-		constexpr auto center_all = [](element_type element) noexcept -> element_type
+		constexpr auto center = [](element_type element) noexcept -> element_type
 		{
-			return layout(option_center_all, std::move(element));
+			return layout(option_center, std::move(element));
 		};
 	}
 }
