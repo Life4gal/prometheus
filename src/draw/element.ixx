@@ -262,9 +262,45 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			{
 				HORIZONTAL = 0b0000'0001,
 				VERTICAL = 0b0000'0010,
-				FLEX = 0b0000'0100,
+			};
 
-				GRID = 0b0001'0000,
+			enum class FlexBoxOption : std::uint32_t
+			{
+				// Flex items are laid out in a row
+				DIRECTION_ROW = 0b0000'0000'0000'0001,
+				// Flex items are laid out in a row, but in reverse order
+				DIRECTION_ROW_INVERSE = 0b0000'0000'0000'0010,
+				// Flex items are laid out in a column
+				DIRECTION_COLUMN = 0b0000'0000'0000'0100,
+				// Flex items are laid out in a column, but in reverse order
+				DIRECTION_COLUMN_INVERSE = 0b0000'0000'0000'1000,
+
+				// Flex items will wrap onto multiple lines
+				WRAP_DEFAULT = 0b0000'0000'0001'0000,
+				// Flex items will all try to fit onto one line
+				WRAP_NO_WRAP = 0b0000'0000'0010'0000,
+				// Flex items will wrap onto multiple lines, but in reverse order
+				WRAP_INVERSE = 0b0000'0000'0100'0000,
+
+				// Items are aligned to the start of FLEX_BOX's direction
+				JUSTIFY_FLEX_START = 0b0000'0001'0000'0000,
+				// Items are aligned to the end of FLEX_BOX's direction
+				JUSTIFY_FLEX_END = 0b0000'0010'0000'0000,
+				// Items are centered along the line
+				JUSTIFY_CENTER = 0b0000'0100'0000'0000,
+				// Items are stretched to fill the line
+				JUSTIFY_STRETCH = 0b0000'1000'0000'0000,
+				// Items are evenly distributed in the line, first item is on the start line, last item on the end line
+				JUSTIFY_SPACE_BETWEEN = 0b0001'0000'0000'0000,
+				// Items are evenly distributed in the line with equal space around them
+				JUSTIFY_SPACE_AROUND = 0b0010'0000'0000'0000,
+				// Items are distributed so that the spacing between any two items (and the space to the edges) is equal.
+				JUSTIFY_SPACE_EVENLY = 0b0100'0000'0000'0000,
+			};
+
+			enum class GridBoxOption : std::uint32_t
+			{
+				DEFAULT,
 			};
 
 			enum class FixedOption : std::uint32_t
@@ -334,7 +370,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		constexpr auto option_box_horizontal = impl::options<impl::BoxOption::HORIZONTAL>{};
 		constexpr auto option_box_vertical = impl::options<impl::BoxOption::VERTICAL>{};
 		constexpr auto option_box_flex = impl::options<impl::BoxOption::FLEX>{};
-		constexpr auto option_box_grid = impl::options<impl::BoxOption::GRID>{};
+		constexpr auto option_box_grid = impl::options<impl::GridBoxOption::DEFAULT>{};
 
 		constexpr auto option_fixed_less_than = impl::options<impl::FixedOption::WIDTH, impl::FixedOption::HEIGHT, impl::FixedOption::LESS_THAN>{};
 		constexpr auto option_fixed_width_less_than = impl::options<impl::FixedOption::WIDTH, impl::FixedOption::LESS_THAN>{};
@@ -383,33 +419,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 					}
 				},
-				[]<impl::BoxOption... Os>(impl::options<Os...>, element_matrix_type elements_matrix) noexcept -> element_type
-				{
-					if constexpr (constexpr auto value = impl::options<Os...>::value;
-						value == option_box_grid)
-					{
-						return impl::box_grid(std::move(elements_matrix));
-					}
-					else
-					{
-						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-					}
-				},
 				[]<typename Self, impl::BoxOption... Os>(this const Self& self, impl::options<Os...> options, derived_element_t auto... elements) noexcept -> element_type
 				{
 					elements_type es{};
-					es.reserve(sizeof...(elements));
-
-					(es.emplace_back(std::move(elements)), ...);
-
-					return self(options, std::move(es));
-				},
-				// (options, element...) => (options, elements)
-				// (options, element...) !=> (options, elements...)
-				[]<typename Self, impl::BoxOption... Os>(this const Self& self, impl::options<Os...> options, derived_elements_t auto... elements) noexcept -> element_type //
-					requires (sizeof...(elements) != 1)
-				{
-					element_matrix_type es{};
 					es.reserve(sizeof...(elements));
 
 					(es.emplace_back(std::move(elements)), ...);
@@ -427,6 +439,33 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 							{
 								return self(options, std::move(elements)...);
 							},
+					};
+				},
+				// GRID BOX
+				[]<impl::GridBoxOption... Os>(impl::options<Os...>, element_matrix_type elements_matrix) noexcept -> element_type
+				{
+					if constexpr (constexpr auto value = impl::options<Os...>::value;
+						value == option_box_grid)
+					{
+						return impl::box_grid(std::move(elements_matrix));
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
+				},
+				[]<typename Self, impl::GridBoxOption... Os>(this const Self& self, impl::options<Os...> options, derived_elements_t auto... elements) noexcept -> element_type //
+				{
+					element_matrix_type es{};
+					es.reserve(sizeof...(elements));
+
+					(es.emplace_back(std::move(elements)), ...);
+
+					return self(options, std::move(es));
+				},
+				[]<typename Self, impl::GridBoxOption... Os>(this const Self& self, impl::options<Os...> options) noexcept -> auto
+				{
+					return functional::overloaded{
 							[self, options](derived_elements_t auto... elements) noexcept -> element_type
 							{
 								return self(options, std::move(elements)...);

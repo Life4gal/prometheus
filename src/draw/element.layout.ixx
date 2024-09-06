@@ -47,6 +47,37 @@ namespace
 		float size = 0;
 	};
 
+	struct element_block_size
+	{
+		struct size_type
+		{
+			float min_size = 0;
+			float flex_grow = 0;
+			float flex_shrink = 0;
+
+			float size = 0;
+			float position = 0;
+		};
+
+		size_type width = {};
+		size_type height = {};
+
+		// _________________________
+		// | L0B1	L0B2		L0B3	   |
+		// | L1B1  		L1B2	           |
+		// |		L2B1		               |
+		// |				                   |
+		// |________________________|
+		// 
+		// L0B2 => 
+		// placed_line = 0
+		// placed_position = 1
+		std::uint32_t placed_line = 0;
+		std::uint32_t placed_position = 0;
+	};
+
+	using element_blocks_size = std::vector<element_block_size*>;
+
 	template<std::ranges::output_range<element_size> Range>
 	constexpr auto calculate_grow(Range& range, float extra_space, float flex_grow_sum) noexcept -> void
 	{
@@ -138,6 +169,465 @@ namespace
 		}
 	}
 
+	template<std::underlying_type_t<element::impl::FlexBoxOption> OptionValue, std::ranges::output_range<element_block_size> Range>
+	constexpr auto calculate_justify(Range& range, const float total_width, const float total_height) noexcept -> void
+	{
+		using option_type = element::impl::FlexBoxOption;
+
+		const auto& container_padding = Style::instance().container_padding;
+		const auto& container_spacing = Style::instance().container_spacing;
+
+		std::vector<element_blocks_size> lines{};
+
+		// layout all elements into rows
+		{
+			element_blocks_size this_line{};
+			std::ranges::for_each(
+				range,
+				[
+					&lines,
+					&this_line,
+					total_width,
+					current_x = container_padding.width,
+					container_padding_x = container_padding.width,
+					container_spacing_x = container_spacing.width
+				](element_block_size& block) mutable noexcept -> void
+				{
+					if (current_x + block.width.min_size > total_width)
+					{
+						current_x = container_padding_x;
+						lines.emplace_back(std::exchange(this_line, element_blocks_size{}));
+					}
+
+					block.placed_line = static_cast<std::uint32_t>(lines.size());
+					block.placed_position = static_cast<std::uint32_t>(this_line.size());
+					this_line.emplace_back(std::addressof(block));
+
+					current_x += block.width.min_size + container_spacing_x;
+				}
+			);
+			if (not this_line.empty())
+			{
+				lines.emplace_back(std::move(this_line));
+			}
+		}
+
+		// set position on the X axis
+		{
+			std::ranges::for_each(
+				lines,
+				[
+					total_width,
+					container_padding_x = container_padding.width,
+					container_spacing_x = container_spacing.width
+				](element_blocks_size& line) noexcept -> void
+				{
+					std::vector<element_size> elements{};
+					elements.reserve(line.size());
+
+					std::ranges::transform(
+						line,
+						std::back_inserter(elements),
+						[](const element_block_size& block) noexcept -> element_size
+						{
+							// ReSharper disable once CppUseStructuredBinding
+							const auto& s = block.width;
+
+							return {
+									.min_size = s.min_size,
+									.flex_grow =
+									s.flex_grow ? s.flex_grow : (OptionValue & std::to_underlying(option_type::JUSTIFY_STRETCH)) ? 1 : 0,
+									.flex_shrink = s.flex_shrink,
+									.size = s.size
+							};
+						}
+					);
+
+					const auto extra_x = 2 * container_padding_x + (line.size() - 1) * container_spacing_x;
+					calculate(elements, total_width - extra_x);
+
+					std::ranges::for_each(
+						std::views::zip(line, elements),
+						[
+							current_x = container_padding_x,
+							container_spacing_x
+						](std::tuple<element_block_size&, const element_size&> pack) mutable noexcept -> void
+						{
+							auto& [block, element] = pack;
+
+							block.width.size = element.size;
+							block.width.position = current_x;
+
+							current_x = current_x + element.size + container_spacing_x;
+						}
+					);
+				}
+			);
+		}
+
+		// distribute remaining space
+		{
+			std::ranges::for_each(
+				lines,
+				[total_width](element_blocks_size& line) noexcept -> void
+				{
+					const auto& back = line.back();
+					auto remaining_space = total_width - back->width.position - back->width.size;
+
+					if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_FLEX_END))
+					{
+						std::ranges::for_each(
+							line,
+							[remaining_space](element_block_size& block) noexcept -> void
+							{
+								block.width.position += remaining_space;
+							}
+						);
+					}
+					else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_CENTER))
+					{
+						std::ranges::for_each(
+							line,
+							[remaining_space](element_block_size& block) noexcept -> void
+							{
+								block.width.position += remaining_space / 2;
+							}
+						);
+					}
+					else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_SPACE_BETWEEN))
+					{
+						std::ranges::for_each(
+							line | std::views::drop(1) | std::views::reverse | std::views::enumerate,
+							[remaining_space, s = line.size()](std::tuple_element_t<std::ptrdiff_t, element_block_size&> pack) mutable noexcept -> void
+							{
+								const auto [index, block] = pack;
+								const auto i = s - index - 1;
+
+								block.width.position += remaining_space;
+								remaining_space = remaining_space * (i - 1) / i;
+							}
+						);
+					}
+					else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_SPACE_AROUND))
+					{
+						std::ranges::for_each(
+							line | std::views::reverse | std::views::enumerate,
+							[remaining_space, s = line.size()](std::tuple_element_t<std::ptrdiff_t, element_block_size&> pack) mutable noexcept -> void
+							{
+								const auto [index, block] = pack;
+								const auto i = s - index - 1;
+
+								block.width.position += remaining_space * (2 * i + 1) / (2 * i + 2);
+								remaining_space = remaining_space * (2 * i) / (2 * i + 2);
+							}
+						);
+					}
+					else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_SPACE_EVENLY))
+					{
+						std::ranges::for_each(
+							line | std::views::reverse | std::views::enumerate,
+							[remaining_space, s = line.size()](std::tuple_element_t<std::ptrdiff_t, element_block_size&> pack) mutable noexcept -> void
+							{
+								const auto [index, block] = pack;
+								const auto i = s - index - 1;
+
+								block.width.position += remaining_space * (i + 1) / (i + 2);
+								remaining_space = remaining_space * (i + 1) / (i + 2);
+							}
+						);
+					}
+					else {}
+				}
+			);
+		}
+
+		// set position on the Y axis
+		{
+			std::vector<element_size> elements{};
+			elements.reserve(lines.size());
+
+			std::ranges::transform(
+				lines,
+				std::back_inserter(elements),
+				[](const element_blocks_size& line) noexcept -> element_size
+				{
+					const auto min_size = std::ranges::max_element(line, {}, [](const element_block_size& block) noexcept -> auto { return block.height.min_size; });
+					const auto flex_grow = std::ranges::max_element(line, {}, [](const element_block_size& block) noexcept -> auto { return block.height.flex_grow; });
+					const auto flex_shrink = std::ranges::max_element(line, {}, [](const element_block_size& block) noexcept -> auto { return block.height.flex_shrink; });
+
+					return {
+							.min_size = min_size.operator*()->height.min_size,
+							.flex_grow = flex_grow.operator*()->height.flex_grow,
+							.flex_shrink = flex_shrink.operator*()->height.flex_shrink,
+							.size = 0
+					};
+				}
+			);
+
+			const auto extra_y = 2 * container_padding.height + (lines.size() - 1) * container_spacing.height;
+			calculate(elements, total_height - extra_y);
+
+			std::vector<float> ys{};
+			ys.reserve(elements.size());
+
+			// align content
+			auto current_y = container_padding.height;
+			std::ranges::transform(
+				elements,
+				std::back_inserter(ys),
+				[
+					&current_y,
+					container_spacing_y = container_spacing.height
+				](const element_size& element) noexcept -> float
+				{
+					return std::exchange(current_y, current_y + element.size + container_spacing_y);
+				}
+			);
+
+			auto remaining_space = std::ranges::max(0.f, total_height - current_y);
+
+			if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_FLEX_END))
+			{
+				std::ranges::for_each(
+					ys,
+					[remaining_space](auto& y) noexcept -> void
+					{
+						y += remaining_space;
+					}
+				);
+			}
+			else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_CENTER))
+			{
+				std::ranges::for_each(
+					ys,
+					[remaining_space](auto& y) noexcept -> void
+					{
+						y += remaining_space / 2;
+					}
+				);
+			}
+			else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_STRETCH))
+			{
+				std::ranges::for_each(
+					ys | std::views::reverse | std::views::enumerate,
+					[&elements, remaining_space, s = ys.size()](std::tuple_element_t<std::ptrdiff_t, float&> pack) mutable noexcept -> void
+					{
+						auto& [index, y] = pack;
+						const auto i = s - index - 1;
+
+						const auto shifted = remaining_space * (i + 0) / (i + 1);
+						y += shifted;
+
+						const auto consumed = remaining_space - shifted;
+						elements[i].size += consumed;
+						remaining_space -= consumed;
+					}
+				);
+			}
+			else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_SPACE_BETWEEN))
+			{
+				std::ranges::for_each(
+					ys | std::views::drop(1) | std::views::reverse | std::views::enumerate,
+					[remaining_space, s = ys.size()](std::tuple_element_t<std::ptrdiff_t, float&> pack) mutable noexcept -> void
+					{
+						auto& [index, y] = pack;
+						const auto i = s - index - 1;
+
+						y += remaining_space;
+						remaining_space = remaining_space * (i - 1) / i;
+					}
+				);
+			}
+			else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_SPACE_AROUND))
+			{
+				std::ranges::for_each(
+					ys | std::views::reverse | std::views::enumerate,
+					[remaining_space, s = ys.size()](std::tuple_element_t<std::ptrdiff_t, float&> pack) mutable noexcept -> void
+					{
+						auto& [index, y] = pack;
+						const auto i = s - index - 1;
+
+						y += remaining_space * (2 * i + 1) / (2 * i + 2);
+						remaining_space = remaining_space * (2 * i) / (2 * i + 2);
+					}
+				);
+			}
+			else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_SPACE_EVENLY))
+			{
+				std::ranges::for_each(
+					ys | std::views::reverse | std::views::enumerate,
+					[remaining_space, s = ys.size()](std::tuple_element_t<std::ptrdiff_t, float&> pack) mutable noexcept -> void
+					{
+						auto& [index, y] = pack;
+						const auto i = s - index - 1;
+
+						y += remaining_space * (i + 1) / (i + 2);
+						remaining_space = remaining_space * (i + 1) / (i + 2);
+					}
+				);
+			}
+
+			// align items
+			std::ranges::for_each(
+				std::views::zip(lines, elements, ys),
+				[](std::tuple<element_blocks_size&, const element_size&, const float&> pack) noexcept -> void
+				{
+					auto& [line, element, y] = pack;
+					std::ranges::for_each(
+						line,
+						[&element, y](element_block_size& block) noexcept -> void
+						{
+							// ReSharper disable once CppUseStructuredBinding
+							auto& height = block.height;
+
+							const auto stretch = height.flex_grow or (OptionValue & std::to_underlying(option_type::JUSTIFY_STRETCH));
+							const auto size = stretch ? element.size : std::ranges::min(element.size, height.min_size);
+
+
+							if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_FLEX_START))
+							{
+								height.size = size;
+								height.position = y;
+							}
+							else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_FLEX_END))
+							{
+								height.size = size;
+								height.position = y + element.size - size;
+							}
+							else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_CENTER))
+							{
+								height.size = size;
+								height.position = y + (element.size - size) / 2;
+							}
+							else if constexpr (OptionValue & std::to_underlying(option_type::JUSTIFY_STRETCH))
+							{
+								height.size = element.size;
+								height.position = y;
+							}
+						}
+					);
+				}
+			);
+		}
+	}
+
+	template<std::underlying_type_t<element::impl::FlexBoxOption> OptionValue, std::ranges::output_range<element_block_size> Range>
+	constexpr auto calculate_wrap(Range& range, const float total_width, const float total_height) noexcept -> void
+	{
+		using option_type = element::impl::FlexBoxOption;
+
+		if constexpr (OptionValue & std::to_underlying(option_type::WRAP_INVERSE))
+		{
+			const auto symmetry_y = [&range, total_height]() noexcept -> void
+			{
+				std::ranges::for_each(
+					range,
+					[total_height](element_block_size& block) noexcept -> void
+					{
+						block.height.position = (total_height - block.height.size) / 2;
+					}
+				);
+			};
+
+			symmetry_y();
+
+			constexpr auto value = OptionValue & ~std::to_underlying(option_type::WRAP_INVERSE) | std::to_underlying(option_type::WRAP_DEFAULT);
+			calculate_justify<value>(range, total_width, total_height);
+
+			symmetry_y();
+		}
+		else
+		{
+			calculate_justify<OptionValue>(range, total_width, total_height);
+		}
+	}
+
+	template<std::underlying_type_t<element::impl::FlexBoxOption> OptionValue, std::ranges::output_range<element_block_size> Range>
+	constexpr auto calculate_direction(Range& range, const float total_width, const float total_height) noexcept -> void
+	{
+		using option_type = element::impl::FlexBoxOption;
+
+		if constexpr (OptionValue & std::to_underlying(option_type::DIRECTION_ROW_INVERSE))
+		{
+			const auto symmetry_x = [&range, total_width]() noexcept -> void
+			{
+				std::ranges::for_each(
+					range,
+					[total_width](element_block_size& block) noexcept -> void
+					{
+						block.width.position = (total_width - block.width.size) / 2;
+					}
+				);
+			};
+
+			symmetry_x();
+
+			constexpr auto value = OptionValue & ~std::to_underlying(option_type::DIRECTION_ROW_INVERSE) | std::to_underlying(option_type::DIRECTION_ROW);
+			calculate_wrap<value>(range, total_width, total_height);
+
+			symmetry_x();
+		}
+		else if constexpr (OptionValue & std::to_underlying(option_type::DIRECTION_ROW))
+		{
+			calculate_wrap<OptionValue>(range, total_width, total_height);
+		}
+		else
+		{
+			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+		}
+	}
+
+	template<std::underlying_type_t<element::impl::FlexBoxOption> OptionValue, std::ranges::output_range<element_block_size> Range>
+	constexpr auto calculate(Range& range, const float total_width, const float total_height) noexcept -> void
+	{
+		using option_type = element::impl::FlexBoxOption;
+
+		if constexpr (
+			(OptionValue & std::to_underlying(option_type::DIRECTION_COLUMN)) or
+			(OptionValue & std::to_underlying(option_type::DIRECTION_COLUMN_INVERSE))
+		)
+		{
+			const auto symmetry_xy = [&range]() noexcept -> void
+			{
+				std::ranges::for_each(
+					range,
+					[](element_block_size& block) noexcept -> void
+					{
+						using std::swap;
+
+						swap(block.width, block.height);
+					}
+				);
+			};
+
+			symmetry_xy();
+
+			if constexpr (OptionValue & std::to_underlying(option_type::DIRECTION_COLUMN))
+			{
+				constexpr auto value = OptionValue & ~std::to_underlying(option_type::DIRECTION_COLUMN) | std::to_underlying(option_type::DIRECTION_ROW);
+				calculate_direction<value>(range, total_height, total_width);
+			}
+			else if constexpr (OptionValue & std::to_underlying(option_type::DIRECTION_COLUMN_INVERSE))
+			{
+				constexpr auto value = OptionValue & ~std::to_underlying(option_type::DIRECTION_COLUMN_INVERSE) | std::to_underlying(option_type::DIRECTION_ROW_INVERSE);
+				calculate_direction<value>(range, total_height, total_width);
+			}
+			else
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+			}
+
+			symmetry_xy();
+		}
+		else if constexpr (
+			(OptionValue & std::to_underlying(option_type::DIRECTION_ROW)) or
+			(OptionValue & std::to_underlying(option_type::DIRECTION_ROW_INVERSE))
+		)
+		{
+			calculate_direction<OptionValue>(range, total_width, total_height);
+		}
+	}
+
 	template<element::impl::BoxOption Option>
 		requires (Option == element::impl::BoxOption::HORIZONTAL or Option == element::impl::BoxOption::VERTICAL)
 	class Box final : public impl::Element
@@ -146,6 +636,7 @@ namespace
 		using option_type = element::impl::BoxOption;
 
 		constexpr static auto option = Option;
+		constexpr static auto option_value = std::to_underlying(option);
 
 		explicit Box(elements_type children) noexcept
 			: Element{std::move(children)} {}
@@ -323,6 +814,97 @@ namespace
 					}
 				}
 			);
+		}
+	};
+
+	template<element::impl::FlexBoxOption Option>
+	class FlexBox final : public impl::Element
+	{
+	public:
+		using option_type = element::impl::FlexBoxOption;
+
+		constexpr static auto option = Option;
+		constexpr static auto option_value = std::to_underlying(option);
+		constexpr static auto option_normalized_value = element::impl::options<
+			(
+				option_value & std::to_underlying(option_type::DIRECTION_ROW) or
+				option_value & std::to_underlying(option_type::DIRECTION_ROW_INVERSE)
+			)
+				? option_type::DIRECTION_ROW
+				: option_type::DIRECTION_COLUMN,
+			option_type::WRAP_DEFAULT,
+			option_type::JUSTIFY_FLEX_START
+		>{}.value;
+
+	private:
+		template<std::ranges::output_range<element_block_size> Range>
+		auto calculate_layout(Range& range, const float total_width, const float total_height, bool calculate_requirement) noexcept -> void
+		{
+			range.reserve(children_.size());
+
+			std::ranges::transform(
+				children_,
+				std::back_inserter(range),
+				[calculate_requirement](const auto& child) noexcept -> element_block_size
+				{
+					const auto& requirement = child->requirement();
+
+					return {
+							.width = {
+									.size = {
+											.min_size = requirement.min_width,
+											.flex_grow = calculate_requirement ? 0 : requirement.flex_grow_width,
+											.flex_shrink = calculate_requirement ? 0 : requirement.flex_shrink_width,
+											.size = 0,
+									},
+									.position = 0,
+							},
+							.height = {
+									.size = {
+											.min_size = requirement.min_height,
+											.flex_grow = calculate_requirement ? 0 : requirement.flex_grow_height,
+											.flex_shrink = calculate_requirement ? 0 : requirement.flex_shrink_height,
+									},
+									.position = 0,
+							},
+							.placed_line = 0,
+							.placed_position = 0,
+					};
+				}
+			);
+
+			calculate(range, total_width, total_height);
+		}
+
+	public:
+		explicit FlexBox(elements_type children) noexcept
+			: Element{std::move(children)}
+		{
+			if constexpr (
+				(option_value & std::to_underlying(option_type::DIRECTION_ROW)) or
+				(option_value & std::to_underlying(option_type::DIRECTION_ROW_INVERSE))
+			)
+			{
+				requirement_.flex_grow_width = 1;
+			}
+			else if constexpr (
+				(option_value & std::to_underlying(option_type::DIRECTION_COLUMN)) or
+				(option_value & std::to_underlying(option_type::DIRECTION_COLUMN_INVERSE))
+			)
+			{
+				requirement_.flex_grow_height = 1;
+			}
+			else
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+			}
+		}
+
+		~FlexBox() noexcept override = default;
+
+		auto calculate_requirement(Surface& surface) noexcept -> void override
+		{
+			Element::calculate_requirement(surface);
 		}
 	};
 
@@ -575,6 +1157,7 @@ namespace
 		using value_type = fixed_value<Option>;
 
 		constexpr static auto option = Option;
+		constexpr static auto option_value = std::to_underlying(option);
 
 	private:
 		value_type value_;
@@ -591,9 +1174,6 @@ namespace
 			Element::calculate_requirement(surface);
 
 			requirement_ = children_[0]->requirement();
-
-			constexpr auto option_value = std::to_underlying(option);
-
 			if constexpr (option_value & std::to_underlying(option_type::WIDTH))
 			{
 				requirement_.flex_grow_width = 0;
@@ -645,8 +1225,6 @@ namespace
 		{
 			Element::set_rect(rect);
 
-			constexpr auto option_value = std::to_underlying(option);
-
 			auto box = rect;
 			if constexpr (
 				(option_value & std::to_underlying(option_type::LESS_THAN)) or
@@ -675,6 +1253,7 @@ namespace
 		using option_type = element::impl::FlexOption;
 
 		constexpr static auto option = Option;
+		constexpr static auto option_value = std::to_underlying(option);
 
 		explicit Flex() noexcept
 			: Element{} {}
@@ -689,7 +1268,7 @@ namespace
 			requirement_.reset();
 
 			if (not children_.empty())
-			[[unlikely]]
+			[[likely]]
 			{
 				children_[0]->calculate_requirement(surface);
 				requirement_ = children_[0]->requirement();
@@ -727,6 +1306,17 @@ namespace
 					if constexpr (horizontal) { set_sw(); }
 					if constexpr (vertical) { set_sh(); }
 				}
+			}
+		}
+
+		auto set_rect(const rect_type& rect) noexcept -> void override
+		{
+			Element::set_rect(rect);
+
+			if (not children_.empty())
+			[[likely]]
+			{
+				children_[0]->set_rect(rect);
 			}
 		}
 	};
