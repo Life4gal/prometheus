@@ -27,64 +27,68 @@ namespace gal::prometheus::primitive
 {
 	namespace multidimensional_detail
 	{
-		template<std::size_t Index, typename Derived, bool>
-		struct lazy_value_type;
-
-		template<std::size_t Index, typename Derived>
-		struct lazy_value_type<Index, Derived, true>
+		template<typename OtherDerived, typename ThisDerived>
+		[[nodiscard]] consteval auto is_convertible_derived() noexcept -> bool
 		{
-			using type = std::tuple_element_t<Index, typename Derived::value_type>;
-		};
-
-		template<std::size_t Index, typename Derived>
-		struct lazy_value_type<Index, Derived, false>
-		{
-			using type = typename Derived::value_type;
-		};
-
-		template<std::size_t Index, typename Derived>
-		using lazy_value_type_t = typename lazy_value_type<
-			Index,
-			Derived,
-			requires
+			if constexpr (meta::member_size<OtherDerived>() != meta::member_size<ThisDerived>())
 			{
-				// ReSharper disable once CppUseTypeTraitAlias
-				typename std::tuple_element<Index, typename Derived::value_type>::type;
-			}>::type;
+				return false;
+			}
+			else
+			{
+				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> bool
+				{
+					const auto f = []<std::size_t I>() noexcept -> bool
+					{
+						using this_type = meta::member_type_of_index_t<I, ThisDerived>;
+						using other_type = meta::member_type_of_index_t<I, OtherDerived>;
 
-		template<typename>
-		struct is_always_equal : std::false_type {};
+						return
+								// implicit
+								std::is_convertible_v<other_type, this_type> or
+								// explicit
+								std::is_constructible_v<this_type, other_type>;
+					};
 
-		template<typename T>
-			requires requires { T::is_always_equal; }
-		struct is_always_equal<T> : std::bool_constant<T::is_always_equal> {};
+					return (f.template operator()<Index>() and ...);
+				}(std::make_index_sequence<meta::member_size<ThisDerived>()>{});
+			}
+		}
 
-		template<typename T>
-		constexpr static auto is_always_equal_v = is_always_equal<T>::value;
+		template<typename OtherDerived, typename ThisDerived>
+		concept convertible_derived_t = is_convertible_derived<OtherDerived, ThisDerived>();
 
-		template<typename T>
-		concept always_equal_t = is_always_equal_v<T>;
+		template<typename T, typename ThisDerived>
+		[[nodiscard]] consteval auto is_convertible_type() noexcept -> bool
+		{
+			return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> bool
+			{
+				const auto f = []<std::size_t I>() noexcept -> bool
+				{
+					using this_type = meta::member_type_of_index_t<I, ThisDerived>;
+
+					return
+							// implicit
+							std::is_convertible_v<T, this_type> or
+							// explicit
+							std::is_constructible_v<this_type, T>;
+				};
+
+				return (f.template operator()<Index>() and ...);
+			}(std::make_index_sequence<meta::member_size<ThisDerived>()>{});
+		}
+
+		template<typename T, typename ThisDerived>
+		concept convertible_type_t = is_convertible_type<T, ThisDerived>();
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-	enum class Dimension
-	{
-		_0 = 0,
-		_1 = 1,
-		_2 = 2,
-		_3 = 3,
-	};
-
-	template<typename Derived, typename... Ts>
-		requires (std::is_arithmetic_v<Ts> and ...)
+	template<typename Derived>
 	struct [[nodiscard]] multidimensional
 	{
-		template<typename D, typename... Us>
-			requires (std::is_arithmetic_v<Us> and ...)
+		template<typename D>
 		friend struct multidimensional;
-
-		using value_type = std::tuple<Ts...>;
 
 		using derived_type = Derived;
 
@@ -93,12 +97,7 @@ namespace gal::prometheus::primitive
 		[[nodiscard]] constexpr auto rep() const noexcept -> const Derived& { return *static_cast<const Derived*>(this); }
 
 	public:
-		template<typename OtherDerived>
-			requires(
-				multidimensional_detail::always_equal_t<OtherDerived> and
-				multidimensional_detail::always_equal_t<derived_type> and
-				meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-			)
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived>
 		[[nodiscard]] constexpr auto to() const noexcept -> OtherDerived
 		{
 			if constexpr (std::is_same_v<OtherDerived, derived_type>) { return *this; }
@@ -107,10 +106,11 @@ namespace gal::prometheus::primitive
 				OtherDerived result;
 
 				meta::member_zip_walk(
-					[]<std::size_t Index>(auto& lhs, const auto rhs) noexcept -> void //
+					[]<std::size_t Index>(auto& lhs, const auto& rhs) noexcept -> void //
 					{
-						using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-						lhs = static_cast<type>(rhs);
+						using type = meta::member_type_of_index_t<Index, derived_type>;
+						if constexpr (requires { static_cast<type>(rhs); }) { lhs = static_cast<type>(rhs); }
+						else { lhs = type{rhs}; }
 					},
 					result,
 					rep()
@@ -120,22 +120,15 @@ namespace gal::prometheus::primitive
 			}
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		constexpr auto operator+=(const multidimensional<OtherDerived, Us...>& other) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		constexpr auto operator+=(const multidimensional<OtherDerived>& other) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[]<std::size_t Index>(auto& lhs, const auto rhs) noexcept -> void //
+				[]<std::size_t Index>(auto& lhs, const auto& rhs) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					lhs += static_cast<type>(rhs);
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(rhs); }) { lhs += static_cast<type>(rhs); }
+					else { lhs += type{rhs}; }
 				},
 				rep(),
 				other.rep()
@@ -143,16 +136,8 @@ namespace gal::prometheus::primitive
 			return rep();
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto operator+(const multidimensional<OtherDerived, Us...>& other) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto operator+(const multidimensional<OtherDerived>& other) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -161,22 +146,23 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		constexpr auto operator+=(const U value) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		constexpr auto operator+=(const T& value) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[value]<std::size_t Index>(auto& self) noexcept -> void //
+				[&value]<std::size_t Index>(auto& self) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					self += static_cast<type>(static_cast<std::common_type_t<Ts...>>(value));
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(value); }) { self += value; }
+					else { self += type{value}; }
 				},
 				rep()
 			);
 			return rep();
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		[[nodiscard]] constexpr auto operator+(const U value) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		[[nodiscard]] constexpr auto operator+(const T& value) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -185,22 +171,15 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		constexpr auto operator-=(const multidimensional<OtherDerived, Us...>& other) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		constexpr auto operator-=(const multidimensional<OtherDerived>& other) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[]<std::size_t Index>(auto& lhs, const auto rhs) noexcept -> void //
+				[]<std::size_t Index>(auto& lhs, const auto& rhs) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					lhs -= static_cast<type>(rhs);
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(rhs); }) { lhs -= static_cast<type>(rhs); }
+					else { lhs -= type{rhs}; }
 				},
 				rep(),
 				other.rep()
@@ -208,16 +187,8 @@ namespace gal::prometheus::primitive
 			return rep();
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto operator-(const multidimensional<OtherDerived, Us...>& other) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto operator-(const multidimensional<OtherDerived>& other) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -226,22 +197,23 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		constexpr auto operator-=(const U value) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		constexpr auto operator-=(const T& value) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[value]<std::size_t Index>(auto& self) noexcept -> void //
+				[&value]<std::size_t Index>(auto& self) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					self -= static_cast<type>(static_cast<std::common_type_t<Ts...>>(value));
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(value); }) { self -= value; }
+					else { self -= type{value}; }
 				},
 				rep()
 			);
 			return rep();
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		[[nodiscard]] constexpr auto operator-(const U value) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		[[nodiscard]] constexpr auto operator-(const T& value) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -250,22 +222,15 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		constexpr auto operator*=(const multidimensional<OtherDerived, Us...>& other) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		constexpr auto operator*=(const multidimensional<OtherDerived>& other) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[]<std::size_t Index>(auto& lhs, const auto rhs) noexcept -> void //
+				[]<std::size_t Index>(auto& lhs, const auto& rhs) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					lhs *= static_cast<type>(rhs);
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(rhs); }) { lhs *= static_cast<type>(rhs); }
+					else { lhs *= type{rhs}; }
 				},
 				rep(),
 				other.rep()
@@ -273,16 +238,11 @@ namespace gal::prometheus::primitive
 			return rep();
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
 			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
+				meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
 			)
-		[[nodiscard]] constexpr auto operator*(const multidimensional<OtherDerived, Us...>& other) const noexcept -> derived_type
+		[[nodiscard]] constexpr auto operator*(const multidimensional<OtherDerived>& other) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -291,22 +251,23 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		constexpr auto operator*=(const U value) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		constexpr auto operator*=(const T& value) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[value]<std::size_t Index>(auto& self) noexcept -> void //
+				[&value]<std::size_t Index>(auto& self) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					self *= static_cast<type>(static_cast<std::common_type_t<Ts...>>(value));
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(value); }) { self *= value; }
+					else { self *= type{value}; }
 				},
 				rep()
 			);
 			return rep();
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		[[nodiscard]] constexpr auto operator*(const U value) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		[[nodiscard]] constexpr auto operator*(const T& value) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -315,22 +276,15 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		constexpr auto operator/=(const multidimensional<OtherDerived, Us...>& other) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		constexpr auto operator/=(const multidimensional<OtherDerived>& other) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[]<std::size_t Index>(auto& lhs, const auto rhs) noexcept -> void //
+				[]<std::size_t Index>(auto& lhs, const auto& rhs) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					lhs /= static_cast<type>(rhs);
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(rhs); }) { lhs /= static_cast<type>(rhs); }
+					else { lhs /= type{rhs}; }
 				},
 				rep(),
 				other.rep()
@@ -338,16 +292,8 @@ namespace gal::prometheus::primitive
 			return rep();
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto operator/(const multidimensional<OtherDerived, Us...>& other) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto operator/(const multidimensional<OtherDerived>& other) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -356,22 +302,23 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		constexpr auto operator/=(const U value) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		constexpr auto operator/=(const T& value) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[value]<std::size_t Index>(auto& self) noexcept -> void //
+				[&value]<std::size_t Index>(auto& self) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					self /= static_cast<type>(static_cast<std::common_type_t<Ts...>>(value));
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(value); }) { self /= value; }
+					else { self /= type{value}; }
 				},
 				rep()
 			);
 			return rep();
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		[[nodiscard]] constexpr auto operator/(const U value) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		[[nodiscard]] constexpr auto operator/(const T& value) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -380,22 +327,15 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		constexpr auto operator%=(const multidimensional<OtherDerived, Us...>& other) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		constexpr auto operator%=(const multidimensional<OtherDerived>& other) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[]<std::size_t Index>(auto& lhs, const auto rhs) noexcept -> void //
+				[]<std::size_t Index>(auto& lhs, const auto& rhs) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					lhs %= static_cast<type>(rhs);
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(rhs); }) { lhs %= static_cast<type>(rhs); }
+					else { lhs %= type{rhs}; }
 				},
 				rep(),
 				other.rep()
@@ -403,16 +343,8 @@ namespace gal::prometheus::primitive
 			return rep();
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto operator%(const multidimensional<OtherDerived, Us...>& other) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto operator%(const multidimensional<OtherDerived>& other) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -421,22 +353,23 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		constexpr auto operator%=(const U value) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		constexpr auto operator%=(const T& value) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[value]<std::size_t Index>(auto& self) noexcept -> void //
+				[&value]<std::size_t Index>(auto& self) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					self %= static_cast<type>(static_cast<std::common_type_t<Ts...>>(value));
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(value); }) { self %= value; }
+					else { self %= type{value}; }
 				},
 				rep()
 			);
 			return rep();
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		[[nodiscard]] constexpr auto operator%(const U value) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		[[nodiscard]] constexpr auto operator%(const T& value) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -445,22 +378,15 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		constexpr auto operator&=(const multidimensional<OtherDerived, Us...>& other) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		constexpr auto operator&=(const multidimensional<OtherDerived>& other) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[]<std::size_t Index>(auto& lhs, const auto rhs) noexcept -> void //
+				[]<std::size_t Index>(auto& lhs, const auto& rhs) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					lhs &= static_cast<type>(rhs);
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(rhs); }) { lhs &= static_cast<type>(rhs); }
+					else { lhs &= type{rhs}; }
 				},
 				rep(),
 				other.rep()
@@ -468,16 +394,8 @@ namespace gal::prometheus::primitive
 			return rep();
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto operator&(const multidimensional<OtherDerived, Us...>& other) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto operator&(const multidimensional<OtherDerived>& other) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -486,22 +404,23 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		constexpr auto operator&=(const U value) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		constexpr auto operator&=(const T& value) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[value]<std::size_t Index>(auto& self) noexcept -> void //
+				[&value]<std::size_t Index>(auto& self) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					self &= static_cast<type>(static_cast<std::common_type_t<Ts...>>(value));
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(value); }) { self &= value; }
+					else { self &= type{value}; }
 				},
 				rep()
 			);
 			return rep();
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		[[nodiscard]] constexpr auto operator&(const U value) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		[[nodiscard]] constexpr auto operator&(const T& value) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -510,22 +429,15 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		constexpr auto operator|=(const multidimensional<OtherDerived, Us...>& other) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		constexpr auto operator|=(const multidimensional<OtherDerived>& other) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[]<std::size_t Index>(auto& lhs, const auto rhs) noexcept -> void //
+				[]<std::size_t Index>(auto& lhs, const auto& rhs) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					lhs |= static_cast<type>(rhs);
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(rhs); }) { lhs |= static_cast<type>(rhs); }
+					else { lhs |= type{rhs}; }
 				},
 				rep(),
 				other.rep()
@@ -533,16 +445,8 @@ namespace gal::prometheus::primitive
 			return rep();
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto operator|(const multidimensional<OtherDerived, Us...>& other) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto operator|(const multidimensional<OtherDerived>& other) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -551,22 +455,23 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		constexpr auto operator|=(const U value) noexcept -> derived_type&
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		constexpr auto operator|=(const T& value) noexcept -> derived_type&
 		{
 			meta::member_zip_walk(
-				[value]<std::size_t Index>(auto& self) noexcept -> void //
+				[&value]<std::size_t Index>(auto& self) noexcept -> void //
 				{
-					using type = multidimensional_detail::lazy_value_type_t<Index, derived_type>;
-					self |= static_cast<type>(static_cast<std::common_type_t<Ts...>>(value));
+					using type = meta::member_type_of_index_t<Index, derived_type>;
+					if constexpr (requires { static_cast<type>(value); }) { self |= value; }
+					else { self |= type{value}; }
 				},
 				rep()
 			);
 			return rep();
 		}
 
-		template<std::convertible_to<std::common_type_t<Ts...>> U>
-		[[nodiscard]] constexpr auto operator|(const U value) const noexcept -> derived_type
+		template<multidimensional_detail::convertible_type_t<derived_type> T>
+		[[nodiscard]] constexpr auto operator|(const T& value) const noexcept -> derived_type
 		{
 			derived_type result{rep()};
 
@@ -575,36 +480,20 @@ namespace gal::prometheus::primitive
 			return result;
 		}
 
-		template<Dimension D, typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				        std::is_same_v<OtherDerived, derived_type> or
-				        (
-					        multidimensional_detail::always_equal_t<OtherDerived> and
-					        multidimensional_detail::always_equal_t<derived_type> and
-					        meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				        )
-			        ) and
-			        (std::three_way_comparable_with<Ts, Us> and ...)
-		[[nodiscard]] constexpr auto compare(const multidimensional<OtherDerived, Us...>& other) noexcept -> auto
+		template<std::size_t Dimension, multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+			requires (Dimension < meta::member_size<derived_type>())
+		[[nodiscard]] constexpr auto compare(const multidimensional<OtherDerived>& other) noexcept -> auto
 		{
-			const auto v = meta::member_of_index<static_cast<std::size_t>(D)>(rep());
-			const auto other_v = meta::member_of_index<static_cast<std::size_t>(D)>(other.rep());
+			const auto v = meta::member_of_index<Dimension>(rep());
+			const auto other_v = meta::member_of_index<Dimension>(other.rep());
 
 			return v <=> other_v;
 		}
 
-		template<typename Comparator, typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				        std::is_same_v<OtherDerived, derived_type> or
-				        (
-					        multidimensional_detail::always_equal_t<OtherDerived> and
-					        multidimensional_detail::always_equal_t<derived_type> and
-					        meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				        )
-			        ) and
-			        (std::declval<Comparator>(std::declval<Ts>(), std::declval<Us>()) and ...)
-		[[nodiscard]] constexpr auto compare(Comparator comparator, const multidimensional<OtherDerived, Us...>& other) noexcept -> bool
+		template<typename Comparator, multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto compare(Comparator comparator, const multidimensional<OtherDerived>& other) noexcept -> bool
 		{
+			// manually meta::member_walk
 			return [&]<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> bool
 			{
 				const auto f = [&]<std::size_t I>() noexcept -> bool
@@ -616,90 +505,42 @@ namespace gal::prometheus::primitive
 			}();
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto equal(const multidimensional<OtherDerived, Us...>& other) noexcept -> bool
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto equal(const multidimensional<OtherDerived>& other) noexcept -> bool
 		{
 			return this->compare(std::ranges::equal_to{}, other);
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto not_equal(const multidimensional<OtherDerived, Us...>& other) noexcept -> bool
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto not_equal(const multidimensional<OtherDerived>& other) noexcept -> bool
 		{
 			return this->compare(std::ranges::not_equal_to{}, other);
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto greater_than(const multidimensional<OtherDerived, Us...>& other) noexcept -> bool
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto greater_than(const multidimensional<OtherDerived>& other) noexcept -> bool
 		{
 			return this->compare(std::ranges::greater{}, other);
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto greater_equal(const multidimensional<OtherDerived, Us...>& other) noexcept -> bool
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto greater_equal(const multidimensional<OtherDerived>& other) noexcept -> bool
 		{
 			return this->compare(std::ranges::greater_equal{}, other);
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto less_than(const multidimensional<OtherDerived, Us...>& other) noexcept -> bool
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto less_than(const multidimensional<OtherDerived>& other) noexcept -> bool
 		{
 			return this->compare(std::ranges::less{}, other);
 		}
 
-		template<typename OtherDerived = derived_type, std::convertible_to<Ts>... Us>
-			requires(
-				std::is_same_v<OtherDerived, derived_type> or
-				(
-					multidimensional_detail::always_equal_t<OtherDerived> and
-					multidimensional_detail::always_equal_t<derived_type> and
-					meta::member_size<OtherDerived>() == meta::member_size<derived_type>()
-				)
-			)
-		[[nodiscard]] constexpr auto less_equal(const multidimensional<OtherDerived, Us...>& other) noexcept -> bool
+		template<multidimensional_detail::convertible_derived_t<derived_type> OtherDerived = derived_type>
+		[[nodiscard]] constexpr auto less_equal(const multidimensional<OtherDerived>& other) noexcept -> bool
 		{
 			return this->compare(std::ranges::less_equal{}, other);
 		}
 	};
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 }

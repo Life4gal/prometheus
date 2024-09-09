@@ -171,7 +171,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename PointValueType, typename RadiusValueType, typename RotationValueType>
 		requires(std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<RadiusValueType> and std::is_arithmetic_v<RotationValueType>)
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_ellipse<2, PointValueType, RadiusValueType, RotationValueType> final
-			: multidimensional<basic_ellipse<2, PointValueType, RadiusValueType, RotationValueType>, PointValueType, RadiusValueType, RotationValueType>
+			: multidimensional<basic_ellipse<2, PointValueType, RadiusValueType, RotationValueType>>
 	{
 		using point_value_type = PointValueType;
 		using radius_value_type = RadiusValueType;
@@ -180,8 +180,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 		using point_type = basic_point<2, point_value_type>;
 		using radius_type = basic_extent<2, radius_value_type>;
 		using rotation_type = rotation_value_type;
-
-		constexpr static auto is_always_equal = true;
 
 		constexpr static std::size_t element_size{3};
 		template<std::size_t Index>

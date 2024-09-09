@@ -69,7 +69,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_color final : multidimensional<basic_color<T>, T>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_color final : multidimensional<basic_color<T>>
 	{
 		using value_type = T;
 		constexpr static auto is_integral_value = std::is_integral_v<value_type>;

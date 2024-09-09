@@ -179,15 +179,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename PointValueType, typename ExtentValueType>
 		requires(std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<ExtentValueType>)
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_rect<2, PointValueType, ExtentValueType> final
-			: multidimensional<basic_rect<2, PointValueType, ExtentValueType>, PointValueType, ExtentValueType>
+			: multidimensional<basic_rect<2, PointValueType, ExtentValueType>>
 	{
 		using point_value_type = PointValueType;
 		using extent_value_type = ExtentValueType;
 
 		using point_type = basic_point<2, point_value_type>;
 		using extent_type = basic_extent<2, extent_value_type>;
-
-		constexpr static auto is_always_equal = true;
 
 		constexpr static std::size_t element_size{2};
 		template<std::size_t Index>
@@ -354,15 +352,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	template<typename PointValueType, typename ExtentValueType>
 		requires(std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<ExtentValueType>)
 	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_rect<3, PointValueType, ExtentValueType> final
-			: multidimensional<basic_rect<3, PointValueType, ExtentValueType>, PointValueType, ExtentValueType>
+			: multidimensional<basic_rect<3, PointValueType, ExtentValueType>>
 	{
 		using point_value_type = PointValueType;
 		using extent_value_type = ExtentValueType;
 
 		using point_type = basic_point<3, point_value_type>;
 		using extent_type = basic_extent<3, extent_value_type>;
-
-		constexpr static auto is_always_equal = true;
 
 		constexpr static std::size_t element_size{2};
 		template<std::size_t Index>

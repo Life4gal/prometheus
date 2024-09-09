@@ -123,14 +123,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 	template<std::size_t N, typename PointValueType, typename RadiusType>
 		requires(std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<RadiusType>)
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_circle final : multidimensional<basic_circle<N, PointValueType, RadiusType>, PointValueType, RadiusType>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_circle final : multidimensional<basic_circle<N, PointValueType, RadiusType>>
 	{
 		using point_value_type = PointValueType;
 		using radius_type = RadiusType;
 
 		using point_type = basic_point<N, point_value_type>;
-
-		constexpr static auto is_always_equal = true;
 
 		constexpr static std::size_t element_size{2};
 		template<std::size_t Index>

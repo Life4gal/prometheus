@@ -136,11 +136,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point<2, T> final : multidimensional<basic_point<2, T>, T>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point<2, T> final : multidimensional<basic_point<2, T>>
 	{
 		using value_type = T;
-
-		constexpr static auto is_always_equal = true;
 
 		value_type x;
 		value_type y;
@@ -262,11 +260,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point<3, T> final : multidimensional<basic_point<3, T>, T>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_point<3, T> final : multidimensional<basic_point<3, T>>
 	{
 		using value_type = T;
-
-		constexpr static auto is_always_equal = true;
 
 		value_type x;
 		value_type y;
