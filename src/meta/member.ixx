@@ -3083,7 +3083,7 @@ namespace gal::prometheus::meta
 	}
 
 	template<std::size_t N, typename T>
-		requires member_gettable_t<std::remove_cvref_t<T>>
+		requires(member_gettable_t<std::remove_cvref_t<T>> and N < member_size<T>())
 	[[nodiscard]] constexpr auto member_of_index(T&& value) noexcept -> decltype(auto) //
 	{
 		return member_detail::visit(
@@ -3095,10 +3095,10 @@ namespace gal::prometheus::meta
 	}
 
 	template<std::size_t N, typename T>
-		requires member_gettable_t<std::remove_cvref_t<T>>
+		requires (member_gettable_t<std::remove_cvref_t<T>> and N < member_size<T>())
 	struct member_type_of_index
 	{
-		using type = std::decay_t<decltype(member_of_index<N>(std::declval<T>()))>;
+		using type = std::decay_t<decltype(meta::member_of_index<N>(std::declval<T>()))>;
 	};
 
 	template<std::size_t N, typename T>
@@ -3113,8 +3113,20 @@ namespace gal::prometheus::meta
 			U&& u
 		) mutable noexcept -> void //
 				{
-					// function(member_of_index<Index>(std::forward<U>(u))...);
-				(member_detail::invoke<Index>(function, member_of_index<Index>(std::forward<U>(u))), ...);
+					(member_detail::invoke<Index>(function, meta::member_of_index<Index>(std::forward<U>(u))), ...);
+				}(std::make_index_sequence<member_size<T>()>{}, std::forward<T>(value));
+	}
+
+	template<typename Function, typename T>
+		requires member_gettable_t<std::remove_cvref_t<T>>
+	constexpr auto member_walk_until(Function function, T&& value) noexcept -> void
+	{
+		[&function]<std::size_t... Index, typename U>(
+			std::index_sequence<Index...>,
+			U&& u
+		) mutable noexcept -> void //
+				{
+					(member_detail::invoke<Index>(function, meta::member_of_index<Index>(std::forward<U>(u))) and ...);
 				}(std::make_index_sequence<member_size<T>()>{}, std::forward<T>(value));
 	}
 
@@ -3138,17 +3150,9 @@ namespace gal::prometheus::meta
 			Us&&... us
 		) mutable noexcept -> void //
 				{
-					//(
-					//	member_detail::invoke<Index>( //
-					//			function,
-					//			member_of_index<Index>(std::forward<Us>(us))...
-					//			), //
-					//	... //
-					//);
-
 					const auto f = [&function]<std::size_t I, typename... U>(U&&... u) noexcept -> void //
 					{
-						member_detail::invoke<I>(function, member_of_index<I>(std::forward<U>(u))...);
+						member_detail::invoke<I>(function, meta::member_of_index<I>(std::forward<U>(u))...);
 					};
 
 					(f.template operator()<Index>(std::forward<Us>(us)...), ...);
@@ -3175,17 +3179,9 @@ namespace gal::prometheus::meta
 			Us&&... us
 		) mutable noexcept -> void //
 				{
-					// (
-					// 	member_detail::invoke<Index>( //
-					// 		function,
-					// 		member_of_index<Index>(std::forward<Us>(us))...
-					// 	) and //
-					// 	... //
-					// );
-
 					const auto f = [&function]<std::size_t I, typename... U>(U&&... u) noexcept -> void //
 					{
-						member_detail::invoke<I>(function, member_of_index<I>(std::forward<U>(u))...);
+						member_detail::invoke<I>(function, meta::member_of_index<I>(std::forward<U>(u))...);
 					};
 
 					(f.template operator()<Index>(std::forward<Us>(us)...) and ...);
