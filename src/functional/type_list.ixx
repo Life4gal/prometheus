@@ -155,38 +155,33 @@ namespace gal::prometheus::functional
 			};
 
 		public:
-			[[nodiscard]] consteval auto size() const noexcept -> std::size_t
+			[[nodiscard]] constexpr static auto size() noexcept -> std::size_t
 			{
-				(void)this;
 				return types_size;
 			}
 
 			template<template<typename> typename Projection>
-			[[nodiscard]] consteval auto projection() const noexcept -> list<typename Projection<Ts>::type...> // NOLINT(modernize-type-traits)
+			[[nodiscard]] constexpr static auto projection() noexcept -> list<typename Projection<Ts>::type...> // NOLINT(modernize-type-traits)
 			{
-				(void)this;
 				return {};
 			}
 
 			template<template<typename> typename Prediction>
-			[[nodiscard]] consteval auto all() const noexcept -> bool
+			[[nodiscard]] constexpr static auto all() noexcept -> bool
 			{
-				(void)this;
 				return ((Prediction<Ts>::value) and ...);
 			}
 
 			template<template<typename, typename> typename Prediction, typename T>
-			[[nodiscard]] consteval auto all() const noexcept -> bool
+			[[nodiscard]] constexpr static auto all() noexcept -> bool
 			{
-				(void)this;
-				return this->template all<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>();
+				return list::all<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>();
 			}
 
 			template<template<typename, typename> typename Prediction, typename... Us>
 				requires(sizeof...(Us) > 1)
-			[[nodiscard]] consteval auto all(const list<Us...>) const noexcept -> bool
+			[[nodiscard]] constexpr static auto all(const list<Us...>) noexcept -> bool
 			{
-				(void)this;
 				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> bool
 				{
 					return ((Prediction<nth_type<Index>, typename list<Us...>::template nth_type<Index>>::value) and ...);
@@ -195,29 +190,33 @@ namespace gal::prometheus::functional
 
 			template<template<typename, typename> typename Prediction, typename... Us>
 				requires(sizeof...(Us) > 1)
-			[[nodiscard]] consteval auto all() const noexcept -> bool
+			[[nodiscard]] constexpr static auto all() noexcept -> bool
 			{
-				return this->template all<Prediction, Us...>(list<Us...>{});
+				return list::all<Prediction, Us...>(list<Us...>{});
 			}
 
 			template<typename... Us>
-			[[nodiscard]] consteval auto all() const noexcept -> bool { return this->all<std::is_same, Us...>(); }
+			[[nodiscard]] constexpr static auto all() noexcept -> bool
+			{
+				return list::all<std::is_same, Us...>();
+			}
 
 			template<template<typename> typename Prediction>
-			[[nodiscard]] consteval auto any() const noexcept -> bool
+			[[nodiscard]] constexpr static auto any() noexcept -> bool
 			{
-				(void)this;
 				return ((Prediction<Ts>::value) or ...);
 			}
 
 			template<template<typename, typename> typename Prediction, typename T>
-			[[nodiscard]] consteval auto any() const noexcept -> bool { return this->template any<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
+			[[nodiscard]] constexpr static auto any() noexcept -> bool
+			{
+				return list::any<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>();
+			}
 
 			template<template<typename, typename> typename Prediction, typename... Us>
 				requires(sizeof...(Us) > 1)
-			[[nodiscard]] consteval auto any(const list<Us...>) const noexcept -> bool
+			[[nodiscard]] constexpr static auto any(const list<Us...>) noexcept -> bool
 			{
-				(void)this;
 				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> bool
 				{
 					return ((Prediction<nth_type<Index>, typename list<Us...>::template nth_type<Index>>::value) or ...);
@@ -226,37 +225,39 @@ namespace gal::prometheus::functional
 
 			template<template<typename, typename> typename Prediction, typename... Us>
 				requires(sizeof...(Us) > 1)
-			[[nodiscard]] consteval auto any() const noexcept -> bool
+			[[nodiscard]] constexpr static auto any() noexcept -> bool
 			{
-				return this->template any<Prediction, Us...>(list<Us...>{});
+				return list::any<Prediction, Us...>(list<Us...>{});
 			}
 
 			template<typename... Us>
-			[[nodiscard]] consteval auto any() const noexcept -> bool
+			[[nodiscard]] constexpr static auto any() noexcept -> bool
 			{
-				return this->any<std::is_same, Us...>();
+				return list::any<std::is_same, Us...>();
 			}
 
 			template<template<typename> typename Prediction>
 				requires(list{}.any<Prediction>())
-			[[nodiscard]] consteval auto index_of() const noexcept -> std::size_t
+			[[nodiscard]] constexpr static auto index_of() noexcept -> std::size_t
 			{
-				(void)this;
 				return index_of_impl<0, Prediction, Ts...>::value;
 			}
 
 			template<typename T, template<typename, typename> typename Prediction>
-				requires requires(list l) { l.template index_of<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
-			[[nodiscard]] consteval auto index_of() const noexcept -> std::size_t
+				requires requires { list::index_of<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
+			[[nodiscard]] constexpr static auto index_of() noexcept -> std::size_t
 			{
-				return this->template index_of<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>();
+				return list::index_of<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>();
 			}
 
 			template<typename T>
-				requires requires(list l) { l.template index_of<T, std::is_same>(); }
-			[[nodiscard]] consteval auto index_of() const noexcept -> std::size_t { return this->template index_of<T, std::is_same>(); }
+				requires requires { list::index_of<T, std::is_same>(); }
+			[[nodiscard]] constexpr static auto index_of() noexcept -> std::size_t
+			{
+				return list::index_of<T, std::is_same>();
+			}
 
-			[[nodiscard]] consteval auto reverse() const noexcept -> auto //
+			[[nodiscard]] constexpr static auto reverse() noexcept -> auto //
 			{
 				return []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> auto //
 				{
@@ -265,37 +266,45 @@ namespace gal::prometheus::functional
 			}
 
 			template<typename... Us>
-			[[nodiscard]] consteval auto push_back() const noexcept -> list<Ts..., Us...>
+			[[nodiscard]] constexpr static auto push_back() noexcept -> list<Ts..., Us...>
 			{
-				(void)this;
 				return {};
 			}
 
 			template<typename... Us>
-			[[nodiscard]] consteval auto push_back(const list<Us...>) const noexcept -> list<Ts..., Us...> { return this->push_back<Us...>(); }
+			[[nodiscard]] constexpr static auto push_back(const list<Us...>) noexcept -> list<Ts..., Us...>
+			{
+				return list::push_back<Us...>();
+			}
 
 			template<list_t auto List>
-			[[nodiscard]] consteval auto push_back() const noexcept -> auto { return this->push_back(List); }
+			[[nodiscard]] constexpr static auto push_back() noexcept -> auto
+			{
+				return list::push_back(List);
+			}
 
 			template<typename... Us>
-			[[nodiscard]] consteval auto push_front() const noexcept -> list<Us..., Ts...>
+			[[nodiscard]] constexpr static auto push_front() noexcept -> list<Us..., Ts...>
 			{
-				(void)this;
 				return {};
 			}
 
 			template<typename... Us>
-			[[nodiscard]] consteval auto push_front(const list<Us...>) const noexcept -> list<Us..., Ts...> { return this->push_front<Us...>(); }
+			[[nodiscard]] constexpr static auto push_front(const list<Us...>) noexcept -> list<Us..., Ts...>
+			{
+				return list::push_front<Us...>();
+			}
 
 			template<list_t auto List>
-			[[nodiscard]] consteval auto push_front() const noexcept -> auto { return this->push_front(List); }
+			[[nodiscard]] constexpr static auto push_front() noexcept -> auto
+			{
+				return list::push_front(List);
+			}
 
 			template<std::size_t N = 1>
 				requires(N <= types_size)
-			[[nodiscard]] consteval auto pop_back() const noexcept -> auto
+			[[nodiscard]] constexpr static auto pop_back() noexcept -> auto
 			{
-				(void)this;
-
 				if constexpr (N == 0) { return list{}; }
 				else if constexpr (N == types_size) { return list<>{}; }
 				else
@@ -309,10 +318,8 @@ namespace gal::prometheus::functional
 
 			template<std::size_t N = 1>
 				requires (N <= types_size)
-			[[nodiscard]] consteval auto pop_front() const noexcept -> auto
+			[[nodiscard]] constexpr static auto pop_front() noexcept -> auto
 			{
-				(void)this;
-
 				if constexpr (N == 0) { return list{}; }
 				else if constexpr (N == types_size) { return list<>{}; }
 				else
@@ -326,24 +333,28 @@ namespace gal::prometheus::functional
 
 			template<std::size_t N = 1>
 				requires(N <= types_size)
-			[[nodiscard]] consteval auto back() const noexcept -> auto { return this->template pop_front<types_size - N>(); }
+			[[nodiscard]] constexpr static auto back() noexcept -> auto
+			{
+				return list::pop_front<types_size - N>();
+			}
 
 			template<std::size_t N = 1>
 				requires(N <= types_size)
-			[[nodiscard]] consteval auto front() const noexcept -> auto { return this->template pop_back<types_size - N>(); }
+			[[nodiscard]] constexpr static auto front() noexcept -> auto
+			{
+				return list::pop_back<types_size - N>();
+			}
 
 			template<std::size_t N = types_size>
 				requires(N <= types_size)
-			[[nodiscard]] consteval auto unique_front() const noexcept -> auto
+			[[nodiscard]] constexpr static auto unique_front() noexcept -> auto
 			{
-				(void)this;
-
 				if constexpr (N <= 1) { return list{}; }
 				else
 				{
 					using type = typename unique_impl<
-						decltype(list{}.template front<N>().template pop_front<1>()),
-						decltype(list{}.template front<1>())
+						decltype(list::front<N>().template pop_front<1>()),
+						decltype(list::front<1>())
 					>::type;
 
 					if constexpr (N == types_size) //
@@ -352,23 +363,21 @@ namespace gal::prometheus::functional
 					}
 					else //
 					{
-						return type{}.template push_back<list{}.template back<types_size - N>()>();
+						return type{}.template push_back<list::back<types_size - N>()>();
 					}
 				}
 			}
 
 			template<std::size_t N = types_size>
 				requires(N <= types_size)
-			[[nodiscard]] consteval auto unique_back() const noexcept -> auto
+			[[nodiscard]] constexpr static auto unique_back() noexcept -> auto
 			{
-				(void)this;
-
 				if constexpr (N <= 1) { return list{}; }
 				else
 				{
 					using type = typename unique_impl<
-						decltype(list{}.template back<N>().template pop_front<1>()),
-						decltype(list{}.template back<N>().template front<1>())
+						decltype(list::back<N>().template pop_front<1>()),
+						decltype(list::back<N>().template front<1>())
 					>::type;
 
 					if constexpr (N == types_size) //
@@ -377,41 +386,43 @@ namespace gal::prometheus::functional
 					}
 					else //
 					{
-						return this->template front<types_size - N>().template push_back<type{}>();
+						return list::front<types_size - N>().template push_back<type{}>();
 					}
 				}
 			}
 
-			[[nodiscard]] consteval auto unique() const noexcept -> auto { return this->template unique_back<types_size>(); }
-
-			[[nodiscard]] consteval auto to_tuple() const noexcept -> std::tuple<Ts...>
+			[[nodiscard]] constexpr static auto unique() noexcept -> auto
 			{
-				(void)this;
+				return list::unique_back<types_size>();
+			}
+
+			[[nodiscard]] constexpr static auto to_tuple() noexcept -> std::tuple<Ts...>
+			{
 				return {};
 			}
 
 			template<template<typename> typename Prediction>
-			[[nodiscard]] consteval auto sub_list() const noexcept -> typename sub_list_impl<Prediction, list, list<>>::type
+			[[nodiscard]] constexpr static auto sub_list() noexcept -> typename sub_list_impl<Prediction, list, list<>>::type
 			{
-				(void)this;
 				return {};
 			}
 
 			template<typename T, template<typename, typename> typename Prediction>
-				requires requires(list l) { l.sub_list<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
-			[[nodiscard]] consteval auto sub_list() const noexcept -> auto
+				requires requires { list::sub_list<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>(); }
+			[[nodiscard]] constexpr static auto sub_list() noexcept -> auto
 			{
-				return this->sub_list<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>();
+				return list::sub_list<TYPE_LIST_WORKAROUND_BINDER(T, Prediction)>();
 			}
 		};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-	template<typename... Ts>
-	constexpr auto type_list = type_list_detail::list<Ts...>{};
 
-	template<type_list_detail::list_t auto List>
-	using type_list_type = std::decay_t<decltype(List)>;
+	template<typename... Ts>
+	using type_list_type = type_list_detail::list<Ts...>;
+
+	template<typename... Ts>
+	constexpr auto type_list = type_list_type<Ts...>{};
 
 	template<typename T>
 	concept type_list_t = type_list_detail::list_t<T>;
