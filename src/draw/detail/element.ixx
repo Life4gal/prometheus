@@ -224,4 +224,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			return typename selector_type::type{};
 		}
 	}
+
+	template<detail::options_t... Os>
+	[[nodiscard]] constexpr auto make(Os... os) noexcept -> decltype(auto);
 }

@@ -46,7 +46,10 @@ namespace gal::prometheus::draw
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-	constexpr auto separator = options<detail::SeparatorOption::NONE>{};
+	namespace element
+	{
+		constexpr auto separator = options<detail::SeparatorOption::NONE>{};
+	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 

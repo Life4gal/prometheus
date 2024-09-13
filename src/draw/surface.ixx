@@ -19,14 +19,11 @@ export import :element;
 #else
 #pragma once
 
-#include <memory>
-#include <vector>
-#include <algorithm>
-
 #include <prometheus/macro.hpp>
-#include <draw/draw_list.ixx>
-#include <draw/element.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
+#include <draw/draw_list.ixx>
+#include <draw/detail/element.ixx>
 
 #endif
 
@@ -66,7 +63,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			draw_list_.push_clip_rect(rect_, false);
 		}
 
-		auto render(impl::Element& element) noexcept -> void;
+		auto render(detail::Element& element) noexcept -> void;
 
 		auto render(const element_type& element) noexcept -> void
 		{

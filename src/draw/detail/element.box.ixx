@@ -7,18 +7,17 @@
 module;
 
 #include <prometheus/macro.hpp>
-#include <draw/detail/element.box.calculate.inl>
 
 export module gal.prometheus.draw:element.box;
 
 import std;
 
 import gal.prometheus.primitive;
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
+import gal.prometheus.functional;
 
 import :style;
 import :element.element;
-import :element.flex; // for BoxGrid::fill_line
+import :element.flex; // for detail::make_filler
 
 #else
 #pragma once
@@ -26,13 +25,11 @@ import :element.flex; // for BoxGrid::fill_line
 #include <prometheus/macro.hpp>
 
 #include <primitive/primitive.ixx>
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+#include <functional/functional.ixx>
 
 #include <draw/style.ixx>
 #include <draw/detail/element.ixx>
-#include <draw/detail/element.flex.ixx> // for BoxGrid::fill_line
-
-#include <draw/detail/element.box.calculate.inl>
+#include <draw/detail/element.flex.ixx> // for detail::make_filler
 
 #endif
 
@@ -44,21 +41,56 @@ namespace gal::prometheus::draw
 		{
 			HORIZONTAL,
 			VERTICAL,
+			GRID,
+		};
+
+		enum class CenterOption
+		{
+			HORIZONTAL = 0x0001,
+			VERTICAL = 0x0010,
 		};
 
 		template<typename T>
 		concept box_option_t = std::is_same_v<T, BoxOption>;
+
+		template<typename T>
+		concept center_option_t = std::is_same_v<T, CenterOption>;
+
+		struct box_options
+		{
+			options<BoxOption::HORIZONTAL> horizontal{};
+			options<BoxOption::VERTICAL> vertical{};
+			options<BoxOption::GRID> grid{};
+		};
+
+		struct center_options
+		{
+			options<CenterOption::HORIZONTAL> horizontal{};
+			options<CenterOption::VERTICAL> vertical{};
+			options<CenterOption::HORIZONTAL, CenterOption::VERTICAL> all{};
+		};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-	constexpr auto box_horizontal = options<detail::BoxOption::HORIZONTAL>{};
-	constexpr auto box_vertical = options<detail::BoxOption::VERTICAL>{};
+	namespace element
+	{
+		constexpr auto box = detail::box_options{};
+		constexpr auto center = detail::center_options{};
+	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace detail
 	{
+		#include <draw/detail/element.box.calculate.inl>
+
+		[[nodiscard]] inline auto make_filler() noexcept -> element_type
+		{
+			// return make(element::flex.all)(element::flex.dynamic);
+			return flex_maker<element::flex.dynamic, element::flex.all>{}();
+		}
+
 		template<BoxOption Option>
 		class Box final : public Element
 		{
@@ -204,7 +236,7 @@ namespace gal::prometheus::draw
 						current_right = point.x + extent.width - container_padding.width,
 						current_bottom = point.y + extent.height - container_padding.height,
 						container_spacing
-					](std::tuple<element_type&, const element_size&> pack) mutable noexcept -> void
+					](const std::tuple<element_type&, const element_size&>& pack) mutable noexcept -> void
 					{
 						auto& [child, element] = pack;
 
@@ -268,7 +300,7 @@ namespace gal::prometheus::draw
 				const derived_elements_t auto&... ranges
 			) noexcept -> size_type
 			{
-				constexpr auto max = std::ranges::max(r1, r2, {}, [](const auto& r) noexcept -> auto { return std::ranges::size(r); });
+				const auto& max = std::ranges::max(r1, r2, {}, [](const auto& r) noexcept -> auto { return std::ranges::size(r); });
 
 				if constexpr (sizeof...(ranges) == 0)
 				{
@@ -289,7 +321,7 @@ namespace gal::prometheus::draw
 				if (const auto diff = width - size;
 					diff != 0)
 				{
-					const auto filler = flex_maker{}(flex_horizontal)(flex_vertical)(flex_grow)(flex_shrink)();
+					const auto filler = make_filler();
 					std::ranges::fill_n(std::back_inserter(dest), diff, filler);
 				}
 			}
@@ -318,7 +350,7 @@ namespace gal::prometheus::draw
 				}
 				else
 				{
-					width_ = BoxGrid::max_size(range, ranges);
+					width_ = BoxGrid::max_size(range, ranges...);
 				}
 
 				BoxGrid::fill_line(children_, width_, std::move(range));
@@ -519,42 +551,150 @@ namespace gal::prometheus::draw
 			}
 		};
 
+		// struct box_grid_increasing_builder
+		// {
+		// 	using element_matrix_type = BoxGrid::element_matrix_type;
+		//
+		// 	element_matrix_type element_matrix;
+		//
+		// 	[[nodiscard]] auto operator()() noexcept -> element_type
+		// 	{
+		// 		return make_element<BoxGrid>(std::move(element_matrix));
+		// 	}
+		//
+		// 	[[nodiscard]] auto operator()(derived_element_t auto... elements) noexcept -> box_grid_increasing_builder&
+		// 	{
+		// 		auto& new_line = element_matrix.emplace_back(sizeof...(elements));
+		// 		(new_line.emplace_back(std::move(elements)), ...);
+		//
+		// 		return *this;
+		// 	}
+		// };
+
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 		template<box_option_t auto... Os>
 		struct element_maker<Os...>
 		{
 			template<BoxOption Option>
+				requires (Option == BoxOption::HORIZONTAL or Option == BoxOption::VERTICAL)
 			[[nodiscard]] auto operator()(options<Option>) const noexcept -> box_builder<Option>
 			{
 				return {};
 			}
 
 			template<BoxOption Option, typename... Args>
-			[[nodiscard]] auto operator()(options<Option> option, Args&&... args) const noexcept -> auto //
+				requires (Option == BoxOption::HORIZONTAL or Option == BoxOption::VERTICAL)
+			[[nodiscard]] auto operator()(options<Option> option, Args&&... args) const noexcept -> auto
 			{
 				return this->operator()(option)(std::forward<Args>(args)...);
 			}
 
-			[[nodiscard]] auto operator()(const box_grid_builder::size_type width, const box_grid_builder::size_type height) const noexcept -> box_grid_builder
+			template<BoxOption Option>
+				requires (Option == BoxOption::GRID)
+			[[nodiscard]] auto operator()(options<Option>, const box_grid_builder::size_type width, const box_grid_builder::size_type height) const noexcept -> box_grid_builder
 			{
 				return {.width = width, .height = height};
 			}
 
-			template<typename... Args>
-			[[nodiscard]] auto operator()(const box_grid_builder::size_type width, const box_grid_builder::size_type height, Args&&... args) const noexcept -> auto //
+			template<BoxOption Option, typename... Args>
+				requires (Option == BoxOption::GRID)
+			[[nodiscard]] auto operator()(options<Option>, const box_grid_builder::size_type width, const box_grid_builder::size_type height, Args&&... args) const noexcept -> auto
 			{
 				return this->operator()(width, height)(std::forward<Args>(args)...);
 			}
 
-			[[nodiscard]] auto operator()(BoxGrid::element_matrix_type matrix) const noexcept -> element_type
+			template<BoxOption Option>
+				requires (Option == BoxOption::GRID)
+			[[nodiscard]] auto operator()(options<Option>, BoxGrid::element_matrix_type matrix) const noexcept -> element_type
 			{
 				return make_element<BoxGrid>(std::move(matrix));
 			}
 
-			[[nodiscard]] auto operator()(derived_elements_t auto... elements) const noexcept -> element_type
+			template<BoxOption Option>
+				requires (Option == BoxOption::GRID)
+			[[nodiscard]] auto operator()(options<Option>, derived_elements_t auto... elements) const noexcept -> element_type
 			{
 				return make_element<BoxGrid>(std::move(elements)...);
+			}
+
+			// template<BoxOption Option>
+			// 	requires (Option == BoxOption::GRID)
+			// [[nodiscard]] auto operator()(options<Option>, derived_element_t auto... elements) const noexcept -> element_type
+			// {
+			// 	return box_grid_increasing_builder{}(std::move(elements)...);
+			// }
+
+			template<BoxOption Option>
+				requires (Option == BoxOption::GRID)
+			[[nodiscard]] auto operator()(options<Option>) const noexcept -> auto
+			{
+				return functional::overloaded{
+						[](const box_grid_builder::size_type width, const box_grid_builder::size_type height) noexcept -> box_grid_builder
+						{
+							return {.width = width, .height = height};
+						},
+						[]<typename... Args>(const box_grid_builder::size_type width, const box_grid_builder::size_type height, Args&&... args) noexcept -> auto
+						{
+							return box_grid_builder{.width = width, .height = height}(std::forward<Args>(args)...);
+						},
+						[](BoxGrid::element_matrix_type matrix) noexcept -> element_type
+						{
+							return make_element<BoxGrid>(std::move(matrix));
+						},
+						[](derived_elements_t auto... elements) noexcept -> element_type
+						{
+							return make_element<BoxGrid>(std::move(elements)...);
+						},
+						// [](derived_element_t auto... elements) noexcept -> box_grid_increasing_builder
+						// {
+						// 	return box_grid_increasing_builder{}(std::move(elements)...);
+						// },
+				};
+			}
+		};
+
+		template<center_option_t auto... Os>
+		struct element_maker<Os...>
+		{
+			template<CenterOption Option>
+			[[nodiscard]] constexpr auto operator()(options<Option>) const noexcept -> auto
+			{
+				return [](element_type element) noexcept -> element_type
+				{
+					const auto filler = make_filler();
+
+					if constexpr (constexpr auto option_value = std::to_underlying(Option);
+						option_value == element::center.horizontal)
+					{
+						// return make(element::box.horizontal)(filler, std::move(element), filler);
+						return box_builder<static_cast<BoxOption>(element::box.horizontal.value)>{}(filler, std::move(element), filler);
+					}
+					else if constexpr (option_value == element::center.vertical)
+					{
+						// return make(element::box.vertical)(filler, std::move(element), filler);
+						return box_builder<static_cast<BoxOption>(element::box.vertical.value)>{}(filler, std::move(element), filler);
+					}
+					else if constexpr (option_value == element::center.all)
+					{
+						// return make(element::box.horizontal)(make(element::box.vertical)(std::move(element)));
+						return box_builder<static_cast<BoxOption>(element::box.horizontal.value)>{}(
+							filler,
+							box_builder<static_cast<BoxOption>(element::box.vertical.value)>{}(filler, std::move(element), filler),
+							filler
+						);
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
+				};
+			}
+
+			template<CenterOption Option, typename... Args>
+			[[nodiscard]] auto operator()(options<Option> option, Args&&... args) const noexcept -> auto //
+			{
+				return this->operator()(option)(std::forward<Args>(args)...);
 			}
 		};
 

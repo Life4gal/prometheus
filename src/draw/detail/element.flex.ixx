@@ -12,16 +12,12 @@ export module gal.prometheus.draw:element.flex;
 
 import std;
 
-import gal.prometheus.primitive;
-
 import :element.element;
 
 #else
 #pragma once
 
 #include <prometheus/macro.hpp>
-
-#include <primitive/primitive.ixx>
 
 #include <draw/detail/element.ixx>
 
@@ -46,15 +42,34 @@ namespace gal::prometheus::draw
 			HORIZONTAL = 0x0001,
 			VERTICAL = 0x0010,
 		};
+
+		template<typename T>
+		concept flex_type_option_t = std::is_same_v<T, FlexTypeOption>;
+
+		template<typename T>
+		concept flex_direction_option_t = std::is_same_v<T, FlexDirectionOption>;
+
+		template<typename T>
+		concept flex_type_or_direction_option_t = flex_type_option_t<T> or flex_direction_option_t<T>;
+
+		struct flex_options
+		{
+			options<FlexTypeOption::GROW> grow{};
+			options<FlexTypeOption::SHRINK> shrink{};
+			options<FlexTypeOption::GROW, FlexTypeOption::SHRINK> dynamic{};
+
+			options<FlexDirectionOption::HORIZONTAL> horizontal{};
+			options<FlexDirectionOption::VERTICAL> vertical{};
+			options<FlexDirectionOption::HORIZONTAL, FlexDirectionOption::VERTICAL> all{};
+		};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-	constexpr auto flex_grow = options<detail::FlexTypeOption::GROW>{};
-	constexpr auto flex_shrink = options<detail::FlexTypeOption::SHRINK>{};
-
-	constexpr auto flex_horizontal = options<detail::FlexDirectionOption::HORIZONTAL>{};
-	constexpr auto flex_vertical = options<detail::FlexDirectionOption::VERTICAL>{};
+	namespace element
+	{
+		constexpr auto flex = detail::flex_options{};
+	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
@@ -73,6 +88,10 @@ namespace gal::prometheus::draw
 			explicit Flex(element_type element) noexcept
 				: Element{std::move(element)} {}
 
+			Flex(const Flex& other) noexcept = default;
+			Flex& operator=(const Flex& other) noexcept = default;
+			Flex(Flex&& other) noexcept = default;
+			Flex& operator=(Flex&& other) noexcept = default;
 			~Flex() noexcept override = default;
 
 			auto calculate_requirement(Surface& surface) noexcept -> void override
@@ -162,8 +181,7 @@ namespace gal::prometheus::draw
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-		template<auto... Os>
-			requires ((std::is_same_v<decltype(Os), FlexTypeOption> or std::is_same_v<decltype(Os), FlexDirectionOption>) and ...)
+		template<flex_type_or_direction_option_t auto... Os>
 		struct element_maker<Os...> : flex_maker<> {};
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END

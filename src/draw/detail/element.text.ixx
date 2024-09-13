@@ -48,7 +48,10 @@ namespace gal::prometheus::draw
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-	constexpr auto text = options<detail::TextOption::NONE>{};
+	namespace element
+	{
+		constexpr auto text = options<detail::TextOption::NONE>{};
+	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 

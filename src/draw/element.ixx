@@ -19,6 +19,7 @@ export import :element.border;
 export import :element.boundary;
 export import :element.flex;
 export import :element.box;
+export import :element.flex_box;
 
 #else
 #pragma once
@@ -32,34 +33,30 @@ export import :element.box;
 #include <draw/detail/element.boundary.ixx>
 #include <draw/detail/element.flex.ixx>
 #include <draw/detail/element.box.ixx>
+#include <draw/detail/element.flex_box.ixx>
 
 #endif
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 {
+	// element | decorator
 	template<typename Element, typename Decorator>
-		requires (derived_element_t<std::decay_t<Element>> and derived_element_t<std::invoke_result_t<Decorator, Element>>)
 	[[nodiscard]] constexpr auto operator|(Element&& element, Decorator&& decorator) noexcept -> element_type //
+		requires (derived_element_t<std::decay_t<Element>> and derived_element_t<std::invoke_result_t<Decorator, Element>>)
 	{
 		return std::invoke(std::forward<Decorator>(decorator), std::forward<Element>(element));
 	}
 
-	template<typename Decorator>
-		requires derived_element_t<std::invoke_result_t<Decorator, elements_type::value_type>>
-	[[nodiscard]] constexpr auto operator|(elements_type& elements, Decorator&& decorator) noexcept -> decltype(auto)
+	// element | option => element | decorator
+	template<typename Element, detail::options_t Option>
+	[[nodiscard]] constexpr auto operator|(Element&& element, const Option option) noexcept -> element_type //
+		requires(derived_element_t<std::decay_t<Element>> and derived_element_t<std::invoke_result_t<std::decay_t<decltype(draw::make(option))>, Element>>)
 	{
-		return std::invoke(std::forward<Decorator>(decorator), elements);
-	}
-
-	template<typename Decorator>
-		requires derived_element_t<std::invoke_result_t<Decorator, elements_type::value_type>>
-	[[nodiscard]] constexpr auto operator|(elements_type&& elements, Decorator&& decorator) noexcept -> decltype(auto)
-	{
-		return std::invoke(std::forward<Decorator>(decorator), std::move(elements));
+		return std::forward<Element>(element) | draw::make(option);
 	}
 
 	template<detail::options_t... Os>
-	[[nodiscard]] constexpr auto element(Os... os) noexcept -> decltype(auto)
+	[[nodiscard]] constexpr auto make(Os... os) noexcept -> decltype(auto)
 	{
 		constexpr auto maker = detail::select_maker<Os...>();
 

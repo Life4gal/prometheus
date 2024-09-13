@@ -51,16 +51,34 @@ namespace gal::prometheus::draw
 			EQUAL = 0x0010,
 			GREATER_THAN = 0x0100,
 		};
+
+		template<typename T>
+		concept boundary_type_option_t = std::is_same_v<T, BoundaryTypeOption>;
+
+		template<typename T>
+		concept boundary_comparator_option_t = std::is_same_v<T, BoundaryComparatorOption>;
+
+		template<typename T>
+		concept boundary_type_or_comparator_option_t = boundary_type_option_t<T> or boundary_comparator_option_t<T>;
+
+		struct boundary_options
+		{
+			options<BoundaryTypeOption::WIDTH> width{};
+			options<BoundaryTypeOption::HEIGHT> height{};
+			options<BoundaryTypeOption::WIDTH, BoundaryTypeOption::HEIGHT> all{};
+
+			options<BoundaryComparatorOption::LESS_THAN> less_than{};
+			options<BoundaryComparatorOption::EQUAL> equal{};
+			options<BoundaryComparatorOption::GREATER_THAN> greater_than{};
+		};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-	constexpr auto boundary_width = options<detail::BoundaryTypeOption::WIDTH>{};
-	constexpr auto boundary_height = options<detail::BoundaryTypeOption::HEIGHT>{};
-
-	constexpr auto boundary_less_than = options<detail::BoundaryComparatorOption::LESS_THAN>{};
-	constexpr auto boundary_equal = options<detail::BoundaryComparatorOption::EQUAL>{};
-	constexpr auto boundary_greater_than = options<detail::BoundaryComparatorOption::GREATER_THAN>{};
+	namespace element
+	{
+		constexpr auto boundary = detail::boundary_options{};
+	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
@@ -233,7 +251,7 @@ namespace gal::prometheus::draw
 			}
 
 			template<BoundaryComparatorOption C>
-				requires (Last != BoundaryTypeOption::NONE)
+				requires (Last != BoundaryTypeOption::NONE and std::to_underlying(Last) != element::boundary.all)
 			[[nodiscard]] constexpr auto operator()(const options<C>, const float v) const noexcept -> auto
 			{
 				if constexpr (Last == BoundaryTypeOption::WIDTH)
@@ -263,12 +281,18 @@ namespace gal::prometheus::draw
 					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 				}
 			}
+
+			template<BoundaryComparatorOption C>
+				requires (std::to_underlying(Last) != element::boundary.all)
+			[[nodiscard]] constexpr auto operator()(const options<C>, const float width, const float height) const noexcept -> auto
+			{
+				return boundary_maker<C, C>{.value = {.width = width, .height = height}};
+			}
 		};
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-		template<auto... Os>
-			requires ((std::is_same_v<decltype(Os), BoundaryTypeOption> or std::is_same_v<decltype(Os), BoundaryComparatorOption>) and ...)
+		template<boundary_type_or_comparator_option_t auto... Os>
 		struct element_maker<Os...> : boundary_maker<> {};
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END

@@ -46,7 +46,10 @@ namespace gal::prometheus::draw
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-	constexpr auto border = options<detail::BorderOption::NONE>{};
+	namespace element
+	{
+		constexpr auto border = options<detail::BorderOption::NONE>{};
+	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
