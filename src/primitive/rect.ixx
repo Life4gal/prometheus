@@ -279,17 +279,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		[[nodiscard]] constexpr auto valid() const noexcept -> bool { return extent.width >= 0 and extent.height >= 0; }
 
-		[[nodiscard]] constexpr auto width() const noexcept -> extent_value_type
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-			return extent.width;
-		}
+		[[nodiscard]] constexpr auto width() const noexcept -> extent_value_type { return extent.width; }
 
-		[[nodiscard]] constexpr auto height() const noexcept -> extent_value_type
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-			return extent.height;
-		}
+		[[nodiscard]] constexpr auto height() const noexcept -> extent_value_type { return extent.height; }
 
 		[[nodiscard]] constexpr auto size() const noexcept -> extent_type { return {width(), height()}; }
 
@@ -509,23 +501,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 
 		[[nodiscard]] constexpr auto valid() const noexcept -> bool { return extent.width >= 0 and extent.height >= 0 and extent.depth >= 0; }
 
-		[[nodiscard]] constexpr auto width() const noexcept -> extent_value_type
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
-			return extent.width;
-		}
+		[[nodiscard]] constexpr auto width() const noexcept -> extent_value_type { return extent.width; }
 
-		[[nodiscard]] constexpr auto height() const noexcept -> extent_value_type
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
-			return extent.height;
-		}
+		[[nodiscard]] constexpr auto height() const noexcept -> extent_value_type { return extent.height; }
 
-		[[nodiscard]] constexpr auto depth() const noexcept -> extent_value_type
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
-			return extent.depth;
-		}
+		[[nodiscard]] constexpr auto depth() const noexcept -> extent_value_type { return extent.depth; }
 
 		[[nodiscard]] constexpr auto size() const noexcept -> extent_type { return {width(), height()}; }
 
