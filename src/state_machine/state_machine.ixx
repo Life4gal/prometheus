@@ -170,7 +170,7 @@ namespace gal::prometheus::infrastructure
 					is_entry_point,
 					from,
 					to,
-					functional::type_list_type<functional::type_list<Event...>>,
+					functional::type_list_type<Event...>,
 					guard_type,
 					action_type,
 					sentry_entry_type,
@@ -186,7 +186,7 @@ namespace gal::prometheus::infrastructure
 					is_entry_point,
 					from,
 					to,
-					functional::type_list_type<functional::type_list<Event...>>,
+					functional::type_list_type<Event...>,
 					guard_type,
 					action_type,
 					sentry_entry_type,
@@ -479,23 +479,23 @@ namespace gal::prometheus::infrastructure
 
 		public:
 			constexpr static auto transitions_list = list;
-			using transitions_list_type = functional::type_list_type<transitions_list>;
+			using transitions_list_type = std::decay_t<decltype(transitions_list)>;
 
 			constexpr static auto entry_point_list = list.template sub_list<is_entry_point>();
-			using entry_point_list_type = functional::type_list_type<entry_point_list>;
+			using entry_point_list_type = std::decay_t<decltype(entry_point_list)>;
 
 			constexpr static auto state_list = list.template projection<projection_from>().unique();
-			using state_list_type = functional::type_list_type<state_list>;
+			using state_list_type = std::decay_t<decltype(state_list)>;
 
 			template<typename State>
 			constexpr static auto state_to_transitions_list = list.template sub_list<State, contains_state>();
 			template<typename State>
-			using state_to_transitions_list_type = functional::type_list_type<state_to_transitions_list<State>>;
+			using state_to_transitions_list_type = std::decay_t<decltype(state_to_transitions_list<State>)>;
 
 			template<typename EventType>
 			constexpr static auto event_to_transitions_list = list.template sub_list<EventType, contains_event>();
 			template<typename EventType>
-			using event_to_transitions_list_type = functional::type_list_type<event_to_transitions_list<EventType>>;
+			using event_to_transitions_list_type = std::decay_t<decltype(event_to_transitions_list<EventType>)>;
 		};
 
 		template<template<typename...> typename List, typename... Transitions>
