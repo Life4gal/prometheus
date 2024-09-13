@@ -395,6 +395,18 @@ set(
 		${PROJECT_SOURCE_DIR}/src/draw/draw_list.ixx
 		${PROJECT_SOURCE_DIR}/src/draw/font.ixx
 
+		${PROJECT_SOURCE_DIR}/src/draw/surface.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/style.ixx
+
+		${PROJECT_SOURCE_DIR}/src/draw/detail/element.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/detail/element.text.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/detail/element.border.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/detail/element.boundary.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/detail/element.flex.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/detail/element.box.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/detail/element.flex_box.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/element.ixx
+
 		${PROJECT_SOURCE_DIR}/src/draw/draw.ixx
 
 		# =========================
@@ -423,6 +435,14 @@ set(
 		${PROJECT_SOURCE_DIR}/src/functional/function_signature.ixx
 
 		${PROJECT_SOURCE_DIR}/src/functional/functional.ixx
+
+		# =========================
+		# IO
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/io/device.ixx
+
+		${PROJECT_SOURCE_DIR}/src/io/io.ixx
 
 		# =========================
 		# MEMORY
@@ -517,6 +537,8 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/draw/font.impl.ixx
+
+		${PROJECT_SOURCE_DIR}/src/draw/detail/element.impl.ixx
 
 		# =========================
 		# ERROR
