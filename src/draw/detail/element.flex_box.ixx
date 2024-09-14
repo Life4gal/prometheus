@@ -13,7 +13,6 @@ export module gal.prometheus.draw:element.flex_box;
 import std;
 
 import gal.prometheus.primitive;
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :style;
 import :element.element;
@@ -24,7 +23,6 @@ import :element.element;
 #include <prometheus/macro.hpp>
 
 #include <primitive/primitive.ixx>
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #include <draw/style.ixx>
 #include <draw/detail/element.ixx>
@@ -168,6 +166,21 @@ namespace gal::prometheus::draw
 
 		template<typename T>
 		concept flex_box_hacky_option_t = std::is_same_v<T, FlexBoxHackyOption>;
+
+		enum class FlowOption
+		{
+			HORIZONTAL,
+			VERTICAL,
+		};
+
+		template<typename T>
+		concept flow_option_t = std::is_same_v<T, FlowOption>;
+
+		struct flow_options
+		{
+			options<FlowOption::HORIZONTAL> horizontal{};
+			options<FlowOption::VERTICAL> vertical{};
+		};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
@@ -178,6 +191,8 @@ namespace gal::prometheus::draw
 
 		// hacky
 		constexpr auto flex_box_auto = options<detail::FlexBoxHackyOption::NONE>{};
+
+		constexpr auto flow = detail::flow_options{};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
@@ -475,6 +490,14 @@ namespace gal::prometheus::draw
 		// hacky
 		template<flex_box_hacky_option_t auto... Os>
 		struct element_maker<Os...> : flex_box_maker<> {};
+
+		template<flow_option_t auto... Os>
+			requires ((std::to_underlying(Os) == element::flow.horizontal) and ...)
+		struct element_maker<Os...> : flex_box_maker<> {};
+
+		template<flow_option_t auto... Os>
+			requires ((std::to_underlying(Os) == element::flow.vertical) and ...)
+		struct element_maker<Os...> : flex_box_maker<FlexBoxDirectionOption::COLUMN> {};
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 	}
