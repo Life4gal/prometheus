@@ -107,15 +107,15 @@ namespace gal::prometheus::draw
 			auto operator=(Box&&) noexcept -> Box& = default;
 			~Box() noexcept override = default;
 
-			auto calculate_requirement(Surface& surface) noexcept -> void override
+			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
 			{
 				requirement_.reset();
 
 				std::ranges::for_each(
 					children_,
-					[this, &surface](const auto& child) noexcept -> void
+					[this, &style, &surface](const auto& child) noexcept -> void
 					{
-						child->calculate_requirement(surface);
+						child->calculate_requirement(style, surface);
 
 						using functional::operators::operator|;
 						if constexpr (option == BoxOption::HORIZONTAL)
@@ -141,14 +141,14 @@ namespace gal::prometheus::draw
 					}
 				);
 
-				const auto& container_padding = Style::instance().container_padding;
-				const auto& container_spacing = Style::instance().container_spacing;
+				const auto& container_padding = style.container_padding;
+				const auto& container_spacing = style.container_spacing;
 				const auto [extra_x, extra_y] = [&]() noexcept -> std::pair<float, float>
 				{
 					if constexpr (option == BoxOption::HORIZONTAL)
 					{
 						return std::make_pair(
-							2 * container_padding.width + (children_.size() - 1) * container_spacing.width,
+							2 * container_padding.width + static_cast<float>(children_.size() - 1) * container_spacing.width,
 							2 * container_padding.height
 						);
 					}
@@ -156,7 +156,7 @@ namespace gal::prometheus::draw
 					{
 						return std::make_pair(
 							2 * container_padding.width,
-							2 * container_padding.height + (children_.size() - 1) * container_spacing.height
+							2 * container_padding.height + static_cast<float>(children_.size() - 1) * container_spacing.height
 						);
 					}
 					else
@@ -169,9 +169,9 @@ namespace gal::prometheus::draw
 				requirement_.min_height += extra_y;
 			}
 
-			auto set_rect(const rect_type& rect) noexcept -> void override
+			auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
 			{
-				Element::set_rect(rect);
+				Element::set_rect(style, rect);
 
 				std::vector<element_size> elements{};
 				elements.reserve(children_.size());
@@ -208,17 +208,17 @@ namespace gal::prometheus::draw
 					}
 				);
 
-				const auto& container_padding = Style::instance().container_padding;
-				const auto& container_spacing = Style::instance().container_spacing;
+				const auto& container_padding = style.container_padding;
+				const auto& container_spacing = style.container_spacing;
 
 				if constexpr (option == BoxOption::HORIZONTAL)
 				{
-					const auto extra_x = 2 * container_padding.width + (children_.size() - 1) * container_spacing.width;
+					const auto extra_x = 2 * container_padding.width + static_cast<float>(children_.size() - 1) * container_spacing.width;
 					calculate(elements, rect.width() - extra_x);
 				}
 				else if constexpr (option == BoxOption::VERTICAL)
 				{
-					const auto extra_y = 2 * container_padding.height + (children_.size() - 1) * container_spacing.height;
+					const auto extra_y = 2 * container_padding.height + static_cast<float>(children_.size() - 1) * container_spacing.height;
 					calculate(elements, rect.height() - extra_y);
 				}
 				else
@@ -231,6 +231,7 @@ namespace gal::prometheus::draw
 				std::ranges::for_each(
 					std::views::zip(children_, elements),
 					[
+						&style,
 						current_x = point.x + container_padding.width,
 						current_y = point.y + container_padding.height,
 						current_right = point.x + extent.width - container_padding.width,
@@ -253,7 +254,7 @@ namespace gal::prometheus::draw
 									// bottom
 									current_bottom
 							};
-							child->set_rect(box);
+							child->set_rect(style, box);
 							current_x = current_x + element.size + container_spacing.width;
 						}
 						else if constexpr (option == BoxOption::VERTICAL)
@@ -269,7 +270,7 @@ namespace gal::prometheus::draw
 									// bottom
 									current_y + element.size
 							};
-							child->set_rect(box);
+							child->set_rect(style, box);
 							current_y = current_y + element.size + container_spacing.height;
 						}
 						else
@@ -373,9 +374,9 @@ namespace gal::prometheus::draw
 				);
 			}
 
-			auto calculate_requirement(Surface& surface) noexcept -> void override
+			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
 			{
-				Element::calculate_requirement(surface);
+				Element::calculate_requirement(style, surface);
 
 				requirement_.reset();
 
@@ -422,8 +423,8 @@ namespace gal::prometheus::draw
 					return accumulate;
 				};
 
-				const auto& container_padding = Style::instance().container_padding;
-				const auto& container_spacing = Style::instance().container_spacing;
+				const auto& container_padding = style.container_padding;
+				const auto& container_spacing = style.container_spacing;
 				const auto extra_x = 2 * container_padding.width + static_cast<float>(width_ - 1) * container_spacing.width;
 				const auto extra_y = 2 * container_padding.height + static_cast<float>(height_ - 1) * container_spacing.height;
 
@@ -431,9 +432,9 @@ namespace gal::prometheus::draw
 				requirement_.min_height = integrate(size_y) + extra_y;
 			}
 
-			auto set_rect(const rect_type& rect) noexcept -> void override
+			auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
 			{
-				Element::set_rect(rect);
+				Element::set_rect(style, rect);
 
 				std::vector<element_size> elements_x{width_, {.min_size = 0, .flex_grow = std::numeric_limits<float>::max(), .flex_shrink = std::numeric_limits<float>::max(), .size = 0}};
 				std::vector<element_size> elements_y{height_, {.min_size = 0, .flex_grow = std::numeric_limits<float>::max(), .flex_shrink = std::numeric_limits<float>::max(), .size = 0}};
@@ -465,8 +466,8 @@ namespace gal::prometheus::draw
 					}
 				);
 
-				const auto& container_padding = Style::instance().container_padding;
-				const auto& container_spacing = Style::instance().container_spacing;
+				const auto& container_padding = style.container_padding;
+				const auto& container_spacing = style.container_spacing;
 				const auto extra_x = 2 * container_padding.width + static_cast<float>(width_ - 1) * container_spacing.width;
 				const auto extra_y = 2 * container_padding.height + static_cast<float>(height_ - 1) * container_spacing.height;
 
@@ -478,6 +479,7 @@ namespace gal::prometheus::draw
 				std::ranges::for_each(
 					std::views::zip(elements_y, grid),
 					[
+						&style,
 						&elements_x ,
 						x = point.x + container_padding.width,
 						y = point.y + container_padding.height,
@@ -489,6 +491,7 @@ namespace gal::prometheus::draw
 						std::ranges::for_each(
 							std::views::zip(elements_x, line),
 							[
+								&style,
 								current_x = x,
 								current_y = y,
 								current_height = element_y.size,
@@ -508,7 +511,7 @@ namespace gal::prometheus::draw
 										// bottom
 										current_y + current_height
 								};
-								element->set_rect(box);
+								element->set_rect(style, box);
 								current_x = current_x + element_x.size + container_spacing.width;
 							}
 						);

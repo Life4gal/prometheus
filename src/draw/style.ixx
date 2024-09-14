@@ -29,17 +29,31 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		using extern_type = primitive::basic_extent_2d<float>;
 		using color_type = primitive::colors::color_type;
 
-		[[nodiscard]] static auto instance() noexcept -> Style&;
+		[[nodiscard]] static auto fallback() noexcept -> const Style&;
 
-		// Default font size used when drawing text
+		// Font size used when drawing text
 		float font_size;
-		// Default width when drawing line
+		// Width when drawing line
 		float line_width;
 
 		color_type separator_color;
 
+		// Percentage of space remaining in the flexible container
+		// 
+		// | <--- 100 ---> |
+		// | e1          e2     |
+		// 
+		// e1.flex_x = 1
+		// e2.flex_x = 2
+		//
+		// e1.width = 100 * (1 / (1 + 2))
+		// e2.width = 100 * (2 / (1 + 2))
 		float flex_x;
 		float flex_y;
+
+		// horizontal => height
+		// vertical => width
+		float gauge_size;
 
 		// Padding of the first/last element from the container boundary
 		extern_type container_padding;
@@ -55,4 +69,25 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		// Default color of the title when drawing the window
 		color_type window_title_default_color;
 	};
+
+	inline auto Style::fallback() noexcept -> const Style&
+	{
+		constexpr static Style style
+		{
+				.font_size = 18.f,
+				.line_width = 1.f,
+				.separator_color = primitive::colors::red,
+				.flex_x = 1.f,
+				.flex_y = 1.f,
+				.gauge_size = 10.f,
+				.container_padding = {1.f, 1.f},
+				.container_spacing = {2.f, 2.f},
+				.border_rounding = 2.f,
+				.border_padding = {3.f, 3.f},
+				.border_default_color = primitive::colors::black,
+				.window_title_default_color = primitive::colors::blue_violet
+		};
+
+		return style;
+	}
 }

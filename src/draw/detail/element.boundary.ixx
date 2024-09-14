@@ -145,11 +145,12 @@ namespace gal::prometheus::draw
 			Boundary& operator=(Boundary&& other) noexcept = default;
 			~Boundary() noexcept override = default;
 
-			auto calculate_requirement(Surface& surface) noexcept -> void override
+			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
 			{
-				Element::calculate_requirement(surface);
+				Element::calculate_requirement(style, surface);
 
 				requirement_ = children_[0]->requirement();
+
 				if constexpr (WidthComparator != BoundaryComparatorOption::NONE)
 				{
 					requirement_.flex_grow_width = 0;
@@ -197,9 +198,9 @@ namespace gal::prometheus::draw
 				}
 			}
 
-			auto set_rect(const rect_type& rect) noexcept -> void override
+			auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
 			{
-				Element::set_rect(rect);
+				Element::set_rect(style, rect);
 
 				auto box = rect;
 
@@ -219,7 +220,7 @@ namespace gal::prometheus::draw
 					box.extent.height = std::ranges::min(box.extent.height, value_.height);
 				}
 
-				children_[0]->set_rect(box);
+				children_[0]->set_rect(style, box);
 			}
 		};
 

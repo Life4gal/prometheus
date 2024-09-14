@@ -240,7 +240,7 @@ namespace gal::prometheus::draw
 				FlexBoxAlignContentOption Ac,
 				std::ranges::output_range<element_block_size> Range
 			>
-			auto calculate_layout(Range& range, const float total_width, const float total_height, bool calculate_requirement) noexcept -> void
+			auto calculate_layout(const Style& style, Range& range, const float total_width, const float total_height, bool calculate_requirement) noexcept -> void
 			{
 				range.reserve(children_.size());
 
@@ -272,7 +272,7 @@ namespace gal::prometheus::draw
 					}
 				);
 
-				calculate<D, W, J, Ai, Ac>(range, total_width, total_height);
+				calculate<D, W, J, Ai, Ac>(style, range, total_width, total_height);
 			}
 
 		public:
@@ -300,9 +300,9 @@ namespace gal::prometheus::draw
 			FlexBox& operator=(FlexBox&& other) noexcept = default;
 			~FlexBox() noexcept override = default;
 
-			auto calculate_requirement(Surface& surface) noexcept -> void override
+			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
 			{
-				Element::calculate_requirement(surface);
+				Element::calculate_requirement(style, surface);
 
 				std::vector<element_block_size> element_blocks{};
 				if constexpr (is_row_oriented())
@@ -313,7 +313,7 @@ namespace gal::prometheus::draw
 						FlexBoxJustifyOption::FLEX_START,
 						FlexBoxAlignItemOption::FLEX_START,
 						FlexBoxAlignContentOption::FLEX_START
-					>(element_blocks, std::numeric_limits<float>::max(), required_width_or_height_, true);
+					>(style, element_blocks, std::numeric_limits<float>::max(), required_width_or_height_, true);
 				}
 				else if constexpr (is_column_oriented())
 				{
@@ -323,7 +323,7 @@ namespace gal::prometheus::draw
 						FlexBoxJustifyOption::FLEX_START,
 						FlexBoxAlignItemOption::FLEX_START,
 						FlexBoxAlignContentOption::FLEX_START
-					>(element_blocks, required_width_or_height_, std::numeric_limits<float>::max(), true);
+					>(style, element_blocks, required_width_or_height_, std::numeric_limits<float>::max(), true);
 				}
 				else
 				{
@@ -360,9 +360,9 @@ namespace gal::prometheus::draw
 				requirement_.min_height = box.height();
 			}
 
-			auto set_rect(const rect_type& rect) noexcept -> void override
+			auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
 			{
-				Element::set_rect(rect);
+				Element::set_rect(style, rect);
 
 				[[maybe_unused]] const auto previous = std::exchange(required_width_or_height_, is_row_oriented() ? rect.width() : rect.height());
 
@@ -373,11 +373,11 @@ namespace gal::prometheus::draw
 					justify_option,
 					align_item_option,
 					align_content_option
-				>(element_blocks, rect.width(), rect.height(), true);
+				>(style, element_blocks, rect.width(), rect.height(), false);
 
 				std::ranges::for_each(
 					std::views::zip(children_, element_blocks),
-					[&rect](const std::tuple<element_type&, const element_block_size&>& pack) noexcept -> void
+					[&style, &rect](const std::tuple<element_type&, const element_block_size&>& pack) noexcept -> void
 					{
 						auto& [child, block] = pack;
 
@@ -391,7 +391,7 @@ namespace gal::prometheus::draw
 						};
 						const auto intersects_box = rect.combine_min(block_rect);
 
-						child->set_rect(intersects_box);
+						child->set_rect(style, intersects_box);
 					}
 				);
 			}

@@ -39,10 +39,10 @@ template<
 	FlexBoxAlignContentOption AlignContentOption,
 	std::ranges::output_range<element_block_size> Range
 >
-constexpr auto calculate(Range& range, const float total_width, const float total_height) noexcept -> void
+constexpr auto calculate(const Style& style, Range& range, const float total_width, const float total_height) noexcept -> void
 {
-	const auto& container_padding = Style::instance().container_padding;
-	const auto& container_spacing = Style::instance().container_spacing;
+	const auto& container_padding = style.container_padding;
+	const auto& container_spacing = style.container_spacing;
 
 	std::vector<element_blocks_size> lines{};
 
@@ -397,7 +397,7 @@ template<
 	FlexBoxAlignContentOption AlignContentOption,
 	std::ranges::output_range<element_block_size> Range
 >
-constexpr auto calculate(Range& range, const float total_width, const float total_height) noexcept -> void
+constexpr auto calculate(const Style& style, Range& range, const float total_width, const float total_height) noexcept -> void
 {
 	if constexpr (WrapOption == FlexBoxWrapOption::INVERSE)
 	{
@@ -414,13 +414,13 @@ constexpr auto calculate(Range& range, const float total_width, const float tota
 
 		symmetry_y();
 
-		calculate<JustifyOption, AlignItemOption, AlignContentOption>(range, total_width, total_height);
+		calculate<JustifyOption, AlignItemOption, AlignContentOption>(style, range, total_width, total_height);
 
 		symmetry_y();
 	}
 	else
 	{
-		calculate<JustifyOption, AlignItemOption, AlignContentOption>(range, total_width, total_height);
+		calculate<JustifyOption, AlignItemOption, AlignContentOption>(style, range, total_width, total_height);
 	}
 }
 
@@ -432,7 +432,7 @@ template<
 	FlexBoxAlignContentOption AlignContentOption,
 	std::ranges::output_range<element_block_size> Range
 >
-constexpr auto calculate(Range& range, const float total_width, const float total_height) noexcept -> void
+constexpr auto calculate(const Style& style, Range& range, const float total_width, const float total_height) noexcept -> void
 {
 	if constexpr (DirectionOption == FlexBoxDirectionOption::ROW_INVERSE)
 	{
@@ -449,13 +449,13 @@ constexpr auto calculate(Range& range, const float total_width, const float tota
 
 		symmetry_x();
 
-		calculate<WrapOption, JustifyOption, AlignItemOption, AlignContentOption>(range, total_width, total_height);
+		calculate<WrapOption, JustifyOption, AlignItemOption, AlignContentOption>(style, range, total_width, total_height);
 
 		symmetry_x();
 	}
 	else if constexpr (DirectionOption == FlexBoxDirectionOption::ROW)
 	{
-		calculate<WrapOption, JustifyOption, AlignItemOption, AlignContentOption>(range, total_width, total_height);
+		calculate<WrapOption, JustifyOption, AlignItemOption, AlignContentOption>(style, range, total_width, total_height);
 	}
 	else
 	{
@@ -476,11 +476,11 @@ constexpr auto calculate(Range& range, const float total_width, const float tota
 
 		if constexpr (DirectionOption == FlexBoxDirectionOption::COLUMN)
 		{
-			calculate<FlexBoxDirectionOption::ROW, WrapOption, JustifyOption, AlignItemOption, AlignContentOption>(range, total_height, total_width);
+			calculate<FlexBoxDirectionOption::ROW, WrapOption, JustifyOption, AlignItemOption, AlignContentOption>(style, range, total_height, total_width);
 		}
 		else if constexpr (DirectionOption == FlexBoxDirectionOption::COLUMN_INVERSE)
 		{
-			calculate<FlexBoxDirectionOption::ROW_INVERSE, WrapOption, JustifyOption, AlignItemOption, AlignContentOption>(range, total_height, total_width);
+			calculate<FlexBoxDirectionOption::ROW_INVERSE, WrapOption, JustifyOption, AlignItemOption, AlignContentOption>(style, range, total_height, total_width);
 		}
 		else
 		{

@@ -63,10 +63,10 @@ namespace gal::prometheus::draw
 		private:
 			color_type color_;
 
-			[[nodiscard]] static auto extra_offset() noexcept -> Style::extern_type
+			[[nodiscard]] static auto extra_offset(const Style& style) noexcept -> Style::extern_type
 			{
-				const auto line_width = Style::instance().line_width;
-				const auto& border_padding = Style::instance().border_padding;
+				const auto line_width = style.line_width;
+				const auto& border_padding = style.border_padding;
 				const auto offset_x = line_width + border_padding.width;
 				const auto offset_y = line_width + border_padding.height;
 
@@ -78,23 +78,23 @@ namespace gal::prometheus::draw
 				: Element{elements_type{std::move(element)}},
 				  color_{color} {}
 
-			auto calculate_requirement(Surface& surface) noexcept -> void override
+			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
 			{
-				Element::calculate_requirement(surface);
+				Element::calculate_requirement(style, surface);
 
 				requirement_ = children_[0]->requirement();
 
-				const auto [offset_x, offset_y] = extra_offset();
+				const auto [offset_x, offset_y] = extra_offset(style);
 
 				requirement_.min_width += 2 * offset_x;
 				requirement_.min_height += 2 * offset_y;
 			}
 
-			auto set_rect(const rect_type& rect) noexcept -> void override
+			auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
 			{
-				Element::set_rect(rect);
+				Element::set_rect(style, rect);
 
-				const auto [offset_x, offset_y] = extra_offset();
+				const auto [offset_x, offset_y] = extra_offset(style);
 				const auto& [point, extent] = rect;
 
 				const rect_type box
@@ -109,18 +109,18 @@ namespace gal::prometheus::draw
 						point.y + extent.height - offset_y
 				};
 
-				children_[0]->set_rect(box);
+				children_[0]->set_rect(style, box);
 			}
 
-			auto render(Surface& surface) noexcept -> void override
+			auto render(const Style& style, Surface& surface) noexcept -> void override
 			{
-				render(surface, DrawFlag::ROUND_CORNER_ALL);
+				render(style, surface, DrawFlag::ROUND_CORNER_ALL);
 			}
 
-			auto render(Surface& surface, const DrawFlag flag) const noexcept -> void
+			auto render(const Style& style, Surface& surface, const DrawFlag flag) const noexcept -> void
 			{
-				surface.draw_list().rect(rect_, color_, Style::instance().border_rounding, flag, Style::instance().line_width);
-				children_[0]->render(surface);
+				surface.draw_list().rect(rect_, color_, style.border_rounding, flag, style.line_width);
+				children_[0]->render(style, surface);
 			}
 		};
 
@@ -137,9 +137,9 @@ namespace gal::prometheus::draw
 				: Element{std::move(title), std::move(content)},
 				  color_{title_color} {}
 
-			auto calculate_requirement(Surface& surface) noexcept -> void override
+			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
 			{
-				Element::calculate_requirement(surface);
+				Element::calculate_requirement(style, surface);
 
 				// content
 				requirement_ = children_[1]->requirement();
@@ -148,9 +148,9 @@ namespace gal::prometheus::draw
 				requirement_.min_height += children_[0]->requirement().min_height;
 			}
 
-			auto set_rect(const rect_type& rect) noexcept -> void override
+			auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
 			{
-				Element::set_rect(rect);
+				Element::set_rect(style, rect);
 
 				const auto& [point, extent] = rect;
 
@@ -165,7 +165,7 @@ namespace gal::prometheus::draw
 						// bottom
 						point.y + children_[0]->requirement().min_height
 				};
-				children_[0]->set_rect(title_box);
+				children_[0]->set_rect(style, title_box);
 
 				// content
 				const rect_type content_box{
@@ -178,19 +178,19 @@ namespace gal::prometheus::draw
 						// bottom
 						point.y + extent.height
 				};
-				children_[1]->set_rect(content_box);
+				children_[1]->set_rect(style, content_box);
 			}
 
-			auto render(Surface& surface) noexcept -> void override
+			auto render(const Style& style, Surface& surface) noexcept -> void override
 			{
 				// title
-				surface.draw_list().rect_filled(children_[0]->rect(), color_, Style::instance().border_rounding, DrawFlag::ROUND_CORNER_TOP);
-				children_[0]->render(surface);
+				surface.draw_list().rect_filled(children_[0]->rect(), color_, style.border_rounding, DrawFlag::ROUND_CORNER_TOP);
+				children_[0]->render(style, surface);
 
 				// content
 				const auto content = cast_element_unchecked<Border>(children_[1]);
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(content != nullptr);
-				content->render(surface, DrawFlag::ROUND_CORNER_BOTTOM);
+				content->render(style, surface, DrawFlag::ROUND_CORNER_BOTTOM);
 			}
 		};
 
@@ -214,7 +214,7 @@ namespace gal::prometheus::draw
 
 			[[nodiscard]] auto operator()(element_type element) const noexcept -> element_type
 			{
-				return this->operator()(std::move(element), Style::instance().border_default_color);
+				return this->operator()(std::move(element), Style::fallback().border_default_color);
 			}
 
 			[[nodiscard]] auto operator()(element_type title, const TitleBorder::color_type title_color, element_type content, const Border::color_type content_color) const noexcept -> element_type
@@ -232,7 +232,7 @@ namespace gal::prometheus::draw
 
 			[[nodiscard]] auto operator()(element_type title, element_type content) const noexcept -> element_type
 			{
-				return this->operator()(std::move(title), Style::instance().window_title_default_color, std::move(content), Style::instance().border_default_color);
+				return this->operator()(std::move(title), Style::fallback().window_title_default_color, std::move(content), Style::fallback().border_default_color);
 			}
 		};
 

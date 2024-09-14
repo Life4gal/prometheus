@@ -31,6 +31,7 @@ import gal.prometheus.functional;
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 {
+	class Style;
 	class Surface;
 
 	namespace detail
@@ -123,13 +124,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 				return requirement_;
 			}
 
-			virtual auto calculate_requirement(Surface& surface) noexcept -> void
+			virtual auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void
 			{
 				std::ranges::for_each(
 					children_,
-					[&surface](auto& child) noexcept -> void
+					[&style, &surface](auto& child) noexcept -> void
 					{
-						child->calculate_requirement(surface);
+						child->calculate_requirement(style, surface);
 					}
 				);
 			}
@@ -139,18 +140,19 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 				return rect_;
 			}
 
-			virtual auto set_rect(const rect_type& rect) noexcept -> void
+			virtual auto set_rect(const Style& style, const rect_type& rect) noexcept -> void
 			{
+				(void)style;
 				rect_ = rect;
 			}
 
-			virtual auto render(Surface& surface) noexcept -> void
+			virtual auto render(const Style& style, Surface& surface) noexcept -> void
 			{
 				std::ranges::for_each(
 					children_,
-					[&surface](auto& child) noexcept -> void
+					[&style, &surface](auto& child) noexcept -> void
 					{
-						child->render(surface);
+						child->render(style, surface);
 					}
 				);
 			}

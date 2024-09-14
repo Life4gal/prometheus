@@ -60,23 +60,23 @@ namespace gal::prometheus::draw
 		public:
 			explicit Separator() noexcept = default;
 
-			auto calculate_requirement([[maybe_unused]] Surface& surface) noexcept -> void override
+			auto calculate_requirement(const Style& style, [[maybe_unused]] Surface& surface) noexcept -> void override
 			{
-				const auto line_width = Style::instance().line_width;
+				const auto line_width = style.line_width;
 				requirement_.min_width = line_width;
 				requirement_.min_height = line_width;
 			}
 
-			auto render(Surface& surface) noexcept -> void override
+			auto render(const Style& style, Surface& surface) noexcept -> void override
 			{
-				if (const auto line_width = Style::instance().line_width;
+				if (const auto line_width = style.line_width;
 					rect_.width() == line_width)
 				{
 					const auto from = rect_.left_top();
 					auto to = rect_.right_bottom();
 					to.x -= line_width;
 
-					surface.draw_list().line(from, to, Style::instance().separator_color, line_width);
+					surface.draw_list().line(from, to, style.separator_color, line_width);
 				}
 				else
 				{
@@ -84,7 +84,7 @@ namespace gal::prometheus::draw
 					auto to = rect_.right_bottom();
 					to.y -= line_width;
 
-					surface.draw_list().line(from, to, Style::instance().separator_color, line_width);
+					surface.draw_list().line(from, to, style.separator_color, line_width);
 				}
 			}
 		};

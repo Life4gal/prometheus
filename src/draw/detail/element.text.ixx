@@ -119,17 +119,17 @@ namespace gal::prometheus::draw
 			explicit Text(std::u32string&& string) noexcept
 				: text_{std::move(string)} {}
 
-			auto calculate_requirement(Surface& surface) noexcept -> void override
+			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
 			{
 				const auto& font = surface.draw_list().shared_data()->get_default_font();
-				const auto area = calculate_text_area(font, Style::instance().font_size, text_);
+				const auto area = calculate_text_area(font, style.font_size, text_);
 				requirement_.min_width = area.width;
 				requirement_.min_height = area.height;
 			}
 
-			auto render(Surface& surface) noexcept -> void override
+			auto render(const Style& style, Surface& surface) noexcept -> void override
 			{
-				surface.draw_list().text(Style::instance().font_size, rect_.left_top(), primitive::colors::black, text_, rect_.width());
+				surface.draw_list().text(style.font_size, rect_.left_top(), primitive::colors::black, text_, rect_.width());
 			}
 		};
 

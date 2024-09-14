@@ -94,14 +94,14 @@ namespace gal::prometheus::draw
 			Flex& operator=(Flex&& other) noexcept = default;
 			~Flex() noexcept override = default;
 
-			auto calculate_requirement(Surface& surface) noexcept -> void override
+			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
 			{
 				requirement_.reset();
 
 				if (not children_.empty())
 				[[likely]]
 				{
-					children_[0]->calculate_requirement(surface);
+					children_[0]->calculate_requirement(style, surface);
 					requirement_ = children_[0]->requirement();
 				}
 
@@ -120,10 +120,10 @@ namespace gal::prometheus::draw
 					constexpr auto grow = type & std::to_underlying(FlexTypeOption::GROW);
 					constexpr auto shrink = type & std::to_underlying(FlexTypeOption::SHRINK);
 
-					const auto set_gw = [this]() noexcept -> void { requirement_.flex_grow_width = 1; };
-					const auto set_gh = [this]() noexcept -> void { requirement_.flex_grow_height = 1; };
-					const auto set_sw = [this]() noexcept -> void { requirement_.flex_shrink_width = 1; };
-					const auto set_sh = [this]() noexcept -> void { requirement_.flex_shrink_height = 1; };
+					const auto set_gw = [this, x = style.flex_x]() noexcept -> void { requirement_.flex_grow_width = x; };
+					const auto set_gh = [this, y = style.flex_y]() noexcept -> void { requirement_.flex_grow_height = y; };
+					const auto set_sw = [this, x = style.flex_x]() noexcept -> void { requirement_.flex_shrink_width = x; };
+					const auto set_sh = [this, y = style.flex_y]() noexcept -> void { requirement_.flex_shrink_height = y; };
 
 					if constexpr (grow)
 					{
@@ -138,14 +138,14 @@ namespace gal::prometheus::draw
 				}
 			}
 
-			auto set_rect(const rect_type& rect) noexcept -> void override
+			auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
 			{
-				Element::set_rect(rect);
+				Element::set_rect(style, rect);
 
 				if (not children_.empty())
 				[[likely]]
 				{
-					children_[0]->set_rect(rect);
+					children_[0]->set_rect(style, rect);
 				}
 			}
 		};

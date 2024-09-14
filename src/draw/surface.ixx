@@ -63,12 +63,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			draw_list_.push_clip_rect(rect_, false);
 		}
 
-		auto render(detail::Element& element) noexcept -> void;
+		auto render(const Style& style, detail::Element& element) noexcept -> void;
 
-		auto render(const element_type& element) noexcept -> void
+		auto render(const Style& style, const element_type& element) noexcept -> void
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(element != nullptr);
-			render(*element);
+			render(style, *element);
 		}
 
 		// todo
