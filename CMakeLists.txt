@@ -405,6 +405,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/draw/detail/element.flex.ixx
 		${PROJECT_SOURCE_DIR}/src/draw/detail/element.box.ixx
 		${PROJECT_SOURCE_DIR}/src/draw/detail/element.flex_box.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/detail/element.gauge.ixx
 		${PROJECT_SOURCE_DIR}/src/draw/element.ixx
 
 		${PROJECT_SOURCE_DIR}/src/draw/draw.ixx

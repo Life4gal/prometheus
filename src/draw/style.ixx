@@ -33,6 +33,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 
 		// Font size used when drawing text
 		float font_size;
+		// Color used when drawing text
+		color_type text_color;
+
 		// Width when drawing line
 		float line_width;
 
@@ -54,6 +57,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		// horizontal => height
 		// vertical => width
 		float gauge_size;
+		color_type gauge_color;
 
 		// Padding of the first/last element from the container boundary
 		extern_type container_padding;
@@ -64,10 +68,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		float border_rounding;
 		// Padding of the elements within the boundary from the border
 		extern_type border_padding;
-		// Default color of the border when drawing the border
-		color_type border_default_color;
-		// Default color of the title when drawing the window
-		color_type window_title_default_color;
+		// Color of the border when drawing the border
+		color_type border_color;
+		// Color of the title when drawing the window
+		color_type window_title_color;
 	};
 
 	inline auto Style::fallback() noexcept -> const Style&
@@ -75,17 +79,19 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		constexpr static Style style
 		{
 				.font_size = 18.f,
+				.text_color = primitive::colors::black,
 				.line_width = 1.f,
 				.separator_color = primitive::colors::red,
 				.flex_x = 1.f,
 				.flex_y = 1.f,
 				.gauge_size = 10.f,
+				.gauge_color = primitive::colors::green,
 				.container_padding = {1.f, 1.f},
 				.container_spacing = {2.f, 2.f},
 				.border_rounding = 2.f,
 				.border_padding = {3.f, 3.f},
-				.border_default_color = primitive::colors::black,
-				.window_title_default_color = primitive::colors::blue_violet
+				.border_color = primitive::colors::black,
+				.window_title_color = primitive::colors::blue_violet
 		};
 
 		return style;

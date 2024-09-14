@@ -20,6 +20,7 @@ export import :element.boundary;
 export import :element.flex;
 export import :element.box;
 export import :element.flex_box;
+export import :element.gauge;
 
 #else
 #pragma once
@@ -34,5 +35,6 @@ export import :element.flex_box;
 #include <draw/detail/element.flex.ixx>
 #include <draw/detail/element.box.ixx>
 #include <draw/detail/element.flex_box.ixx>
+#include <draw/detail/element.gauge.ixx>
 
 #endif
