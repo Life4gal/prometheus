@@ -36,37 +36,3 @@ export import :element.flex_box;
 #include <draw/detail/element.flex_box.ixx>
 
 #endif
-
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
-{
-	// element | decorator
-	template<typename Element, typename Decorator>
-	[[nodiscard]] constexpr auto operator|(Element&& element, Decorator&& decorator) noexcept -> element_type //
-		requires (derived_element_t<std::decay_t<Element>> and derived_element_t<std::invoke_result_t<Decorator, Element>>)
-	{
-		return std::invoke(std::forward<Decorator>(decorator), std::forward<Element>(element));
-	}
-
-	// element | option => element | decorator
-	template<typename Element, detail::options_t Option>
-	[[nodiscard]] constexpr auto operator|(Element&& element, const Option option) noexcept -> element_type //
-		requires(derived_element_t<std::decay_t<Element>> and derived_element_t<std::invoke_result_t<std::decay_t<decltype(draw::make(option))>, Element>>)
-	{
-		return std::forward<Element>(element) | draw::make(option);
-	}
-
-	template<detail::options_t... Os>
-	[[nodiscard]] constexpr auto make(Os... os) noexcept -> decltype(auto)
-	{
-		constexpr auto maker = detail::select_maker<Os...>();
-
-		if constexpr (requires { maker(os...); })
-		{
-			return maker(os...);
-		}
-		else
-		{
-			return maker;
-		}
-	}
-}

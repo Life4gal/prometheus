@@ -225,6 +225,46 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		}
 	}
 
+	// make(element::xxx) -> maker
 	template<detail::options_t... Os>
-	[[nodiscard]] constexpr auto make(Os... os) noexcept -> decltype(auto);
+	[[nodiscard]] constexpr auto make(Os... os) noexcept -> decltype(auto)
+	{
+		constexpr auto maker = detail::select_maker<Os...>();
+
+		if constexpr (requires { maker(os...); })
+		{
+			return maker(os...);
+		}
+		else
+		{
+			return maker;
+		}
+	}
+}
+
+// C++ 20 => ADL and function templates that are not visible
+// element_type -> std::shared_ptr
+GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
+{
+	// element | decorator
+	template<typename Element, typename Decorator>
+	[[nodiscard]] constexpr auto operator|(Element&& element, Decorator&& decorator) noexcept -> gal::prometheus::draw::element_type // NOLINT(cert-dcl58-cpp)
+		requires (
+			gal::prometheus::draw::derived_element_t<std::decay_t<Element>> and
+			gal::prometheus::draw::derived_element_t<std::invoke_result_t<Decorator, Element>>
+		)
+	{
+		return std::invoke(std::forward<Decorator>(decorator), std::forward<Element>(element));
+	}
+
+	// element | option => element | decorator
+	template<typename Element, gal::prometheus::draw::detail::options_t Option>
+	[[nodiscard]] constexpr auto operator|(Element&& element, const Option option) noexcept -> gal::prometheus::draw::element_type // NOLINT(cert-dcl58-cpp)
+		requires(
+			gal::prometheus::draw::derived_element_t<std::decay_t<Element>> and
+			gal::prometheus::draw::derived_element_t<std::invoke_result_t<std::decay_t<decltype(gal::prometheus::draw::make(option))>, Element>>
+		)
+	{
+		return std::forward<Element>(element) | gal::prometheus::draw::make(option);
+	}
 }
