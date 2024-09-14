@@ -14,6 +14,7 @@ import std;
 
 import gal.prometheus.primitive;
 import gal.prometheus.chars;
+import gal.prometheus.functional;
 
 import :surface;
 import :style;
@@ -24,8 +25,11 @@ import :element.element;
 
 #include <prometheus/macro.hpp>
 
+#include <optional>
+
 #include <primitive/primitive.ixx>
 #include <chars/chars.ixx>
+#include <functional/functional.ixx>
 
 #include <draw/surface.ixx>
 #include <draw/style.ixx>
@@ -111,13 +115,22 @@ namespace gal::prometheus::draw
 		{
 		public:
 			using text_type = std::u32string;
+			using color_type = Style::color_type;
 
 		private:
 			text_type text_;
+			std::optional<color_type> color_;
 
 		public:
+			Text(std::u32string&& string, const color_type color) noexcept
+				: Element{},
+				  text_{std::move(string)},
+				  color_{color} {}
+
 			explicit Text(std::u32string&& string) noexcept
-				: text_{std::move(string)} {}
+				: Element{},
+				  text_{std::move(string)},
+				  color_{std::nullopt} {}
 
 			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
 			{
@@ -129,7 +142,7 @@ namespace gal::prometheus::draw
 
 			auto render(const Style& style, Surface& surface) noexcept -> void override
 			{
-				surface.draw_list().text(style.font_size, rect_.left_top(), primitive::colors::black, text_, rect_.width());
+				surface.draw_list().text(style.font_size, rect_.left_top(), style.text_color, text_, rect_.width());
 			}
 		};
 
@@ -138,6 +151,16 @@ namespace gal::prometheus::draw
 		template<text_option_t auto... Os>
 		struct element_maker<Os...>
 		{
+			[[nodiscard]] auto operator()(Text::text_type string, const Text::color_type color) const noexcept -> element_type
+			{
+				return make_element<Text>(std::move(string), color);
+			}
+
+			[[nodiscard]] auto operator()(const std::string_view& string, const Text::color_type color) const noexcept -> element_type
+			{
+				return this->operator()(chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(string), color);
+			}
+
 			[[nodiscard]] auto operator()(Text::text_type string) const noexcept -> element_type
 			{
 				return make_element<Text>(std::move(string));
@@ -146,6 +169,20 @@ namespace gal::prometheus::draw
 			[[nodiscard]] auto operator()(const std::string_view& string) const noexcept -> element_type
 			{
 				return this->operator()(chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(string));
+			}
+
+			[[nodiscard]] auto operator()(const Text::color_type color) const noexcept -> auto
+			{
+				return functional::overloaded{
+						[this, color](Text::text_type string) noexcept -> element_type
+						{
+							return this->operator()(std::move(string), color);
+						},
+						[this, color](const std::string_view& string) noexcept -> element_type
+						{
+							return this->operator()(string, color);
+						},
+				};
 			}
 		};
 
