@@ -23,6 +23,8 @@ import :element.element;
 
 #include <prometheus/macro.hpp>
 
+#include <optional>
+
 #include <primitive/primitive.ixx>
 
 #include <draw/surface.ixx>
@@ -61,7 +63,7 @@ namespace gal::prometheus::draw
 			using color_type = Style::color_type;
 
 		private:
-			color_type color_;
+			std::optional<color_type> color_;
 
 			[[nodiscard]] static auto extra_offset(const Style& style) noexcept -> Style::extern_type
 			{
@@ -75,8 +77,12 @@ namespace gal::prometheus::draw
 
 		public:
 			Border(element_type element, const color_type color) noexcept
-				: Element{elements_type{std::move(element)}},
+				: Element{std::move(element)},
 				  color_{color} {}
+
+			explicit Border(element_type element) noexcept
+				: Element{std::move(element)},
+				  color_{std::nullopt} {}
 
 			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
 			{
@@ -119,7 +125,7 @@ namespace gal::prometheus::draw
 
 			auto render(const Style& style, Surface& surface, const DrawFlag flag) const noexcept -> void
 			{
-				surface.draw_list().rect(rect_, color_, style.border_rounding, flag, style.line_width);
+				surface.draw_list().rect(rect_, color_.value_or(style.border_color), style.border_rounding, flag, style.line_width);
 				children_[0]->render(style, surface);
 			}
 		};
@@ -130,12 +136,16 @@ namespace gal::prometheus::draw
 			using color_type = Style::color_type;
 
 		private:
-			color_type color_;
+			std::optional<color_type> color_;
 
 		public:
 			TitleBorder(element_type title, const color_type title_color, element_type content) noexcept
 				: Element{std::move(title), std::move(content)},
 				  color_{title_color} {}
+
+			TitleBorder(element_type title, element_type content) noexcept
+				: Element{std::move(title), std::move(content)},
+				  color_{std::nullopt} {}
 
 			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
 			{
@@ -184,7 +194,7 @@ namespace gal::prometheus::draw
 			auto render(const Style& style, Surface& surface) noexcept -> void override
 			{
 				// title
-				surface.draw_list().rect_filled(children_[0]->rect(), color_, style.border_rounding, DrawFlag::ROUND_CORNER_TOP);
+				surface.draw_list().rect_filled(children_[0]->rect(), color_.value_or(style.window_title_color), style.border_rounding, DrawFlag::ROUND_CORNER_TOP);
 				children_[0]->render(style, surface);
 
 				// content
@@ -214,12 +224,13 @@ namespace gal::prometheus::draw
 
 			[[nodiscard]] auto operator()(element_type element) const noexcept -> element_type
 			{
-				return this->operator()(std::move(element), Style::fallback().border_default_color);
+				return make_element<Border>(std::move(element));
 			}
 
 			[[nodiscard]] auto operator()(element_type title, const TitleBorder::color_type title_color, element_type content, const Border::color_type content_color) const noexcept -> element_type
 			{
-				return make_element<TitleBorder>(std::move(title), title_color, this->operator()(std::move(content), content_color));
+				auto content_with_border = this->operator()(std::move(content), content_color);
+				return make_element<TitleBorder>(std::move(title), title_color, std::move(content_with_border));
 			}
 
 			[[nodiscard]] auto operator()(const TitleBorder::color_type title_color, const Border::color_type content_color) const noexcept -> auto
@@ -232,7 +243,8 @@ namespace gal::prometheus::draw
 
 			[[nodiscard]] auto operator()(element_type title, element_type content) const noexcept -> element_type
 			{
-				return this->operator()(std::move(title), Style::fallback().window_title_default_color, std::move(content), Style::fallback().border_default_color);
+				auto content_with_border = this->operator()(std::move(content));
+				return make_element<TitleBorder>(std::move(title), std::move(content_with_border));
 			}
 		};
 
