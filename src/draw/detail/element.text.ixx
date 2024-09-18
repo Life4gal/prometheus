@@ -142,7 +142,7 @@ namespace gal::prometheus::draw
 
 			auto render(const Style& style, Surface& surface) noexcept -> void override
 			{
-				surface.draw_list().text(style.font_size, rect_.left_top(), style.text_color, text_, rect_.width());
+				surface.draw_list().text(style.font_size, rect_.left_top(), color_.value_or(style.text_color), text_, rect_.width());
 			}
 		};
 
@@ -156,7 +156,7 @@ namespace gal::prometheus::draw
 				return make_element<Text>(std::move(string), color);
 			}
 
-			[[nodiscard]] auto operator()(const std::string_view& string, const Text::color_type color) const noexcept -> element_type
+			[[nodiscard]] auto operator()(const std::string_view string, const Text::color_type color) const noexcept -> element_type
 			{
 				return this->operator()(chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(string), color);
 			}
@@ -166,7 +166,7 @@ namespace gal::prometheus::draw
 				return make_element<Text>(std::move(string));
 			}
 
-			[[nodiscard]] auto operator()(const std::string_view& string) const noexcept -> element_type
+			[[nodiscard]] auto operator()(const std::string_view string) const noexcept -> element_type
 			{
 				return this->operator()(chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(string));
 			}
