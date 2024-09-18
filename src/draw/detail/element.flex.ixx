@@ -60,8 +60,16 @@ namespace gal::prometheus::draw
 
 			options<FlexDirectionOption::HORIZONTAL> horizontal{};
 			options<FlexDirectionOption::VERTICAL> vertical{};
-			options<FlexDirectionOption::HORIZONTAL, FlexDirectionOption::VERTICAL> all{};
+			options<FlexDirectionOption::HORIZONTAL, FlexDirectionOption::VERTICAL> both{};
 		};
+
+		enum class FlexHackyOption
+		{
+			NONE,
+		};
+
+		template<typename T>
+		concept flex_hack_option_t = std::is_same_v<T, FlexHackyOption>;
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
@@ -69,6 +77,9 @@ namespace gal::prometheus::draw
 	namespace element
 	{
 		constexpr auto flex = detail::flex_options{};
+
+		// hacky
+		constexpr auto flex_auto = options<detail::FlexHackyOption::NONE>{};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
@@ -166,14 +177,21 @@ namespace gal::prometheus::draw
 				return make_element<Flex<Type, Direction>>();
 			}
 
-			template<FlexTypeOption Option>
-			[[nodiscard]] constexpr auto operator()(const options<Option>) const noexcept -> flex_maker<Type | std::to_underlying(Option), Direction>
+			template<FlexTypeOption... Option>
+			[[nodiscard]] constexpr auto operator()(const options<Option...>) const noexcept -> flex_maker<(Type | ... | std::to_underlying(Option)), Direction>
 			{
 				return {};
 			}
 
-			template<FlexDirectionOption Option>
-			[[nodiscard]] constexpr auto operator()(const options<Option>) const noexcept -> flex_maker<Type, Direction | std::to_underlying(Option)>
+			template<FlexDirectionOption... Option>
+			[[nodiscard]] constexpr auto operator()(const options<Option...>) const noexcept -> flex_maker<Type, (Direction | ... | std::to_underlying(Option))>
+			{
+				return {};
+			}
+
+			// hacky
+			template<FlexHackyOption Option>
+			[[nodiscard]] constexpr auto operator()(const options<Option>) const noexcept -> flex_maker<element::flex.dynamic, element::flex.both>
 			{
 				return {};
 			}
@@ -182,6 +200,9 @@ namespace gal::prometheus::draw
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
 		template<flex_type_or_direction_option_t auto... Os>
+		struct element_maker<Os...> : flex_maker<> {};
+
+		template<flex_hack_option_t auto... Os>
 		struct element_maker<Os...> : flex_maker<> {};
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END

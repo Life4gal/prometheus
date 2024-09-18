@@ -87,8 +87,7 @@ namespace gal::prometheus::draw
 
 		[[nodiscard]] inline auto make_filler() noexcept -> element_type
 		{
-			// return make(element::flex.all)(element::flex.dynamic);
-			return flex_maker<element::flex.dynamic, element::flex.all>{}();
+			return make(element::flex_auto)();
 		}
 
 		template<BoxOption Option>
