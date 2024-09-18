@@ -110,6 +110,42 @@ namespace
 	};
 }
 
+template<>
+struct meta::user_defined::enum_name_policy<MouseButton>
+{
+	constexpr static auto value = EnumNamePolicy::WITH_SCOPED_NAME;
+};
+
+template<>
+struct meta::user_defined::enum_name_policy<MouseAction>
+{
+	constexpr static auto value = EnumNamePolicy::WITH_SCOPED_NAME;
+};
+
+template<>
+struct meta::user_defined::enum_name_policy<MouseMod>
+{
+	constexpr static auto value = EnumNamePolicy::WITH_SCOPED_NAME;
+};
+
+template<>
+struct meta::user_defined::enum_name_policy<KeyboardKeyCode>
+{
+	constexpr static auto value = EnumNamePolicy::WITH_SCOPED_NAME;
+};
+
+template<>
+struct meta::user_defined::enum_name_policy<KeyboardAction>
+{
+	constexpr static auto value = EnumNamePolicy::WITH_SCOPED_NAME;
+};
+
+template<>
+struct meta::user_defined::enum_name_policy<KeyboardMod>
+{
+	constexpr static auto value = EnumNamePolicy::WITH_SCOPED_NAME;
+};
+
 auto glfw_callback_setup(GLFWwindow& w) -> void
 {
 	static auto callback_window_focus = [](GLFWwindow* window, const int focused)
@@ -173,9 +209,10 @@ auto glfw_callback_setup(GLFWwindow& w) -> void
 	{
 		std::println(
 			stdout,
-			"[KEYBOARD]: window: 0x{:x}, key_code: [{}], scan_code: {}, action: {}, mods: {}",
+			"[KEYBOARD]: window: 0x{:x}, key_code: [{}]({}), scan_code: {}, action: {}, mods: {}",
 			reinterpret_cast<std::uintptr_t>(window),
 			meta::to_string(static_cast<KeyboardKeyCode>(key_code)),
+			key_code,
 			scan_code,
 			meta::to_string(static_cast<KeyboardAction>(action)),
 			meta::to_string(static_cast<KeyboardMod>(mods))
