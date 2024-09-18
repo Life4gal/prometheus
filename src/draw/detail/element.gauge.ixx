@@ -90,15 +90,15 @@ namespace gal::prometheus::draw
 				if constexpr (const auto current_value = Invert ? max - value_ : value_;
 					Horizontal)
 				{
+					const auto v_offset = (extent.height - style.gauge_size) / 2;
+
 					if (current_value == 0 or current_value == max) // NOLINT(clang-diagnostic-float-equal)
 					{
-						const rect_type rect{
-								point.x,
-								point.y,
-								point.x + extent.width,
-								point.y + style.gauge_size
-						};
-						if (current_value == 0) // NOLINT(clang-diagnostic-float-equal)
+						const rect_type::point_type start_point{point.x, point.y + v_offset};
+						const rect_type::extent_type rect_extent{extent.width, style.gauge_size};
+
+						if (const rect_type rect{start_point, rect_extent};
+							current_value == 0) // NOLINT(clang-diagnostic-float-equal)
 						{
 							surface.draw_list().rect(rect, style.border_color, style.border_rounding, DrawFlag::ROUND_CORNER_ALL, style.line_width);
 						}
@@ -109,23 +109,16 @@ namespace gal::prometheus::draw
 					}
 					else
 					{
-						const auto width = current_value * rect_.width();
-						const auto height = style.gauge_size;
+						const auto width = current_value * extent.width;
 
-						const rect_type rect1
-						{
-								point.x,
-								point.y,
-								point.x + width,
-								point.y + height
-						};
-						const rect_type rect2
-						{
-								point.x + width,
-								point.y,
-								point.x + extent.width,
-								point.y + height
-						};
+						const rect_type::point_type start_point_1{point.x, point.y + v_offset};
+						const rect_type::extent_type rect_extent_1{width, style.gauge_size};
+
+						const rect_type::point_type start_point_2{point.x + width, point.y + v_offset};
+						const rect_type::extent_type rect_extent_2{extent.width - width, style.gauge_size};
+
+						const rect_type rect1{start_point_1, rect_extent_1};
+						const rect_type rect2{start_point_2, rect_extent_2};
 
 						if constexpr (Invert)
 						{
@@ -141,15 +134,15 @@ namespace gal::prometheus::draw
 				}
 				else
 				{
+					const auto h_offset = (extent.width - style.gauge_size) / 2;
+
 					if (current_value == 0 or current_value == max) // NOLINT(clang-diagnostic-float-equal)
 					{
-						const rect_type rect{
-								point.x,
-								point.y,
-								point.x + style.gauge_size,
-								point.y + extent.height
-						};
-						if (current_value == 0) // NOLINT(clang-diagnostic-float-equal)
+						const rect_type::point_type start_point{point.x + h_offset, point.y};
+						const rect_type::extent_type rect_extent{style.gauge_size, extent.height};
+
+						if (const rect_type rect{start_point, rect_extent};
+							current_value == 0) // NOLINT(clang-diagnostic-float-equal)
 						{
 							surface.draw_list().rect(rect, style.border_color, style.border_rounding, DrawFlag::ROUND_CORNER_ALL, style.line_width);
 						}
@@ -160,23 +153,16 @@ namespace gal::prometheus::draw
 					}
 					else
 					{
-						const auto width = style.gauge_size;
 						const auto height = current_value * rect_.height();
 
-						const rect_type rect1
-						{
-								point.x,
-								point.y,
-								point.x + width,
-								point.y + height
-						};
-						const rect_type rect2
-						{
-								point.x,
-								point.y + height,
-								point.x + width,
-								point.y + extent.height
-						};
+						const rect_type::point_type start_point_1{point.x + h_offset, point.y};
+						const rect_type::extent_type rect_extent_1{style.gauge_size, height};
+
+						const rect_type::point_type start_point_2{point.x + h_offset, point.y + height};
+						const rect_type::extent_type rect_extent_2{style.gauge_size, extent.height - height};
+
+						const rect_type rect1{start_point_1, rect_extent_1};
+						const rect_type rect2{start_point_2, rect_extent_2};
 
 						if constexpr (Invert)
 						{
@@ -211,13 +197,13 @@ namespace gal::prometheus::draw
 					requirement_.flex_grow_width = 0;
 					requirement_.flex_shrink_width = 0;
 
-					requirement_.min_height = 1;
+					requirement_.min_height = 10; //std::numeric_limits<value_type>::max();
 					requirement_.flex_grow_height = style.flex_y;
 					requirement_.flex_shrink_height = style.flex_y;
 				}
 				else if constexpr (option == GaugeDirectionOption::LEFT or option == GaugeDirectionOption::RIGHT)
 				{
-					requirement_.min_width = 1;
+					requirement_.min_width = 10; //std::numeric_limits<value_type>::max();
 					requirement_.flex_grow_width = style.flex_x;
 					requirement_.flex_shrink_width = style.flex_x;
 
