@@ -1861,8 +1861,10 @@ namespace gal::prometheus::draw
 				return;
 			}
 
-			path_pin(from + point_type{.5f, .5f});
-			path_pin(to + point_type{.5f, .5f});
+			// path_pin(from + point_type{.5f, .5f});
+			// path_pin(to + point_type{.5f, .5f});
+			path_pin(from);
+			path_pin(to);
 
 			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
@@ -1965,7 +1967,8 @@ namespace gal::prometheus::draw
 				return;
 			}
 
-			path_rect(rect_type{rect.left_top() + point_type{.5f, .5f}, rect.right_bottom() - point_type{.5f, .5f}}, rounding, flag);
+			// path_rect(rect_type{rect.left_top() + point_type{.5f, .5f}, rect.right_bottom() - point_type{.5f, .5f}}, rounding, flag);
+			path_rect(rect, rounding, flag);
 
 			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 			const auto current_vertex_size = vertex_list_.size();
