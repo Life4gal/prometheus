@@ -39,7 +39,7 @@ import :element.element;
 
 namespace gal::prometheus::draw
 {
-	namespace detail
+	namespace detail::element
 	{
 		enum class TextOption
 		{
@@ -54,116 +54,119 @@ namespace gal::prometheus::draw
 
 	namespace element
 	{
-		constexpr auto text = options<detail::TextOption::NONE>{};
+		constexpr auto text = detail::options<detail::element::TextOption::NONE>{};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace detail
 	{
-		[[nodiscard]] inline auto calculate_text_area(
-			const font_type& font,
-			const float font_size,
-			const std::u32string_view s
-		) noexcept -> Element::rect_type::extent_type
+		namespace element
 		{
-			using rect_type = Element::rect_type;
-			using point_type = rect_type::point_type;
-			using extent_type = rect_type::extent_type;
-
-			const float scale = font_size / font.pixel_height;
-
-			auto it_input_current = s.begin();
-			const auto it_input_end = s.end();
-
-			auto area = extent_type{0, 0};
-			auto cursor = point_type{0, font_size};
-
-			while (it_input_current != it_input_end)
+			[[nodiscard]] inline auto calculate_text_area(
+				const font_type& font,
+				const float font_size,
+				const std::u32string_view s
+			) noexcept -> Element::rect_type::extent_type
 			{
-				const auto c = *it_input_current;
-				it_input_current += 1;
+				using rect_type = Element::rect_type;
+				using point_type = rect_type::point_type;
+				using extent_type = rect_type::extent_type;
 
-				if (c == U'\n')
-				{
-					area.width = std::ranges::max(area.width, cursor.x);
-					cursor.x = 0;
-					cursor.y += font.pixel_height * scale;
-				}
+				const float scale = font_size / font.pixel_height;
 
-				const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&]
+				auto it_input_current = s.begin();
+				const auto it_input_end = s.end();
+
+				auto area = extent_type{0, 0};
+				auto cursor = point_type{0, font_size};
+
+				while (it_input_current != it_input_end)
 				{
-					if (const auto it = font.glyphs.find(c);
-						it != font.glyphs.end())
+					const auto c = *it_input_current;
+					it_input_current += 1;
+
+					if (c == U'\n')
 					{
-						return it->second;
+						area.width = std::ranges::max(area.width, cursor.x);
+						cursor.x = 0;
+						cursor.y += font.pixel_height * scale;
 					}
 
-					return font.fallback_glyph;
-				}();
+					const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&]
+					{
+						if (const auto it = font.glyphs.find(c);
+							it != font.glyphs.end())
+						{
+							return it->second;
+						}
 
-				const auto advance_x = glyph_advance_x * scale;
-				cursor.x += advance_x;
+						return font.fallback_glyph;
+					}();
+
+					const auto advance_x = glyph_advance_x * scale;
+					cursor.x += advance_x;
+				}
+
+				area.width = std::ranges::max(area.width, cursor.x);
+				area.height = cursor.y;
+				return area;
 			}
 
-			area.width = std::ranges::max(area.width, cursor.x);
-			area.height = cursor.y;
-			return area;
+			class Text final : public Element
+			{
+			public:
+				using text_type = std::u32string;
+				using color_type = Style::color_type;
+
+			private:
+				text_type text_;
+				std::optional<color_type> color_;
+
+			public:
+				Text(std::u32string&& string, const color_type color) noexcept
+					: Element{},
+					  text_{std::move(string)},
+					  color_{color} {}
+
+				explicit Text(std::u32string&& string) noexcept
+					: Element{},
+					  text_{std::move(string)},
+					  color_{std::nullopt} {}
+
+				auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
+				{
+					const auto& font = surface.draw_list().shared_data()->get_default_font();
+					const auto area = calculate_text_area(font, style.font_size, text_);
+					requirement_.min_width = area.width;
+					requirement_.min_height = area.height;
+				}
+
+				auto render(const Style& style, Surface& surface) noexcept -> void override
+				{
+					surface.draw_list().text(style.font_size, rect_.left_top(), color_.value_or(style.text_color), text_, rect_.width());
+				}
+			};
 		}
-
-		class Text final : public Element
-		{
-		public:
-			using text_type = std::u32string;
-			using color_type = Style::color_type;
-
-		private:
-			text_type text_;
-			std::optional<color_type> color_;
-
-		public:
-			Text(std::u32string&& string, const color_type color) noexcept
-				: Element{},
-				  text_{std::move(string)},
-				  color_{color} {}
-
-			explicit Text(std::u32string&& string) noexcept
-				: Element{},
-				  text_{std::move(string)},
-				  color_{std::nullopt} {}
-
-			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
-			{
-				const auto& font = surface.draw_list().shared_data()->get_default_font();
-				const auto area = calculate_text_area(font, style.font_size, text_);
-				requirement_.min_width = area.width;
-				requirement_.min_height = area.height;
-			}
-
-			auto render(const Style& style, Surface& surface) noexcept -> void override
-			{
-				surface.draw_list().text(style.font_size, rect_.left_top(), color_.value_or(style.text_color), text_, rect_.width());
-			}
-		};
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-		template<text_option_t auto... Os>
-		struct element_maker<Os...>
+		template<element::text_option_t auto... Os>
+		struct maker<Os...>
 		{
-			[[nodiscard]] auto operator()(Text::text_type string, const Text::color_type color) const noexcept -> element_type
+			[[nodiscard]] auto operator()(element::Text::text_type string, const element::Text::color_type color) const noexcept -> element_type
 			{
-				return make_element<Text>(std::move(string), color);
+				return make_element<element::Text>(std::move(string), color);
 			}
 
-			[[nodiscard]] auto operator()(const std::string_view string, const Text::color_type color) const noexcept -> element_type
+			[[nodiscard]] auto operator()(const std::string_view string, const element::Text::color_type color) const noexcept -> element_type
 			{
 				return this->operator()(chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(string), color);
 			}
 
-			[[nodiscard]] auto operator()(Text::text_type string) const noexcept -> element_type
+			[[nodiscard]] auto operator()(element::Text::text_type string) const noexcept -> element_type
 			{
-				return make_element<Text>(std::move(string));
+				return make_element<element::Text>(std::move(string));
 			}
 
 			[[nodiscard]] auto operator()(const std::string_view string) const noexcept -> element_type
@@ -171,10 +174,10 @@ namespace gal::prometheus::draw
 				return this->operator()(chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(string));
 			}
 
-			[[nodiscard]] auto operator()(const Text::color_type color) const noexcept -> auto
+			[[nodiscard]] auto operator()(const element::Text::color_type color) const noexcept -> auto
 			{
 				return functional::overloaded{
-						[this, color](Text::text_type string) noexcept -> element_type
+						[this, color](element::Text::text_type string) noexcept -> element_type
 						{
 							return this->operator()(std::move(string), color);
 						},

@@ -88,14 +88,14 @@ constexpr auto calculate(Range& range, const float target_size) noexcept -> void
 	if (const auto extra_space = target_size - size;
 		extra_space >= 0)
 	{
-		detail::calculate_grow(range, extra_space, flex_grow_sum);
+		element::calculate_grow(range, extra_space, flex_grow_sum);
 	}
 	else if (flex_shrink_size + extra_space >= 0)
 	{
-		detail::calculate_shrink_easy(range, extra_space, flex_shrink_sum);
+		element::calculate_shrink_easy(range, extra_space, flex_shrink_sum);
 	}
 	else
 	{
-		detail::calculate_shrink_hard(range, extra_space + flex_shrink_size, size - flex_shrink_size);
+		element::calculate_shrink_hard(range, extra_space + flex_shrink_size, size - flex_shrink_size);
 	}
 }

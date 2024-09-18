@@ -35,7 +35,7 @@ import :element.element;
 
 namespace gal::prometheus::draw
 {
-	namespace detail
+	namespace detail::element
 	{
 		enum class BorderOption
 		{
@@ -50,171 +50,174 @@ namespace gal::prometheus::draw
 
 	namespace element
 	{
-		constexpr auto border = options<detail::BorderOption::NONE>{};
+		constexpr auto border = detail::options<detail::element::BorderOption::NONE>{};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace detail
 	{
-		class Border final : public Element
+		namespace element
 		{
-		public:
-			using color_type = Style::color_type;
-
-		private:
-			std::optional<color_type> color_;
-
-			[[nodiscard]] static auto extra_offset(const Style& style) noexcept -> Style::extern_type
+			class Border final : public Element
 			{
-				const auto line_width = style.line_width;
-				const auto& border_padding = style.border_padding;
-				const auto offset_x = line_width + border_padding.width;
-				const auto offset_y = line_width + border_padding.height;
+			public:
+				using color_type = Style::color_type;
 
-				return {offset_x, offset_y};
-			}
+			private:
+				std::optional<color_type> color_;
 
-		public:
-			Border(element_type element, const color_type color) noexcept
-				: Element{std::move(element)},
-				  color_{color} {}
-
-			explicit Border(element_type element) noexcept
-				: Element{std::move(element)},
-				  color_{std::nullopt} {}
-
-			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
-			{
-				Element::calculate_requirement(style, surface);
-
-				requirement_ = children_[0]->requirement();
-
-				const auto [offset_x, offset_y] = extra_offset(style);
-
-				requirement_.min_width += 2 * offset_x;
-				requirement_.min_height += 2 * offset_y;
-			}
-
-			auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
-			{
-				Element::set_rect(style, rect);
-
-				const auto [offset_x, offset_y] = extra_offset(style);
-				const auto& [point, extent] = rect;
-
-				const rect_type box
+				[[nodiscard]] static auto extra_offset(const Style& style) noexcept -> Style::extern_type
 				{
-						// left
-						point.x + offset_x,
-						// top
-						point.y + offset_y,
-						// right
-						point.x + extent.width - offset_x,
-						// bottom
-						point.y + extent.height - offset_y
-				};
+					const auto line_width = style.line_width;
+					const auto& border_padding = style.border_padding;
+					const auto offset_x = line_width + border_padding.width;
+					const auto offset_y = line_width + border_padding.height;
 
-				children_[0]->set_rect(style, box);
-			}
+					return {offset_x, offset_y};
+				}
 
-			auto render(const Style& style, Surface& surface) noexcept -> void override
+			public:
+				Border(element_type element, const color_type color) noexcept
+					: Element{std::move(element)},
+					  color_{color} {}
+
+				explicit Border(element_type element) noexcept
+					: Element{std::move(element)},
+					  color_{std::nullopt} {}
+
+				auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
+				{
+					Element::calculate_requirement(style, surface);
+
+					requirement_ = children_[0]->requirement();
+
+					const auto [offset_x, offset_y] = extra_offset(style);
+
+					requirement_.min_width += 2 * offset_x;
+					requirement_.min_height += 2 * offset_y;
+				}
+
+				auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
+				{
+					Element::set_rect(style, rect);
+
+					const auto [offset_x, offset_y] = extra_offset(style);
+					const auto& [point, extent] = rect;
+
+					const rect_type box
+					{
+							// left
+							point.x + offset_x,
+							// top
+							point.y + offset_y,
+							// right
+							point.x + extent.width - offset_x,
+							// bottom
+							point.y + extent.height - offset_y
+					};
+
+					children_[0]->set_rect(style, box);
+				}
+
+				auto render(const Style& style, Surface& surface) noexcept -> void override
+				{
+					render(style, surface, DrawFlag::ROUND_CORNER_ALL);
+				}
+
+				auto render(const Style& style, Surface& surface, const DrawFlag flag) const noexcept -> void
+				{
+					surface.draw_list().rect(rect_, color_.value_or(style.border_color), style.border_rounding, flag, style.line_width);
+					children_[0]->render(style, surface);
+				}
+			};
+
+			class TitleBorder final : public Element
 			{
-				render(style, surface, DrawFlag::ROUND_CORNER_ALL);
-			}
+			public:
+				using color_type = Style::color_type;
 
-			auto render(const Style& style, Surface& surface, const DrawFlag flag) const noexcept -> void
-			{
-				surface.draw_list().rect(rect_, color_.value_or(style.border_color), style.border_rounding, flag, style.line_width);
-				children_[0]->render(style, surface);
-			}
-		};
+			private:
+				std::optional<color_type> color_;
 
-		class TitleBorder final : public Element
-		{
-		public:
-			using color_type = Style::color_type;
+			public:
+				TitleBorder(element_type title, const color_type title_color, element_type content) noexcept
+					: Element{std::move(title), std::move(content)},
+					  color_{title_color} {}
 
-		private:
-			std::optional<color_type> color_;
+				TitleBorder(element_type title, element_type content) noexcept
+					: Element{std::move(title), std::move(content)},
+					  color_{std::nullopt} {}
 
-		public:
-			TitleBorder(element_type title, const color_type title_color, element_type content) noexcept
-				: Element{std::move(title), std::move(content)},
-				  color_{title_color} {}
+				auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
+				{
+					Element::calculate_requirement(style, surface);
 
-			TitleBorder(element_type title, element_type content) noexcept
-				: Element{std::move(title), std::move(content)},
-				  color_{std::nullopt} {}
+					// content
+					requirement_ = children_[1]->requirement();
+					// title
+					requirement_.min_width = std::ranges::max(requirement_.min_width, children_[0]->requirement().min_width);
+					requirement_.min_height += children_[0]->requirement().min_height;
+				}
 
-			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
-			{
-				Element::calculate_requirement(style, surface);
+				auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
+				{
+					Element::set_rect(style, rect);
 
-				// content
-				requirement_ = children_[1]->requirement();
-				// title
-				requirement_.min_width = std::ranges::max(requirement_.min_width, children_[0]->requirement().min_width);
-				requirement_.min_height += children_[0]->requirement().min_height;
-			}
+					const auto& [point, extent] = rect;
 
-			auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
-			{
-				Element::set_rect(style, rect);
+					// title
+					const rect_type title_box{
+							// left
+							point.x,
+							// top
+							point.y,
+							// right
+							point.x + extent.width,
+							// bottom
+							point.y + children_[0]->requirement().min_height
+					};
+					children_[0]->set_rect(style, title_box);
 
-				const auto& [point, extent] = rect;
+					// content
+					const rect_type content_box{
+							// left
+							point.x,
+							// top
+							point.y + title_box.height(),
+							// right
+							point.x + title_box.width(),
+							// bottom
+							point.y + extent.height
+					};
+					children_[1]->set_rect(style, content_box);
+				}
 
-				// title
-				const rect_type title_box{
-						// left
-						point.x,
-						// top
-						point.y,
-						// right
-						point.x + extent.width,
-						// bottom
-						point.y + children_[0]->requirement().min_height
-				};
-				children_[0]->set_rect(style, title_box);
+				auto render(const Style& style, Surface& surface) noexcept -> void override
+				{
+					// title
+					surface.draw_list().rect_filled(children_[0]->rect(), color_.value_or(style.window_title_color), style.border_rounding, DrawFlag::ROUND_CORNER_TOP);
+					children_[0]->render(style, surface);
 
-				// content
-				const rect_type content_box{
-						// left
-						point.x,
-						// top
-						point.y + title_box.height(),
-						// right
-						point.x + title_box.width(),
-						// bottom
-						point.y + extent.height
-				};
-				children_[1]->set_rect(style, content_box);
-			}
-
-			auto render(const Style& style, Surface& surface) noexcept -> void override
-			{
-				// title
-				surface.draw_list().rect_filled(children_[0]->rect(), color_.value_or(style.window_title_color), style.border_rounding, DrawFlag::ROUND_CORNER_TOP);
-				children_[0]->render(style, surface);
-
-				// content
-				const auto content = cast_element_unchecked<Border>(children_[1]);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(content != nullptr);
-				content->render(style, surface, DrawFlag::ROUND_CORNER_BOTTOM);
-			}
-		};
+					// content
+					const auto content = cast_element_unchecked<Border>(children_[1]);
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(content != nullptr);
+					content->render(style, surface, DrawFlag::ROUND_CORNER_BOTTOM);
+				}
+			};
+		}
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-		template<border_option_t auto... Os>
-		struct element_maker<Os...>
+		template<element::border_option_t auto... Os>
+		struct maker<Os...>
 		{
-			[[nodiscard]] auto operator()(element_type element, const Border::color_type color) const noexcept -> element_type
+			[[nodiscard]] auto operator()(element_type element, const element::Border::color_type color) const noexcept -> element_type
 			{
-				return make_element<Border>(std::move(element), color);
+				return make_element<element::Border>(std::move(element), color);
 			}
 
-			[[nodiscard]] auto operator()(const Border::color_type color) const noexcept -> auto
+			[[nodiscard]] auto operator()(const element::Border::color_type color) const noexcept -> auto
 			{
 				return [color, this](element_type element) noexcept -> element_type
 				{
@@ -224,16 +227,21 @@ namespace gal::prometheus::draw
 
 			[[nodiscard]] auto operator()(element_type element) const noexcept -> element_type
 			{
-				return make_element<Border>(std::move(element));
+				return make_element<element::Border>(std::move(element));
 			}
 
-			[[nodiscard]] auto operator()(element_type title, const TitleBorder::color_type title_color, element_type content, const Border::color_type content_color) const noexcept -> element_type
+			[[nodiscard]] auto operator()(
+				element_type title,
+				const element::TitleBorder::color_type title_color,
+				element_type content,
+				const element::Border::color_type content_color
+			) const noexcept -> element_type
 			{
 				auto content_with_border = this->operator()(std::move(content), content_color);
-				return make_element<TitleBorder>(std::move(title), title_color, std::move(content_with_border));
+				return make_element<element::TitleBorder>(std::move(title), title_color, std::move(content_with_border));
 			}
 
-			[[nodiscard]] auto operator()(const TitleBorder::color_type title_color, const Border::color_type content_color) const noexcept -> auto
+			[[nodiscard]] auto operator()(const element::TitleBorder::color_type title_color, const element::Border::color_type content_color) const noexcept -> auto
 			{
 				return [title_color, content_color, this](element_type title, element_type content) noexcept -> element_type
 				{
@@ -244,7 +252,7 @@ namespace gal::prometheus::draw
 			[[nodiscard]] auto operator()(element_type title, element_type content) const noexcept -> element_type
 			{
 				auto content_with_border = this->operator()(std::move(content));
-				return make_element<TitleBorder>(std::move(title), std::move(content_with_border));
+				return make_element<element::TitleBorder>(std::move(title), std::move(content_with_border));
 			}
 		};
 

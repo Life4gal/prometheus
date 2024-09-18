@@ -31,7 +31,7 @@ import :element.element;
 
 namespace gal::prometheus::draw
 {
-	namespace detail
+	namespace detail::element
 	{
 		enum class FlexBoxDirectionOption
 		{
@@ -187,317 +187,320 @@ namespace gal::prometheus::draw
 
 	namespace element
 	{
-		constexpr auto flex_box = detail::flex_box_options{};
+		constexpr auto flex_box = detail::element::flex_box_options{};
 
 		// hacky
-		constexpr auto flex_box_auto = options<detail::FlexBoxHackyOption::NONE>{};
+		constexpr auto flex_box_auto = detail::options<detail::element::FlexBoxHackyOption::NONE>{};
 
-		constexpr auto flow = detail::flow_options{};
+		constexpr auto flow = detail::element::flow_options{};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace detail
 	{
-		#include <draw/detail/element.flex_box.calculate.inl>
-
-		template<
-			FlexBoxDirectionOption DirectionOption,
-			FlexBoxWrapOption WrapOption,
-			FlexBoxJustifyOption JustifyOption,
-			FlexBoxAlignItemOption AlignItemOption,
-			FlexBoxAlignContentOption AlignContentOption
-		>
-		class FlexBox final : public Element
+		namespace element
 		{
-		public:
-			constexpr static auto direction_option = DirectionOption;
-			constexpr static auto wrap_option = WrapOption;
-			constexpr static auto justify_option = JustifyOption;
-			constexpr static auto align_item_option = AlignItemOption;
-			constexpr static auto align_content_option = AlignContentOption;
-
-		private:
-			float required_width_or_height_;
-
-			[[nodiscard]] constexpr static auto is_row_oriented() noexcept -> bool
-			{
-				return direction_option == FlexBoxDirectionOption::ROW or direction_option == FlexBoxDirectionOption::ROW_INVERSE;
-			}
-
-			[[nodiscard]] constexpr static auto is_column_oriented() noexcept -> bool
-			{
-				return direction_option == FlexBoxDirectionOption::COLUMN or direction_option == FlexBoxDirectionOption::COLUMN_INVERSE;
-			}
-
-			static_assert(is_row_oriented() or is_column_oriented());
+			#include <draw/detail/element.flex_box.calculate.inl>
 
 			template<
-				FlexBoxDirectionOption D,
-				FlexBoxWrapOption W,
-				FlexBoxJustifyOption J,
-				FlexBoxAlignItemOption Ai,
-				FlexBoxAlignContentOption Ac,
-				std::ranges::output_range<element_block_size> Range
+				FlexBoxDirectionOption DirectionOption,
+				FlexBoxWrapOption WrapOption,
+				FlexBoxJustifyOption JustifyOption,
+				FlexBoxAlignItemOption AlignItemOption,
+				FlexBoxAlignContentOption AlignContentOption
 			>
-			auto calculate_layout(const Style& style, Range& range, const float total_width, const float total_height, bool calculate_requirement) noexcept -> void
+			class FlexBox final : public Element
 			{
-				range.reserve(children_.size());
+			public:
+				constexpr static auto direction_option = DirectionOption;
+				constexpr static auto wrap_option = WrapOption;
+				constexpr static auto justify_option = JustifyOption;
+				constexpr static auto align_item_option = AlignItemOption;
+				constexpr static auto align_content_option = AlignContentOption;
 
-				std::ranges::transform(
-					children_,
-					std::back_inserter(range),
-					[calculate_requirement](const auto& child) noexcept -> element_block_size
-					{
-						const auto& requirement = child->requirement();
+			private:
+				float required_width_or_height_;
 
-						return {
-								.width = {
-										.min_size = requirement.min_width,
-										.flex_grow = calculate_requirement ? 0 : requirement.flex_grow_width,
-										.flex_shrink = calculate_requirement ? 0 : requirement.flex_shrink_width,
-										.size = 0,
-										.position = 0,
-								},
-								.height = {
-										.min_size = requirement.min_height,
-										.flex_grow = calculate_requirement ? 0 : requirement.flex_grow_height,
-										.flex_shrink = calculate_requirement ? 0 : requirement.flex_shrink_height,
-										.size = 0,
-										.position = 0,
-								},
-								.placed_line = 0,
-								.placed_position = 0,
-						};
-					}
-				);
-
-				calculate<D, W, J, Ai, Ac>(style, range, total_width, total_height);
-			}
-
-		public:
-			explicit FlexBox(elements_type children) noexcept
-				: Element{std::move(children)},
-				  required_width_or_height_{std::numeric_limits<float>::max()}
-			{
-				if constexpr (is_row_oriented())
+				[[nodiscard]] constexpr static auto is_row_oriented() noexcept -> bool
 				{
-					requirement_.flex_grow_width = 1;
-				}
-				else if constexpr (is_column_oriented())
-				{
-					requirement_.flex_grow_height = 1;
-				}
-				else
-				{
-					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-				}
-			}
-
-			FlexBox(const FlexBox& other) noexcept = default;
-			FlexBox& operator=(const FlexBox& other) noexcept = default;
-			FlexBox(FlexBox&& other) noexcept = default;
-			FlexBox& operator=(FlexBox&& other) noexcept = default;
-			~FlexBox() noexcept override = default;
-
-			auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
-			{
-				Element::calculate_requirement(style, surface);
-
-				std::vector<element_block_size> element_blocks{};
-				if constexpr (is_row_oriented())
-				{
-					calculate_layout<
-						FlexBoxDirectionOption::ROW,
-						FlexBoxWrapOption::DEFAULT,
-						FlexBoxJustifyOption::FLEX_START,
-						FlexBoxAlignItemOption::FLEX_START,
-						FlexBoxAlignContentOption::FLEX_START
-					>(style, element_blocks, std::numeric_limits<float>::max(), required_width_or_height_, true);
-				}
-				else if constexpr (is_column_oriented())
-				{
-					calculate_layout<
-						FlexBoxDirectionOption::COLUMN,
-						FlexBoxWrapOption::DEFAULT,
-						FlexBoxJustifyOption::FLEX_START,
-						FlexBoxAlignItemOption::FLEX_START,
-						FlexBoxAlignContentOption::FLEX_START
-					>(style, element_blocks, required_width_or_height_, std::numeric_limits<float>::max(), true);
-				}
-				else
-				{
-					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					return direction_option == FlexBoxDirectionOption::ROW or direction_option == FlexBoxDirectionOption::ROW_INVERSE;
 				}
 
-				// reset
-				requirement_.min_width = 0;
-				requirement_.min_height = 0;
+				[[nodiscard]] constexpr static auto is_column_oriented() noexcept -> bool
+				{
+					return direction_option == FlexBoxDirectionOption::COLUMN or direction_option == FlexBoxDirectionOption::COLUMN_INVERSE;
+				}
 
-				// calculate the union of all the blocks
-				rect_type box{
-						std::numeric_limits<float>::max(),
-						std::numeric_limits<float>::max(),
-						std::numeric_limits<float>::min(),
-						std::numeric_limits<float>::min()
-				};
-				std::ranges::for_each(
-					element_blocks,
-					[&box](const element_block_size& block) noexcept -> void
-					{
-						const rect_type block_rect
+				static_assert(is_row_oriented() or is_column_oriented());
+
+				template<
+					FlexBoxDirectionOption D,
+					FlexBoxWrapOption W,
+					FlexBoxJustifyOption J,
+					FlexBoxAlignItemOption Ai,
+					FlexBoxAlignContentOption Ac,
+					std::ranges::output_range<element_block_size> Range
+				>
+				auto calculate_layout(const Style& style, Range& range, const float total_width, const float total_height, bool calculate_requirement) noexcept -> void
+				{
+					range.reserve(children_.size());
+
+					std::ranges::transform(
+						children_,
+						std::back_inserter(range),
+						[calculate_requirement](const auto& child) noexcept -> element_block_size
 						{
-								block.width.position,
-								block.height.position,
-								block.width.position + block.width.size,
-								block.height.position + block.height.size
-						};
+							const auto& requirement = child->requirement();
 
-						box = box.combine_max(block_rect);
-					}
-				);
-				requirement_.min_width = box.width();
-				requirement_.min_height = box.height();
-			}
+							return {
+									.width = {
+											.min_size = requirement.min_width,
+											.flex_grow = calculate_requirement ? 0 : requirement.flex_grow_width,
+											.flex_shrink = calculate_requirement ? 0 : requirement.flex_shrink_width,
+											.size = 0,
+											.position = 0,
+									},
+									.height = {
+											.min_size = requirement.min_height,
+											.flex_grow = calculate_requirement ? 0 : requirement.flex_grow_height,
+											.flex_shrink = calculate_requirement ? 0 : requirement.flex_shrink_height,
+											.size = 0,
+											.position = 0,
+									},
+									.placed_line = 0,
+									.placed_position = 0,
+							};
+						}
+					);
 
-			auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
-			{
-				Element::set_rect(style, rect);
+					calculate<D, W, J, Ai, Ac>(style, range, total_width, total_height);
+				}
 
-				[[maybe_unused]] const auto previous = std::exchange(required_width_or_height_, is_row_oriented() ? rect.width() : rect.height());
-
-				std::vector<element_block_size> element_blocks{};
-				calculate_layout<
-					direction_option,
-					wrap_option,
-					justify_option,
-					align_item_option,
-					align_content_option
-				>(style, element_blocks, rect.width(), rect.height(), false);
-
-				std::ranges::for_each(
-					std::views::zip(children_, element_blocks),
-					[&style, &rect](const std::tuple<element_type&, const element_block_size&>& pack) noexcept -> void
+			public:
+				explicit FlexBox(elements_type children) noexcept
+					: Element{std::move(children)},
+					  required_width_or_height_{std::numeric_limits<float>::max()}
+				{
+					if constexpr (is_row_oriented())
 					{
-						auto& [child, block] = pack;
-
-						const auto start_point = rect.point;
-						const rect_type block_rect
-						{
-								start_point.x + block.width.position,
-								start_point.y + block.height.position,
-								start_point.x + block.width.position + block.width.size,
-								start_point.y + block.height.position + block.height.size
-						};
-						const auto intersects_box = rect.combine_min(block_rect);
-
-						child->set_rect(style, intersects_box);
+						requirement_.flex_grow_width = 1;
 					}
-				);
-			}
-		};
+					else if constexpr (is_column_oriented())
+					{
+						requirement_.flex_grow_height = 1;
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
+				}
 
-		template<
-			FlexBoxDirectionOption DirectionOption = FlexBoxDirectionOption::ROW,
-			FlexBoxWrapOption WrapOption = FlexBoxWrapOption::DEFAULT,
-			FlexBoxJustifyOption JustifyOption = FlexBoxJustifyOption::FLEX_START,
-			FlexBoxAlignItemOption AlignItemOption = FlexBoxAlignItemOption::FLEX_START,
-			FlexBoxAlignContentOption AlignContentOption = FlexBoxAlignContentOption::FLEX_START
-		>
-		struct flex_box_maker
-		{
-			[[nodiscard]] constexpr auto operator()(elements_type elements) const noexcept -> element_type
+				FlexBox(const FlexBox& other) noexcept = default;
+				FlexBox& operator=(const FlexBox& other) noexcept = default;
+				FlexBox(FlexBox&& other) noexcept = default;
+				FlexBox& operator=(FlexBox&& other) noexcept = default;
+				~FlexBox() noexcept override = default;
+
+				auto calculate_requirement(const Style& style, Surface& surface) noexcept -> void override
+				{
+					Element::calculate_requirement(style, surface);
+
+					std::vector<element_block_size> element_blocks{};
+					if constexpr (is_row_oriented())
+					{
+						calculate_layout<
+							FlexBoxDirectionOption::ROW,
+							FlexBoxWrapOption::DEFAULT,
+							FlexBoxJustifyOption::FLEX_START,
+							FlexBoxAlignItemOption::FLEX_START,
+							FlexBoxAlignContentOption::FLEX_START
+						>(style, element_blocks, std::numeric_limits<float>::max(), required_width_or_height_, true);
+					}
+					else if constexpr (is_column_oriented())
+					{
+						calculate_layout<
+							FlexBoxDirectionOption::COLUMN,
+							FlexBoxWrapOption::DEFAULT,
+							FlexBoxJustifyOption::FLEX_START,
+							FlexBoxAlignItemOption::FLEX_START,
+							FlexBoxAlignContentOption::FLEX_START
+						>(style, element_blocks, required_width_or_height_, std::numeric_limits<float>::max(), true);
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
+
+					// reset
+					requirement_.min_width = 0;
+					requirement_.min_height = 0;
+
+					// calculate the union of all the blocks
+					rect_type box{
+							std::numeric_limits<float>::max(),
+							std::numeric_limits<float>::max(),
+							std::numeric_limits<float>::min(),
+							std::numeric_limits<float>::min()
+					};
+					std::ranges::for_each(
+						element_blocks,
+						[&box](const element_block_size& block) noexcept -> void
+						{
+							const rect_type block_rect
+							{
+									block.width.position,
+									block.height.position,
+									block.width.position + block.width.size,
+									block.height.position + block.height.size
+							};
+
+							box = box.combine_max(block_rect);
+						}
+					);
+					requirement_.min_width = box.width();
+					requirement_.min_height = box.height();
+				}
+
+				auto set_rect(const Style& style, const rect_type& rect) noexcept -> void override
+				{
+					Element::set_rect(style, rect);
+
+					[[maybe_unused]] const auto previous = std::exchange(required_width_or_height_, is_row_oriented() ? rect.width() : rect.height());
+
+					std::vector<element_block_size> element_blocks{};
+					calculate_layout<
+						direction_option,
+						wrap_option,
+						justify_option,
+						align_item_option,
+						align_content_option
+					>(style, element_blocks, rect.width(), rect.height(), false);
+
+					std::ranges::for_each(
+						std::views::zip(children_, element_blocks),
+						[&style, &rect](const std::tuple<element_type&, const element_block_size&>& pack) noexcept -> void
+						{
+							auto& [child, block] = pack;
+
+							const auto start_point = rect.point;
+							const rect_type block_rect
+							{
+									start_point.x + block.width.position,
+									start_point.y + block.height.position,
+									start_point.x + block.width.position + block.width.size,
+									start_point.y + block.height.position + block.height.size
+							};
+							const auto intersects_box = rect.combine_min(block_rect);
+
+							child->set_rect(style, intersects_box);
+						}
+					);
+				}
+			};
+
+			template<
+				FlexBoxDirectionOption DirectionOption = FlexBoxDirectionOption::ROW,
+				FlexBoxWrapOption WrapOption = FlexBoxWrapOption::DEFAULT,
+				FlexBoxJustifyOption JustifyOption = FlexBoxJustifyOption::FLEX_START,
+				FlexBoxAlignItemOption AlignItemOption = FlexBoxAlignItemOption::FLEX_START,
+				FlexBoxAlignContentOption AlignContentOption = FlexBoxAlignContentOption::FLEX_START
+			>
+			struct flex_box_maker
 			{
-				return make_element<FlexBox<DirectionOption, WrapOption, JustifyOption, AlignItemOption, AlignContentOption>>(std::move(elements));
-			}
+				[[nodiscard]] constexpr auto operator()(elements_type elements) const noexcept -> element_type
+				{
+					return make_element<FlexBox<DirectionOption, WrapOption, JustifyOption, AlignItemOption, AlignContentOption>>(std::move(elements));
+				}
 
-			[[nodiscard]] constexpr auto operator()(derived_element_t auto... elements) const noexcept -> element_type
-			{
-				elements_type es{};
-				es.reserve(sizeof...(elements));
+				[[nodiscard]] constexpr auto operator()(derived_element_t auto... elements) const noexcept -> element_type
+				{
+					elements_type es{};
+					es.reserve(sizeof...(elements));
 
-				(es.emplace_back(std::move(elements)), ...);
+					(es.emplace_back(std::move(elements)), ...);
 
-				return this->operator()(std::move(es));
-			}
+					return this->operator()(std::move(es));
+				}
 
-			template<FlexBoxDirectionOption Option>
-			[[nodiscard]] constexpr auto operator()(options<Option>) const noexcept -> flex_box_maker<Option, WrapOption, JustifyOption, AlignItemOption, AlignContentOption>
-			{
-				return {};
-			}
+				template<FlexBoxDirectionOption Option>
+				[[nodiscard]] constexpr auto operator()(options<Option>) const noexcept -> flex_box_maker<Option, WrapOption, JustifyOption, AlignItemOption, AlignContentOption>
+				{
+					return {};
+				}
 
-			template<FlexBoxDirectionOption Option, typename... Args>
-			[[nodiscard]] constexpr auto operator()(options<Option> option, Args&&... args) const noexcept -> auto
-			{
-				return this->operator()(option)(std::forward<Args>(args)...);
-			}
+				template<FlexBoxDirectionOption Option, typename... Args>
+				[[nodiscard]] constexpr auto operator()(options<Option> option, Args&&... args) const noexcept -> auto
+				{
+					return this->operator()(option)(std::forward<Args>(args)...);
+				}
 
-			template<FlexBoxWrapOption Option>
-			[[nodiscard]] constexpr auto operator()(options<Option>) const noexcept -> flex_box_maker<DirectionOption, Option, JustifyOption, AlignItemOption, AlignContentOption>
-			{
-				return {};
-			}
+				template<FlexBoxWrapOption Option>
+				[[nodiscard]] constexpr auto operator()(options<Option>) const noexcept -> flex_box_maker<DirectionOption, Option, JustifyOption, AlignItemOption, AlignContentOption>
+				{
+					return {};
+				}
 
-			template<FlexBoxWrapOption Option, typename... Args>
-			[[nodiscard]] constexpr auto operator()(options<Option> option, Args&&... args) const noexcept -> auto
-			{
-				return this->operator()(option)(std::forward<Args>(args)...);
-			}
+				template<FlexBoxWrapOption Option, typename... Args>
+				[[nodiscard]] constexpr auto operator()(options<Option> option, Args&&... args) const noexcept -> auto
+				{
+					return this->operator()(option)(std::forward<Args>(args)...);
+				}
 
-			template<FlexBoxJustifyOption Option>
-			[[nodiscard]] constexpr auto operator()(options<Option>) const noexcept -> flex_box_maker<DirectionOption, WrapOption, Option, AlignItemOption, AlignContentOption>
-			{
-				return {};
-			}
+				template<FlexBoxJustifyOption Option>
+				[[nodiscard]] constexpr auto operator()(options<Option>) const noexcept -> flex_box_maker<DirectionOption, WrapOption, Option, AlignItemOption, AlignContentOption>
+				{
+					return {};
+				}
 
-			template<FlexBoxJustifyOption Option, typename... Args>
-			[[nodiscard]] constexpr auto operator()(options<Option> option, Args&&... args) const noexcept -> auto
-			{
-				return this->operator()(option)(std::forward<Args>(args)...);
-			}
+				template<FlexBoxJustifyOption Option, typename... Args>
+				[[nodiscard]] constexpr auto operator()(options<Option> option, Args&&... args) const noexcept -> auto
+				{
+					return this->operator()(option)(std::forward<Args>(args)...);
+				}
 
-			template<FlexBoxAlignItemOption Option>
-			[[nodiscard]] constexpr auto operator()(options<Option>) const noexcept -> flex_box_maker<DirectionOption, WrapOption, JustifyOption, Option, AlignContentOption>
-			{
-				return {};
-			}
+				template<FlexBoxAlignItemOption Option>
+				[[nodiscard]] constexpr auto operator()(options<Option>) const noexcept -> flex_box_maker<DirectionOption, WrapOption, JustifyOption, Option, AlignContentOption>
+				{
+					return {};
+				}
 
-			template<FlexBoxAlignItemOption Option, typename... Args>
-			[[nodiscard]] constexpr auto operator()(options<Option> option, Args&&... args) const noexcept -> auto
-			{
-				return this->operator()(option)(std::forward<Args>(args)...);
-			}
+				template<FlexBoxAlignItemOption Option, typename... Args>
+				[[nodiscard]] constexpr auto operator()(options<Option> option, Args&&... args) const noexcept -> auto
+				{
+					return this->operator()(option)(std::forward<Args>(args)...);
+				}
 
-			template<FlexBoxAlignContentOption Option>
-			[[nodiscard]] constexpr auto operator()(options<Option>) const noexcept -> flex_box_maker<DirectionOption, WrapOption, JustifyOption, AlignItemOption, Option>
-			{
-				return {};
-			}
+				template<FlexBoxAlignContentOption Option>
+				[[nodiscard]] constexpr auto operator()(options<Option>) const noexcept -> flex_box_maker<DirectionOption, WrapOption, JustifyOption, AlignItemOption, Option>
+				{
+					return {};
+				}
 
-			template<FlexBoxAlignContentOption Option, typename... Args>
-			[[nodiscard]] constexpr auto operator()(options<Option> option, Args&&... args) const noexcept -> auto
-			{
-				return this->operator()(option)(std::forward<Args>(args)...);
-			}
-		};
+				template<FlexBoxAlignContentOption Option, typename... Args>
+				[[nodiscard]] constexpr auto operator()(options<Option> option, Args&&... args) const noexcept -> auto
+				{
+					return this->operator()(option)(std::forward<Args>(args)...);
+				}
+			};
+		}
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-		template<flex_box_direction_or_wrap_or_justify_or_align_item_or_align_content_option_t auto... Os>
-		struct element_maker<Os...> : flex_box_maker<> {};
+		template<element::flex_box_direction_or_wrap_or_justify_or_align_item_or_align_content_option_t auto... Os>
+		struct maker<Os...> : element::flex_box_maker<> {};
 
 		// hacky
-		template<flex_box_hacky_option_t auto... Os>
-		struct element_maker<Os...> : flex_box_maker<> {};
+		template<element::flex_box_hacky_option_t auto... Os>
+		struct maker<Os...> : element::flex_box_maker<> {};
 
-		template<flow_option_t auto... Os>
-			requires ((std::to_underlying(Os) == element::flow.horizontal) and ...)
-		struct element_maker<Os...> : flex_box_maker<> {};
+		template<element::flow_option_t auto... Os>
+			requires ((std::to_underlying(Os) == draw::element::flow.horizontal) and ...)
+		struct maker<Os...> : element::flex_box_maker<> {};
 
-		template<flow_option_t auto... Os>
-			requires ((std::to_underlying(Os) == element::flow.vertical) and ...)
-		struct element_maker<Os...> : flex_box_maker<FlexBoxDirectionOption::COLUMN> {};
+		template<element::flow_option_t auto... Os>
+			requires ((std::to_underlying(Os) == draw::element::flow.vertical) and ...)
+		struct maker<Os...> : element::flex_box_maker<element::FlexBoxDirectionOption::COLUMN> {};
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 	}

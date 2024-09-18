@@ -33,7 +33,7 @@ import :element.element;
 
 namespace gal::prometheus::draw
 {
-	namespace detail
+	namespace detail::element
 	{
 		enum class SeparatorOption
 		{
@@ -48,55 +48,58 @@ namespace gal::prometheus::draw
 
 	namespace element
 	{
-		constexpr auto separator = options<detail::SeparatorOption::NONE>{};
+		constexpr auto separator = detail::options<detail::element::SeparatorOption::NONE>{};
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	namespace detail
 	{
-		class Separator final : public Element
+		namespace element
 		{
-		public:
-			explicit Separator() noexcept = default;
-
-			auto calculate_requirement(const Style& style, [[maybe_unused]] Surface& surface) noexcept -> void override
+			class Separator final : public Element
 			{
-				const auto line_width = style.line_width;
-				requirement_.min_width = line_width;
-				requirement_.min_height = line_width;
-			}
+			public:
+				explicit Separator() noexcept = default;
 
-			auto render(const Style& style, Surface& surface) noexcept -> void override
-			{
-				if (const auto line_width = style.line_width;
-					rect_.width() == line_width)
+				auto calculate_requirement(const Style& style, [[maybe_unused]] Surface& surface) noexcept -> void override
 				{
-					const auto from = rect_.left_top();
-					auto to = rect_.right_bottom();
-					to.x -= line_width;
-
-					surface.draw_list().line(from, to, style.separator_color, line_width);
+					const auto line_width = style.line_width;
+					requirement_.min_width = line_width;
+					requirement_.min_height = line_width;
 				}
-				else
+
+				auto render(const Style& style, Surface& surface) noexcept -> void override
 				{
-					const auto from = rect_.left_top();
-					auto to = rect_.right_bottom();
-					to.y -= line_width;
+					if (const auto line_width = style.line_width;
+						rect_.width() == line_width) // NOLINT(clang-diagnostic-float-equal)
+					{
+						const auto from = rect_.left_top();
+						auto to = rect_.right_bottom();
+						to.x -= line_width;
 
-					surface.draw_list().line(from, to, style.separator_color, line_width);
+						surface.draw_list().line(from, to, style.separator_color, line_width);
+					}
+					else
+					{
+						const auto from = rect_.left_top();
+						auto to = rect_.right_bottom();
+						to.y -= line_width;
+
+						surface.draw_list().line(from, to, style.separator_color, line_width);
+					}
 				}
-			}
-		};
+			};
+		}
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 
-		template<separator_option_t auto... Os>
-		struct element_maker<Os...>
+		template<element::separator_option_t auto... Os>
+		struct maker<Os...>
 		{
 			[[nodiscard]] auto operator()() const noexcept -> element_type
 			{
-				return make_element<Separator>();
+				return make_element<element::Separator>();
 			}
 		};
 
