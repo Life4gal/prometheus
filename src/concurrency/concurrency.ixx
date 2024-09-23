@@ -8,11 +8,13 @@ export module gal.prometheus.concurrency;
 
 export import :thread;
 export import :unfair_mutex;
+export import :queue;
 
 #else
 #pragma once
 
 #include <concurrency/thread.ixx>
 #include <concurrency/unfair_mutex.ixx>
+#include <concurrency/queue.ixx>
 
 #endif
