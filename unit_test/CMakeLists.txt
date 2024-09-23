@@ -18,6 +18,12 @@ add_executable(
 		${PROJECT_SOURCE_DIR}/src/chars/utf32.cpp
 
 		# =================================
+		# CONCURRENCY
+		# =================================
+
+		${PROJECT_SOURCE_DIR}/src/concurrency/queue.cpp
+
+		# =================================
 		# META
 		# =================================
 
