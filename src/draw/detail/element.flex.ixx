@@ -69,7 +69,7 @@ namespace gal::prometheus::draw
 		};
 
 		template<typename T>
-		concept flex_hack_option_t = std::is_same_v<T, FlexHackyOption>;
+		concept flex_hacky_option_t = std::is_same_v<T, FlexHackyOption>;
 	}
 
 	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
@@ -205,7 +205,7 @@ namespace gal::prometheus::draw
 		template<element::flex_type_or_direction_option_t auto... Os>
 		struct maker<Os...> : element::flex_maker<> {};
 
-		template<element::flex_hack_option_t auto... Os>
+		template<element::flex_hacky_option_t auto... Os>
 		struct maker<Os...> : element::flex_maker<> {};
 
 		GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
