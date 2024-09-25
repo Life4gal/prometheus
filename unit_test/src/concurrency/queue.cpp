@@ -155,31 +155,15 @@ namespace
 		{
 			struct production_type
 			{
-				std::uint32_t hash;
-				std::uint32_t uuid_1;
-				std::uint32_t uuid_2;
-				std::uint64_t uuid_3;
-				std::uint32_t uuid_4;
+				std::string name;
 				std::uint32_t id;
 
 				[[nodiscard]] constexpr auto operator==(const production_type& other) const noexcept -> bool = default;
 			};
 			using sum_production_type = std::uint64_t;
 
-			// fixme
-			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-			#define WORKAROUND_CONSTEXPR const
-			#define WORKAROUND_REF_TERMINATE_PRODUCT &terminate_product
-			#define WORKAROUND_REF_TERMINATE_PRODUCT_COMMA WORKAROUND_REF_TERMINATE_PRODUCT,
-			#else
-			#define WORKAROUND_CONSTEXPR constexpr
-			#define WORKAROUND_REF_TERMINATE_PRODUCT
-			#define WORKAROUND_REF_TERMINATE_PRODUCT_COMMA
-			#endif
-
 			constexpr std::uint32_t terminate_product_id = 42;
-			// ReSharper disable once CppVariableCanBeMadeConstexpr
-			WORKAROUND_CONSTEXPR production_type terminate_product{.hash = 0, .uuid_1 = 0, .uuid_2 = 0, .uuid_3 = 0, .uuid_4 = 0, .id = terminate_product_id};
+			const production_type terminate_product{.name = "", .id = terminate_product_id};
 
 			constexpr sum_production_type production_per_producer = 1'000'000;
 			constexpr auto expected_total_production =
@@ -189,7 +173,7 @@ namespace
 					                           producers_count
 					);
 
-			const auto do_create_consumers = [WORKAROUND_REF_TERMINATE_PRODUCT](
+			const auto do_create_consumers = [&terminate_product](
 				auto& queue,
 				std::span<sum_production_type, consumers_count> sums,
 				std::span<std::thread, consumers_count> consumers
@@ -197,12 +181,12 @@ namespace
 			{
 				std::ranges::for_each(
 					std::views::zip(sums, consumers),
-					[WORKAROUND_REF_TERMINATE_PRODUCT_COMMA &queue](const std::tuple<std::uint64_t&, std::thread&>& pack) noexcept -> void
+					[&terminate_product, &queue](const std::tuple<std::uint64_t&, std::thread&>& pack) noexcept -> void
 					{
 						auto& [sum, consumer] = pack;
 
 						consumer = std::thread{
-								[WORKAROUND_REF_TERMINATE_PRODUCT_COMMA &queue, &sum]() noexcept -> void
+								[&terminate_product, &queue, &sum]() noexcept -> void
 								{
 									std::uint64_t total = 0;
 									while (true)
@@ -223,26 +207,22 @@ namespace
 				);
 			};
 
-			const auto do_create_producers = [WORKAROUND_REF_TERMINATE_PRODUCT](
+			const auto do_create_producers = [&terminate_product](
 				auto& queue,
 				std::span<std::thread, producers_count> producers
 			) noexcept -> void
 			{
 				std::ranges::for_each(
 					producers,
-					[WORKAROUND_REF_TERMINATE_PRODUCT_COMMA &queue](std::thread& producer) noexcept -> void
+					[&terminate_product, &queue](std::thread& producer) noexcept -> void
 					{
 						producer = std::thread{
-								[WORKAROUND_REF_TERMINATE_PRODUCT_COMMA &queue]() noexcept -> void
+								[&terminate_product, &queue]() noexcept -> void
 								{
 									for (auto n = production_per_producer; n != terminate_product.id; --n)
 									{
 										queue.push(production_type{
-												.hash = static_cast<std::uint32_t>(std::hash<sum_production_type>{}(n)),
-												.uuid_1 = 1337,
-												.uuid_2 = 1337,
-												.uuid_3 = 1337,
-												.uuid_4 = 1337,
+												.name = std::format("{}", n),
 												.id = static_cast<std::uint32_t>(n)
 										});
 									}
@@ -252,7 +232,7 @@ namespace
 				);
 			};
 
-			const auto do_start_and_check = [WORKAROUND_REF_TERMINATE_PRODUCT_COMMA value = expected_total_production](
+			const auto do_start_and_check = [&terminate_product, value = expected_total_production](
 				auto& queue,
 				std::span<sum_production_type, consumers_count> sums,
 				std::span<std::thread, consumers_count> consumers,
@@ -260,7 +240,7 @@ namespace
 			) noexcept -> void
 			{
 				std::ranges::for_each(producers, &std::thread::join);
-				std::ranges::for_each(std::views::iota(0) | std::views::take(consumers_count), [WORKAROUND_REF_TERMINATE_PRODUCT_COMMA &queue](auto) { queue.push(terminate_product); });
+				std::ranges::for_each(std::views::iota(0) | std::views::take(consumers_count), [&terminate_product, &queue](auto) { queue.push(terminate_product); });
 				std::ranges::for_each(consumers, &std::thread::join);
 
 				const auto total = std::ranges::fold_left(

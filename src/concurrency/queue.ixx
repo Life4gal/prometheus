@@ -611,9 +611,6 @@ namespace gal::prometheus::concurrency
 
 	public:
 		using value_type = T;
-		using atomic_value_type = std::atomic<value_type>;
-
-		static_assert(not atomic_value_type::is_always_lock_free, "Use `FixedAtomicQueue` instead");
 
 		using state_type = typename impl_type::State;
 		using atomic_state_type = typename impl_type::atomic_state_type;
@@ -801,9 +798,6 @@ namespace gal::prometheus::concurrency
 
 	public:
 		using value_type = T;
-		using atomic_value_type = std::atomic<value_type>;
-
-		static_assert(not atomic_value_type::is_always_lock_free, "Use `DynamicAtomicQueue` instead");
 
 		using state_type = typename impl_type::State;
 		using atomic_state_type = typename impl_type::atomic_state_type;
