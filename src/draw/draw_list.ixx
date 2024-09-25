@@ -345,7 +345,7 @@ namespace gal::prometheus::draw
 
 		uv_type texture_uv_of_white_pixel_;
 
-		font_type default_font_;
+		Font default_font_;
 
 	public:
 		DrawListSharedData() noexcept
@@ -354,8 +354,7 @@ namespace gal::prometheus::draw
 			circle_segment_max_error_{},
 			arc_fast_radius_cutoff_{},
 			curve_tessellation_tolerance_{1.25f},
-			texture_uv_of_white_pixel_{0},
-			default_font_{}
+			texture_uv_of_white_pixel_{0}
 		{
 			set_circle_tessellation_max_error(.3f);
 		}
@@ -420,23 +419,34 @@ namespace gal::prometheus::draw
 			return texture_uv_of_white_pixel_;
 		}
 
-		auto set_default_font(font_type&& font) noexcept -> void
+		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_ranges_view_type glyph_ranges) noexcept -> Font::texture_type
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(font.texture_data);
-
-			default_font_ = std::move(font);
+			return default_font_.load(font_path, pixel_height, glyph_ranges);
 		}
 
-		[[nodiscard]] constexpr auto get_default_font() noexcept -> font_type&
+		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_ranges_type& glyph_ranges) noexcept -> Font::texture_type
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(default_font_.texture_data);
-
-			return default_font_;
+			return load_default_font(font_path, pixel_height, {glyph_ranges.data(), glyph_ranges.size()});
 		}
 
-		[[nodiscard]] constexpr auto get_default_font() const noexcept -> const font_type&
+		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_type& glyph_range) noexcept -> Font::texture_type
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(default_font_.texture_data);
+			return load_default_font(font_path, pixel_height, {&glyph_range, 1});
+		}
+
+		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_views_type glyph_ranges) noexcept -> Font::texture_type
+		{
+			return default_font_.load(font_path, pixel_height, glyph_ranges);
+		}
+
+		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_view_type glyph_range) noexcept -> Font::texture_type
+		{
+			return load_default_font(font_path, pixel_height, {&glyph_range, 1});
+		}
+
+		[[nodiscard]] constexpr auto get_default_font() noexcept -> const Font&
+		{
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(default_font_.loaded());
 
 			return default_font_;
 		}
@@ -454,7 +464,7 @@ namespace gal::prometheus::draw
 		using ellipse_type = draw_list_detail::ellipse_type;
 		using rect_type = draw_list_detail::rect_type;
 
-		using texture_id_type = font_type::texture_id_type;
+		using texture_id_type = Font::texture_id_type;
 
 		using vertex_type = draw_list_detail::vertex_type;
 		using index_type = draw_list_detail::index_type;
@@ -1089,7 +1099,7 @@ namespace gal::prometheus::draw
 		}
 
 		constexpr auto draw_text(
-			const font_type& font,
+			const Font& font,
 			const float font_size,
 			const point_type& p,
 			const color_type& color,
@@ -1097,11 +1107,11 @@ namespace gal::prometheus::draw
 			const float wrap_width
 		) noexcept -> void
 		{
-			const auto new_texture = this_command_texture_id_ != font.texture_id;
+			const auto new_texture = this_command_texture_id_ != font.texture_id();
 
 			if (new_texture)
 			{
-				push_texture_id(font.texture_id);
+				push_texture_id(font.texture_id());
 			}
 
 			const auto vertex_count = 4 * text.size();
@@ -1111,7 +1121,9 @@ namespace gal::prometheus::draw
 
 			command_list_.back().element_count += index_count;
 
-			const float scale = font_size / font.pixel_height;
+			const float scale = font_size / font.pixel_height();
+			const auto& glyphs = font.glyphs();
+			const auto& fallback_glyph = font.fallback_glyph();
 
 			auto it_input_current = text.begin();
 			const auto it_input_end = text.end();
@@ -1126,7 +1138,7 @@ namespace gal::prometheus::draw
 				if (c == U'\n' or (wrap_width > 0 and cursor.x - p.x > wrap_width))
 				{
 					cursor.x = p.x;
-					cursor.y += font.pixel_height * scale;
+					cursor.y += font.pixel_height() * scale;
 					if (c == U'\n')
 					{
 						command_list_.back().element_count -= 6;
@@ -1134,15 +1146,14 @@ namespace gal::prometheus::draw
 					}
 				}
 
-				const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&]
-				{
-					if (const auto it = font.glyphs.find(c);
-						it != font.glyphs.end())
+				const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&]() -> const auto& {
+					if (const auto it = glyphs.find(c);
+						it != glyphs.end())
 					{
 						return it->second;
 					}
 
-					return font.fallback_glyph;
+					return fallback_glyph;
 				}();
 
 				const auto advance_x = glyph_advance_x * scale;
@@ -1762,7 +1773,7 @@ namespace gal::prometheus::draw
 			// we don't know the size of the clip rect, so we need the user to set it
 			this_command_clip_rect_ = {};
 			// the first texture is always the (default) font texture
-			this_command_texture_id_ = shared_data_->get_default_font().texture_id;
+			this_command_texture_id_ = shared_data_->get_default_font().texture_id();
 
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(path_list_.empty());
 
@@ -2570,7 +2581,7 @@ namespace gal::prometheus::draw
 		}
 
 		constexpr auto text(
-			const font_type& font,
+			const Font& font,
 			const float font_size,
 			const point_type& p,
 			const color_type& color,
@@ -2617,7 +2628,7 @@ namespace gal::prometheus::draw
 		}
 
 		constexpr auto text(
-			const font_type& font,
+			const Font& font,
 			const float font_size,
 			const point_type& p,
 			const color_type& color,

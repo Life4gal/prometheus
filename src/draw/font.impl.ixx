@@ -47,7 +47,7 @@ namespace
 	using namespace gal::prometheus::draw;
 
 	// ReSharper disable once CppInconsistentNaming
-	constexpr glyph_range_value_type simplified_chinese_common_accumulative_offsets_from_0x4e00[]
+	constexpr glyph_value_type simplified_chinese_common_accumulative_offsets_from_0x4e00[]
 	{
 			0, 1, 2, 4, 1, 1, 1, 1, 2, 1, 3, 2, 1, 2, 2, 1, 1, 1, 1, 1, 5, 2, 1, 2, 3, 3, 3, 2, 2, 4, 1, 1, 1, 2, 1, 5, 2, 3, 1, 2, 1, 2,
 			1, 1, 2, 1, 1, 2, 2, 1, 4, 1, 1, 1, 1, 5, 10, 1, 2, 19, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 5, 1, 6, 3, 2, 1, 2, 2, 1, 1, 1, 4, 8, 5,
@@ -110,102 +110,14 @@ namespace
 			1, 2, 1, 1, 4, 4, 2, 3, 6, 1, 5, 7, 4, 3, 211, 4, 1, 2, 1, 2, 5, 1, 2, 4, 2, 2, 6, 5, 6, 10, 3, 4, 48, 100, 6, 2, 16, 296, 5, 27, 387, 2,
 			2, 3, 7, 16, 8, 5, 38, 15, 39, 21, 9, 10, 3, 7, 59, 13, 27, 21, 47, 5, 21, 6
 	};
-}
 
-namespace gal::prometheus::draw
-{
-	[[nodiscard]] auto glyph_range_latin() noexcept -> glyph_ranges_view_type
-	{
-		constexpr static std::array<glyph_range_type, 1> range{{
-				{0x0020, 0x00ff}, // Basic Latin + Latin Supplement
-		}};
-
-		return range;
-	}
-
-	[[nodiscard]] auto glyph_range_greek() noexcept -> glyph_ranges_view_type
-	{
-		constexpr static std::array<glyph_range_type, 2> range{{
-				{0x0020, 0x00ff}, // Basic Latin + Latin Supplement
-				{0x0370, 0x3ff}, // Greek and Coptic
-		}};
-
-		return range;
-	}
-
-	[[nodiscard]] auto glyph_range_simplified_chinese_common() noexcept -> glyph_ranges_view_type
-	{
-		const auto unpack = []<std::size_t I>() constexpr noexcept -> glyph_range_type
-		{
-			const auto codepoint =
-					0x4e00 +
-					// // fixme: fatal error C1128: number of sections exceeded object file format limit : compile with /bigobj
-					// std::ranges::fold_left(
-					// 	std::ranges::subrange{
-					// 			std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00),
-					// 			std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00) + 1 + I
-					// 	},
-					// 	glyph_range_value_type{0},
-					// 	[](const glyph_range_value_type total, const glyph_range_value_type current) noexcept -> glyph_range_value_type
-					// 	{
-					// 		return total + current;
-					// 	}
-					// );
-					std::accumulate(
-						std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00),
-						std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00) + 1 + I,
-						glyph_range_value_type{0}
-					);
-			return {codepoint, codepoint};
-		};
-
-		const static auto range = [unpack]<std::size_t... Index>(std::index_sequence<Index...>) constexpr noexcept ->
-			std::array<glyph_range_type,
-			           1 + // Basic Latin + Latin Supplement
-			           1 + // General Punctuation
-			           1 + // CJK Symbols and Punctuations, Hiragana, Katakana
-			           1 + // Katakana Phonetic Extensions
-			           1 + // Half-width characters
-			           1 + // Invalid
-			           std::ranges::size(simplified_chinese_common_accumulative_offsets_from_0x4e00)
-			>
-				{
-					return {
-							{{0x0020, 0x00ff}, // Basic Latin + Latin Supplement
-							 {0x2000, 0x206f}, // General Punctuation
-							 {0x3000, 0x30ff}, // CJK Symbols and Punctuations, Hiragana, Katakana
-							 {0x31f0, 0x31ff}, // Katakana Phonetic Extensions
-							 {0xff00, 0xffef}, // Half-width characters
-							 {0xfffd, 0xfffd}, // Invalid
-							 unpack.operator()<Index>()...}
-					};
-				}(std::make_index_sequence<std::ranges::size(simplified_chinese_common_accumulative_offsets_from_0x4e00)>{});
-
-		return range;
-	}
-
-	[[nodiscard]] auto glyph_range_simplified_chinese_all() noexcept -> glyph_ranges_view_type
-	{
-		constexpr static std::array<glyph_range_type, 7> range{{
-				{0x0020, 0x00ff}, // Basic Latin + Latin Supplement
-				{0x2000, 0x206f}, // General Punctuation
-				{0x3000, 0x30ff}, // CJK Symbols and Punctuations, Hiragana, Katakana
-				{0x31f0, 0x31ff}, // Katakana Phonetic Extensions
-				{0xff00, 0xffef}, // Half-width characters
-				{0xfffd, 0xfffd}, // Invalid
-				{0x4e00, 0x9faf}, // CJK Ideograms
-		}};
-
-		return range;
-	}
-
-	auto load_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_ranges_view_type glyph_ranges) noexcept -> font_type
+	[[nodiscard]] auto create_ft(const std::string_view font_path) noexcept -> std::pair<FT_Library, FT_Face>
 	{
 		FT_Library ft_library;
 		if (FT_Init_FreeType(&ft_library))
 		{
 			// Could not initialize FreeType library
-			return font_type{};
+			return {nullptr, nullptr};
 		}
 
 		FT_Face ft_face;
@@ -213,35 +125,64 @@ namespace gal::prometheus::draw
 		{
 			FT_Done_FreeType(ft_library);
 			// Could not load font
-			return font_type{};
+			return {nullptr, nullptr};
 		}
 
-		FT_Set_Pixel_Sizes(ft_face, 0, pixel_height);
+		return {ft_library, ft_face};
+	}
 
+	auto destroy_ft(std::pair<FT_Library, FT_Face> ft) noexcept -> void
+	{
+		auto [ft_library, ft_face] = ft;
+
+		FT_Done_Face(ft_face);
+		FT_Done_FreeType(ft_library);
+	}
+
+	template<std::ranges::range GlyphRanges>
+		requires std::is_same_v<std::ranges::range_value_t<std::ranges::range_value_t<GlyphRanges>>, glyph_pair_type>
+	auto load_glyphs(
+		FT_Face ft_face,
+		const GlyphRanges& glyph_ranges,
+		Font::glyphs_type& out_glyphs,
+		Font::texture_type& out_texture
+	) noexcept -> void
+	{
 		std::vector<stbrp_rect> rects;
-		for (const auto [first, second]: glyph_ranges)
-		{
-			for (auto c = first; c <= second; ++c)
+		std::ranges::for_each(
+			glyph_ranges,
+			[&ft_face, &rects](const auto& glyph_range) noexcept -> void
 			{
-				if (FT_Load_Char(ft_face, c, FT_LOAD_RENDER))
-				{
-					continue;
-				}
-
-				const auto& g = ft_face->glyph;
-				rects.emplace_back(
-					stbrp_rect
+				std::ranges::for_each(
+					glyph_range,
+					[&ft_face, &rects](const auto& pair) noexcept -> void
 					{
-							.id = std::bit_cast<int>(c),
-							.w = static_cast<stbrp_coord>(g->bitmap.width),
-							.h = static_cast<stbrp_coord>(g->bitmap.rows),
-							.x = static_cast<stbrp_coord>(g->bitmap_left),
-							.y = static_cast<stbrp_coord>(g->bitmap_top),
-							.was_packed = 0
+						const auto [first, second] = pair;
+
+						for (auto c = first; c <= second; ++c)
+						{
+							if (FT_Load_Char(ft_face, c, FT_LOAD_RENDER))
+							{
+								continue;
+							}
+
+							const auto& g = ft_face->glyph;
+							rects.emplace_back(
+								stbrp_rect
+								{
+										.id = std::bit_cast<int>(c),
+										.w = static_cast<stbrp_coord>(g->bitmap.width),
+										.h = static_cast<stbrp_coord>(g->bitmap.rows),
+										.x = static_cast<stbrp_coord>(g->bitmap_left),
+										.y = static_cast<stbrp_coord>(g->bitmap_top),
+										.was_packed = 0
+								}
+							);
+						}
 					}
 				);
 			}
-		}
+		);
 
 		const auto size = [&rects]()
 		{
@@ -279,19 +220,16 @@ namespace gal::prometheus::draw
 			nodes.resize(atlas_width);
 		}
 
-		font_type font
+		out_texture.size =
 		{
-				.pixel_height = static_cast<float>(pixel_height),
-				.texture_size = {static_cast<std::uint32_t>(atlas_width), static_cast<std::uint32_t>(atlas_height)},
-				.texture_data = std::make_unique_for_overwrite<std::uint32_t[]>(static_cast<std::size_t>(atlas_width * atlas_height)),
-				.texture_id = 0,
-				.glyphs = {},
-				.fallback_glyph = {}
+				static_cast<Font::extent_type::value_type>(atlas_width),
+				static_cast<Font::extent_type::value_type>(atlas_height)
 		};
+		out_texture.data = std::make_unique_for_overwrite<std::uint32_t[]>(static_cast<std::size_t>(atlas_width * atlas_height));
 
 		for (const auto& [id, rect_width, rect_height, rect_x, rect_y, was_packed]: rects)
 		{
-			const auto c = std::bit_cast<glyph_range_value_type>(id);
+			const auto c = std::bit_cast<glyph_value_type>(id);
 
 			if (FT_Load_Char(ft_face, c, FT_LOAD_RENDER))
 			{
@@ -305,7 +243,7 @@ namespace gal::prometheus::draw
 				for (std::uint32_t x = 0; x < g->bitmap.width; ++x)
 				{
 					const auto index = rect_x + x + (rect_y + y) * atlas_width;
-					font.texture_data[index] =
+					out_texture.data[index] =
 							// A
 							g->bitmap.buffer[x + y * g->bitmap.pitch] << 24 |
 							// B
@@ -317,26 +255,26 @@ namespace gal::prometheus::draw
 				}
 			}
 
-			font.glyphs[c] = {
+			out_glyphs[c] = {
 					.rect = {
-							glyph_type::rect_type::point_type
+							Font::point_type
 							{
 									static_cast<std::int32_t>(g->bitmap_left),
 									static_cast<std::int32_t>(g->bitmap_top)
 							},
-							glyph_type::rect_type::extent_type
+							Font::extent_type
 							{
 									static_cast<std::uint32_t>(g->bitmap.width),
 									static_cast<std::uint32_t>(g->bitmap.rows)
 							}
 					},
 					.uv = {
-							glyph_type::uv_type::point_type
+							Font::uv_type::point_type
 							{
 									static_cast<float>(rect_x) / static_cast<float>(atlas_width),
 									static_cast<float>(rect_y) / static_cast<float>(atlas_height)
 							},
-							glyph_type::uv_type::extent_type
+							Font::uv_type::extent_type
 							{
 									static_cast<float>(g->bitmap.width) / static_cast<float>(atlas_width),
 									static_cast<float>(g->bitmap.rows) / static_cast<float>(atlas_height)
@@ -345,12 +283,154 @@ namespace gal::prometheus::draw
 					.advance_x = static_cast<float>(g->advance.x) / 64.f
 			};
 		}
+	}
 
-		font.fallback_glyph = font.glyphs[U'?'];
+	template<std::ranges::range GlyphRanges>
+		requires std::is_same_v<std::ranges::range_value_t<std::ranges::range_value_t<GlyphRanges>>, glyph_pair_type>
+	auto load_font(
+		const std::string_view font_path,
+		const std::uint32_t pixel_height,
+		const GlyphRanges& glyph_ranges,
+		Font::glyphs_type& out_glyphs,
+		Font::texture_type& out_texture
+	) noexcept -> void
+	{
+		auto ft = create_ft(font_path);
+		if (ft.first == nullptr or ft.second == nullptr)
+		{
+			return;
+		}
 
-		FT_Done_Face(ft_face);
-		FT_Done_FreeType(ft_library);
+		auto [ft_library, ft_face] = ft;
+		FT_Set_Pixel_Sizes(ft_face, 0, pixel_height);
 
-		return font;
+		load_glyphs(ft_face, glyph_ranges, out_glyphs, out_texture);
+		destroy_ft(ft);
+	}
+}
+
+namespace gal::prometheus::draw
+{
+	[[nodiscard]] auto glyph_range_latin() noexcept -> glyph_range_view_type
+	{
+		constexpr static std::array<glyph_pair_type, 1> range{{
+				{0x0020, 0x00ff}, // Basic Latin + Latin Supplement
+		}};
+
+		return range;
+	}
+
+	[[nodiscard]] auto glyph_range_greek() noexcept -> glyph_range_view_type
+	{
+		constexpr static std::array<glyph_pair_type, 2> range{{
+				{0x0020, 0x00ff}, // Basic Latin + Latin Supplement
+				{0x0370, 0x3ff}, // Greek and Coptic
+		}};
+
+		return range;
+	}
+
+	[[nodiscard]] auto glyph_range_simplified_chinese_common() noexcept -> glyph_range_view_type
+	{
+		const auto unpack = []<std::size_t I>() constexpr noexcept -> glyph_pair_type
+		{
+			const auto codepoint =
+					0x4e00 +
+					// // fixme: fatal error C1128: number of sections exceeded object file format limit : compile with /bigobj
+					// std::ranges::fold_left(
+					// 	std::ranges::subrange{
+					// 			std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00),
+					// 			std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00) + 1 + I
+					// 	},
+					// 	glyph_value_type{0},
+					// 	[](const glyph_value_type total, const glyph_value_type current) noexcept -> glyph_value_type
+					// 	{
+					// 		return total + current;
+					// 	}
+					// );
+					std::accumulate(
+						std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00),
+						std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00) + 1 + I,
+						glyph_value_type{0}
+					);
+			return {codepoint, codepoint};
+		};
+
+		const static auto range = [unpack]<std::size_t... Index>(std::index_sequence<Index...>) constexpr noexcept ->
+			std::array<glyph_pair_type,
+			           1 + // Basic Latin + Latin Supplement
+			           1 + // General Punctuation
+			           1 + // CJK Symbols and Punctuations, Hiragana, Katakana
+			           1 + // Katakana Phonetic Extensions
+			           1 + // Half-width characters
+			           1 + // Invalid
+			           std::ranges::size(simplified_chinese_common_accumulative_offsets_from_0x4e00)
+			>
+				{
+					return {
+							{{0x0020, 0x00ff}, // Basic Latin + Latin Supplement
+							 {0x2000, 0x206f}, // General Punctuation
+							 {0x3000, 0x30ff}, // CJK Symbols and Punctuations, Hiragana, Katakana
+							 {0x31f0, 0x31ff}, // Katakana Phonetic Extensions
+							 {0xff00, 0xffef}, // Half-width characters
+							 {0xfffd, 0xfffd}, // Invalid
+							 unpack.operator()<Index>()...}
+					};
+				}(std::make_index_sequence<std::ranges::size(simplified_chinese_common_accumulative_offsets_from_0x4e00)>{});
+
+		return range;
+	}
+
+	[[nodiscard]] auto glyph_range_simplified_chinese_all() noexcept -> glyph_range_view_type
+	{
+		constexpr static std::array<glyph_pair_type, 7> range{{
+				{0x0020, 0x00ff}, // Basic Latin + Latin Supplement
+				{0x2000, 0x206f}, // General Punctuation
+				{0x3000, 0x30ff}, // CJK Symbols and Punctuations, Hiragana, Katakana
+				{0x31f0, 0x31ff}, // Katakana Phonetic Extensions
+				{0xff00, 0xffef}, // Half-width characters
+				{0xfffd, 0xfffd}, // Invalid
+				{0x4e00, 0x9faf}, // CJK Ideograms
+		}};
+
+		return range;
+	}
+
+	auto Font::load(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_ranges_view_type glyph_ranges) noexcept -> texture_type
+	{
+		texture_type texture
+		{
+				.size = {},
+				.data = nullptr,
+				.id = texture_id_
+		};
+
+		load_font(font_path, pixel_height, glyph_ranges, glyphs_, texture);
+		if (texture.data != nullptr)
+		{
+			font_path_ = font_path;
+			pixel_height_ = static_cast<float>(pixel_height);
+			fallback_glyph_ = glyphs_[static_cast<char_type>('?')];
+		}
+		return texture;
+	}
+
+	[[nodiscard]] auto Font::load(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_views_type glyph_ranges) noexcept -> texture_type
+	{
+		texture_type texture
+		{
+				.size = {},
+				.data = nullptr,
+				.id = texture_id_
+		};
+
+		load_font(font_path, pixel_height, glyph_ranges, glyphs_, texture);
+		if (texture.data != nullptr)
+		{
+			font_path_ = font_path;
+			pixel_height_ = static_cast<float>(pixel_height);
+			fallback_glyph_ = glyphs_[static_cast<char_type>('?')];
+		}
+		return texture;
 	}
 }
