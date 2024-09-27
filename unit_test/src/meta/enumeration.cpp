@@ -92,7 +92,6 @@ namespace
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"meta.enumeration"> _ = []
 	{
 		using namespace unit_test;
-		using namespace literals;
 
 		"min/max"_test = []
 		{
@@ -229,54 +228,34 @@ namespace
 			{
 				"FreeFlag0"_test = []
 				{
-					using namespace unit_test::operators;
-
 					constexpr std::string_view split{"-"};
 
-					expect((meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(FF0_F5, split) == "FF0_F1-FF0_F2") == "FF0_F5 == FF0_F1-FF0_F2"_b);
-					expect((meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(FF0_F6, split) == "FF0_F3-FF0_F4") == "FF0_F6 == FF0_F3-FF0_F4"_b);
+					expect(meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(FF0_F5, split) == "FF0_F1-FF0_F2"_s);
+					expect(meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(FF0_F6, split) == "FF0_F3-FF0_F4"_s);
 				};
 
 				"FreeFlag1"_test = []
 				{
-					using namespace unit_test::operators;
-
 					constexpr std::string_view split{"/"};
 
-					expect((meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(FF1_F5, split) == "FF1_F1/FF1_F2") == "FF1_F5 == FF1_F1/FF1_F2"_b);
-					expect((meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(FF1_F6, split) == "FF1_F3/FF1_F4") == "FF1_F6 == FF1_F3/FF1_F4"_b);
+					expect(meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(FF1_F5, split) == "FF1_F1/FF1_F2"_s);
+					expect(meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(FF1_F6, split) == "FF1_F3/FF1_F4"_s);
 				};
 
 				"ScopedFlag0"_test = []
 				{
-					using namespace unit_test::operators;
-
 					constexpr std::string_view split{"-"};
 
-					expect(
-						(meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(ScopedFlag0::F5, split) == "F1-F2") ==
-						"ScopedFlag0::F5 == ScopedFlag0::F1-ScopedFlag0::F2"_b
-					);
-					expect(
-						(meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(ScopedFlag0::F6, split) == "F3-F4") ==
-						"ScopedFlag0::F6 == ScopedFlag0::F3-ScopedFlag0::F4"_b
-					);
+					expect(meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(ScopedFlag0::F5, split) == "F1-F2"_s);
+					expect(meta::full_name_of<meta::EnumNamePolicy::VALUE_ONLY>(ScopedFlag0::F6, split) == "F3-F4"_s);
 				};
 
 				"ScopedFlag1"_test = []
 				{
-					using namespace unit_test::operators;
-
 					constexpr std::string_view split{"/"};
 
-					expect(
-						(meta::full_name_of<meta::EnumNamePolicy::WITH_SCOPED_NAME>(ScopedFlag1::F5, split) == "ScopedFlag1::F1/ScopedFlag1::F2") ==
-						"ScopedFlag1::F5 == ScopedFlag1::F1/ScopedFlag1::F2"_b
-					);
-					expect(
-						(meta::full_name_of<meta::EnumNamePolicy::WITH_SCOPED_NAME>(ScopedFlag1::F6, split) == "ScopedFlag1::F3/ScopedFlag1::F4") ==
-						"ScopedFlag1::F6 == ScopedFlag1::F3/ScopedFlag1::F4"_b
-					);
+					expect(meta::full_name_of<meta::EnumNamePolicy::WITH_SCOPED_NAME>(ScopedFlag1::F5, split) == "ScopedFlag1::F1/ScopedFlag1::F2"_s);
+					expect(meta::full_name_of<meta::EnumNamePolicy::WITH_SCOPED_NAME>(ScopedFlag1::F6, split) == "ScopedFlag1::F3/ScopedFlag1::F4"_s);
 				};
 			};
 		};

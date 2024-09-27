@@ -14,7 +14,6 @@ namespace
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"concurrency.queue"> _ = []
 	{
 		using namespace unit_test;
-		using namespace literals;
 
 		constexpr std::size_t producers_count = 1;
 		constexpr std::size_t consumers_count = 2;
@@ -109,8 +108,6 @@ namespace
 					[](const auto t, const auto c) noexcept -> std::uint64_t { return t + c; }
 				);
 
-				using namespace unit_test::operators;
-				// using operators::operator==;
 				expect(total == unit_test::value(value));
 			};
 
@@ -249,8 +246,6 @@ namespace
 					[](const auto t, const auto c) noexcept -> std::uint64_t { return t + c; }
 				);
 
-				using namespace unit_test::operators;
-				// using operators::operator==;
 				expect(total == unit_test::value(value));
 			};
 

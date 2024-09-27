@@ -1,8 +1,11 @@
 #include <prometheus/macro.hpp>
 
+#if GAL_PROMETHEUS_USE_MODULE
 import std;
-import gal.prometheus.test;
-import gal.prometheus.coroutine;
+import gal.prometheus;
+#else
+#include <prometheus.ixx>
+#endif
 
 namespace
 {
@@ -12,11 +15,13 @@ namespace
 	// It's a good idea to read what's in the link before reading the code below.
 	// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-capture
 
-	GAL_PROMETHEUS_NO_DESTROY test::suite<"coroutine.task"> _ = []
+	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"coroutine.task"> _ = []
 	{
-		using namespace test;
+		using namespace unit_test;
 
-		ignore_pass / "void"_test = []
+		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
+
+		"void"_test = []
 		{
 			auto return_void = []() -> Task<void> { co_return; }();
 
@@ -27,7 +32,7 @@ namespace
 			expect(return_void.done() == "return_void.done()"_b) << fatal;
 		};
 
-		ignore_pass / "hello_world"_test = []
+		"hello_world"_test = []
 		{
 			using task_type = Task<std::string>;
 
@@ -50,10 +55,10 @@ namespace
 			expect(world == "world"_s) << fatal;
 
 			expect(say_hello.promise().result().empty() != "not say_hello.promise().result().empty()"_b) << fatal;
-			expect(say_world.promise().result().empty() == "say_world.promise().result().empty()"_b) << fatal;// NOLINT // use-after-move
+			expect(say_world.promise().result().empty() == "say_world.promise().result().empty()"_b) << fatal; // NOLINT // use-after-move
 		};
 
-		ignore_pass / "exception"_test = []
+		"exception"_test = []
 		{
 			using task_type = Task<std::string>;
 
@@ -72,19 +77,19 @@ namespace
 			expect(throw_exception.promise().has_exception() == "throw_exception.promise().has_exception()"_b) << fatal;
 
 			expect(
-					[&throw_exception]
+				[&throw_exception]
+				{
+					try { std::ignore = throw_exception.promise().result(); }
+					catch (const std::runtime_error& e)
 					{
-						try { [[maybe_unused]] const auto& _ = throw_exception.promise().result(); }
-						catch (const std::runtime_error& e)
-						{
-							expect(e.what() == "exception raise!"_s) << fatal;
-							return true;
-						}
-						return false;
-					}() == "throw it!"_b) << fatal;
+						expect(e.what() == "exception raise!"_s) << fatal;
+						return true;
+					}
+					return false;
+				}() == "throw it!"_b) << fatal;
 		};
 
-		ignore_pass / "nested_task"_test = []
+		"nested_task"_test = []
 		{
 			constexpr static std::string_view m1{"inner task here~\n"};
 			constexpr static std::string_view m2{"outer task waiting...\n"};
@@ -109,10 +114,10 @@ namespace
 
 			outer.resume();
 
-			expect(message == as_s{std::string{m2}.append(m1).append(m3)}) << fatal;
+			expect(message == value(std::string{m2}.append(m1).append(m3))) << fatal;
 		};
 
-		ignore_pass / "suspend_task"_test = []
+		"suspend_task"_test = []
 		{
 			auto suspend_task = []() -> Task<int>
 			{
@@ -140,7 +145,7 @@ namespace
 			expect(suspend_task.promise().result() == 42_auto) << fatal;
 		};
 
-		ignore_pass / "coroutine_handle"_test = []
+		"coroutine_handle"_test = []
 		{
 			auto task_1 = []() -> Task<int> { co_return 42; }();
 
@@ -160,5 +165,7 @@ namespace
 			expect(task_1.promise().result() == 42_auto) << fatal;
 			expect(task_2.promise().result() == "42"_s) << fatal;
 		};
+
+		config().output_level = old_level;
 	};
-}// namespace
+} // namespace

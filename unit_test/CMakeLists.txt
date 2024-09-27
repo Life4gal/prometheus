@@ -24,6 +24,20 @@ add_executable(
 		${PROJECT_SOURCE_DIR}/src/concurrency/queue.cpp
 
 		# =================================
+		# COROUTINE
+		# =================================
+
+		${PROJECT_SOURCE_DIR}/src/coroutine/generator.cpp
+		${PROJECT_SOURCE_DIR}/src/coroutine/task.cpp
+
+		# =================================
+		# FUNCTIONAL
+		# =================================
+
+		${PROJECT_SOURCE_DIR}/src/functional/aligned_union.cpp
+		${PROJECT_SOURCE_DIR}/src/functional/function_ref.cpp
+
+		# =================================
 		# META
 		# =================================
 

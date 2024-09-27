@@ -29,7 +29,6 @@ namespace
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"chars.utf32"> _ = []
 	{
 		using namespace unit_test;
-		using namespace literals;
 
 		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
 
@@ -69,7 +68,6 @@ namespace
 		{
 			"to_ascii"_test = [source = make_source(generator_char_only, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF32>(source) == "valid utf32 string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF32, chars::CharsCategory::ASCII>(source);
@@ -81,7 +79,6 @@ namespace
 
 			"to_utf8_char"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF32>(source) == "valid utf32 string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF32, chars::CharsCategory::UTF8_CHAR>(source);
@@ -93,7 +90,6 @@ namespace
 
 			"to_utf8"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF32>(source) == "valid utf32 string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF32, chars::CharsCategory::UTF8>(source);
@@ -105,7 +101,6 @@ namespace
 
 			"to_utf16_le"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF32>(source) == "valid utf32 string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF32, chars::CharsCategory::UTF16_LE>(source);
@@ -117,7 +112,6 @@ namespace
 
 			"to_utf16_be"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF32>(source) == "valid utf32 string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF32, chars::CharsCategory::UTF16_BE>(source);
@@ -129,7 +123,6 @@ namespace
 
 			"to_utf32"_test = [source = make_source(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF32>(source) == "valid utf32 string"_b) << fatal;
 				expect(chars::length<chars::CharsCategory::UTF32, chars::CharsCategory::UTF32>(source) == value(source.size())) << fatal;
 

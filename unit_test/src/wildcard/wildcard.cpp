@@ -55,7 +55,6 @@ namespace
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"wildcard.wildcard"> _ = []
 	{
 		using namespace unit_test;
-		using namespace literals;
 
 		"basic_test"_test = []
 		{

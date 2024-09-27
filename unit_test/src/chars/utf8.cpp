@@ -30,7 +30,6 @@ namespace
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"chars.utf8_char"> chars_utf8_char = []
 	{
 		using namespace unit_test;
-		using namespace literals;
 
 		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
 
@@ -94,7 +93,6 @@ namespace
 		{
 			"to_ascii"_test = [source = make_source<char>(generator_char_only, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8_CHAR>(source) == "valid utf8_char string"_b) << fatal;
 				expect(chars::length<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::ASCII>(source) == value(source.size())) << fatal;
 
@@ -107,7 +105,6 @@ namespace
 
 			"to_utf8_char"_test = [source = make_source<char>(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8_CHAR>(source) == "valid utf8_char string"_b) << fatal;
 				expect(chars::length<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF8_CHAR>(source) == value(source.size())) << fatal;
 
@@ -120,7 +117,6 @@ namespace
 
 			"to_utf8"_test = [source = make_source<char>(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8_CHAR>(source) == "valid utf8_char string"_b) << fatal;
 				expect(chars::length<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF8>(source) == value(source.size())) << fatal;
 
@@ -133,7 +129,6 @@ namespace
 
 			"to_utf16_le"_test = [source = make_source<char>(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8_CHAR>(source) == "valid utf8_char string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF16_LE>(source);
@@ -145,7 +140,6 @@ namespace
 
 			"to_utf16_be"_test = [source = make_source<char>(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8_CHAR>(source) == "valid utf8_char string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF16_BE>(source);
@@ -157,7 +151,6 @@ namespace
 
 			"to_utf32"_test = [source = make_source<char>(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8_CHAR>(source) == "valid utf8_char string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(source);
@@ -174,7 +167,6 @@ namespace
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"chars.utf8"> chars_utf8 = []
 	{
 		using namespace unit_test;
-		using namespace literals;
 
 		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
 
@@ -240,9 +232,7 @@ namespace
 		{
 			"to_ascii"_test = [source = make_source<char8_t>(generator_char_only, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8>(source) == "valid utf8 string"_b) << fatal;
-				// fixme: MSVC ICE HERE!
 				expect(chars::length<chars::CharsCategory::UTF8, chars::CharsCategory::ASCII>(source) == value(source.size())) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8, chars::CharsCategory::ASCII>(source);
@@ -254,9 +244,7 @@ namespace
 
 			"to_utf8_char"_test = [source = make_source<char8_t>(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8>(source) == "valid utf8 string"_b) << fatal;
-				// fixme: MSVC ICE HERE!
 				expect(chars::length<chars::CharsCategory::UTF8, chars::CharsCategory::UTF8_CHAR>(source) == value(source.size())) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8, chars::CharsCategory::UTF8_CHAR>(source);
@@ -268,9 +256,7 @@ namespace
 
 			"to_utf8"_test = [source = make_source<char8_t>(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8>(source) == "valid utf8 string"_b) << fatal;
-				// fixme: MSVC ICE HERE!
 				expect(chars::length<chars::CharsCategory::UTF8, chars::CharsCategory::UTF8>(source) == value(source.size())) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8, chars::CharsCategory::UTF8>(source);
@@ -282,7 +268,6 @@ namespace
 
 			"to_utf16_le"_test = [source = make_source<char8_t>(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8>(source) == "valid utf8 string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8, chars::CharsCategory::UTF16_LE>(source);
@@ -294,7 +279,6 @@ namespace
 
 			"to_utf16_be"_test = [source = make_source<char8_t>(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8>(source) == "valid utf8 string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8, chars::CharsCategory::UTF16_BE>(source);
@@ -306,7 +290,6 @@ namespace
 
 			"to_utf32"_test = [source = make_source<char8_t>(generator, random.get<std::size_t>(0, 65535))]
 			{
-				using operators::operator==;
 				expect(chars::validate<chars::CharsCategory::UTF8>(source) == "valid utf8 string"_b) << fatal;
 
 				const auto dest = chars::convert<chars::CharsCategory::UTF8, chars::CharsCategory::UTF32>(source);

@@ -1,19 +1,22 @@
 #include <prometheus/macro.hpp>
 
+#if GAL_PROMETHEUS_USE_MODULE
 import std;
-import gal.prometheus.test;
-import gal.prometheus.utility;
+import gal.prometheus;
+#else
+#include <prometheus.ixx>
+#endif
+
+using namespace gal::prometheus;
 
 namespace
 {
-	using namespace gal::prometheus;
-	using namespace utility;
-
-	GAL_PROMETHEUS_NO_DESTROY test::suite<"utility.aligned_union"> _ = []
+	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"utility.aligned_union"> _ = []
 	{
-		using namespace test;
+		using namespace unit_test;
+		using namespace functional;
 
-		ignore_pass / "arithmethic"_test = []
+		"arithmethic"_test = []
 		{
 			using union_type = AlignedUnion<int, unsigned, float>;
 
@@ -27,30 +30,30 @@ namespace
 			expect(u.load<float>() == 3.14_f) << fatal;
 		};
 
-		ignore_pass / "pointer"_test = []
+		"pointer"_test = []
 		{
 			using union_type = AlignedUnion<int*, unsigned*, float*>;
 			static_assert(union_type::max_size == sizeof(int*));
 
-			int      value_i = 42;
+			int value_i = 42;
 			unsigned value_u = 123;
-			float    value_f = 3.14f;
+			float value_f = 3.14f;
 
 			auto* pointer_i = &value_i;
 			auto* pointer_u = &value_u;
 			auto* pointer_f = &value_f;
 
 			union_type u{union_type::constructor_tag<int*>{}, pointer_i};
-			expect(u.load<int*>() == as{pointer_i}) << fatal;
+			expect(u.load<int*>() == value(pointer_i)) << fatal;
 
 			u.store<unsigned*>(pointer_u);
-			expect(u.load<unsigned*>() == as{pointer_u}) << fatal;
+			expect(u.load<unsigned*>() == value(pointer_u)) << fatal;
 
 			u.store<float*>(pointer_f);
-			expect(u.load<float*>() == as{pointer_f}) << fatal;
+			expect(u.load<float*>() == value(pointer_f)) << fatal;
 		};
 
-		ignore_pass / "structure"_test = []
+		"structure"_test = []
 		{
 			struct struct1
 			{
