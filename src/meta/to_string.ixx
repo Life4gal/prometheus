@@ -61,6 +61,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::meta)
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("not appendable."); }
 		}
 		// member function
+		else if constexpr (requires { t.to_string(out); })
+		{
+			if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(", meta::name_of<type>()); }
+			t.to_string(out);
+			if constexpr (ContainsTypeName) { out.push_back(')'); }
+		}
 		else if constexpr (requires { t.to_string(); })
 		{
 			if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(", meta::name_of<type>()); }
@@ -144,7 +150,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::meta)
 	template<
 		std::ranges::output_range<char> StringType = std::basic_string<char>,
 		bool ContainsTypeName = true,
-		typename T>
+		typename T
+	>
 		requires std::ranges::contiguous_range<StringType>
 	[[nodiscard]] constexpr auto to_string(const T& t) noexcept -> StringType
 	{
