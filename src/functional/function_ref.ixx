@@ -11,7 +11,8 @@ module;
 export module gal.prometheus.functional:function_ref;
 
 import std;
-import gal.prometheus.error;
+
+GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
 import :aligned_union;
 
@@ -22,8 +23,9 @@ import :aligned_union;
 #include <tuple>
 
 #include <prometheus/macro.hpp>
+
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 #include <functional/aligned_union.ixx>
-#include <error/error.ixx>
 
 #endif
 
@@ -141,7 +143,7 @@ namespace gal::prometheus::functional
 				  invoker_{&do_invoke_function<typename function_ref_detail::compatible_function_pointer<FunctionPointer>::type>}
 			{
 				// throw exception?
-				GAL_PROMETHEUS_DEBUG_NOT_NULL(function, "function pointer must not be null");
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(function != nullptr, "function pointer must not be null");
 			}
 
 		public:
