@@ -547,8 +547,19 @@ namespace gal::prometheus::draw
 				// Add vertexes for each point on the line
 				if (is_use_texture)
 				{
-					// todo: get the texture
-					GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE();
+					GAL_PROMETHEUS_ERROR_ASSUME(not shared_data_->get_default_font().baked_line_uv().empty(), "draw::FontAtlasFlag::NO_BAKED_LINE");
+
+					const auto& uv = shared_data_->get_default_font().baked_line_uv()[thickness_integer];
+
+					const auto uv0 = uv.left_top();
+					const auto uv1 = uv.right_bottom();
+					for (std::decay_t<decltype(path_point_count)> i = 0; i < path_point_count; ++i)
+					{
+						// left-side outer edge
+						vertex_list_.emplace_back(temp_buffer_points[i * 2 + 0], uv0, color);
+						// right-side outer edge
+						vertex_list_.emplace_back(temp_buffer_points[i * 2 + 1], uv1, color);
+					}
 				}
 				else
 				{

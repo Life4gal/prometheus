@@ -51,6 +51,13 @@ namespace gal::prometheus::draw
 	// Latin + Half-Width + Japanese Hiragana/Katakana + full set of about 21000 CJK Unified Ideographs
 	[[nodiscard]] auto glyph_range_simplified_chinese_all() noexcept -> glyph_range_view_type;
 
+	enum class FontAtlasFlag : std::uint8_t
+	{
+		NONE = 0,
+
+		NO_BAKED_LINE = 1 << 0,
+	};
+
 	class Font final
 	{
 	public:
@@ -81,7 +88,12 @@ namespace gal::prometheus::draw
 			texture_id_type& id;
 		};
 
+		using baked_line_uv_type = std::vector<uv_type>;
+
 	private:
+		struct loader;
+		friend loader;
+
 		std::string font_path_;
 
 		float pixel_height_;
@@ -90,11 +102,20 @@ namespace gal::prometheus::draw
 		glyphs_type glyphs_;
 		glyph_type fallback_glyph_;
 
+		std::underlying_type_t<FontAtlasFlag> atlas_flag_;
+
+		int baked_line_max_width_;
+		baked_line_uv_type baked_line_uv_;
+
 	public:
 		Font() noexcept
 			: pixel_height_{0},
 			  texture_id_{0},
-			  fallback_glyph_{} {}
+			  fallback_glyph_{},
+			  atlas_flag_{std::to_underlying(FontAtlasFlag::NONE)},
+			  baked_line_max_width_{63} {}
+
+		// =========================================
 
 		[[nodiscard]] constexpr auto loaded() const noexcept -> bool
 		{
@@ -125,6 +146,39 @@ namespace gal::prometheus::draw
 		{
 			return fallback_glyph_;
 		}
+
+		[[nodiscard]] constexpr auto baked_line_max_width() const noexcept -> int
+		{
+			return baked_line_max_width_;
+		}
+
+		[[nodiscard]] constexpr auto baked_line_uv() const noexcept -> const baked_line_uv_type&
+		{
+			return baked_line_uv_;
+		}
+
+		// =========================================
+
+		auto set_flag(const std::underlying_type_t<FontAtlasFlag> flag) noexcept -> Font&
+		{
+			atlas_flag_ |= flag;
+
+			return *this;
+		}
+
+		auto set_flag(const FontAtlasFlag flag) noexcept -> Font&
+		{
+			return set_flag(std::to_underlying(flag));
+		}
+
+		constexpr auto set_baked_line_max_width(const int width) noexcept -> void
+		{
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width > 0);
+
+			baked_line_max_width_ = width;
+		}
+
+		// =========================================
 
 		[[nodiscard]] auto load(std::string_view font_path, std::uint32_t pixel_height, glyph_ranges_view_type glyph_ranges) noexcept -> texture_type;
 

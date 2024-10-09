@@ -138,175 +138,6 @@ namespace
 		FT_Done_Face(ft_face);
 		FT_Done_FreeType(ft_library);
 	}
-
-	template<std::ranges::range GlyphRanges>
-		requires std::is_same_v<std::ranges::range_value_t<std::ranges::range_value_t<GlyphRanges>>, glyph_pair_type>
-	auto load_glyphs(
-		FT_Face ft_face,
-		const GlyphRanges& glyph_ranges,
-		Font::glyphs_type& out_glyphs,
-		Font::texture_type& out_texture
-	) noexcept -> void
-	{
-		std::vector<stbrp_rect> rects;
-		std::ranges::for_each(
-			glyph_ranges,
-			[&ft_face, &rects](const auto& glyph_range) noexcept -> void
-			{
-				std::ranges::for_each(
-					glyph_range,
-					[&ft_face, &rects](const auto& pair) noexcept -> void
-					{
-						const auto [first, second] = pair;
-
-						for (auto c = first; c <= second; ++c)
-						{
-							if (FT_Load_Char(ft_face, c, FT_LOAD_RENDER))
-							{
-								continue;
-							}
-
-							const auto& g = ft_face->glyph;
-							rects.emplace_back(
-								stbrp_rect
-								{
-										.id = std::bit_cast<int>(c),
-										.w = static_cast<stbrp_coord>(g->bitmap.width),
-										.h = static_cast<stbrp_coord>(g->bitmap.rows),
-										.x = static_cast<stbrp_coord>(g->bitmap_left),
-										.y = static_cast<stbrp_coord>(g->bitmap_top),
-										.was_packed = 0
-								}
-							);
-						}
-					}
-				);
-			}
-		);
-
-		const auto size = [&rects]()
-		{
-			std::uint32_t total_area = 0;
-			std::uint32_t max_width = 0;
-			std::uint32_t max_height = 0;
-
-			for (const auto& [id, w, h, x, y, was_packed]: rects)
-			{
-				total_area += w * h;
-				max_width = std::ranges::max(max_width, static_cast<std::uint32_t>(w));
-				max_height = std::ranges::max(max_height, static_cast<std::uint32_t>(h));
-			}
-
-			const auto min_side = static_cast<std::uint32_t>(std::sqrt(total_area));
-			const auto max_side = std::ranges::max(max_width, max_height);
-
-			return std::bit_ceil(std::ranges::max(min_side, max_side));
-		}();
-		auto atlas_width = size;
-		auto atlas_height = size;
-
-		stbrp_context context;
-		std::vector<stbrp_node> nodes{atlas_width};
-		while (true)
-		{
-			stbrp_init_target(&context, atlas_width, atlas_height, nodes.data(), static_cast<int>(nodes.size()));
-			if (stbrp_pack_rects(&context, rects.data(), static_cast<int>(rects.size())))
-			{
-				break;
-			}
-
-			atlas_width *= 2;
-			atlas_height *= 2;
-			nodes.resize(atlas_width);
-		}
-
-		out_texture.size =
-		{
-				static_cast<Font::extent_type::value_type>(atlas_width),
-				static_cast<Font::extent_type::value_type>(atlas_height)
-		};
-		out_texture.data = std::make_unique_for_overwrite<std::uint32_t[]>(static_cast<std::size_t>(atlas_width * atlas_height));
-
-		for (const auto& [id, rect_width, rect_height, rect_x, rect_y, was_packed]: rects)
-		{
-			const auto c = std::bit_cast<glyph_value_type>(id);
-
-			if (FT_Load_Char(ft_face, c, FT_LOAD_RENDER))
-			{
-				continue;
-			}
-
-			const auto& g = ft_face->glyph;
-
-			for (std::uint32_t y = 0; y < g->bitmap.rows; ++y)
-			{
-				for (std::uint32_t x = 0; x < g->bitmap.width; ++x)
-				{
-					const auto index = rect_x + x + (rect_y + y) * atlas_width;
-					out_texture.data[index] =
-							// A
-							g->bitmap.buffer[x + y * g->bitmap.pitch] << 24 |
-							// B
-							std::uint32_t{255} << 16 |
-							// G
-							std::uint32_t{255} << 8 |
-							// R
-							std::uint32_t{255};
-				}
-			}
-
-			out_glyphs[c] = {
-					.rect = {
-							Font::point_type
-							{
-									static_cast<std::int32_t>(g->bitmap_left),
-									static_cast<std::int32_t>(g->bitmap_top)
-							},
-							Font::extent_type
-							{
-									static_cast<std::uint32_t>(g->bitmap.width),
-									static_cast<std::uint32_t>(g->bitmap.rows)
-							}
-					},
-					.uv = {
-							Font::uv_type::point_type
-							{
-									static_cast<float>(rect_x) / static_cast<float>(atlas_width),
-									static_cast<float>(rect_y) / static_cast<float>(atlas_height)
-							},
-							Font::uv_type::extent_type
-							{
-									static_cast<float>(g->bitmap.width) / static_cast<float>(atlas_width),
-									static_cast<float>(g->bitmap.rows) / static_cast<float>(atlas_height)
-							}
-					},
-					.advance_x = static_cast<float>(g->advance.x) / 64.f
-			};
-		}
-	}
-
-	template<std::ranges::range GlyphRanges>
-		requires std::is_same_v<std::ranges::range_value_t<std::ranges::range_value_t<GlyphRanges>>, glyph_pair_type>
-	auto load_font(
-		const std::string_view font_path,
-		const std::uint32_t pixel_height,
-		const GlyphRanges& glyph_ranges,
-		Font::glyphs_type& out_glyphs,
-		Font::texture_type& out_texture
-	) noexcept -> void
-	{
-		auto ft = create_ft(font_path);
-		if (ft.first == nullptr or ft.second == nullptr)
-		{
-			return;
-		}
-
-		auto [ft_library, ft_face] = ft;
-		FT_Set_Pixel_Sizes(ft_face, 0, pixel_height);
-
-		load_glyphs(ft_face, glyph_ranges, out_glyphs, out_texture);
-		destroy_ft(ft);
-	}
 }
 
 namespace gal::prometheus::draw
@@ -396,41 +227,249 @@ namespace gal::prometheus::draw
 		return range;
 	}
 
+	struct Font::loader
+	{
+		template<std::ranges::range GlyphRanges>
+			requires std::is_same_v<std::ranges::range_value_t<std::ranges::range_value_t<GlyphRanges>>, glyph_pair_type>
+		auto operator()(Font& font, const std::string_view font_path, const std::uint32_t pixel_height, const GlyphRanges& glyph_ranges) const noexcept -> texture_type
+		{
+			texture_type texture
+			{
+					.size = {},
+					.data = nullptr,
+					.id = font.texture_id_
+			};
+
+			auto ft = create_ft(font_path);
+			if (ft.first == nullptr or ft.second == nullptr)
+			{
+				return texture;
+			}
+
+			auto [ft_library, ft_face] = ft;
+			FT_Set_Pixel_Sizes(ft_face, 0, pixel_height);
+
+			// ===============================
+
+			constexpr auto id_baked_line = std::numeric_limits<int>::min() + 0;
+			const auto no_baked_line = font.atlas_flag_ & std::to_underlying(FontAtlasFlag::NO_BAKED_LINE);
+
+			std::vector<stbrp_rect> rects;
+
+			if (not no_baked_line)
+			{
+				font.baked_line_uv_.reserve(font.baked_line_max_width_);
+				rects.emplace_back(
+					stbrp_rect
+					{
+							.id = id_baked_line,
+							.w = font.baked_line_max_width_ + 1,
+							.h = font.baked_line_max_width_ + 2,
+							.x = 0,
+							.y = 0,
+							.was_packed = 0
+					}
+				);
+			}
+
+			// ===============================
+
+			std::ranges::for_each(
+				glyph_ranges,
+				[&ft_face, &rects](const auto& glyph_range) noexcept -> void
+				{
+					std::ranges::for_each(
+						glyph_range,
+						[&ft_face, &rects](const auto& pair) noexcept -> void
+						{
+							const auto [first, second] = pair;
+
+							for (auto c = first; c <= second; ++c)
+							{
+								if (FT_Load_Char(ft_face, c, FT_LOAD_RENDER))
+								{
+									continue;
+								}
+
+								const auto& g = ft_face->glyph;
+								rects.emplace_back(
+									stbrp_rect
+									{
+											.id = std::bit_cast<int>(c),
+											.w = static_cast<stbrp_coord>(g->bitmap.width),
+											.h = static_cast<stbrp_coord>(g->bitmap.rows),
+											.x = static_cast<stbrp_coord>(g->bitmap_left),
+											.y = static_cast<stbrp_coord>(g->bitmap_top),
+											.was_packed = 0
+									}
+								);
+							}
+						}
+					);
+				}
+			);
+
+			// ===============================
+
+			const auto size = [&rects]()
+			{
+				std::uint32_t total_area = 0;
+				std::uint32_t max_width = 0;
+				std::uint32_t max_height = 0;
+
+				for (const auto& [id, w, h, x, y, was_packed]: rects)
+				{
+					total_area += w * h;
+					max_width = std::ranges::max(max_width, static_cast<std::uint32_t>(w));
+					max_height = std::ranges::max(max_height, static_cast<std::uint32_t>(h));
+				}
+
+				const auto min_side = static_cast<std::uint32_t>(std::sqrt(total_area));
+				const auto max_side = std::ranges::max(max_width, max_height);
+
+				return std::bit_ceil(std::ranges::max(min_side, max_side));
+			}();
+			auto atlas_width = size;
+			auto atlas_height = size;
+
+			stbrp_context context;
+			std::vector<stbrp_node> nodes{atlas_width};
+			while (true)
+			{
+				stbrp_init_target(&context, atlas_width, atlas_height, nodes.data(), static_cast<int>(nodes.size()));
+				if (stbrp_pack_rects(&context, rects.data(), static_cast<int>(rects.size())))
+				{
+					break;
+				}
+
+				atlas_width *= 2;
+				atlas_height *= 2;
+				nodes.resize(atlas_width);
+			}
+
+			// ===============================
+
+			texture.size =
+			{
+					static_cast<extent_type::value_type>(atlas_width),
+					static_cast<extent_type::value_type>(atlas_height)
+			};
+			texture.data = std::make_unique_for_overwrite<std::uint32_t[]>(static_cast<std::size_t>(atlas_width * atlas_height));
+
+			font.font_path_ = std::format("{}-{}px", font_path, pixel_height);
+			font.pixel_height_ = static_cast<float>(pixel_height);
+
+			const uv_type::extent_type texture_uv_scale{1.f / static_cast<float>(texture.size.width), 1.f / static_cast<float>(texture.size.height)};
+
+			// ===============================
+
+			for (const auto& [id, rect_width, rect_height, rect_x, rect_y, was_packed]: rects)
+			{
+				if (not no_baked_line and id == id_baked_line)
+				{
+					for (stbrp_coord y = 0; y < rect_height; ++y)
+					{
+						const auto line_width = y;
+						for (stbrp_coord x = 0; x < line_width; ++x)
+						{
+							const auto index = rect_x + x + (rect_y + y) * atlas_width;
+							constexpr auto color =
+									// A
+									std::uint32_t{0xff} << 24 |
+									// B
+									std::uint32_t{0xff} << 16 |
+									// G
+									std::uint32_t{0xff} << 8 |
+									// R
+									std::uint32_t{0xff};
+							texture.data[index] = color;
+						}
+
+						using value_type = uv_type::point_type::value_type;
+
+						const auto uv0_x = static_cast<value_type>(rect_x) * texture_uv_scale.width;
+						const auto uv1_x = static_cast<value_type>(rect_x + line_width) * texture_uv_scale.width;
+						const auto uv_y = static_cast<value_type>(static_cast<float>(rect_y + y) + .5f * texture_uv_scale.height);
+
+						font.baked_line_uv_.emplace_back(uv0_x, uv_y, uv1_x, uv_y);
+					}
+
+					continue;
+				}
+
+				const auto c = std::bit_cast<glyph_value_type>(id);
+
+				if (FT_Load_Char(ft_face, c, FT_LOAD_RENDER))
+				{
+					continue;
+				}
+
+				const auto& g = ft_face->glyph;
+
+				for (std::uint32_t y = 0; y < g->bitmap.rows; ++y)
+				{
+					for (std::uint32_t x = 0; x < g->bitmap.width; ++x)
+					{
+						const auto index = rect_x + x + (rect_y + y) * atlas_width;
+						const auto a = g->bitmap.buffer[x + y * g->bitmap.pitch] << 24;
+						const auto color =
+								// A
+								a |
+								// B
+								std::uint32_t{0xff} << 16 |
+								// G
+								std::uint32_t{0xff} << 8 |
+								// R
+								std::uint32_t{0xff};
+						texture.data[index] = color;
+					}
+				}
+
+				font.glyphs_[c] = {
+						.rect = {
+								Font::point_type
+								{
+										static_cast<std::int32_t>(g->bitmap_left),
+										static_cast<std::int32_t>(g->bitmap_top)
+								},
+								Font::extent_type
+								{
+										static_cast<std::uint32_t>(g->bitmap.width),
+										static_cast<std::uint32_t>(g->bitmap.rows)
+								}
+						},
+						.uv = {
+								Font::uv_type::point_type
+								{
+										static_cast<float>(rect_x) / static_cast<float>(atlas_width),
+										static_cast<float>(rect_y) / static_cast<float>(atlas_height)
+								},
+								Font::uv_type::extent_type
+								{
+										static_cast<float>(g->bitmap.width) / static_cast<float>(atlas_width),
+										static_cast<float>(g->bitmap.rows) / static_cast<float>(atlas_height)
+								}
+						},
+						.advance_x = static_cast<float>(g->advance.x) / 64.f
+				};
+			}
+
+			font.fallback_glyph_ = font.glyphs_[static_cast<char_type>('?')];
+
+			// ===============================
+
+			destroy_ft(ft);
+			return texture;
+		}
+	};
+
 	auto Font::load(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_ranges_view_type glyph_ranges) noexcept -> texture_type
 	{
-		texture_type texture
-		{
-				.size = {},
-				.data = nullptr,
-				.id = texture_id_
-		};
-
-		load_font(font_path, pixel_height, glyph_ranges, glyphs_, texture);
-		if (texture.data != nullptr)
-		{
-			font_path_ = font_path;
-			pixel_height_ = static_cast<float>(pixel_height);
-			fallback_glyph_ = glyphs_[static_cast<char_type>('?')];
-		}
-		return texture;
+		return loader{}(*this, font_path, pixel_height, glyph_ranges);
 	}
 
 	[[nodiscard]] auto Font::load(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_views_type glyph_ranges) noexcept -> texture_type
 	{
-		texture_type texture
-		{
-				.size = {},
-				.data = nullptr,
-				.id = texture_id_
-		};
-
-		load_font(font_path, pixel_height, glyph_ranges, glyphs_, texture);
-		if (texture.data != nullptr)
-		{
-			font_path_ = font_path;
-			pixel_height_ = static_cast<float>(pixel_height);
-			fallback_glyph_ = glyphs_[static_cast<char_type>('?')];
-		}
-		return texture;
+		return loader{}(*this, font_path, pixel_height, glyph_ranges);
 	}
 }

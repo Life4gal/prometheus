@@ -73,7 +73,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		// Tessellation tolerance when using `path_bezier_curve` without a specific number of segments.
 		// Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
 		float curve_tessellation_tolerance_;
-		int max_texture_line_width_;
 
 		uv_type texture_uv_of_white_pixel_;
 
@@ -113,7 +112,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			circle_segment_max_error_{},
 			arc_fast_radius_cutoff_{},
 			curve_tessellation_tolerance_{1.25f},
-			max_texture_line_width_{63},
 			texture_uv_of_white_pixel_{0}
 		{
 			set_circle_tessellation_max_error(.3f);
@@ -173,12 +171,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width > 0);
 
-			max_texture_line_width_ = width;
+			// todo
+			default_font_.set_baked_line_max_width(width);
 		}
 
 		[[nodiscard]] constexpr auto get_max_texture_line_width() const noexcept -> int
 		{
-			return max_texture_line_width_;
+			// todo
+			return default_font_.baked_line_max_width();
 		}
 
 		constexpr auto set_texture_uv_of_white_pixel(const uv_type& uv) noexcept -> void
@@ -216,10 +216,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			return load_default_font(font_path, pixel_height, {&glyph_range, 1});
 		}
 
-		[[nodiscard]] constexpr auto get_default_font() noexcept -> const Font&
+		[[nodiscard]] constexpr auto get_default_font() noexcept -> Font&
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(default_font_.loaded());
+			return default_font_;
+		}
 
+		[[nodiscard]] constexpr auto get_default_font() const noexcept -> const Font&
+		{
 			return default_font_;
 		}
 	};
