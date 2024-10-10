@@ -51,20 +51,17 @@ namespace gal::prometheus::draw
 	// Latin + Half-Width + Japanese Hiragana/Katakana + full set of about 21000 CJK Unified Ideographs
 	[[nodiscard]] auto glyph_range_simplified_chinese_all() noexcept -> glyph_range_view_type;
 
-	enum class FontAtlasFlag : std::uint8_t
-	{
-		NONE = 0,
-
-		NO_BAKED_LINE = 1 << 0,
-	};
-
 	class Font final
 	{
 	public:
 		using rect_type = primitive::basic_rect_2d<std::int32_t, std::uint32_t>;
 		using point_type = rect_type::point_type;
 		using extent_type = rect_type::extent_type;
+
 		using uv_type = primitive::basic_rect_2d<float>;
+		using uv_point_type = uv_type::point_type;
+		using uv_extent_type = uv_type::extent_type;
+
 		using char_type = char32_t;
 
 		using texture_id_type = std::uintptr_t;
@@ -94,26 +91,31 @@ namespace gal::prometheus::draw
 		struct loader;
 		friend loader;
 
-		std::string font_path_;
+		// ========================
+		// strange member order, but less padding!
+		// ========================
 
-		float pixel_height_;
-		texture_id_type texture_id_;
+		std::string font_path_;
 
 		glyphs_type glyphs_;
 		glyph_type fallback_glyph_;
 
-		std::underlying_type_t<FontAtlasFlag> atlas_flag_;
+		uv_point_type white_pixel_uv_;
+
+		float pixel_height_;
 
 		int baked_line_max_width_;
 		baked_line_uv_type baked_line_uv_;
 
+		texture_id_type texture_id_;
+
 	public:
 		Font() noexcept
-			: pixel_height_{0},
-			  texture_id_{0},
-			  fallback_glyph_{},
-			  atlas_flag_{std::to_underlying(FontAtlasFlag::NONE)},
-			  baked_line_max_width_{63} {}
+			: fallback_glyph_{},
+			  white_pixel_uv_{0},
+			  pixel_height_{0},
+			  baked_line_max_width_{63},
+			  texture_id_{0} {}
 
 		// =========================================
 
@@ -127,16 +129,6 @@ namespace gal::prometheus::draw
 			return font_path_;
 		}
 
-		[[nodiscard]] constexpr auto pixel_height() const noexcept -> float
-		{
-			return pixel_height_;
-		}
-
-		[[nodiscard]] constexpr auto texture_id() const noexcept -> texture_id_type
-		{
-			return texture_id_;
-		}
-
 		[[nodiscard]] constexpr auto glyphs() const noexcept -> const glyphs_type&
 		{
 			return glyphs_;
@@ -145,6 +137,16 @@ namespace gal::prometheus::draw
 		[[nodiscard]] constexpr auto fallback_glyph() const noexcept -> const glyph_type&
 		{
 			return fallback_glyph_;
+		}
+
+		[[nodiscard]] constexpr auto white_pixel_uv() const noexcept -> const uv_point_type&
+		{
+			return white_pixel_uv_;
+		}
+
+		[[nodiscard]] constexpr auto pixel_height() const noexcept -> float
+		{
+			return pixel_height_;
 		}
 
 		[[nodiscard]] constexpr auto baked_line_max_width() const noexcept -> int
@@ -157,23 +159,17 @@ namespace gal::prometheus::draw
 			return baked_line_uv_;
 		}
 
+		[[nodiscard]] constexpr auto texture_id() const noexcept -> texture_id_type
+		{
+			return texture_id_;
+		}
+
 		// =========================================
-
-		auto set_flag(const std::underlying_type_t<FontAtlasFlag> flag) noexcept -> Font&
-		{
-			atlas_flag_ |= flag;
-
-			return *this;
-		}
-
-		auto set_flag(const FontAtlasFlag flag) noexcept -> Font&
-		{
-			return set_flag(std::to_underlying(flag));
-		}
 
 		constexpr auto set_baked_line_max_width(const int width) noexcept -> void
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width > 0);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not loaded());
 
 			baked_line_max_width_ = width;
 		}

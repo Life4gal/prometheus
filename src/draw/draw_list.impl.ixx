@@ -166,7 +166,7 @@ namespace gal::prometheus::draw
 
 			const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
 
-			const auto& opaque_uv = shared_data_->get_texture_uv_of_white_pixel();
+			const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
 
 			vertex_list_.emplace_back(p1 + point_type{normalized_y, -normalized_x}, opaque_uv, color);
 			vertex_list_.emplace_back(p2 + point_type{normalized_y, -normalized_x}, opaque_uv, color);
@@ -192,7 +192,7 @@ namespace gal::prometheus::draw
 			return;
 		}
 
-		const auto& opaque_uv = shared_data_->get_texture_uv_of_white_pixel();
+		const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
 		const auto transparent_color = color.transparent();
 
 		const auto is_closed = not functional::exclude(draw_flag, DrawFlag::CLOSED);
@@ -206,7 +206,7 @@ namespace gal::prometheus::draw
 		const auto is_use_texture =
 		(
 			functional::contains<functional::EnumCheckPolicy::ANY_BIT>(draw_list_flag_, DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE) and
-			(thickness_integer < shared_data_->get_max_texture_line_width()) and
+			(thickness_integer < shared_data_->get_default_font().baked_line_max_width()) and
 			(thickness_fractional <= .00001f));
 
 		const auto vertex_cont = is_use_texture ? (path_point_count * 2) : (is_thick_line ? path_point_count * 4 : path_point_count * 3);
@@ -457,7 +457,7 @@ namespace gal::prometheus::draw
 
 		const auto current_vertex_index = vertex_list_.size();
 
-		const auto& opaque_uv = shared_data_->get_texture_uv_of_white_pixel();
+		const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
 
 		std::ranges::transform(path_point, std::back_inserter(vertex_list_), [opaque_uv, color](const point_type& point) noexcept -> vertex_type { return {point, opaque_uv, color}; });
 		for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
@@ -482,7 +482,7 @@ namespace gal::prometheus::draw
 			return;
 		}
 
-		const auto& opaque_uv = shared_data_->get_texture_uv_of_white_pixel();
+		const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
 		const auto transparent_color = color.transparent();
 
 		const auto vertex_count = path_point_count * 2;
@@ -565,7 +565,7 @@ namespace gal::prometheus::draw
 
 		command_list_.back().element_count += index_count;
 
-		const auto& opaque_uv = shared_data_->get_texture_uv_of_white_pixel();
+		const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
 
 		const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
 

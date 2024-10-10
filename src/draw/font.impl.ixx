@@ -251,12 +251,11 @@ namespace gal::prometheus::draw
 
 			// ===============================
 
-			constexpr auto id_baked_line = std::numeric_limits<int>::min() + 0;
-			const auto no_baked_line = font.atlas_flag_ & std::to_underlying(FontAtlasFlag::NO_BAKED_LINE);
 
 			std::vector<stbrp_rect> rects;
 
-			if (not no_baked_line)
+			// baked line
+			constexpr auto id_baked_line = std::numeric_limits<int>::min() + 0;
 			{
 				font.baked_line_uv_.reserve(font.baked_line_max_width_);
 				rects.emplace_back(
@@ -354,42 +353,55 @@ namespace gal::prometheus::draw
 					static_cast<extent_type::value_type>(atlas_width),
 					static_cast<extent_type::value_type>(atlas_height)
 			};
+			// note: We don't necessarily overwrite all the memory, but it doesn't matter.
+			// texture.data = std::make_unique<std::uint32_t[]>(static_cast<std::size_t>(atlas_width * atlas_height));
 			texture.data = std::make_unique_for_overwrite<std::uint32_t[]>(static_cast<std::size_t>(atlas_width * atlas_height));
 
 			font.font_path_ = std::format("{}-{}px", font_path, pixel_height);
 			font.pixel_height_ = static_cast<float>(pixel_height);
 
-			const uv_type::extent_type texture_uv_scale{1.f / static_cast<float>(texture.size.width), 1.f / static_cast<float>(texture.size.height)};
+			const uv_extent_type texture_uv_scale{1.f / static_cast<float>(texture.size.width), 1.f / static_cast<float>(texture.size.height)};
 
 			// ===============================
 
 			for (const auto& [id, rect_width, rect_height, rect_x, rect_y, was_packed]: rects)
 			{
-				if (not no_baked_line and id == id_baked_line)
+				if (id == id_baked_line)
 				{
+					using value_type = uv_point_type::value_type;
+					constexpr std::uint32_t white_color = 0xff'ff'ff'ff;
+
+					// hacky: baked line rect area, one pixel
+					{
+						const auto x = rect_x + rect_y * atlas_width;
+						texture.data[x] = white_color;
+
+						const auto uv_x = static_cast<value_type>(static_cast<float>(rect_x) + .5f) * texture_uv_scale.width;
+						const auto uv_y = static_cast<value_type>(static_cast<float>(rect_y) + .5f) * texture_uv_scale.height;
+
+						font.white_pixel_uv_ = uv_point_type{uv_x, uv_y};
+					}
+
+					// ◿
 					for (stbrp_coord y = 0; y < rect_height; ++y)
 					{
 						const auto line_width = y;
-						for (stbrp_coord x = 0; x < line_width; ++x)
+						const auto offset_y = (rect_y + y) * atlas_width;
+
+						for (stbrp_coord x = line_width; x > 0; --x)
 						{
-							const auto index = rect_x + x + (rect_y + y) * atlas_width;
-							constexpr auto color =
-									// A
-									std::uint32_t{0xff} << 24 |
-									// B
-									std::uint32_t{0xff} << 16 |
-									// G
-									std::uint32_t{0xff} << 8 |
-									// R
-									std::uint32_t{0xff};
-							texture.data[index] = color;
+							const auto offset_x = rect_x + (rect_width - x);
+							const auto index = offset_x + offset_y;
+							texture.data[index] = white_color;
 						}
 
-						using value_type = uv_type::point_type::value_type;
+						const auto begin_x = rect_x + (rect_width - line_width);
+						const auto end_x = rect_x + rect_width;
+						const auto begin_y = rect_y + y;
 
-						const auto uv0_x = static_cast<value_type>(rect_x) * texture_uv_scale.width;
-						const auto uv1_x = static_cast<value_type>(rect_x + line_width) * texture_uv_scale.width;
-						const auto uv_y = static_cast<value_type>(static_cast<float>(rect_y + y) + .5f * texture_uv_scale.height);
+						const auto uv0_x = static_cast<value_type>(begin_x) * texture_uv_scale.width;
+						const auto uv1_x = static_cast<value_type>(end_x) * texture_uv_scale.width;
+						const auto uv_y = static_cast<value_type>((static_cast<float>(begin_y) + .5f) * texture_uv_scale.height);
 
 						font.baked_line_uv_.emplace_back(uv0_x, uv_y, uv1_x, uv_y);
 					}
@@ -425,31 +437,19 @@ namespace gal::prometheus::draw
 					}
 				}
 
+				const auto p0_x = static_cast<point_type::value_type>(g->bitmap_left);
+				const auto p0_y = static_cast<point_type::value_type>(g->bitmap_top);
+				const auto p1_x = p0_x + static_cast<point_type::value_type>(g->bitmap.width);
+				const auto p1_y = p0_y + static_cast<point_type::value_type>(g->bitmap.rows);
+
+				const auto uv0_x = static_cast<uv_point_type::value_type>(rect_x) * texture_uv_scale.width;
+				const auto uv0_y = static_cast<uv_point_type::value_type>(rect_y) * texture_uv_scale.height;
+				const auto uv1_x = uv0_x + static_cast<uv_extent_type::value_type>(g->bitmap.width) * texture_uv_scale.width;
+				const auto uv1_y = uv0_y + static_cast<uv_extent_type::value_type>(g->bitmap.rows) * texture_uv_scale.height;
+
 				font.glyphs_[c] = {
-						.rect = {
-								Font::point_type
-								{
-										static_cast<std::int32_t>(g->bitmap_left),
-										static_cast<std::int32_t>(g->bitmap_top)
-								},
-								Font::extent_type
-								{
-										static_cast<std::uint32_t>(g->bitmap.width),
-										static_cast<std::uint32_t>(g->bitmap.rows)
-								}
-						},
-						.uv = {
-								Font::uv_type::point_type
-								{
-										static_cast<float>(rect_x) / static_cast<float>(atlas_width),
-										static_cast<float>(rect_y) / static_cast<float>(atlas_height)
-								},
-								Font::uv_type::extent_type
-								{
-										static_cast<float>(g->bitmap.width) / static_cast<float>(atlas_width),
-										static_cast<float>(g->bitmap.rows) / static_cast<float>(atlas_height)
-								}
-						},
+						.rect = {p0_x, p0_y, p1_x, p1_y},
+						.uv = {uv0_x, uv0_y, uv1_x, uv1_y},
 						.advance_x = static_cast<float>(g->advance.x) / 64.f
 				};
 			}

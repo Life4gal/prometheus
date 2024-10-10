@@ -74,8 +74,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		// Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
 		float curve_tessellation_tolerance_;
 
-		uv_type texture_uv_of_white_pixel_;
-
 		Font default_font_;
 
 		// @see https://stackoverflow.com/a/2244088/15194693
@@ -111,8 +109,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			circle_segment_counts_{},
 			circle_segment_max_error_{},
 			arc_fast_radius_cutoff_{},
-			curve_tessellation_tolerance_{1.25f},
-			texture_uv_of_white_pixel_{0}
+			curve_tessellation_tolerance_{1.25f}
 		{
 			set_circle_tessellation_max_error(.3f);
 		}
@@ -167,30 +164,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 			return static_cast<circle_segment_counts_type::value_type>(circle_segments_calc(radius, circle_segment_max_error_));
 		}
 
-		constexpr auto set_max_texture_line_width(const int width) noexcept -> void
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width > 0);
-
-			// todo
-			default_font_.set_baked_line_max_width(width);
-		}
-
-		[[nodiscard]] constexpr auto get_max_texture_line_width() const noexcept -> int
-		{
-			// todo
-			return default_font_.baked_line_max_width();
-		}
-
-		constexpr auto set_texture_uv_of_white_pixel(const uv_type& uv) noexcept -> void
-		{
-			texture_uv_of_white_pixel_ = uv;
-		}
-
-		[[nodiscard]] constexpr auto get_texture_uv_of_white_pixel() const noexcept -> const uv_type&
-		{
-			return texture_uv_of_white_pixel_;
-		}
-
 		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_ranges_view_type glyph_ranges) noexcept -> Font::texture_type
 		{
 			return default_font_.load(font_path, pixel_height, glyph_ranges);
@@ -220,7 +193,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
 		{
 			return default_font_;
 		}
-
+		
 		[[nodiscard]] constexpr auto get_default_font() const noexcept -> const Font&
 		{
 			return default_font_;
