@@ -3,16 +3,20 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.meta:enumeration;
+export module gal.prometheus:meta.enumeration;
 
 import std;
 
-#else
+import :meta.name;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <string_view>
@@ -23,6 +27,8 @@ import std;
 #include <array>
 
 #include <prometheus/macro.hpp>
+
+#include <meta/name.ixx>
 
 #endif
 
@@ -354,7 +360,11 @@ namespace gal::prometheus::meta
 			{
 				return user_defined::enum_name<EnumType>::value;
 			}
-			else { return meta::name_of<EnumType>(); }
+			else
+			{
+				// name.ixx => name_of
+				return meta::name_of<EnumType>();
+			}
 		}
 
 		template<auto EnumValue>

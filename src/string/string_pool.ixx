@@ -3,17 +3,22 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.string:string_pool;
+export module gal.prometheus:string.string_pool;
 
 import std;
-import gal.prometheus.error;
 
-#else
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+import :error;
+#endif
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <string>
@@ -63,7 +68,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::string)
 			{
 				if (not this->storable(str))
 				{
-					GAL_PROMETHEUS_DEBUG_ASSUME(this->storable(str), "There are not enough space for this string.");
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(this->storable(str), "There are not enough space for this string.");
 					return &invalid_char;
 				}
 
@@ -80,7 +85,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::string)
 			{
 				if (not this->storable(size))
 				{
-					GAL_PROMETHEUS_DEBUG_ASSUME(this->storable(size), "There are not enough space for this string.");
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(this->storable(size), "There are not enough space for this string.");
 					return nullptr;
 				}
 
@@ -96,13 +101,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::string)
 			{
 				auto memory_data = memory_.get();
 
-				GAL_PROMETHEUS_DEBUG_ASSUME(memory_data >= (raw - (size_ - size)), "The given memory does not belong to this block");
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(memory_data >= (raw - (size_ - size)), "The given memory does not belong to this block");
 
 				if (memory_data > (raw - (size_ - size)))
 				{
 					// In this case, new string is inserted after the memory is borrowed, and the newly added string needs to be moved to the front
 					auto move_dest = memory_data + (raw - memory_data); // raw;
-					GAL_PROMETHEUS_DEBUG_ASSUME(move_dest == raw);
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(move_dest == raw);
 					auto move_source = raw + size;
 					auto move_size = size_ - size - (raw - memory_data);
 

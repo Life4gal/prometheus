@@ -3,20 +3,30 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
-#include <prometheus/macro.hpp>
 #if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
 #include <Windows.h>
+#else
 #endif
 
-export module gal.prometheus.error:debug.impl;
+#include <prometheus/macro.hpp>
+
+export module gal.prometheus:error.debug.impl;
 
 import std;
-import :debug;
 
+import :error.debug;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
+#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
+#include <Windows.h>
 #else
+#endif
+
 #if __has_include(<print>)
 #include <print>
 #endif
@@ -24,15 +34,7 @@ import :debug;
 #include <atomic>
 #include <format>
 
-#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
-#include <Windows.h>
-#else
-#include <csignal>
-#include <unistd.h>
-#endif
-
 #include <prometheus/macro.hpp>
-#include <error/debug.ixx>
 
 #endif
 
@@ -102,7 +104,7 @@ namespace
 	thread_local std::atomic<const char*> terminate_reason{nullptr};
 }
 
-namespace gal::prometheus::error
+GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::error)
 {
 	auto debug_break(const char* message) noexcept -> void
 	{

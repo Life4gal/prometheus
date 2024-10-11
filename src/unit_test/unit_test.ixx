@@ -5,19 +5,24 @@
 
 // The code below is based on boost-ext/ut(https://github.com/boost-ext/ut)(http://www.boost.org/LICENSE_1_0.txt)
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.unit_test;
+export module gal.prometheus:unit_test;
 
 import std;
-import gal.prometheus.functional;
-import gal.prometheus.meta;
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
-#else
+import :functional;
+import :meta;
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+import :error;
+#endif
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <string>

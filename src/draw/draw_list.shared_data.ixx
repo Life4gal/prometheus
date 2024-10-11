@@ -3,19 +3,25 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.draw:draw_list.shared_data;
+export module gal.prometheus:draw.draw_list.shared_data;
 
 import std;
 
-import gal.prometheus.primitive;
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
+import :primitive;
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+import :error;
+#endif
 
-#else
+import :draw.font;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <prometheus/macro.hpp>

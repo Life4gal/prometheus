@@ -3,8 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 #if __has_include(<intrin.h>)
@@ -14,12 +13,18 @@ module;
 #include <x86intrin.h>
 #endif
 
-export module gal.prometheus.functional:math;
+export module gal.prometheus:functional.math;
 
 import std;
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
-#else
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+import :error;
+#endif
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <cmath>

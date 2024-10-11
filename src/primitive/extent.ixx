@@ -3,20 +3,23 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.primitive:extent;
+export module gal.prometheus:primitive.extent;
 
 import std;
-import gal.prometheus.meta;
 
-import :multidimensional;
-import :point;
+import :meta;
 
-#else
+import :primitive.multidimensional;
+import :primitive.point;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <type_traits>

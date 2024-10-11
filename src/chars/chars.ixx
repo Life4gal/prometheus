@@ -3,26 +3,28 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.chars;
+export module gal.prometheus:chars;
 
-import gal.prometheus.error;
+import std;
 
-export import :encoding;
+import :error;
 
-import :scalar;
-
+export import :chars.encoding;
+export import :chars.scalar;
 #if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-import :icelake;
+export import :chars.icelake;
 #endif
 
-#else
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
+#pragma once
+
 #include <prometheus/macro.hpp>
 #include <error/error.ixx>
 #include <chars/encoding.ixx>

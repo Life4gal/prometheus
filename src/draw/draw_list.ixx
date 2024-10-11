@@ -3,6 +3,10 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#include <prometheus/macro.hpp>
+
 #if not defined(GAL_PROMETHEUS_DRAW_LIST_DEBUG)
 #if defined(DEBUG) or defined(_DEBUG)
 #define GAL_PROMETHEUS_DRAW_LIST_DEBUG 1
@@ -11,22 +15,22 @@
 #endif
 #endif
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
-
-#include <prometheus/macro.hpp>
-
-export module gal.prometheus.draw:draw_list;
+export module gal.prometheus:draw.draw_list;
 
 import std;
 
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+import :error;
+#endif
 
-export import :font;
-export import :draw_list.draw_flag;
-export import :draw_list.shared_data;
+export import :draw.font;
+export import :draw.draw_list.draw_flag;
+export import :draw.draw_list.shared_data;
 
-#else
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <vector>
@@ -41,6 +45,14 @@ export import :draw_list.shared_data;
 #endif
 
 #include <prometheus/macro.hpp>
+
+#if not defined(GAL_PROMETHEUS_DRAW_LIST_DEBUG)
+#if defined(DEBUG) or defined(_DEBUG)
+#define GAL_PROMETHEUS_DRAW_LIST_DEBUG 1
+#else
+#define GAL_PROMETHEUS_DRAW_LIST_DEBUG 0
+#endif
+#endif
 
 #include <functional/functional.ixx>
 #include <primitive/primitive.ixx>

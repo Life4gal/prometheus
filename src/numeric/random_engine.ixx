@@ -5,16 +5,18 @@
 
 // A C++ implementation based on [http://prng.di.unimi.it/].
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.numeric:random_engine;
+export module gal.prometheus:numeric.random_engine;
 
 import std;
 
-#else
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <type_traits>

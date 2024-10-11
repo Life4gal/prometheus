@@ -3,10 +3,8 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
-#include <prometheus/macro.hpp>
 #if __has_include(<intrin.h>)
 #include <intrin.h>
 #endif
@@ -14,25 +12,31 @@ module;
 #include <x86intrin.h>
 #endif
 
-export module gal.prometheus.error:instruction_set.impl;
+#include <prometheus/macro.hpp>
+
+export module gal.prometheus:error.instruction_set.impl;
 
 import std;
 
-import :instruction_set;
+import :error.instruction_set;
 
-#else
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
+#if __has_include(<intrin.h>)
+#include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
 
 #include <cstdint>
 #include <bit>
 #include <type_traits>
-#if __has_include(<intrin.h>)
-#include <intrin.h>
-#endif
-#if __has_include(<x86intrin.h>)
-#include <x86intrin.h>
-#endif
 
 #include <prometheus/macro.hpp>
+
 #include <error/instruction_set.ixx>
 
 #endif
@@ -70,7 +74,7 @@ namespace
 	 * Bit 00: FSGSBASE. Supports RDFSBASE/RDGSBASE/WRFSBASE/WRGSBASE if 1.
 	 * Bit 01: IA32_TSC_ADJUST MSR is supported if 1.
 	 * Bit 02: SGX. Supports Intel® Software Guard Extensions (Intel® SGX Extensions) if 1.
-	 * Bit 03: BMI1. 
+	 * Bit 03: BMI1.
 	 * Bit 04: HLE.
 	 * Bit 05: AVX2. Supports Intel® Advanced Vector Extensions 2 (Intel® AVX2) if 1.
 	 * Bit 06: FDP_EXCPTN_ONLY. x87 FPU Data Pointer updated only on x87 exceptions if 1.
@@ -249,7 +253,7 @@ namespace
 	}
 }
 
-namespace gal::prometheus::error
+GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::error)
 {
 	auto detect_supported_instruction() -> std::uint32_t
 	{

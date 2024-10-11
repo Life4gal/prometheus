@@ -3,19 +3,22 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.concurrency:unfair_mutex;
+export module gal.prometheus:concurrency.unfair_mutex;
 
 import std;
-import gal.prometheus.meta;
 
-import :thread;
+import :meta;
 
-#else
+import :concurrency.thread;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <format>

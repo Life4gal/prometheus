@@ -3,19 +3,21 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.functional:aligned_union;
+export module gal.prometheus:functional.aligned_union;
 
 import std;
 
-import :type_list;
-import :functor;
+import :functional.type_list;
+import :functional.functor;
 
-#else
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <type_traits>
@@ -28,7 +30,8 @@ import :functor;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::functional)
+// GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::functional)
+namespace gal::prometheus::functional
 {
 	template<typename... Ts>
 	class AlignedUnion final

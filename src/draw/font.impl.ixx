@@ -3,8 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
@@ -17,13 +16,16 @@ module;
 #define STB_RECT_PACK_IMPLEMENTATION
 #include <stb_rect_pack.h>
 
-export module gal.prometheus.draw:font.impl;
+export module gal.prometheus:draw.font.impl;
 
 import std;
 
-import :font;
+import :draw.font;
 
-#else
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #include <algorithm>
 #include <ranges>
 #include <numeric>
@@ -140,7 +142,7 @@ namespace
 	}
 }
 
-namespace gal::prometheus::draw
+GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::draw)
 {
 	[[nodiscard]] auto glyph_range_latin() noexcept -> glyph_range_view_type
 	{

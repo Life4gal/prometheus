@@ -1,15 +1,15 @@
 #include <prometheus/macro.hpp>
 
 #if GAL_PROMETHEUS_USE_MODULE
-import std;
 import gal.prometheus;
 #else
 #include <prometheus.ixx>
+#endif
 
 #include <algorithm>
 #include <string>
 #include <limits>
-#endif
+#include <string>
 
 namespace
 {

@@ -3,16 +3,22 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-export module gal.prometheus.meta;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
-export import :name;
-export import :string;
-export import :enumeration;
-export import :member;
-export import :to_string;
+#include <prometheus/macro.hpp>
 
-#else
+export module gal.prometheus:meta;
+
+export import :meta.name;
+export import :meta.string;
+export import :meta.enumeration;
+export import :meta.member;
+export import :meta.to_string;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <meta/name.ixx>

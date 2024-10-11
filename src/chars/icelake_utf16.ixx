@@ -3,10 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #if __has_include(<intrin.h>)
 #include <intrin.h>
@@ -16,17 +13,25 @@ module;
 #endif
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.chars:icelake.utf16;
+export module gal.prometheus:chars.icelake.utf16;
 
 import std;
-import gal.prometheus.meta;
-import gal.prometheus.memory;
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
-import :encoding;
-import :scalar.utf16;
+import :meta;
+import :memory;
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+import :error;
+#endif
 
-#else
+import :chars.encoding;
+import :chars.scalar.utf16;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
+#pragma once
+
 #if __has_include(<intrin.h>)
 #include <intrin.h>
 #endif

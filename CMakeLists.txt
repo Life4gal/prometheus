@@ -10,7 +10,7 @@ elseif (CMAKE_VERSION VERSION_LESS "3.28")
 	# 3.27
 	set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
 elseif (NOT CMAKE_VERSION VERSION_GREATER "3.28")
-	message(FATAL_ERROR "See `https://github.com/Kitware/CMake/blob/v${CMAKE_VERSION}/Help/dev/experimental.rst`.")
+	message(FATAL_ERROR "[PROMETHEUS] See `https://github.com/Kitware/CMake/blob/v${CMAKE_VERSION}/Help/dev/experimental.rst`.")
 endif (CMAKE_VERSION VERSION_LESS "3.26")
 # turn on the dynamic depends for ninja
 set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP ON)
@@ -33,6 +33,7 @@ set(
 )
 
 set(${PROJECT_NAME_PREFIX}VERSION ${${PROJECT_NAME_PREFIX}MAJOR_VERSION}.${${PROJECT_NAME_PREFIX}MINOR_VERSION}.${${PROJECT_NAME_PREFIX}PATCH_VERSION})
+set(${PROJECT_NAME_PREFIX}INLINE_NAMESPACE_NAME v_${${PROJECT_NAME_PREFIX}MAJOR_VERSION}_${${PROJECT_NAME_PREFIX}MINOR_VERSION}_${${PROJECT_NAME_PREFIX}PATCH_VERSION})
 
 # Determine if our project is built as a subproject (using add_subdirectory)
 # or if it is the master project.
@@ -70,9 +71,9 @@ project(
 		LANGUAGES CXX
 )
 
-message(STATUS "CMAKE VERSION: ${CMAKE_VERSION}. Compiler ID: ${CMAKE_CXX_COMPILER_ID}. Platform: ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}.")
-message(STATUS "${PROJECT_NAME} VERSION: ${${PROJECT_NAME_PREFIX}VERSION}")
-message(STATUS "${PROJECT_NAME} BUILD TYPE: ${CMAKE_BUILD_TYPE}")
+message(STATUS "[PROMETHEUS] CMAKE VERSION: ${CMAKE_VERSION}. Compiler ID: ${CMAKE_CXX_COMPILER_ID}. Platform: ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}.")
+message(STATUS "[PROMETHEUS] ${PROJECT_NAME} VERSION: ${${PROJECT_NAME_PREFIX}VERSION}")
+message(STATUS "[PROMETHEUS] ${PROJECT_NAME} BUILD TYPE: ${CMAKE_BUILD_TYPE}")
 
 include(GNUInstallDirs)
 include(CheckCXXCompilerFlag)
@@ -99,7 +100,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(${PROJECT_NAME_PREFIX}PLATFORM_MACOS ON)
 	set(${PROJECT_NAME_PREFIX}PLATFORM ${PROJECT_NAME_PREFIX}PLATFORM_MACOS)
 else ()
-	message(FATAL_ERROR "Unsupported Platform: ${CMAKE_SYSTEM_NAME}")
+	message(FATAL_ERROR "[PROMETHEUS] Unsupported Platform: ${CMAKE_SYSTEM_NAME}")
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 
 # check cpu features
@@ -219,7 +220,7 @@ elseif (${PROJECT_NAME_PREFIX}PLATFORM_MACOS)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Werror")
 	endif ()
 else ()
-	message(FATAL_ERROR "Unsupported compilers: ${CMAKE_CXX_COMPILER}")
+	message(FATAL_ERROR "[PROMETHEUS] Unsupported compilers: ${CMAKE_CXX_COMPILER}")
 endif (${PROJECT_NAME_PREFIX}PLATFORM_WINDOWS)
 
 if (${PROJECT_NAME_PREFIX}SYSTEM_HEADERS)
@@ -245,19 +246,19 @@ if (${PROJECT_NAME_PREFIX}MODULE)
 	set(${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH ${CMAKE_BINARY_DIR}/temp_module)
 	if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 		if (NOT DEFINED ENV{VCToolsInstallDir})
-			message(FATAL_ERROR "Unable to find path to VC Tools in environment variables!")
+			message(FATAL_ERROR "[PROMETHEUS] Unable to find path to VC Tools in environment variables!")
 		endif (NOT DEFINED ENV{VCToolsInstallDir})
 
 		if (NOT EXISTS $ENV{VCToolsInstallDir})
-			message(FATAL_ERROR "Invalid VC Tools installation path!")
+			message(FATAL_ERROR "[PROMETHEUS] Invalid VC Tools installation path!")
 		else ()
-			message(STATUS "Found VC Tools in: [$ENV{VCToolsInstallDir}]")
+			message(STATUS "[PROMETHEUS] Found VC Tools in: [$ENV{VCToolsInstallDir}]")
 		endif (NOT EXISTS $ENV{VCToolsInstallDir})
 
 		if (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
-			message(FATAL_ERROR "Cannot find std.ixx! Please check MSVC version(${CMAKE_CXX_COMPILER_VERSION})!")
+			message(FATAL_ERROR "[PROMETHEUS] Cannot find std.ixx! Please check MSVC version(${CMAKE_CXX_COMPILER_VERSION})!")
 		else ()
-			message(STATUS "Found module std.ixx in: [$ENV{VCToolsInstallDir}modules\\std.ixx]")
+			message(STATUS "[PROMETHEUS] Found module std.ixx in: [$ENV{VCToolsInstallDir}modules\\std.ixx]")
 		endif (NOT EXISTS $ENV{VCToolsInstallDir}modules/std.ixx)
 
 		configure_file(
@@ -323,7 +324,7 @@ if (${PROJECT_NAME_PREFIX}MODULE)
 		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FORMAT "gcc")
 		set(CMAKE_EXPERIMENTAL_CXX_MODULE_MAP_FLAG "-fmodules-ts -fmodule-mapper=<MODULE_MAP_FILE> -fdep-format=trtbd -x c++")
 	else ()
-		message(FATAL_ERROR "Unsupported compilers: ${CMAKE_CXX_COMPILER}")
+		message(FATAL_ERROR "[PROMETHEUS] Unsupported compilers: ${CMAKE_CXX_COMPILER}")
 	endif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif (${PROJECT_NAME_PREFIX}MODULE)
 
@@ -351,64 +352,16 @@ set(
 		${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC
 
 		# =========================
-		# CHARS
-		# =========================
-		
-		${PROJECT_SOURCE_DIR}/src/chars/encoding.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_ascii.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf8.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf16.ixx
-		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf32.ixx
-		${${PROJECT_NAME_PREFIX}MODULE_SOURCE_CHARS_ICELAKE}
-		
-		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
-
-		# =========================
-		# COMMAND_LINE_PARSER
+		# META
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/command_line_parser/command_line_parser.ixx
+		${PROJECT_SOURCE_DIR}/src/meta/string.ixx
+		${PROJECT_SOURCE_DIR}/src/meta/name.ixx
+		${PROJECT_SOURCE_DIR}/src/meta/enumeration.ixx
+		${PROJECT_SOURCE_DIR}/src/meta/member.ixx
+		${PROJECT_SOURCE_DIR}/src/meta/to_string.ixx
 
-		# =========================
-		# CONCURRENCY
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/concurrency/thread.ixx
-		${PROJECT_SOURCE_DIR}/src/concurrency/unfair_mutex.ixx
-
-		${PROJECT_SOURCE_DIR}/src/concurrency/concurrency.ixx
-
-		# =========================
-		# COROUTINE
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/coroutine/task.ixx
-		${PROJECT_SOURCE_DIR}/src/coroutine/generator.ixx
-
-		${PROJECT_SOURCE_DIR}/src/coroutine/coroutine.ixx
-
-		# =========================
-		# DRAW
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/draw/draw_list.ixx
-		${PROJECT_SOURCE_DIR}/src/draw/font.ixx
-
-		${PROJECT_SOURCE_DIR}/src/draw/surface.ixx
-		${PROJECT_SOURCE_DIR}/src/draw/style.ixx
-
-		${PROJECT_SOURCE_DIR}/src/draw/detail/element.ixx
-		${PROJECT_SOURCE_DIR}/src/draw/detail/element.text.ixx
-		${PROJECT_SOURCE_DIR}/src/draw/detail/element.border.ixx
-		${PROJECT_SOURCE_DIR}/src/draw/detail/element.boundary.ixx
-		${PROJECT_SOURCE_DIR}/src/draw/detail/element.flex.ixx
-		${PROJECT_SOURCE_DIR}/src/draw/detail/element.box.ixx
-		${PROJECT_SOURCE_DIR}/src/draw/detail/element.flex_box.ixx
-		${PROJECT_SOURCE_DIR}/src/draw/detail/element.gauge.ixx
-		${PROJECT_SOURCE_DIR}/src/draw/element.ixx
-
-		${PROJECT_SOURCE_DIR}/src/draw/draw.ixx
+		${PROJECT_SOURCE_DIR}/src/meta/meta.ixx
 
 		# =========================
 		# ERROR
@@ -438,32 +391,12 @@ set(
 		${PROJECT_SOURCE_DIR}/src/functional/functional.ixx
 
 		# =========================
-		# IO
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/io/device.ixx
-
-		${PROJECT_SOURCE_DIR}/src/io/io.ixx
-
-		# =========================
 		# MEMORY
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/memory/read_write.ixx
 
 		${PROJECT_SOURCE_DIR}/src/memory/memory.ixx
-
-		# =========================
-		# META
-		# =========================
-
-		${PROJECT_SOURCE_DIR}/src/meta/string.ixx
-		${PROJECT_SOURCE_DIR}/src/meta/name.ixx
-		${PROJECT_SOURCE_DIR}/src/meta/enumeration.ixx
-		${PROJECT_SOURCE_DIR}/src/meta/member.ixx
-		${PROJECT_SOURCE_DIR}/src/meta/to_string.ixx
-
-		${PROJECT_SOURCE_DIR}/src/meta/meta.ixx
 
 		# =========================
 		# NUMERIC
@@ -490,10 +423,23 @@ set(
 		${PROJECT_SOURCE_DIR}/src/primitive/primitive.ixx
 
 		# =========================
-		# STATE_MACHINE
+		# CONCURRENCY
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/state_machine/state_machine.ixx
+		${PROJECT_SOURCE_DIR}/src/concurrency/thread.ixx
+		${PROJECT_SOURCE_DIR}/src/concurrency/unfair_mutex.ixx
+		${PROJECT_SOURCE_DIR}/src/concurrency/queue.ixx
+
+		${PROJECT_SOURCE_DIR}/src/concurrency/concurrency.ixx
+
+		# =========================
+		# COROUTINE
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/coroutine/task.ixx
+		${PROJECT_SOURCE_DIR}/src/coroutine/generator.ixx
+
+		${PROJECT_SOURCE_DIR}/src/coroutine/coroutine.ixx
 
 		# =========================
 		# STRING
@@ -503,6 +449,34 @@ set(
 		${PROJECT_SOURCE_DIR}/src/string/string_pool.ixx
 
 		${PROJECT_SOURCE_DIR}/src/string/string.ixx
+
+		# =========================
+		# IO
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/io/device.ixx
+
+		${PROJECT_SOURCE_DIR}/src/io/io.ixx
+
+		# =========================
+		# CHARS
+		# =========================
+		
+		${PROJECT_SOURCE_DIR}/src/chars/encoding.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_ascii.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf8.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf16.ixx
+		${PROJECT_SOURCE_DIR}/src/chars/scalar_utf32.ixx
+		${${PROJECT_NAME_PREFIX}MODULE_SOURCE_CHARS_ICELAKE}
+		
+		${PROJECT_SOURCE_DIR}/src/chars/chars.ixx
+
+		# =========================
+		# COMMAND_LINE_PARSER
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/command_line_parser/command_line_parser.ixx
 
 		# =========================
 		# UNIT_TEST
@@ -515,6 +489,47 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/wildcard/wildcard.ixx
+
+		# =========================
+		# STATE_MACHINE
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/state_machine/state_machine.ixx
+
+		# =========================
+		# DRAW
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/draw/draw_list.draw_flag.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/draw_list.shared_data.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/draw_list.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/font.ixx
+
+		#${PROJECT_SOURCE_DIR}/src/draw/widgets.ixx
+		
+		#${PROJECT_SOURCE_DIR}/src/draw/surface.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/style.ixx
+		
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/options.ixx
+		
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/element.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/element.text.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/element.border.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/element.boundary.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/element.flex.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/element.box.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/element.flex_box.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/element.gauge.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/element.guardian.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/element.decorator.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/element.ixx
+		
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/component.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/component.button.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/component.box.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/component.ixx
+
+		${PROJECT_SOURCE_DIR}/src/draw/draw.ixx
 
 		# =========================
 		# ROOT
@@ -538,8 +553,11 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/draw/font.impl.ixx
+		${PROJECT_SOURCE_DIR}/src/draw/draw_list.impl.ixx
 
-		${PROJECT_SOURCE_DIR}/src/draw/detail/element.impl.ixx
+		#${PROJECT_SOURCE_DIR}/src/draw/widgets.text.ixx
+
+		#${PROJECT_SOURCE_DIR}/src/draw/detail/impl.ixx
 
 		# =========================
 		# ERROR
@@ -550,6 +568,106 @@ set(
 		${PROJECT_SOURCE_DIR}/src/error/command_line.impl.ixx
 		${PROJECT_SOURCE_DIR}/src/error/instruction_set.impl.ixx
 )
+
+set(${PROJECT_NAME_PREFIX}MODULE_FRAGMENT_MACRO_NAME "${PROJECT_NAME_PREFIX}MODULE_FRAGMENT_DEFINED")
+if (${PROJECT_NAME_PREFIX}MODULE)
+	target_compile_definitions(
+		${PROJECT_NAME}
+		PUBLIC
+		${PROJECT_NAME_PREFIX}USE_MODULE=1
+	)
+
+	# MSVC =>
+	# xxx.impl.ixx
+	# #if GAL_PROMETHEUS_USE_MODULE
+	# module; <== warning C5201: a module declaration can appear only at the start of a translation unit unless a global module fragment is used
+	# #include <...>
+	#
+	# export import xxx.impl;
+	#
+	# import ...;
+	#
+	#else
+	# #include <...>
+	#
+	# #endif
+
+	function(MODIFY_MODULE_FILE file sources)
+		file(RELATIVE_PATH relative_path ${PROJECT_SOURCE_DIR}/src ${file})
+		set(target_path ${${PROJECT_NAME_PREFIX}TEMP_CXX_MODULE_PATH}/${relative_path})
+
+		string(REPLACE "/" "_" cache_var_name ${relative_path})
+		string(TOUPPER ${cache_var_name} cache_var_name)
+		set(cache_var_name "${PROJECT_NAME_PREFIX}MODULE_FILE_CACHED_${cache_var_name}")
+		file(MD5 ${file} cache_var_md5)
+
+		if (NOT DEFINED ${cache_var_name} OR NOT ${${cache_var_name}} STREQUAL ${cache_var_md5})
+			message(STATUS "[PROMETHEUS] [MODULE FILE FRAGMENT] ${file} => ${target_path}")
+
+			get_filename_component(dir ${target_path} DIRECTORY)
+			file(MAKE_DIRECTORY ${dir})
+
+			file(READ ${file} file_content LIMIT 2048)
+			set(module_fragment_begin "#if not ${${PROJECT_NAME_PREFIX}MODULE_FRAGMENT_MACRO_NAME}")
+			set(module_fragment_end "#endif not ${${PROJECT_NAME_PREFIX}MODULE_FRAGMENT_MACRO_NAME}")
+			string(FIND "${file_content}" "${module_fragment_begin}" fragment_begin)
+			string(FIND "${file_content}" "${module_fragment_end}" fragment_end)
+			if(fragment_begin EQUAL -1 OR fragment_end EQUAL -1)
+				message(
+					FATAL_ERROR 
+					"File [${file}] does not contain MODULE fragment. \n\t\"${module_fragment_begin}\" => ${fragment_begin}\n\t\"${module_fragment_end}\" => ${fragment_end}"
+				)
+			endif(fragment_begin EQUAL -1 OR fragment_end EQUAL -1)
+
+			string(LENGTH ${module_fragment_begin} module_fragment_begin_length)
+			math(EXPR real_fragment_begin "${fragment_begin} + ${module_fragment_begin_length}")
+			math(EXPR fragment_length "${fragment_end} - ${real_fragment_begin}")
+			string(SUBSTRING "${file_content}" ${real_fragment_begin} ${fragment_length} module_fragment)
+
+			file(WRITE ${target_path} "module;")
+			file(APPEND ${target_path} "${module_fragment}")
+			file(APPEND ${target_path} "#define ${${PROJECT_NAME_PREFIX}MODULE_FRAGMENT_MACRO_NAME} 1\n")
+
+			# warning C5244: '#include <xxx.ixx>' in the purview of module 'gal.prometheus' appears erroneous.
+			# Consider moving that directive before the module declaration, or replace the textual inclusion with 'import <xxx.ixx>;'.
+			file(APPEND ${target_path} "GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH\n")
+			file(APPEND ${target_path} "#if defined(GAL_PROMETHEUS_COMPILER_MSVC)\n")
+			file(APPEND ${target_path} "GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(5244)\n")
+			file(APPEND ${target_path} "#endif defined(GAL_PROMETHEUS_COMPILER_MSVC)\n")
+			file(APPEND ${target_path} "#include <${relative_path}>\n")
+			file(APPEND ${target_path} "GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP\n")
+
+			set(${cache_var_name} ${cache_var_md5} CACHE STRING "MD5 of ${file}'s module fragment." FORCE)
+		endif (NOT DEFINED ${cache_var_name} OR NOT ${${cache_var_name}} STREQUAL ${cache_var_md5})
+
+		list(APPEND ${sources} ${target_path})
+		set(${sources} ${${sources}} PARENT_SCOPE)
+	endfunction(MODIFY_MODULE_FILE file sources)
+
+	# PUBLIC
+	set(${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC_ORIGINAL ${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC})
+	set(${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC "")
+
+	foreach (file ${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC_ORIGINAL})
+		MODIFY_MODULE_FILE(${file} ${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC)
+	endforeach (file ${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PUBLIC_ORIGINAL})
+
+	# PRIVATE
+	set(${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE_ORIGINAL ${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE})
+	set(${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE "")
+
+	foreach (file ${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE_ORIGINAL})
+		MODIFY_MODULE_FILE(${file} ${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE)
+	endforeach (file ${${PROJECT_NAME_PREFIX}MODULE_SOURCE_PRIVATE_ORIGINAL})
+else ()
+	set(${PROJECT_NAME_PREFIX}USE_MODULE 0)
+	target_compile_definitions(
+		${PROJECT_NAME}
+		PUBLIC
+		${PROJECT_NAME_PREFIX}USE_MODULE=0
+		${${PROJECT_NAME_PREFIX}MODULE_FRAGMENT_MACRO_NAME}=1
+	)
+endif (${PROJECT_NAME_PREFIX}MODULE)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	set_source_files_properties(
@@ -613,12 +731,6 @@ target_compile_options(
 )
 
 # SET DEFINITIONS
-if (${PROJECT_NAME_PREFIX}MODULE)
-	set(${PROJECT_NAME_PREFIX}MODULE_MACRO_VARIABLE_USE_MODULE 1)
-else ()
-	set(${PROJECT_NAME_PREFIX}MODULE_MACRO_VARIABLE_USE_MODULE 0)
-endif (${PROJECT_NAME_PREFIX}MODULE)
-
 target_compile_definitions(
 		${PROJECT_NAME}
 		PUBLIC
@@ -627,12 +739,11 @@ target_compile_definitions(
 		${PROJECT_NAME_PREFIX}MINOR_VERSION=${${PROJECT_NAME_PREFIX}MINOR_VERSION}
 		${PROJECT_NAME_PREFIX}PATCH_VERSION=${${PROJECT_NAME_PREFIX}PATCH_VERSION}
 		${PROJECT_NAME_PREFIX}VERSION="${${PROJECT_NAME_PREFIX}VERSION}"
+		${PROJECT_NAME_PREFIX}INLINE_NAMESPACE_NAME=${${PROJECT_NAME_PREFIX}INLINE_NAMESPACE_NAME}
 		${PROJECT_NAME_PREFIX}COMPILER_ID="${${PROJECT_NAME_PREFIX}COMPILER_ID}"
 		${PROJECT_NAME_PREFIX}COMPILER_VERSION="${${PROJECT_NAME_PREFIX}COMPILER_VERSION}"
 		${PROJECT_NAME_PREFIX}COMPILER_NAME="${${PROJECT_NAME_PREFIX}COMPILER_NAME}"
 		${${PROJECT_NAME_PREFIX}PLATFORM}
-
-		${PROJECT_NAME_PREFIX}USE_MODULE=${${PROJECT_NAME_PREFIX}MODULE_MACRO_VARIABLE_USE_MODULE}
 
 		${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED=${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED}
 

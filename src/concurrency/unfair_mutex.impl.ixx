@@ -3,24 +3,30 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.concurrency:unfair_mutex.impl;
+export module gal.prometheus:concurrency.unfair_mutex.impl;
 
 import std;
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
-import :unfair_mutex;
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+import :error;
+#endif
 
-#else
+import :concurrency.unfair_mutex;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #include <mutex>
 #include <vector>
 #include <algorithm>
 
 #include <prometheus/macro.hpp>
+
 #include <concurrency/unfair_mutex.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
@@ -147,7 +153,7 @@ namespace
 	}
 }
 
-namespace gal::prometheus::concurrency
+GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::concurrency)
 {
 	auto UnfairMutex::holds_invariant() const noexcept -> bool
 	{

@@ -3,26 +3,32 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
-#include <prometheus/macro.hpp>
 #if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
 #include <cstdlib>
 #endif
 
-export module gal.prometheus.error:command_line.impl;
+#include <prometheus/macro.hpp>
+
+export module gal.prometheus:error.command_line.impl;
 
 import std;
-import :command_line;
 
-#else
+import :error.command_line;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
 
 #if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
 #include <cstdlib>
 #endif
 
+#include <span>
+
 #include <prometheus/macro.hpp>
+
 #include <error/command_line.ixx>
 
 #endif
@@ -44,7 +50,7 @@ namespace
 	#endif
 }
 
-namespace gal::prometheus::error
+GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::error)
 {
 	auto command_line_args_count() noexcept -> int
 	{

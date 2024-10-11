@@ -3,13 +3,19 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-export module gal.prometheus.numeric;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
-export import :random_engine;
-export import :random;
+#include <prometheus/macro.hpp>
 
-#else
+export module gal.prometheus:numeric;
+
+export import :numeric.random_engine;
+export import :numeric.random;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <numeric/random_engine.ixx>

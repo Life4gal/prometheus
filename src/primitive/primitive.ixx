@@ -3,19 +3,23 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-export module gal.prometheus.primitive;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
-export import :multidimensional;
-export import :point;
-export import :extent;
-export import :rect;
-export import :circle;
-export import :ellipse;
-export import :color;
-export import :vertex;
+export module gal.prometheus:primitive;
 
-#else
+export import :primitive.multidimensional;
+export import :primitive.point;
+export import :primitive.extent;
+export import :primitive.rect;
+export import :primitive.circle;
+export import :primitive.ellipse;
+export import :primitive.color;
+export import :primitive.vertex;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <primitive/multidimensional.ixx>

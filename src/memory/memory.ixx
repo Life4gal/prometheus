@@ -3,12 +3,16 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-export module gal.prometheus.memory;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
-export import :read_write;
+export module gal.prometheus:memory;
 
-#else
+export import :memory.read_write;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <memory/read_write.ixx>

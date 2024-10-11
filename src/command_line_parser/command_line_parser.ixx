@@ -3,8 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
@@ -12,15 +11,19 @@ module;
 #include <cstdlib>
 #endif
 
-export module gal.prometheus.command_line_parser;
+export module gal.prometheus:command_line_parser;
 
 import std;
-import gal.prometheus.error;
-import gal.prometheus.meta;
-import gal.prometheus.functional;
-import gal.prometheus.string;
 
-#else
+import :error;
+import :meta;
+import :functional;
+import :string;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <type_traits>

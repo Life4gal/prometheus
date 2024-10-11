@@ -1,11 +1,16 @@
 #include <prometheus/macro.hpp>
 
 #if GAL_PROMETHEUS_USE_MODULE
-import std;
 import gal.prometheus;
 #else
 #include <prometheus.ixx>
 #endif
+
+#include <limits>
+#include <string>
+#include <thread>
+#include <span>
+#include <algorithm>
 
 using namespace gal::prometheus;
 

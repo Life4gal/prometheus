@@ -5,11 +5,11 @@ function(
 		library_name
 )
 	if (${library_name}_ADDED OR DEFINED ${library_name}_SOURCE_DIR)
-		message(STATUS "An interface library will be generated for library ${library_name}, the included headers' path is [${${library_name}_SOURCE_DIR}/include].")
+		message(STATUS "[PROMETHEUS] An interface library will be generated for library ${library_name}, the included headers' path is [${${library_name}_SOURCE_DIR}/include].")
 		add_library(${library_name} INTERFACE IMPORTED GLOBAL)
 		target_include_directories(${library_name} SYSTEM INTERFACE ${${library_name}_SOURCE_DIR}/include)
 	else ()
-		message(FATAL_ERROR "Library ${library_name} is not installed and cannot generate target for it!")
+		message(FATAL_ERROR "[PROMETHEUS] Library ${library_name} is not installed and cannot generate target for it!")
 	endif (${library_name}_ADDED OR DEFINED ${library_name}_SOURCE_DIR)
 
 	# mark it
@@ -28,7 +28,7 @@ function(
 	###############################################
 	list(FIND CPM_INSTALL_LINK_TYPE ${link_type} link_type_index)
 	if (link_type_index EQUAL -1)
-		message(FATAL_ERROR "[link type(${link_type})] must be one of ${CPM_INSTALL_LINK_TYPE}")
+		message(FATAL_ERROR "[PROMETHEUS] [link type(${link_type})] must be one of ${CPM_INSTALL_LINK_TYPE}")
 	endif (link_type_index EQUAL -1)
 
 	###############################################
@@ -37,7 +37,7 @@ function(
 	# see CPM.cmake --> cpm_export_variables
 	if (${linked_project}_ADDED OR (DEFINED ${linked_project}_SOURCE_DIR AND DEFINED ${linked_project}_BINARY_DIR))
 		# downloaded
-		message(STATUS "Successfully added [${linked_project}], the source files path is [${${linked_project}_SOURCE_DIR}], the binary files path is [${${linked_project}_BINARY_DIR}]!")
+		message(STATUS "[PROMETHEUS] Successfully added [${linked_project}], the source files path is [${${linked_project}_SOURCE_DIR}], the binary files path is [${${linked_project}_BINARY_DIR}]!")
 		# add_subdirectory(
 		# 		${${linked_project}_SOURCE_DIR}
 		# 		${${linked_project}_BINARY_DIR}
@@ -45,7 +45,7 @@ function(
 		# )
 	else ()
 		# todo: https://github.com/cpm-cmake/CPM.cmake/issues/433
-		message(FATAL_ERROR "Library [${linked_project}] not found!")
+		message(FATAL_ERROR "[PROMETHEUS] Library [${linked_project}] not found!")
 	endif (${linked_project}_ADDED OR (DEFINED ${linked_project}_SOURCE_DIR AND DEFINED ${linked_project}_BINARY_DIR))
 
 	###############################################
@@ -53,7 +53,7 @@ function(
 	###############################################
 	if (NOT (${ARGC} MATCHES 3))
 		list(GET ARGN 0 linked_target)
-		message(STATUS "The target's name [${linked_target}] is different with the project's name [${linked_project}], the target's name will be used as the linked library name!")
+		message(STATUS "[PROMETHEUS] The target's name [${linked_target}] is different with the project's name [${linked_project}], the target's name will be used as the linked library name!")
 	else()
 		set(linked_target ${linked_project})
 	endif (NOT (${ARGC} MATCHES 3))
@@ -61,7 +61,7 @@ function(
 	###############################################
 	############### LINK_LIBRARY ##################
 	###############################################
-	message(STATUS "Project [${this_project}] will [${link_type}] link [${linked_target}].")
+	message(STATUS "[PROMETHEUS] Project [${this_project}] will [${link_type}] link [${linked_target}].")
 	if (link_type_index EQUAL 0)
 		# PUBLIC
 #		target_include_directories(
@@ -102,7 +102,7 @@ function(
 				${linked_target}
 		)
 	else ()
-		message(FATAL_ERROR "Impossible happened!!!Invalid link type ${link_type}.")
+		message(FATAL_ERROR "[PROMETHEUS] Impossible happened!!!Invalid link type ${link_type}.")
 	endif (link_type_index EQUAL 0)
 
 	# todo: `PUBLIC` and `INTERFACE` items will populate the `INTERFACE_INCLUDE_DIRECTORIES` property of <target>.

@@ -3,8 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
@@ -15,13 +14,18 @@ module;
 #define GAL_PROMETHEUS_CONCURRENCY_QUEUE_ARM
 #endif
 
-export module gal.prometheus.concurrency:queue;
+export module gal.prometheus:concurrency.queue;
 
 import std;
 
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+import :error;
+#endif
 
-#else
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <thread>

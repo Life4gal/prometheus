@@ -3,25 +3,30 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.chars:scalar;
+export module gal.prometheus:chars.scalar;
 
 import std;
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
 
-import :encoding;
-export import :scalar.ascii;
-export import :scalar.utf8;
-export import :scalar.utf16;
-export import :scalar.utf32;
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+import :error;
+#endif
 
-#else
+import :chars.encoding;
+export import :chars.scalar.ascii;
+export import :chars.scalar.utf8;
+export import :chars.scalar.utf16;
+export import :chars.scalar.utf32;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
+#pragma once
+
 #include <chars/encoding.ixx>
 #include <chars/scalar_ascii.ixx>
 #include <chars/scalar_utf8.ixx>
@@ -29,6 +34,7 @@ export import :scalar.utf32;
 #include <chars/scalar_utf32.ixx>
 
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #endif
 
 // ReSharper disable once CppRedundantNamespaceDefinition

@@ -3,8 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
@@ -15,18 +14,23 @@ module;
 #include <x86intrin.h>
 #endif
 
-export module gal.prometheus.draw:draw_list.impl;
+export module gal.prometheus:draw.draw_list.impl;
 
 import std;
 
-import gal.prometheus.functional;
-import gal.prometheus.primitive;
-import gal.prometheus.chars;
-GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
+import :functional;
+import :primitive;
+import :chars;
+#if GAL_PROMETHEUS_COMPILER_DEBUG
+import :error;
+#endif
 
-import :draw_list;
+import :draw.draw_list;
 
-#else
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #include <vector>
 #include <type_traits>
 #include <utility>
@@ -129,7 +133,7 @@ namespace
 	};
 }
 
-namespace gal::prometheus::draw
+GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::draw)
 {
 	auto DrawList::draw_polygon_line(const color_type& color, const DrawFlag draw_flag, const float thickness) noexcept -> void
 	{

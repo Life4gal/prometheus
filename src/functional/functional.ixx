@@ -3,19 +3,25 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-export module gal.prometheus.functional;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
-export import :type_list;
-export import :value_list;
-export import :functor;
-export import :aligned_union;
-export import :function_ref;
-export import :math;
-export import :flag;
-export import :function_signature;
+#include <prometheus/macro.hpp>
 
-#else
+export module gal.prometheus:functional;
+
+export import :functional.type_list;
+export import :functional.value_list;
+export import :functional.functor;
+export import :functional.aligned_union;
+export import :functional.function_ref;
+export import :functional.math;
+export import :functional.flag;
+export import :functional.function_signature;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <functional/type_list.ixx>

@@ -3,16 +3,18 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.error:exception;
+export module gal.prometheus:error.exception;
 
 import std;
 
-#else
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <string>
@@ -20,21 +22,6 @@ import std;
 #include <stacktrace>
 
 #include <prometheus/macro.hpp>
-#endif
-
-// todo
-#if __cpp_lib_stacktrace < 202011L
-#warning "fixme: std::stacktrace"
-namespace std
-{
-	struct stacktrace
-	{
-		[[nodiscard]] static auto current() -> stacktrace
-		{
-			return {};
-		}
-	};
-}
 #endif
 
 GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
