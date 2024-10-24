@@ -9,12 +9,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-namespace
-{
-	using Microsoft::WRL::ComPtr;
-
-	using namespace gal::prometheus;
-}
+using Microsoft::WRL::ComPtr;
+using namespace gal::prometheus;
 
 extern const std::size_t num_frames_in_flight;
 
@@ -28,8 +24,7 @@ extern double g_last_time;
 extern std::uint64_t g_frame_count;
 extern float g_fps;
 
-extern std::shared_ptr<draw::DrawListSharedData> g_draw_list_shared_data;
-extern draw::DrawList g_draw_list;
+extern io::DeviceEventQueue g_device_event_queue;
 
 namespace
 {
@@ -59,6 +54,9 @@ namespace
 
 	ComPtr<ID3D12Resource> g_additional_picture_resource = nullptr;
 	D3D12_GPU_DESCRIPTOR_HANDLE g_additional_picture_handle = {.ptr = 0};
+
+	auto g_draw_list_shared_data = std::make_shared<draw::DrawListSharedData>();
+	draw::DrawList g_draw_list;
 
 	[[nodiscard]] auto load_texture(
 		const std::uint8_t* texture_data,
@@ -278,8 +276,11 @@ auto prometheus_init() -> void
 {
 	print_time();
 
+	const auto glyph_range = draw::glyph_range_simplified_chinese_common();
+	auto [font_size, font_data, font_texture_id] = g_draw_list_shared_data->load_default_font(R"(C:\Windows\Fonts\msyh.ttc)", 18, glyph_range);
+
 	using functional::operators::operator|;
-	g_draw_list.draw_list_flag(draw::DrawListFlag::ANTI_ALIASED_LINE | draw::DrawListFlag::ANTI_ALIASED_FILL);
+	g_draw_list.draw_list_flag(draw::DrawListFlag::ANTI_ALIASED_LINE | draw::DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE | draw::DrawListFlag::ANTI_ALIASED_FILL);
 	g_draw_list.shared_data(g_draw_list_shared_data);
 
 	// Create the root signature
@@ -559,16 +560,9 @@ auto prometheus_init() -> void
 
 	// Load default font texture
 	{
-		const auto& default_font = g_draw_list_shared_data->get_default_font();
-
-		const auto font_data = default_font.texture_data.get();
-		assert(font_data);
-
-		const auto font_width = default_font.texture_size.width;
-		const auto font_height = default_font.texture_size.height;
-
-		const auto load_font_texture_result = load_texture(
-			reinterpret_cast<const std::uint8_t*>(font_data),
+		const auto [font_width, font_height] = font_size;
+		[[maybe_unused]] const auto load_font_texture_result = load_texture(
+			reinterpret_cast<const std::uint8_t*>(font_data.get()),
 			font_width,
 			font_height,
 			g_shader_resource_view_descriptor_heap,
@@ -578,7 +572,7 @@ auto prometheus_init() -> void
 		);
 		assert(load_font_texture_result);
 
-		g_draw_list_shared_data->get_default_font().texture_id = static_cast<draw::font_type::texture_id_type>(g_font_handle.ptr);
+		font_texture_id = static_cast<draw::Font::texture_id_type>(g_font_handle.ptr);
 	}
 
 	// Load additional picture texture
@@ -589,7 +583,7 @@ auto prometheus_init() -> void
 		auto* data = stbi_load(ASSETS_PATH_PIC, &image_width, &image_height, nullptr, 4);
 		assert(data);
 
-		const auto load_additional_texture_result = load_texture(
+		[[maybe_unused]] const auto load_additional_texture_result = load_texture(
 			data,
 			image_width,
 			image_height,
@@ -614,7 +608,7 @@ auto prometheus_render() -> void
 {
 	g_draw_list.text(24.f, {10, 10}, primitive::colors::blue, std::format("FPS: {:.3f}", g_fps));
 
-	g_draw_list.text(24.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n");
+	g_draw_list.text(18.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n");
 
 	g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
 	g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
@@ -682,12 +676,10 @@ auto prometheus_render() -> void
 	g_draw_list.triangle_filled({800, 450}, {700, 750}, {850, 800}, primitive::colors::gold);
 
 	// font texture
-	g_draw_list.image(g_draw_list_shared_data->get_default_font().texture_id, {900, 20, 1200, 320});
+	g_draw_list.image(g_draw_list_shared_data->get_default_font().texture_id(), {900, 20, 1200, 320});
 	g_draw_list.image_rounded(static_cast<draw::DrawList::texture_id_type>(g_additional_picture_handle.ptr), {900, 350, 1200, 650}, 10);
 
-	#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 	g_draw_list.bind_debug_info();
-	#endif
 }
 
 auto prometheus_draw() -> void

@@ -25,11 +25,7 @@
 #pragma comment(lib, "dxguid.lib")
 #endif
 
-namespace
-{
-	using namespace gal::prometheus;
-	using Microsoft::WRL::ComPtr;
-}
+using Microsoft::WRL::ComPtr;
 
 extern constexpr std::size_t num_frames_in_flight = 3;
 
@@ -42,9 +38,6 @@ int g_window_height = 960;
 double g_last_time = 0;
 std::uint64_t g_frame_count = 0;
 float g_fps = 0;
-
-auto g_draw_list_shared_data = std::make_shared<draw::DrawListSharedData>();
-draw::DrawList g_draw_list;
 
 extern auto glfw_callback_setup(GLFWwindow& w) -> void;
 
@@ -135,9 +128,6 @@ int main(int, char**)
 		glfwTerminate();
 		return 1;
 	}
-
-	const auto range = draw::glyph_range_simplified_chinese_common();
-	g_draw_list_shared_data->set_default_font(draw::load_font(R"(C:\Windows\Fonts\msyh.ttc)", 18, range));
 
 	// Setup Platform/Renderer backends
 	win32_init(*window);

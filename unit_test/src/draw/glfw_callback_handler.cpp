@@ -25,13 +25,10 @@ namespace
 	enum class MouseButton
 	{
 		LEFT = GLFW_MOUSE_BUTTON_LEFT,
-		MIDDLE = GLFW_MOUSE_BUTTON_MIDDLE,
 		RIGHT = GLFW_MOUSE_BUTTON_RIGHT,
-		X1 = 3,
-		X2 = 4,
-		X3 = 5,
-		X4 = 6,
-		X5 = 7,
+		MIDDLE = GLFW_MOUSE_BUTTON_MIDDLE,
+		X1,
+		X2,
 	};
 
 	enum class MouseAction
@@ -146,6 +143,8 @@ struct meta::user_defined::enum_name_policy<KeyboardMod>
 	constexpr static auto value = EnumNamePolicy::WITH_SCOPED_NAME;
 };
 
+io::DeviceEventQueue g_device_event_queue;
+
 auto glfw_callback_setup(GLFWwindow& w) -> void
 {
 	static auto callback_window_focus = [](GLFWwindow* window, const int focused)
@@ -175,6 +174,8 @@ auto glfw_callback_setup(GLFWwindow& w) -> void
 	{
 		std::println(stdout, "[CURSOR]: window: 0x{:x}, x: {}, y: {}", reinterpret_cast<std::uintptr_t>(window), x, y);
 
+		g_device_event_queue.mouse_move(static_cast<float>(x), static_cast<float>(y));
+
 		if (g_glfw_callback_window_cursor_position)
 		{
 			g_glfw_callback_window_cursor_position(window, x, y);
@@ -191,6 +192,40 @@ auto glfw_callback_setup(GLFWwindow& w) -> void
 			meta::to_string(static_cast<MouseMod>(mods))
 		);
 
+		const auto status = static_cast<MouseAction>(action) == MouseAction::PRESS ? io::MouseButtonStatus::PRESS : io::MouseButtonStatus::RELEASE;
+		switch (static_cast<MouseButton>(button))
+		{
+			case MouseButton::LEFT:
+			{
+				g_device_event_queue.mouse_button(io::MouseButton::LEFT, status);
+				break;
+			}
+			case MouseButton::MIDDLE:
+			{
+				g_device_event_queue.mouse_button(io::MouseButton::MIDDLE, status);
+				break;
+			}
+			case MouseButton::RIGHT:
+			{
+				g_device_event_queue.mouse_button(io::MouseButton::RIGHT, status);
+				break;
+			}
+			case MouseButton::X1:
+			{
+				g_device_event_queue.mouse_button(io::MouseButton::X1, status);
+				break;
+			}
+			case MouseButton::X2:
+			{
+				g_device_event_queue.mouse_button(io::MouseButton::X2, status);
+				break;
+			}
+			default:
+			{
+				break;
+			}
+		}
+
 		if (g_glfw_callback_window_mouse_button)
 		{
 			g_glfw_callback_window_mouse_button(window, button, action, mods);
@@ -199,6 +234,8 @@ auto glfw_callback_setup(GLFWwindow& w) -> void
 	static auto callback_window_scroll = [](GLFWwindow* window, const double x, const double y)
 	{
 		std::println(stdout, "[MOUSE SCROLL]: window: 0x{:x}, x: {}, y: {}", reinterpret_cast<std::uintptr_t>(window), x, y);
+
+		g_device_event_queue.mouse_wheel(static_cast<float>(x), static_cast<float>(y));
 
 		if (g_glfw_callback_window_scroll)
 		{

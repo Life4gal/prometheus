@@ -7,46 +7,46 @@ add_executable(
 		${PROJECT_NAME}
 
 		${PROJECT_SOURCE_DIR}/src/main.cpp
-
+		
 		# =================================
 		# CHARS
 		# =================================
-
+		
 		${PROJECT_SOURCE_DIR}/src/chars/ascii.cpp
 		${PROJECT_SOURCE_DIR}/src/chars/utf8.cpp
 		${PROJECT_SOURCE_DIR}/src/chars/utf16.cpp
 		${PROJECT_SOURCE_DIR}/src/chars/utf32.cpp
-
+		
 		# =================================
 		# CONCURRENCY
 		# =================================
-
+		
 		${PROJECT_SOURCE_DIR}/src/concurrency/queue.cpp
-
+		
 		# =================================
 		# COROUTINE
 		# =================================
-
+		
 		${PROJECT_SOURCE_DIR}/src/coroutine/generator.cpp
 		${PROJECT_SOURCE_DIR}/src/coroutine/task.cpp
-
+		
 		# =================================
 		# FUNCTIONAL
 		# =================================
-
+		
 		${PROJECT_SOURCE_DIR}/src/functional/aligned_union.cpp
 		${PROJECT_SOURCE_DIR}/src/functional/function_ref.cpp
-
+		
 		# =================================
 		# META
 		# =================================
-
+		
 		${PROJECT_SOURCE_DIR}/src/meta/enumeration.cpp
-
+		
 		# =================================
 		# WILDCARD
 		# =================================
-
+		
 		${PROJECT_SOURCE_DIR}/src/wildcard/wildcard.cpp
 )
 
@@ -58,7 +58,7 @@ target_compile_features(
 
 target_link_libraries(
 		${PROJECT_NAME}
-		PUBLIC
+		PRIVATE
 		prometheus
 )
 

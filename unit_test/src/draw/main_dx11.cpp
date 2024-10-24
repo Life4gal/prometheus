@@ -4,7 +4,6 @@
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <wrl/client.h>
-#include <comdef.h>
 
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -16,11 +15,7 @@
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxgi.lib")
 
-namespace
-{
-	using namespace gal::prometheus;
-	using Microsoft::WRL::ComPtr;
-}
+using Microsoft::WRL::ComPtr;
 
 ComPtr<ID3D11Device> g_device = nullptr;
 ComPtr<ID3D11DeviceContext> g_device_immediate_context = nullptr;
@@ -31,9 +26,6 @@ int g_window_height = 960;
 double g_last_time = 0;
 std::uint64_t g_frame_count = 0;
 float g_fps = 0;
-
-auto g_draw_list_shared_data = std::make_shared<draw::DrawListSharedData>();
-draw::DrawList g_draw_list;
 
 extern auto glfw_callback_setup(GLFWwindow& w) -> void;
 
@@ -100,9 +92,6 @@ int main(int, char**)
 		glfwTerminate();
 		return -1;
 	}
-
-	const auto range = draw::glyph_range_simplified_chinese_common();
-	g_draw_list_shared_data->set_default_font(draw::load_font(R"(C:\Windows\Fonts\msyh.ttc)", 18, range));
 
 	// Setup Platform/Renderer backends
 	win32_init(*window);

@@ -9,12 +9,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-namespace
-{
-	using Microsoft::WRL::ComPtr;
-
-	using namespace gal::prometheus;
-} // namespace
+using Microsoft::WRL::ComPtr;
+using namespace gal::prometheus;
 
 extern ComPtr<ID3D11Device> g_device;
 extern ComPtr<ID3D11DeviceContext> g_device_immediate_context;
@@ -26,8 +22,7 @@ extern double g_last_time;
 extern std::uint64_t g_frame_count;
 extern float g_fps;
 
-extern std::shared_ptr<draw::DrawListSharedData> g_draw_list_shared_data;
-extern draw::DrawList g_draw_list;
+extern io::DeviceEventQueue g_device_event_queue;
 
 namespace
 {
@@ -55,6 +50,9 @@ namespace
 	ComPtr<ID3D11SamplerState> g_font_sampler = nullptr;
 
 	ComPtr<ID3D11ShaderResourceView> g_additional_picture_texture = nullptr;
+
+	auto g_draw_list_shared_data = std::make_shared<draw::DrawListSharedData>();
+	draw::DrawList g_draw_list;
 
 	[[nodiscard]] auto load_texture(const std::uint8_t* texture_data, const std::uint32_t texture_width, const std::uint32_t texture_height, ComPtr<ID3D11ShaderResourceView>& out_srv) -> bool
 	{
@@ -105,8 +103,11 @@ auto prometheus_init() -> void //
 {
 	print_time();
 
+	const auto glyph_range = draw::glyph_range_simplified_chinese_common();
+	auto [font_size, font_data, font_texture_id] = g_draw_list_shared_data->load_default_font(R"(C:\Windows\Fonts\msyh.ttc)", 18, glyph_range);
+
 	using functional::operators::operator|;
-	g_draw_list.draw_list_flag(draw::DrawListFlag::ANTI_ALIASED_LINE | draw::DrawListFlag::ANTI_ALIASED_FILL);
+	g_draw_list.draw_list_flag(draw::DrawListFlag::ANTI_ALIASED_LINE | draw::DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE | draw::DrawListFlag::ANTI_ALIASED_FILL);
 	g_draw_list.shared_data(g_draw_list_shared_data);
 
 	// Create the blending setup
@@ -368,14 +369,16 @@ auto prometheus_init() -> void //
 
 	// Load default font texture
 	{
-		const auto& default_font = g_draw_list_shared_data->get_default_font();
-		const auto font_data = default_font.texture_data.get();
-		const auto font_width = default_font.texture_size.width;
-		const auto font_height = default_font.texture_size.height;
-		const auto load_font_texture_result = load_texture(reinterpret_cast<const std::uint8_t*>(font_data), font_width, font_height, g_font_texture);
+		const auto [font_width, font_height] = font_size;
+		[[maybe_unused]] const auto load_font_texture_result = load_texture(
+			reinterpret_cast<const std::uint8_t*>(font_data.get()),
+			font_width,
+			font_height,
+			g_font_texture
+		);
 		assert(load_font_texture_result);
 
-		g_draw_list_shared_data->get_default_font().texture_id = reinterpret_cast<draw::font_type::texture_id_type>(g_font_texture.Get());
+		font_texture_id = reinterpret_cast<draw::Font::texture_id_type>(g_font_texture.Get());
 	}
 
 	// Load additional picture texture
@@ -386,7 +389,12 @@ auto prometheus_init() -> void //
 		auto* data = stbi_load(ASSETS_PATH_PIC, &image_width, &image_height, nullptr, 4);
 		assert(data);
 
-		const auto load_additional_texture_result = load_texture(data, image_width, image_height, g_additional_picture_texture);
+		[[maybe_unused]] const auto load_additional_texture_result = load_texture(
+			data,
+			image_width,
+			image_height,
+			g_additional_picture_texture
+		);
 		assert(load_additional_texture_result);
 
 		stbi_image_free(data);
@@ -396,14 +404,14 @@ auto prometheus_init() -> void //
 auto prometheus_new_frame() -> void //
 {
 	g_draw_list.reset();
-	g_draw_list.push_clip_rect({0, 0},{static_cast<float>(g_window_width), static_cast<float>(g_window_height)},false);
+	g_draw_list.push_clip_rect({0, 0}, {static_cast<float>(g_window_width), static_cast<float>(g_window_height)}, false);
 }
 
 auto prometheus_render() -> void
 {
 	g_draw_list.text(24.f, {10, 10}, primitive::colors::blue, std::format("FPS: {:.3f}", g_fps));
 
-	g_draw_list.text(24.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n");
+	g_draw_list.text(18.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n");
 
 	g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
 	g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
@@ -471,12 +479,10 @@ auto prometheus_render() -> void
 	g_draw_list.triangle_filled({800, 450}, {700, 750}, {850, 800}, primitive::colors::gold);
 
 	// font texture
-	g_draw_list.image(g_draw_list_shared_data->get_default_font().texture_id, {900, 20, 1200, 320});
+	g_draw_list.image(g_draw_list_shared_data->get_default_font().texture_id(), {900, 20, 1200, 320});
 	g_draw_list.image_rounded(reinterpret_cast<draw::DrawList::texture_id_type>(g_additional_picture_texture.Get()), {900, 350, 1200, 650}, 10);
 
-	#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
 	g_draw_list.bind_debug_info();
-	#endif
 }
 
 auto prometheus_draw() -> void
@@ -616,7 +622,7 @@ auto prometheus_draw() -> void
 		const D3D11_RECT rect{static_cast<LONG>(point.x), static_cast<LONG>(point.y), static_cast<LONG>(point.x + extent.width), static_cast<LONG>(point.y + extent.height)};
 		g_device_immediate_context->RSSetScissorRects(1, &rect);
 
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture != 0, "push_texture_id when create texture view");
+		assert(texture != 0 and "push_texture_id when create texture view");
 		ID3D11ShaderResourceView* textures[]{reinterpret_cast<ID3D11ShaderResourceView*>(texture)}; // NOLINT(performance-no-int-to-ptr)
 		g_device_immediate_context->PSSetShaderResources(0, 1, textures);
 
