@@ -7,7 +7,7 @@
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus:draw.draw_list.draw_flag;
+export module gal.prometheus:draw.draw_list.flag;
 
 import std;
 
@@ -23,7 +23,7 @@ import std;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 {
 	enum class DrawFlag : std::uint8_t
 	{

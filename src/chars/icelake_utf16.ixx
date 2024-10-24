@@ -38,7 +38,12 @@ import :chars.scalar.utf16;
 #if __has_include(<x86intrin.h>)
 #include <x86intrin.h>
 #endif
-#include <cstring>
+
+#include <bit>
+#include <functional>
+#include <numeric>
+#include <string>
+#include <algorithm>
 
 #include <prometheus/macro.hpp>
 #include <chars/encoding.ixx>
@@ -48,7 +53,7 @@ import :chars.scalar.utf16;
 #endif
 
 // ReSharper disable once CppRedundantNamespaceDefinition
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(chars)
 {
 	template<>
 	class Simd<"icelake.utf16">

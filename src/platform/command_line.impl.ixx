@@ -11,11 +11,11 @@
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus:error.command_line.impl;
+export module gal.prometheus:platform.command_line.impl;
 
 import std;
 
-import :error.command_line;
+import :platform.command_line;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -29,7 +29,7 @@ import :error.command_line;
 
 #include <prometheus/macro.hpp>
 
-#include <error/command_line.ixx>
+#include <platform/command_line.ixx>
 
 #endif
 
@@ -50,7 +50,7 @@ namespace
 	#endif
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::error)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(platform)
 {
 	auto command_line_args_count() noexcept -> int
 	{

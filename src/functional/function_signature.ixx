@@ -25,7 +25,7 @@ import std;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::functional)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 {
 	template<
 		typename ReturnType,

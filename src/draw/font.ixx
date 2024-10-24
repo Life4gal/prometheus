@@ -22,16 +22,17 @@ import :primitive;
 #include <type_traits>
 #include <span>
 #include <vector>
+#include <string>
+#include <memory>
+#include <unordered_map>
 
 #include <prometheus/macro.hpp>
 #include <primitive/primitive.ixx>
 
 #endif
 
-namespace gal::prometheus::draw
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	using glyph_value_type = std::uint32_t;
 	using glyph_pair_type = std::pair<glyph_value_type, glyph_value_type>;
 
@@ -183,6 +184,4 @@ namespace gal::prometheus::draw
 
 		[[nodiscard]] auto load(std::string_view font_path, std::uint32_t pixel_height, glyph_range_views_type glyph_ranges) noexcept -> texture_type;
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

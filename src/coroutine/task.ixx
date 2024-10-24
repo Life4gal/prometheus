@@ -26,13 +26,14 @@ import std;
 
 #endif
 
-namespace gal::prometheus::coroutine
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(coroutine)
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		template<typename ReturnType>
-		class Task;
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+	template<typename ReturnType>
+	class Task;
+}
 
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(coroutine)
+{
 	template<typename ReturnType>
 	class P
 	{
@@ -68,9 +69,9 @@ namespace gal::prometheus::coroutine
 	};
 
 	template<typename ReturnType>
-	class TaskPromise final : public P<ReturnType>
+	class TaskPromise final : public GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::P<ReturnType>
 	{
-		friend P<ReturnType>;
+		friend GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::P<ReturnType>;
 
 	public:
 		using return_type = ReturnType;
@@ -145,100 +146,101 @@ namespace gal::prometheus::coroutine
 		if (const auto& self = *static_cast<TaskPromise<void>*>(this); // NOLINT
 			self.exception_) { std::rethrow_exception(self.exception_); }
 	}
+}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		template<typename ReturnType>
-		class [[nodiscard]] Task final
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(coroutine)
+{
+	template<typename ReturnType>
+	class [[nodiscard]] Task final
+	{
+	public:
+		using promise_type = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::TaskPromise<ReturnType>;
+		using task_type = Task;
+
+		using return_type = typename promise_type::return_type;
+		using coroutine_handle = std::coroutine_handle<promise_type>;
+		using continuation_type = std::coroutine_handle<>;
+
+		struct awaitable
 		{
-		public:
-			using promise_type = TaskPromise<ReturnType>;
-			using task_type = Task;
+			coroutine_handle coroutine;
 
-			using return_type = typename promise_type::return_type;
-			using coroutine_handle = std::coroutine_handle<promise_type>;
-			using continuation_type = std::coroutine_handle<>;
+			[[nodiscard]] constexpr auto await_ready() const noexcept -> bool { return not coroutine or coroutine.done(); }
 
-			struct awaitable
+			template<typename PromiseType>
+			[[nodiscard]] constexpr auto await_suspend(std::coroutine_handle<PromiseType> continuation) noexcept -> continuation_type
 			{
-				coroutine_handle coroutine;
-
-				[[nodiscard]] constexpr auto await_ready() const noexcept -> bool { return not coroutine or coroutine.done(); }
-
-				template<typename PromiseType>
-				[[nodiscard]] constexpr auto await_suspend(std::coroutine_handle<PromiseType> continuation) noexcept -> continuation_type
-				{
-					coroutine.promise().continuation(continuation);
-					return coroutine;
-				}
-
-				[[nodiscard]] constexpr auto await_resume() & -> decltype(auto) { return coroutine.promise().result(); }
-
-				constexpr auto await_resume() && -> decltype(auto) { return std::move(coroutine.promise()).result(); }
-			};
-
-		private:
-			coroutine_handle coroutine_;
-
-		public:
-			constexpr Task(const Task&) noexcept = delete;
-			constexpr auto operator=(const Task&) noexcept -> Task& = delete;
-
-			constexpr explicit Task() noexcept
-				: coroutine_{nullptr} {}
-
-			constexpr explicit Task(coroutine_handle handle) noexcept
-				: coroutine_{handle} {}
-
-			constexpr Task(Task&& other) noexcept
-				: coroutine_{std::exchange(other.coroutine_, nullptr)} {}
-
-			constexpr auto operator=(Task&& other) noexcept -> Task&
-			{
-				if (std::addressof(other) != this)
-				{
-					if (coroutine_) { coroutine_.destroy(); }
-
-					coroutine_ = std::exchange(other.coroutine_, nullptr);
-				}
-
-				return *this;
+				coroutine.promise().continuation(continuation);
+				return coroutine;
 			}
 
-			constexpr ~Task() noexcept { if (coroutine_) { coroutine_.destroy(); } }
+			[[nodiscard]] constexpr auto await_resume() & -> decltype(auto) { return coroutine.promise().result(); }
 
-			[[nodiscard]] constexpr auto promise() & noexcept -> promise_type& { return coroutine_.promise(); }
-
-			[[nodiscard]] constexpr auto promise() const & noexcept -> const promise_type& { return coroutine_.promise(); }
-
-			[[nodiscard]] constexpr auto promise() && noexcept -> promise_type&& { return std::move(coroutine_.promise()); }
-
-			[[nodiscard]] constexpr auto handle() -> coroutine_handle { return coroutine_; }
-
-			[[nodiscard]] constexpr auto done() const noexcept -> bool { return not coroutine_ or coroutine_.done(); }
-
-			constexpr auto operator()() const -> bool { return this->resume(); }
-
-			constexpr auto resume() -> bool
-			{
-				if (not coroutine_.done()) { coroutine_.resume(); }
-				return not coroutine_.done();
-			}
-
-			[[nodiscard]] constexpr auto destroy() const noexcept -> bool
-			{
-				if (coroutine_)
-				{
-					coroutine_.destroy();
-					coroutine_ = nullptr;
-					return true;
-				}
-
-				return false;
-			}
-
-			constexpr auto operator co_await() & noexcept -> awaitable { return {.coroutine = coroutine_}; }
-
-			constexpr auto operator co_await() && noexcept -> awaitable { return {.coroutine = coroutine_}; }
+			constexpr auto await_resume() && -> decltype(auto) { return std::move(coroutine.promise()).result(); }
 		};
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-} // namespace gal::prometheus::coroutine
+
+	private:
+		coroutine_handle coroutine_;
+
+	public:
+		constexpr Task(const Task&) noexcept = delete;
+		constexpr auto operator=(const Task&) noexcept -> Task& = delete;
+
+		constexpr explicit Task() noexcept
+			: coroutine_{nullptr} {}
+
+		constexpr explicit Task(coroutine_handle handle) noexcept
+			: coroutine_{handle} {}
+
+		constexpr Task(Task&& other) noexcept
+			: coroutine_{std::exchange(other.coroutine_, nullptr)} {}
+
+		constexpr auto operator=(Task&& other) noexcept -> Task&
+		{
+			if (std::addressof(other) != this)
+			{
+				if (coroutine_) { coroutine_.destroy(); }
+
+				coroutine_ = std::exchange(other.coroutine_, nullptr);
+			}
+
+			return *this;
+		}
+
+		constexpr ~Task() noexcept { if (coroutine_) { coroutine_.destroy(); } }
+
+		[[nodiscard]] constexpr auto promise() & noexcept -> promise_type& { return coroutine_.promise(); }
+
+		[[nodiscard]] constexpr auto promise() const & noexcept -> const promise_type& { return coroutine_.promise(); }
+
+		[[nodiscard]] constexpr auto promise() && noexcept -> promise_type&& { return std::move(coroutine_.promise()); }
+
+		[[nodiscard]] constexpr auto handle() -> coroutine_handle { return coroutine_; }
+
+		[[nodiscard]] constexpr auto done() const noexcept -> bool { return not coroutine_ or coroutine_.done(); }
+
+		constexpr auto operator()() const -> bool { return this->resume(); }
+
+		constexpr auto resume() -> bool
+		{
+			if (not coroutine_.done()) { coroutine_.resume(); }
+			return not coroutine_.done();
+		}
+
+		[[nodiscard]] constexpr auto destroy() const noexcept -> bool
+		{
+			if (coroutine_)
+			{
+				coroutine_.destroy();
+				coroutine_ = nullptr;
+				return true;
+			}
+
+			return false;
+		}
+
+		constexpr auto operator co_await() & noexcept -> awaitable { return {.coroutine = coroutine_}; }
+
+		constexpr auto operator co_await() && noexcept -> awaitable { return {.coroutine = coroutine_}; }
+	};
+}

@@ -30,7 +30,7 @@ import :primitive.color;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 {
 	template<
 		typename, // point type
@@ -160,7 +160,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	};
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
 {
 	template<std::size_t Index, typename PositionType, typename UvType, typename ColorType>
 	struct

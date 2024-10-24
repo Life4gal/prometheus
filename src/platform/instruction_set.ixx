@@ -7,7 +7,7 @@
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus:error.instruction_set;
+export module gal.prometheus:platform.instruction_set;
 
 import std;
 
@@ -23,7 +23,7 @@ import std;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(platform)
 {
 	// ReSharper disable CppInconsistentNaming
 	// ReSharper disable IdentifierTypo
@@ -50,4 +50,4 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 	// ReSharper restore CppInconsistentNaming
 
 	auto detect_supported_instruction() -> std::uint32_t;
-} // namespace gal::prometheus::error
+} // namespace gal::prometheus::platform

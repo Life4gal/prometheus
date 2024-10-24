@@ -87,20 +87,23 @@
 #if GAL_PROMETHEUS_USE_MODULE
 #define GAL_PROMETHEUS_COMPILER_MODULE_INLINE
 #define GAL_PROMETHEUS_COMPILER_MODULE_STATIC
-#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN export {
-#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END }
-#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(n) export namespace n
-#define GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(n) namespace n
-#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD export namespace std
+
+#define GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(name) export namespace gal::prometheus:: name
+#define GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(name) namespace gal::prometheus:: name
+#define GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD export namespace std
+
 #else
 #define GAL_PROMETHEUS_COMPILER_MODULE_INLINE inline
 #define GAL_PROMETHEUS_COMPILER_MODULE_STATIC static
-#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN inline namespace GAL_PROMETHEUS_INLINE_NAMESPACE_NAME {
-#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END }
-#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(n) namespace n :: inline GAL_PROMETHEUS_INLINE_NAMESPACE_NAME
-#define GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(n) namespace n :: inline GAL_PROMETHEUS_INLINE_NAMESPACE_NAME
-#define GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD namespace std
+
+#define GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(name) namespace gal::prometheus:: name
+#define GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(name) namespace gal::prometheus:: name
+#define GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD namespace std
+
 #endif
+
+#define GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(name) namespace gal::prometheus:: name :: GAL_PROMETHEUS_VERSION_NAMESPACE_NAME
+#define GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL GAL_PROMETHEUS_VERSION_NAMESPACE_NAME
 
 // =========================================================
 // SEMANTIC
@@ -292,26 +295,16 @@
 #define GAL_PROMETHEUS_META_STRING_U32CHAR_ARRAY(string) GAL_PROMETHEUS_META_PRIVATE_STRING_CHAR_ARRAY(u32char_array, string)
 
 // =========================================================
-// MODULE: gal.prometheus.error
+// MODULE: gal.prometheus.platform
 // =========================================================
 
-#if GAL_PROMETHEUS_USE_MODULE
-// #if GAL_PROMETHEUS_COMPILER_DEBUG
-// #define GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE import gal.prometheus.error;
-// #else
-// #define GAL_PROMETHEUS_ERROR_IMPORT_DEBUG_MODULE
-// #endif
-
-#else
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-#define GAL_PROMETHEUS_ERROR_DEBUG_MODULE <error/error.ixx>
+#define GAL_PROMETHEUS_ERROR_DEBUG_MODULE <platform/platform.ixx>
 #else
 #define GAL_PROMETHEUS_ERROR_DEBUG_MODULE <prometheus/macro.hpp>
 #endif
 
-#endif
-
-#define GAL_PROMETHEUS_ERROR_CALL_DEBUGGER_OR_TERMINATE(message) ::gal::prometheus::error::debug_break("[" __FILE__ ":" GAL_PROMETHEUS_UTILITY_TO_STRING(__LINE__) "] -> " message)
+#define GAL_PROMETHEUS_ERROR_CALL_DEBUGGER_OR_TERMINATE(message) ::gal::prometheus::platform::debug_break("[" __FILE__ ":" GAL_PROMETHEUS_UTILITY_TO_STRING(__LINE__) "] -> " message)
 
 #define GAL_PROMETHEUS_ERROR_PRIVATE_DO_CHECK(debug_type, expression, ...) \
 	do {                                                                                                                                                \
@@ -364,11 +357,11 @@
 	{                                                                                                    \
 		if constexpr (__VA_OPT__(not ) false)                                                            \
 		{                                                                                                \
-			error::mob<error_type>::invoke<error_type>(std::format(message __VA_OPT__(, ) __VA_ARGS__)); \
+			platform::mob<error_type>::invoke<error_type>(std::format(message __VA_OPT__(, ) __VA_ARGS__)); \
 		}                                                                                                \
 		else                                                                                             \
 		{                                                                                                \
-			error::mob<error_type>::invoke<error_type>(message);                                         \
+			platform::mob<error_type>::invoke<error_type>(message);                                         \
 		}                                                                                                \
 	} while (false)
 
@@ -377,11 +370,11 @@
 	{                                                                                              \
 		if constexpr (__VA_OPT__(not ) false)                                                      \
 		{                                                                                          \
-			error::mob<error_type>::invoke<error_type>(std::format(message __VA_OPT__(, ) __VA_ARGS__), data); \
+			platform::mob<error_type>::invoke<error_type>(std::format(message __VA_OPT__(, ) __VA_ARGS__), data); \
 		}                                                                                          \
 		else                                                                                       \
 		{                                                                                          \
-			error::mob<error_type>::invoke<error_type>(message, data);                                         \
+			platform::mob<error_type>::invoke<error_type>(message, data);                                         \
 		}                                                                                          \
 	} while (false)
 

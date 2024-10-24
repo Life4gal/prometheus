@@ -30,8 +30,7 @@ import :functional.functor;
 
 #endif
 
-// GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::functional)
-namespace gal::prometheus::functional
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 {
 	template<typename... Ts>
 	class AlignedUnion final

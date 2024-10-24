@@ -33,6 +33,9 @@ export import :chars.icelake.utf32;
 
 #pragma once
 
+#include <bit>
+#include <span>
+
 #if __has_include(<intrin.h>)
 #include <intrin.h>
 #endif
@@ -40,6 +43,7 @@ export import :chars.icelake.utf32;
 #include <x86intrin.h>
 #endif
 
+#include <prometheus/macro.hpp>
 #include <chars/encoding.ixx>
 #include <chars/icelake_ascii.ixx>
 #include <chars/icelake_utf8.ixx>
@@ -50,7 +54,7 @@ export import :chars.icelake.utf32;
 #endif
 
 // ReSharper disable once CppRedundantNamespaceDefinition
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(chars)
 {
 	template<>
 	class Encoding<"icelake">

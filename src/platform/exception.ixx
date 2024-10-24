@@ -7,7 +7,7 @@
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus:error.exception;
+export module gal.prometheus:platform.exception;
 
 import std;
 
@@ -22,9 +22,10 @@ import std;
 #include <stacktrace>
 
 #include <prometheus/macro.hpp>
+
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(platform)
 {
 	class AbstractException
 	{
@@ -193,7 +194,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 			std::stacktrace stacktrace = std::stacktrace::current()
 		) noexcept(false) -> E
 		{
-			error::panic<E>(
+			platform::panic<E>(
 				std::forward<StringType>(message),
 				location,
 				std::move(stacktrace)
@@ -209,7 +210,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 			std::stacktrace stacktrace = std::stacktrace::current()
 		) noexcept(false) -> E
 		{
-			error::panic<E>(
+			platform::panic<E>(
 				std::forward<StringType>(message),
 				std::forward<typename E::data_type>(data),
 				location,
@@ -223,4 +224,24 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
 		requires { E::panic(std::declval<std::string>()); } or
 		requires { E::panic(std::declval<std::string>(), std::declval<typename E::data_type>()); }
 	>;
-} // namespace gal::prometheus::error
+
+	/**
+	 * @brief Get the OS error message from the last error received on this thread.
+	 * @return A formatted message.
+	 */
+	[[nodiscard]] auto get_error_message() -> std::string;
+
+	class OsError final : public Exception<void>
+	{
+	public:
+		using Exception::Exception;
+
+		[[noreturn]] static auto panic(
+				const std::source_location& location = std::source_location::current(),
+				std::stacktrace stacktrace = std::stacktrace::current()
+				) noexcept(false) -> void //
+		{
+			platform::panic<OsError>(get_error_message(), location, std::move(stacktrace));
+		}
+	};
+} // namespace gal::prometheus::platform

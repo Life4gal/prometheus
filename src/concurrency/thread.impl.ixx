@@ -17,7 +17,7 @@ export module gal.prometheus:concurrency.thread.impl;
 import std;
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 import :concurrency.thread;
@@ -51,7 +51,7 @@ namespace
 	std::unordered_map<thread_id, std::string> thread_names;
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::concurrency)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(concurrency)
 {
 	namespace this_process
     {

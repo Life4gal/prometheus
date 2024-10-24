@@ -12,7 +12,7 @@ export module gal.prometheus:numeric.random;
 import std;
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 import :numeric.random_engine;
@@ -43,45 +43,46 @@ import :numeric.random_engine;
 #define RANDOM_WORKAROUND_OPERATOR_THIS(type) this->template
 #endif
 
-namespace gal::prometheus::numeric
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 {
 	template<typename T>
 	using default_int_distribution = std::uniform_int_distribution<T>;
 	template<typename T>
 	using default_floating_point_distribution = std::uniform_real_distribution<T>;
 	using default_boolean_distribution = std::bernoulli_distribution;
+}
 
-	namespace random_detail
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(numeric)
+{
+	struct any {};
+
+	template<template<typename> typename, template<typename> typename>
+	struct is_distribution_alias : std::false_type {};
+
+	template<template<typename> typename Target, template<typename> typename Current>
+		requires (std::is_same_v<Target<any>, Current<any>>)
+	struct is_distribution_alias<Target, Current> : std::true_type {};
+
+	template<template<typename> typename Target, template<typename> typename Current>
+	constexpr auto is_distribution_alias_v = is_distribution_alias<Target, Current>::value;
+
+	template<template<typename> typename Distribution, typename T>
+	struct is_user_defined_distribution : std::true_type
 	{
-		struct any {};
+		// We always assume that the target distribution contains static_assert (or concept) to restrict the type of T. If it does not, then we assume that it supports arbitrary types.
+		static_assert(
+			std::is_default_constructible_v<Distribution<T>> or
+			std::is_constructible_v<Distribution<T>, T> or
+			std::is_constructible_v<Distribution<T>, T, T>
+		);
+	};
 
-		template<template<typename> typename, template<typename> typename>
-		struct is_distribution_alias : std::false_type {};
+	template<template<typename> typename Distribution, typename T>
+	constexpr auto is_user_defined_distribution_v = is_user_defined_distribution<Distribution, T>::value;
+}
 
-		template<template<typename> typename Target, template<typename> typename Current>
-			requires (std::is_same_v<Target<any>, Current<any>>)
-		struct is_distribution_alias<Target, Current> : std::true_type {};
-
-		template<template<typename> typename Target, template<typename> typename Current>
-		constexpr auto is_distribution_alias_v = is_distribution_alias<Target, Current>::value;
-
-		template<template<typename> typename Distribution, typename T>
-		struct is_user_defined_distribution : std::true_type
-		{
-			// We always assume that the target distribution contains static_assert (or concept) to restrict the type of T. If it does not, then we assume that it supports arbitrary types.
-			static_assert(
-				std::is_default_constructible_v<Distribution<T>> or
-				std::is_constructible_v<Distribution<T>, T> or
-				std::is_constructible_v<Distribution<T>, T, T>
-			);
-		};
-
-		template<template<typename> typename Distribution, typename T>
-		constexpr auto is_user_defined_distribution_v = is_user_defined_distribution<Distribution, T>::value;
-	}
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
+{
 	template<template<typename> typename, typename>
 	struct is_distribution_compatible : std::false_type {};
 
@@ -119,52 +120,52 @@ namespace gal::prometheus::numeric
 	struct is_distribution_compatible<default_floating_point_distribution, long double> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, short> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, unsigned short> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, int> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, unsigned int> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, long> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, unsigned long> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, long long> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, unsigned long long> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (random_detail::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
+		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, float> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (random_detail::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
+		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, double> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (random_detail::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
+		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, long double> : std::true_type {};
 
 	// In fact, this holds true for arbitrary types, but if UserDefinedDistribution does not support type T, it should raise a compile error.
 	template<template<typename> typename UserDefinedDistribution, typename T>
-		requires(random_detail::is_user_defined_distribution_v<UserDefinedDistribution, T>)
+		requires(GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_user_defined_distribution_v<UserDefinedDistribution, T>)
 	struct is_distribution_compatible<UserDefinedDistribution, T> : std::true_type {};
 
 	template<template<typename> typename Distribution, typename T>
@@ -655,8 +656,6 @@ namespace gal::prometheus::numeric
 			)) -> typename Distribution::result_type //
 			requires(not is_shared_category) { return this->template get<Distribution, Args...>(std::forward<Args>(args)...); }
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
 #undef RANDOM_WORKAROUND_OPERATOR_STATIC

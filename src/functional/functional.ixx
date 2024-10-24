@@ -17,6 +17,7 @@ export import :functional.function_ref;
 export import :functional.math;
 export import :functional.flag;
 export import :functional.function_signature;
+export import :functional.hash;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -32,5 +33,6 @@ export import :functional.function_signature;
 #include <functional/math.ixx>
 #include <functional/flag.ixx>
 #include <functional/function_signature.ixx>
+#include <functional/hash.ixx>
 
 #endif

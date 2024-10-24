@@ -11,7 +11,7 @@ export module gal.prometheus:string.charconv;
 
 import std;
 
-import :error;
+import :platform;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -21,13 +21,15 @@ import :error;
 
 #include <string>
 #include <algorithm>
+#include <charconv>
+#include <format>
 
 #include <prometheus/macro.hpp>
-#include <error/error.ixx>
+#include <platform/platform.ixx>
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::string)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(string)
 {
 	[[nodiscard]] constexpr auto is_upper(const char c) noexcept -> bool
 	{
@@ -275,7 +277,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::string)
 	// ------------------------------------------------------------
 
 	template<std::integral T, typename Exception = void>
-		requires(std::is_same_v<Exception, void> or std::is_base_of_v<error::AbstractException, Exception>)
+		requires(std::is_same_v<Exception, void> or std::is_base_of_v<platform::AbstractException, Exception>)
 	[[nodiscard]] constexpr auto from_string(const std::basic_string_view<char> string, int base = 10)
 		noexcept(std::is_same_v<Exception, void>) -> std::conditional_t<std::is_same_v<Exception, void>, std::optional<T>, T>
 	{
@@ -300,14 +302,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::string)
 		if (error_code != std::errc{} or last != end)
 		{
 			if constexpr (std::is_same_v<Exception, void>) { return std::nullopt; }
-			else { error::panic<Exception>(std::format("Can not convert string [{}] to integer", string)); }
+			else { platform::panic<Exception>(std::format("Can not convert string [{}] to integer", string)); }
 		}
 
 		return result;
 	}
 
 	template<std::floating_point T, typename Exception = void>
-		requires(std::is_same_v<Exception, void> or std::is_base_of_v<error::AbstractException, Exception>)
+		requires(std::is_same_v<Exception, void> or std::is_base_of_v<platform::AbstractException, Exception>)
 	[[nodiscard]] constexpr auto from_string(const std::basic_string_view<char> string)
 		noexcept(std::is_same_v<Exception, void>) -> std::conditional_t<std::is_same_v<Exception, void>, std::optional<T>, T>
 	{
@@ -320,7 +322,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::string)
 			error_code != std::errc{} or last != end)
 		{
 			if constexpr (std::is_same_v<Exception, void>) { return std::nullopt; }
-			else { error::panic<Exception>(std::format("Can not convert string [{}] to floating point", string)); }
+			else { platform::panic<Exception>(std::format("Can not convert string [{}] to floating point", string)); }
 		}
 
 		return result;

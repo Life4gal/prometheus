@@ -12,7 +12,7 @@ export module gal.prometheus:string.string_pool;
 import std;
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
@@ -22,16 +22,17 @@ import :error;
 #pragma once
 
 #include <string>
+#include <vector>
 #include <memory>
 #include <algorithm>
 #include <ranges>
 
 #include <prometheus/macro.hpp>
-#include <error/error.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::string)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(string)
 {
 	template<typename CharType = char, bool IsNullTerminate = true, typename CharTrait = std::char_traits<CharType>>
 	class StringPool

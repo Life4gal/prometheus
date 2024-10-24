@@ -12,7 +12,7 @@ export module gal.prometheus:concurrency.unfair_mutex.impl;
 import std;
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 import :concurrency.unfair_mutex;
@@ -153,7 +153,7 @@ namespace
 	}
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::concurrency)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(concurrency)
 {
 	auto UnfairMutex::holds_invariant() const noexcept -> bool
 	{

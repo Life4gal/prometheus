@@ -9,6 +9,7 @@ export module gal.prometheus:draw;
 
 export import :draw.font;
 export import :draw.draw_list;
+export import :draw.window;
 
 // export import :widgets;
 
@@ -28,6 +29,7 @@ export import :draw.draw_list;
 
 #include <draw/font.ixx>
 #include <draw/draw_list.ixx>
+#include <draw/window.ixx>
 
 // #include <draw/widgets.ixx>
 

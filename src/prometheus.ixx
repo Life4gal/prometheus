@@ -8,7 +8,7 @@
 export module gal.prometheus;
 
 export import :meta;
-export import :error;
+export import :platform;
 export import :functional;
 export import :memory;
 export import :numeric;
@@ -30,21 +30,21 @@ export import :draw;
 
 #pragma once
 
-#include <chars/chars.ixx>
-#include <command_line_parser/command_line_parser.ixx>
-#include <concurrency/concurrency.ixx>
-#include <coroutine/coroutine.ixx>
-#include <draw/draw.ixx>
-#include <error/error.ixx>
-#include <functional/functional.ixx>
-#include <io/io.ixx>
-#include <memory/memory.ixx>
 #include <meta/meta.ixx>
+#include <platform/platform.ixx>
+#include <functional/functional.ixx>
+#include <memory/memory.ixx>
 #include <numeric/numeric.ixx>
 #include <primitive/primitive.ixx>
-#include <state_machine/state_machine.ixx>
+#include <concurrency/concurrency.ixx>
+#include <coroutine/coroutine.ixx>
 #include <string/string.ixx>
+#include <io/io.ixx>
+#include <chars/chars.ixx>
+#include <command_line_parser/command_line_parser.ixx>
 #include <unit_test/unit_test.ixx>
 #include <wildcard/wildcard.ixx>
+#include <state_machine/state_machine.ixx>
+#include <draw/draw.ixx>
 
 #endif

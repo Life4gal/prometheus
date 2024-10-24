@@ -12,6 +12,7 @@ export module gal.prometheus:draw.draw_list.shared_data;
 import std;
 
 import :primitive;
+import :functional;
 #if GAL_PROMETHEUS_COMPILER_DEBUG
 import :error;
 #endif
@@ -24,14 +25,22 @@ import :draw.font;
 
 #pragma once
 
+#include <algorithm>
+#include <cmath>
+#include <numbers>
+#include <string>
+
 #include <prometheus/macro.hpp>
 
 #include <primitive/primitive.ixx>
+#include <functional/functional.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
+#include <draw/font.ixx>
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 {
 	class DrawListSharedData final
 	{

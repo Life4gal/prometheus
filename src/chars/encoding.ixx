@@ -13,7 +13,7 @@ import std;
 
 import :meta;
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
@@ -23,6 +23,7 @@ import :error;
 #pragma once
 
 #include <utility>
+#include <span>
 
 #include <prometheus/macro.hpp>
 #include <meta/meta.ixx>
@@ -30,7 +31,7 @@ import :error;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(chars)
 {
 	enum class EncodingType
 	{

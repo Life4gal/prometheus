@@ -18,12 +18,13 @@ import std;
 #pragma once
 
 #include <type_traits>
+#include <utility>
 
 #include <prometheus/macro.hpp>
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::functional)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 {
 	namespace operators
 	{

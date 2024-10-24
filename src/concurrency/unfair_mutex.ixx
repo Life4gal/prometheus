@@ -30,7 +30,7 @@ import :concurrency.thread;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::concurrency)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(concurrency)
 {
 	class UnfairMutex final
 	{
@@ -115,7 +115,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::concurrency)
 	};
 } // namespace gal::prometheus::concurrency
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
 {
 	template<>
 	struct formatter<gal::prometheus::concurrency::UnfairMutex>

@@ -133,7 +133,7 @@ namespace
 	};
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::draw)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 {
 	auto DrawList::draw_polygon_line(const color_type& color, const DrawFlag draw_flag, const float thickness) noexcept -> void
 	{

@@ -13,11 +13,11 @@
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus:error.platform.impl;
+export module gal.prometheus:platform.exception.impl;
 
 import std;
 
-import :error.platform;
+import :platform.exception;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -34,11 +34,11 @@ import :error.platform;
 
 #include <prometheus/macro.hpp>
 
-#include <error/platform.ixx>
+#include <platform/exception.ixx>
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::error)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(platform)
 {
 	auto get_error_message() -> std::string
 	{
@@ -50,4 +50,4 @@ GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::error)
 				#endif
 				);
 	}
-} // namespace gal::prometheus::error
+} // namespace gal::prometheus::platform

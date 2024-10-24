@@ -32,8 +32,8 @@ import :error;
 #include <iostream>
 #include <ranges>
 #include <algorithm>
+#include <source_location>
 
-// todo
 #if __has_include(<print>)
 #include <print>
 #endif
@@ -45,10 +45,8 @@ import :error;
 
 #endif
 
-namespace gal::prometheus::unit_test
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(unit_test)
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	struct color_type
 	{
 		std::string_view none = "\033[0m";
@@ -107,34 +105,34 @@ namespace gal::prometheus::unit_test
 	};
 
 	/**
-	 * result: std::vector<suite> {																			 
-	 * anonymous_suite: suite																						 
-	 * user_suite_0: suite																								
-	 * user_suite_1: suite																								
-	 * user_suite_2: suite																								
-	 * user_suite_3: suite																								
-	 * user_suite_n: suite																								 
-	 * }																														
-	 *																															
-	 * *_suite_*: suite {																									 
-	 * name: std::string																								
-	 * user_test_0: test																									 
-	 * user_test_1: test																									 
-	 * user_test_2: test																									 
-	 * user_test_3: test																									 
-	 * user_test_n: test																									 
-	 * }																														
-	 *																															
-	 * *_test_*: test {																									
-	 * name: std::string																								
-	 * parent: test*																										 
-	 * children(nested test): std::vector<test>																
-	 *																															
-	 * status: Status																										 
-	 * time_start: time_point_type																				
-	 * time_end: time_point_type																				
-	 * total_assertions_passed: std::size_t																		
-	 * total_assertions_failed: std::size_t																		
+	 * result: std::vector<suite> {
+	 * anonymous_suite: suite
+	 * user_suite_0: suite
+	 * user_suite_1: suite
+	 * user_suite_2: suite
+	 * user_suite_3: suite
+	 * user_suite_n: suite
+	 * }
+	 *
+	 * *_suite_*: suite {
+	 * name: std::string
+	 * user_test_0: test
+	 * user_test_1: test
+	 * user_test_2: test
+	 * user_test_3: test
+	 * user_test_n: test
+	 * }
+	 *
+	 * *_test_*: test {
+	 * name: std::string
+	 * parent: test*
+	 * children(nested test): std::vector<test>
+	 *
+	 * status: Status
+	 * time_start: time_point_type
+	 * time_end: time_point_type
+	 * total_assertions_passed: std::size_t
+	 * total_assertions_failed: std::size_t
 	 * }
 	 */
 	// assume suite_results.front() == anonymous_suite
@@ -221,9 +219,10 @@ namespace gal::prometheus::unit_test
 			return filter_execute_test_name(test_name) and filter_execute_test_categories(categories);
 		}
 	};
+}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(unit_test)
+{
 	template<typename Expression>
 	struct is_expression
 			: std::bool_constant<
@@ -5040,9 +5039,10 @@ namespace gal::prometheus::unit_test
 			[[nodiscard]] constexpr auto name() const noexcept -> auto { return name_; }
 		};
 	} // namespace dispatcher
+}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(unit_test)
+{
 	// =========================================
 	// OPERANDS
 	// =========================================
@@ -5051,52 +5051,61 @@ namespace gal::prometheus::unit_test
 	// #warning "error: alias template 'value' requires template arguments; argument deduction only allowed for class templates"
 	#endif
 	template<typename T>
-	// using value = operands::OperandValue<T>;
+	// using value = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandValue<T>;
 	[[nodiscard]] constexpr auto value(T&& v) noexcept -> auto
 	{
-		return operands::OperandValue{std::forward<T>(v)};
+		return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandValue{std::forward<T>(v)};
 	}
 
 	// template<typename T>
-	// using ref = operands::OperandValueRef<T>;
+	// using ref = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandValueRef<T>;
 	template<typename T>
 	[[nodiscard]] constexpr auto ref(T& v) noexcept -> auto
 	{
-		return operands::OperandValueRef{v};
+		return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandValueRef{v};
 	}
 
 	template<typename T>
 	[[nodiscard]] constexpr auto ref(const T& v) noexcept -> auto
 	{
-		return operands::OperandValueRef{v};
+		return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandValueRef{v};
 	}
 
 	template<typename ExceptionType = void, std::invocable InvocableType>
-	[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> operands::OperandThrow<ExceptionType> { return {invocable}; }
+	[[nodiscard]] constexpr auto throws(const InvocableType& invocable) noexcept -> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandThrow<ExceptionType>
+	{
+		return {invocable};
+	}
 
 	template<std::invocable InvocableType>
-	[[nodiscard]] constexpr auto nothrow(const InvocableType& invocable) noexcept -> operands::OperandNoThrow { return {invocable}; }
+	[[nodiscard]] constexpr auto nothrow(const InvocableType& invocable) noexcept -> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandNoThrow
+	{
+		return {invocable};
+	}
 
 	// =========================================
 	// DISPATCHER
 	// =========================================
 
-	constexpr dispatcher::expect_result::fatal fatal{};
+	constexpr GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::dispatcher::expect_result::fatal fatal{};
 
-	constexpr dispatcher::DispatcherThat that{};
-	constexpr dispatcher::DispatcherExpect expect{};
+	constexpr GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::dispatcher::DispatcherThat that{};
+	constexpr GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::dispatcher::DispatcherExpect expect{};
 
 	// =========================================
 	// CONFIG
 	// =========================================
 
-	[[nodiscard]] inline auto config() noexcept -> auto& { return executor::executor().config(); }
+	[[nodiscard]] inline auto config() noexcept -> auto&
+	{
+		return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::executor::executor().config();
+	}
 
 	// =========================================
 	// TEST & SUITE
 	// =========================================
 
-	using test = dispatcher::DispatcherTest;
+	using test = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::dispatcher::DispatcherTest;
 
 	template<meta::basic_fixed_string SuiteName>
 	struct suite
@@ -5105,7 +5114,9 @@ namespace gal::prometheus::unit_test
 		constexpr explicit(false) suite(InvocableType invocable) noexcept //
 			requires requires { +invocable; }
 		{
-			dispatcher::register_event(events::EventSuite{.name = SuiteName.template as<events::name_type>(), .suite = +invocable});
+			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::dispatcher::register_event(
+				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::events::EventSuite{.name = SuiteName.template as<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::events::name_type>(), .suite = +invocable}
+				);
 		}
 	};
 
@@ -5126,7 +5137,10 @@ namespace gal::prometheus::unit_test
 
 			template<typename Lhs, typename Rhs>
 			concept dispatchable_t =
-					not(dispatcher::detail::is_dispatched_expression_v<Lhs> or dispatcher::detail::is_dispatched_expression_v<Rhs>);
+					not(
+						GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::dispatcher::detail::is_dispatched_expression_v<Lhs> or
+						GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::dispatcher::detail::is_dispatched_expression_v<Rhs>
+					);
 		} // namespace detail
 
 		// a == b
@@ -5211,19 +5225,19 @@ namespace gal::prometheus::unit_test
 	inline namespace literals
 	{
 		template<meta::basic_fixed_string StringLiteral>
-		[[nodiscard]] constexpr auto operator""_test() noexcept -> dispatcher::DispatcherTestLiteral<StringLiteral> //
+		[[nodiscard]] constexpr auto operator""_test() noexcept -> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::dispatcher::DispatcherTestLiteral<StringLiteral> //
 		{
-			return dispatcher::DispatcherTestLiteral<StringLiteral>{};
+			return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::dispatcher::DispatcherTestLiteral<StringLiteral>{};
 		}
 
 		template<char... Cs>
-		[[nodiscard]] constexpr auto operator""_auto() noexcept -> operands::OperandLiteralAuto<Cs...> //
+		[[nodiscard]] constexpr auto operator""_auto() noexcept -> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralAuto<Cs...> //
 		{
 			return {};
 		}
 
 		template<meta::basic_fixed_string StringLiteral>
-		[[nodiscard]] constexpr auto operator""_c() noexcept -> operands::OperandLiteralCharacter<StringLiteral.value[0]> //
+		[[nodiscard]] constexpr auto operator""_c() noexcept -> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralCharacter<StringLiteral.value[0]> //
 		{
 			return {};
 		}
@@ -5231,7 +5245,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<int>(); }
 		[[nodiscard]] constexpr auto operator""_i() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<int>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<int>()> //
 		{
 			return {};
 		}
@@ -5239,7 +5253,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<unsigned>(); }
 		[[nodiscard]] constexpr auto operator""_u() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned>()> //
 		{
 			return {};
 		}
@@ -5247,7 +5261,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<long>(); }
 		[[nodiscard]] constexpr auto operator""_l() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long>()> //
 		{
 			return {};
 		}
@@ -5255,7 +5269,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<unsigned long>(); }
 		[[nodiscard]] constexpr auto operator""_ul() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long>()> //
 		{
 			return {};
 		}
@@ -5263,7 +5277,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<long long>(); }
 		[[nodiscard]] constexpr auto operator""_ll() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long long>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<long long>()> //
 		{
 			return {};
 		}
@@ -5271,7 +5285,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<unsigned long long>(); }
 		[[nodiscard]] constexpr auto operator""_ull() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long long>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<unsigned long long>()> //
 		{
 			return {};
 		}
@@ -5279,7 +5293,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::int8_t>(); }
 		[[nodiscard]] constexpr auto operator""_i8() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int8_t>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int8_t>()> //
 		{
 			return {};
 		}
@@ -5287,7 +5301,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::uint8_t>(); }
 		[[nodiscard]] constexpr auto operator""_u8() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint8_t>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint8_t>()> //
 		{
 			return {};
 		}
@@ -5295,7 +5309,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::int16_t>(); }
 		[[nodiscard]] constexpr auto operator""_i16() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int16_t>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int16_t>()> //
 		{
 			return {};
 		}
@@ -5303,7 +5317,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::uint16_t>(); }
 		[[nodiscard]] constexpr auto operator""_u16() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint16_t>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint16_t>()> //
 		{
 			return {};
 		}
@@ -5311,7 +5325,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::int32_t>(); }
 		[[nodiscard]] constexpr auto operator""_i32() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int32_t>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int32_t>()> //
 		{
 			return {};
 		}
@@ -5319,7 +5333,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::uint32_t>(); }
 		[[nodiscard]] constexpr auto operator""_u32() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint32_t>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint32_t>()> //
 		{
 			return {};
 		}
@@ -5327,7 +5341,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::int64_t>(); }
 		[[nodiscard]] constexpr auto operator""_i64() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int64_t>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::int64_t>()> //
 		{
 			return {};
 		}
@@ -5335,7 +5349,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_integral<std::uint64_t>(); }
 		[[nodiscard]] constexpr auto operator""_u64() noexcept
-			-> operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint64_t>()> //
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralIntegral<functional::char_list<Cs...>.template to_integral<std::uint64_t>()> //
 		{
 			return {};
 		}
@@ -5343,7 +5357,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_floating_point<float>(); }
 		[[nodiscard]] constexpr auto operator""_f() noexcept
-			-> operands::OperandLiteralFloatingPoint<
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralFloatingPoint<
 				functional::char_list<Cs...>.template to_floating_point<float>(),
 				functional::char_list<Cs...>.denominator_length()
 			> { return {}; }
@@ -5351,7 +5365,7 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_floating_point<double>(); }
 		[[nodiscard]] constexpr auto operator""_d() noexcept
-			-> operands::OperandLiteralFloatingPoint<
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralFloatingPoint<
 				functional::char_list<Cs...>.template to_floating_point<double>(),
 				functional::char_list<Cs...>.denominator_length()
 			> { return {}; }
@@ -5359,23 +5373,21 @@ namespace gal::prometheus::unit_test
 		template<char... Cs>
 			requires requires { functional::char_list<Cs...>.template to_floating_point<long double>(); }
 		[[nodiscard]] constexpr auto operator""_ld() noexcept
-			-> operands::OperandLiteralFloatingPoint<
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandLiteralFloatingPoint<
 				functional::char_list<Cs...>.template to_floating_point<long double>(),
 				functional::char_list<Cs...>.denominator_length()
 			> { return {}; }
 
 		// We can't construct OperandIdentityBoolean directly here, because we don't know the result of the comparison yet.
-		[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> operands::OperandIdentityBoolean::value_type //
+		[[nodiscard]] constexpr auto operator""_b(const char* name, const std::size_t size) noexcept -> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandIdentityBoolean::value_type //
 		{
 			return {.string = {name, size}};
 		}
 
-		[[nodiscard]] constexpr auto operator""_s(const char* name, const std::size_t size) noexcept -> operands::OperandIdentityString //
+		[[nodiscard]] constexpr auto operator""_s(const char* name, const std::size_t size) noexcept -> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandIdentityString //
 		{
-			const operands::OperandIdentityString::value_type value{.string = {name, size}};
-			return operands::OperandIdentityString{value};
+			const GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandIdentityString::value_type value{.string = {name, size}};
+			return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::operands::OperandIdentityString{value};
 		}
 	} // namespace literals
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 } // namespace gal::prometheus::unit_test

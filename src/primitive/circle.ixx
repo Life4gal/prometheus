@@ -36,7 +36,7 @@ import :primitive.rect;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 {
 	template<std::size_t N, typename PointValueType, typename RadiusType = PointValueType>
 		requires (std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<RadiusType>)
@@ -318,7 +318,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	}
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
 {
 	template<std::size_t Index, std::size_t N, typename PointValueType, typename RadiusType>
 	struct

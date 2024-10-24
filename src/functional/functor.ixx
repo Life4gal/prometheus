@@ -34,10 +34,130 @@ import std;
 #define FUNCTOR_WORKAROUND_OPERATOR_THIS(type) this->
 #endif
 
-namespace gal::prometheus::functional
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(functional)
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+	enum class InvokeFoldType
+	{
+		ALL,
+		ANY,
+		NONE,
+	};
 
+	template<auto DefaultFunctor, InvokeFoldType FoldType>
+	struct unary_invoker
+	{
+		template<typename... Args>
+		[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto operator()(const Args&... args) FUNCTOR_WORKAROUND_OPERATOR_CONST
+			noexcept((std::is_nothrow_invocable_r_v<bool, decltype(DefaultFunctor), Args> and ...)) -> bool //
+			requires(std::is_invocable_r_v<bool, decltype(DefaultFunctor), Args> and ...)
+		{
+			if constexpr (sizeof...(Args) == 0) { return true; }
+
+			if constexpr (FoldType == InvokeFoldType::ALL) { return (DefaultFunctor(args) and ...); }
+			else if constexpr (FoldType == InvokeFoldType::ANY) { return (DefaultFunctor(args) or ...); }
+			else if constexpr (FoldType == InvokeFoldType::NONE) { return not(DefaultFunctor(args) or ...); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+		}
+
+		template<typename Function, typename... Args>
+		[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto
+		operator()(
+			Function function,
+			const Args&... args
+		) FUNCTOR_WORKAROUND_OPERATOR_CONST noexcept((std::is_nothrow_invocable_r_v<bool, Function, Args> and ...)) -> bool //
+			requires(std::is_invocable_r_v<bool, Function, Args> and ...)
+		{
+			if constexpr (sizeof...(Args) == 0) { return true; }
+
+			if constexpr (FoldType == InvokeFoldType::ALL) { return (function(args) and ...); }
+			else if constexpr (FoldType == InvokeFoldType::ANY) { return (function(args) or ...); }
+			else if constexpr (FoldType == InvokeFoldType::NONE) { return not(function(args) or ...); }
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+		}
+	};
+
+	template<auto DefaultFunctor>
+	struct binary_invoker
+	{
+		template<typename Lhs, typename Rhs, typename... Reset>
+		[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto
+		operator()(
+			const Lhs& lhs,
+			const Rhs& rhs,
+			const Reset&... reset //
+		) FUNCTOR_WORKAROUND_OPERATOR_CONST
+			noexcept(
+				noexcept(DefaultFunctor(lhs, rhs)) and //
+				noexcept((DefaultFunctor(lhs, reset) and ...)) and //
+				noexcept((DefaultFunctor(rhs, reset) and ...)) //
+			) -> const auto&
+		{
+			if constexpr (sizeof...(reset) == 0) { return DefaultFunctor(lhs, rhs) ? lhs : rhs; }
+			else
+			{
+				return
+						FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(
+							FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(lhs, rhs),
+							reset...
+						);
+			}
+		}
+
+		template<typename Function, typename Lhs, typename Rhs, typename... Reset>
+			requires std::is_invocable_r_v<bool, Function, Lhs, Rhs>
+		[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto operator()(
+			Function function,
+			const Lhs& lhs,
+			const Rhs& rhs,
+			const Reset&... reset //
+		) FUNCTOR_WORKAROUND_OPERATOR_CONST
+			noexcept(
+				noexcept(function(lhs, rhs)) and //
+				noexcept((function(lhs, reset) and ...)) and //
+				noexcept((function(rhs, reset) and ...)) //
+			) -> const auto&
+		{
+			if constexpr (sizeof...(reset) == 0) { return function(lhs, rhs) ? lhs : rhs; }
+			else
+			{
+				return
+						FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(
+							FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(lhs, rhs),
+							reset...
+						);
+			}
+		}
+	};
+
+	[[maybe_unused]] constexpr auto as_boolean = [](const auto& i) noexcept((static_cast<bool>(i))) -> bool { return static_cast<bool>(i); };
+	[[maybe_unused]] constexpr auto compare_greater_than = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs > rhs)) -> bool
+	{
+		return lhs > rhs;
+	};
+	[[maybe_unused]] constexpr auto compare_greater_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs >= rhs)) -> bool
+	{
+		return lhs >= rhs;
+	};
+	[[maybe_unused]] constexpr auto compare_less_than = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs < rhs)) -> bool
+	{
+		return lhs < rhs;
+	};
+	[[maybe_unused]] constexpr auto compare_less_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs <= rhs)) -> bool
+	{
+		return lhs <= rhs;
+	};
+	[[maybe_unused]] constexpr auto compare_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs == rhs)) -> bool
+	{
+		return lhs == rhs;
+	};
+	[[maybe_unused]] constexpr auto compare_not_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs != rhs)) -> bool
+	{
+		return lhs != rhs;
+	};
+}
+
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+{
 	template<typename FunctionType>
 	struct y_combinator
 	{
@@ -67,138 +187,14 @@ namespace gal::prometheus::functional
 			: Ts{std::forward<Ts>(ts)}... {}
 	};
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-
-	namespace functor_detail
+	namespace functor
 	{
-		enum class InvokeFoldType
-		{
-			ALL,
-			ANY,
-			NONE,
-		};
+		constexpr GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::unary_invoker<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::as_boolean, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::InvokeFoldType::ALL> all;
+		constexpr GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::unary_invoker<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::as_boolean, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::InvokeFoldType::ANY> any;
+		constexpr GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::unary_invoker<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::as_boolean, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::InvokeFoldType::NONE> none;
 
-		template<auto DefaultFunctor, InvokeFoldType FoldType>
-		struct unary_invoker
-		{
-			template<typename... Args>
-			[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto operator()(const Args&... args) FUNCTOR_WORKAROUND_OPERATOR_CONST
-				noexcept((std::is_nothrow_invocable_r_v<bool, decltype(DefaultFunctor), Args> and ...)) -> bool //
-				requires(std::is_invocable_r_v<bool, decltype(DefaultFunctor), Args> and ...)
-			{
-				if constexpr (sizeof...(Args) == 0) { return true; }
-
-				if constexpr (FoldType == InvokeFoldType::ALL) { return (DefaultFunctor(args) and ...); }
-				else if constexpr (FoldType == InvokeFoldType::ANY) { return (DefaultFunctor(args) or ...); }
-				else if constexpr (FoldType == InvokeFoldType::NONE) { return not(DefaultFunctor(args) or ...); }
-				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-			}
-
-			template<typename Function, typename... Args>
-			[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto
-			operator()(
-				Function function,
-				const Args&... args
-			) FUNCTOR_WORKAROUND_OPERATOR_CONST noexcept((std::is_nothrow_invocable_r_v<bool, Function, Args> and ...)) -> bool //
-				requires(std::is_invocable_r_v<bool, Function, Args> and ...)
-			{
-				if constexpr (sizeof...(Args) == 0) { return true; }
-
-				if constexpr (FoldType == InvokeFoldType::ALL) { return (function(args) and ...); }
-				else if constexpr (FoldType == InvokeFoldType::ANY) { return (function(args) or ...); }
-				else if constexpr (FoldType == InvokeFoldType::NONE) { return not(function(args) or ...); }
-				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-			}
-		};
-
-		template<auto DefaultFunctor>
-		struct binary_invoker
-		{
-			template<typename Lhs, typename Rhs, typename... Reset>
-			[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto
-			operator()(
-				const Lhs& lhs,
-				const Rhs& rhs,
-				const Reset&... reset //
-			) FUNCTOR_WORKAROUND_OPERATOR_CONST
-				noexcept(
-					noexcept(DefaultFunctor(lhs, rhs)) and //
-					noexcept((DefaultFunctor(lhs, reset) and ...)) and //
-					noexcept((DefaultFunctor(rhs, reset) and ...)) //
-				) -> const auto&
-			{
-				if constexpr (sizeof...(reset) == 0) { return DefaultFunctor(lhs, rhs) ? lhs : rhs; }
-				else
-				{
-					return
-							FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(
-								FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(lhs, rhs),
-								reset...
-							);
-				}
-			}
-
-			template<typename Function, typename Lhs, typename Rhs, typename... Reset>
-				requires std::is_invocable_r_v<bool, Function, Lhs, Rhs>
-			[[nodiscard]] constexpr FUNCTOR_WORKAROUND_OPERATOR_STATIC auto operator()(
-				Function function,
-				const Lhs& lhs,
-				const Rhs& rhs,
-				const Reset&... reset //
-			) FUNCTOR_WORKAROUND_OPERATOR_CONST
-				noexcept(
-					noexcept(function(lhs, rhs)) and //
-					noexcept((function(lhs, reset) and ...)) and //
-					noexcept((function(rhs, reset) and ...)) //
-				) -> const auto&
-			{
-				if constexpr (sizeof...(reset) == 0) { return function(lhs, rhs) ? lhs : rhs; }
-				else
-				{
-					return
-							FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(
-								FUNCTOR_WORKAROUND_OPERATOR_THIS(binary_invoker)operator()(lhs, rhs),
-								reset...
-							);
-				}
-			}
-		};
-
-		[[maybe_unused]] constexpr auto as_boolean = [](const auto& i) noexcept((static_cast<bool>(i))) -> bool { return static_cast<bool>(i); };
-		[[maybe_unused]] constexpr auto compare_greater_than = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs > rhs)) -> bool
-		{
-			return lhs > rhs;
-		};
-		[[maybe_unused]] constexpr auto compare_greater_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs >= rhs)) -> bool
-		{
-			return lhs >= rhs;
-		};
-		[[maybe_unused]] constexpr auto compare_less_than = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs < rhs)) -> bool
-		{
-			return lhs < rhs;
-		};
-		[[maybe_unused]] constexpr auto compare_less_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs <= rhs)) -> bool
-		{
-			return lhs <= rhs;
-		};
-		[[maybe_unused]] constexpr auto compare_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs == rhs)) -> bool
-		{
-			return lhs == rhs;
-		};
-		[[maybe_unused]] constexpr auto compare_not_equal = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs != rhs)) -> bool
-		{
-			return lhs != rhs;
-		};
-	}
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(functor)
-	{
-		constexpr functor_detail::unary_invoker<functor_detail::as_boolean, functor_detail::InvokeFoldType::ALL> all;
-		constexpr functor_detail::unary_invoker<functor_detail::as_boolean, functor_detail::InvokeFoldType::ANY> any;
-		constexpr functor_detail::unary_invoker<functor_detail::as_boolean, functor_detail::InvokeFoldType::NONE> none;
-
-		constexpr functor_detail::binary_invoker<functor_detail::compare_greater_than> max;
-		constexpr functor_detail::binary_invoker<functor_detail::compare_less_than> min;
+		constexpr GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::binary_invoker<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::compare_greater_than> max;
+		constexpr GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::binary_invoker<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::compare_less_than> min;
 	}
 }
 

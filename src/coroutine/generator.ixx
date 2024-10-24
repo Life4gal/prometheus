@@ -26,14 +26,15 @@ import std;
 
 #endif
 
-namespace gal::prometheus::coroutine
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(coroutine)
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		template<typename ReturnType>
-			requires(not std::is_void_v<ReturnType>)
-		class Generator;
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+	template<typename ReturnType>
+		requires(not std::is_void_v<ReturnType>)
+	class Generator;
+}
 
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(coroutine)
+{
 	template<typename ReturnType>
 	class GeneratorPromise final
 	{
@@ -103,7 +104,7 @@ namespace gal::prometheus::coroutine
 		}
 	};
 
-	struct iterator_sentinel {};
+	using iterator_sentinel = std::default_sentinel_t;
 
 	template<typename Generator>
 	class Iterator
@@ -154,64 +155,65 @@ namespace gal::prometheus::coroutine
 
 		[[nodiscard]] constexpr auto operator->() && noexcept -> decltype(auto) { return std::addressof(std::move(*this).operator*()); }
 	};
+}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-		template<typename ReturnType>
-			requires(not std::is_void_v<ReturnType>)
-		class Generator
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(coroutine)
+{
+	template<typename ReturnType>
+		requires(not std::is_void_v<ReturnType>)
+	class Generator
+	{
+	public:
+		using return_type = std::remove_reference_t<ReturnType>;
+		using difference_type = std::ptrdiff_t;
+		using pointer = std::add_pointer_t<return_type>;
+		using reference = std::add_lvalue_reference_t<return_type>;
+		using iterator = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Iterator<Generator<return_type>>;
+
+		using promise_type = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::GeneratorPromise<return_type>;
+		using coroutine_handle = typename promise_type::coroutine_handle;
+
+	private:
+		friend promise_type;
+
+		coroutine_handle coroutine_;
+
+		constexpr explicit Generator(coroutine_handle coroutine) noexcept
+			: coroutine_{coroutine} {}
+
+	public:
+		constexpr Generator() noexcept
+			: coroutine_{nullptr} {}
+
+		constexpr Generator(const Generator&) noexcept = delete;
+		constexpr auto operator=(const Generator&) noexcept -> Generator& = delete;
+
+		constexpr Generator(Generator&& other) noexcept
+			: coroutine_{std::exchange(other.coroutine_, nullptr)} {}
+
+		constexpr auto operator=(Generator&& other) noexcept -> Generator&
 		{
-		public:
-			using return_type = std::remove_reference_t<ReturnType>;
-			using difference_type = std::ptrdiff_t;
-			using pointer = std::add_pointer_t<return_type>;
-			using reference = std::add_lvalue_reference_t<return_type>;
-			using iterator = Iterator<Generator<return_type>>;
+			coroutine_ = std::exchange(other.coroutine_, nullptr);
 
-			using promise_type = GeneratorPromise<return_type>;
-			using coroutine_handle = typename promise_type::coroutine_handle;
+			return *this;
+		}
 
-		private:
-			friend promise_type;
+		constexpr ~Generator() noexcept { if (coroutine_) { coroutine_.destroy(); } }
 
-			coroutine_handle coroutine_;
+		[[nodiscard]] constexpr auto begin() noexcept -> iterator
+		{
+			// If coroutine_ is nullptr, this is equivalent to returning `end()`
+			iterator it{coroutine_};
 
-			constexpr explicit Generator(coroutine_handle coroutine) noexcept
-				: coroutine_{coroutine} {}
+			if (coroutine_) { ++it; }
 
-		public:
-			constexpr Generator() noexcept
-				: coroutine_{nullptr} {}
+			return it;
+		}
 
-			constexpr Generator(const Generator&) noexcept = delete;
-			constexpr auto operator=(const Generator&) noexcept -> Generator& = delete;
-
-			constexpr Generator(Generator&& other) noexcept
-				: coroutine_{std::exchange(other.coroutine_, nullptr)} {}
-
-			constexpr auto operator=(Generator&& other) noexcept -> Generator&
-			{
-				coroutine_ = std::exchange(other.coroutine_, nullptr);
-
-				return *this;
-			}
-
-			constexpr ~Generator() noexcept { if (coroutine_) { coroutine_.destroy(); } }
-
-			[[nodiscard]] constexpr auto begin() noexcept -> iterator
-			{
-				// If coroutine_ is nullptr, this is equivalent to returning `end()`
-				iterator it{coroutine_};
-
-				if (coroutine_) { ++it; }
-
-				return it;
-			}
-
-			[[nodiscard]] constexpr auto end() const noexcept -> iterator_sentinel
-			{
-				(void)this;
-				return {};
-			}
-		};
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
+		[[nodiscard]] constexpr auto end() const noexcept -> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::iterator_sentinel
+		{
+			(void)this;
+			return {};
+		}
+	};
 } // namespace gal::prometheus::coroutine

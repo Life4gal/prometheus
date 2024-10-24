@@ -25,8 +25,12 @@ export import :chars.icelake;
 
 #pragma once
 
+#include <bit>
+#include <span>
+#include <string>
+
 #include <prometheus/macro.hpp>
-#include <error/error.ixx>
+#include <platform/platform.ixx>
 #include <chars/encoding.ixx>
 #include <chars/scalar.ixx>
 
@@ -36,55 +40,53 @@ export import :chars.icelake;
 
 #endif
 
-namespace gal::prometheus::chars
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 {
-	namespace chars_detail
+	[[nodiscard]] inline auto detect_supported_instruction() noexcept -> std::uint32_t
 	{
-		[[nodiscard]] inline auto detect_supported_instruction() noexcept -> std::uint32_t
-		{
-			const static auto supported = error::detect_supported_instruction();
-			return supported;
-		}
-
-		constexpr std::uint32_t icelake_required =
-				static_cast<std::uint32_t>(error::InstructionSet::BMI1) |
-				static_cast<std::uint32_t>(error::InstructionSet::AVX2) |
-				static_cast<std::uint32_t>(error::InstructionSet::BMI2) |
-				static_cast<std::uint32_t>(error::InstructionSet::AVX512BW) |
-				static_cast<std::uint32_t>(error::InstructionSet::AVX512VL) |
-				static_cast<std::uint32_t>(error::InstructionSet::AVX512VBMI2) |
-				static_cast<std::uint32_t>(error::InstructionSet::AVX512VPOPCNTDQ);
-
-		template<CharsCategory InputCategory>
-		struct endian_selector;
-
-		template<>
-		struct endian_selector<CharsCategory::UTF16>
-		{
-			constexpr static auto value = std::endian::native;
-		};
-
-		template<>
-		struct endian_selector<CharsCategory::UTF16_LE>
-		{
-			constexpr static auto value = std::endian::little;
-		};
-
-		template<>
-		struct endian_selector<CharsCategory::UTF16_BE>
-		{
-			constexpr static auto value = std::endian::big;
-		};
+		const static auto supported = platform::detect_supported_instruction();
+		return supported;
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+	constexpr std::uint32_t icelake_required =
+			static_cast<std::uint32_t>(platform::InstructionSet::BMI1) |
+			static_cast<std::uint32_t>(platform::InstructionSet::AVX2) |
+			static_cast<std::uint32_t>(platform::InstructionSet::BMI2) |
+			static_cast<std::uint32_t>(platform::InstructionSet::AVX512BW) |
+			static_cast<std::uint32_t>(platform::InstructionSet::AVX512VL) |
+			static_cast<std::uint32_t>(platform::InstructionSet::AVX512VBMI2) |
+			static_cast<std::uint32_t>(platform::InstructionSet::AVX512VPOPCNTDQ);
 
+	template<CharsCategory InputCategory>
+	struct endian_selector;
+
+	template<>
+	struct endian_selector<CharsCategory::UTF16>
+	{
+		constexpr static auto value = std::endian::native;
+	};
+
+	template<>
+	struct endian_selector<CharsCategory::UTF16_LE>
+	{
+		constexpr static auto value = std::endian::little;
+	};
+
+	template<>
+	struct endian_selector<CharsCategory::UTF16_BE>
+	{
+		constexpr static auto value = std::endian::big;
+	};
+}
+
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(chars)
+{
 	[[nodiscard]] inline auto encoding_of(const std::span<const char8_t> input) noexcept -> EncodingType
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
 			return Encoding<"icelake">::encoding_of(input);
 		}
@@ -96,10 +98,10 @@ namespace gal::prometheus::chars
 
 	[[nodiscard]] inline auto encoding_of(const std::span<const char> input) noexcept -> EncodingType
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
 			return Encoding<"icelake">::encoding_of(input);
 		}
@@ -112,14 +114,14 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, bool ReturnResultType = false>
 	[[nodiscard]] constexpr auto validate(const typename scalar_processor_of_t<InputCategory>::input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
-			if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+			if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 			{
-				return simd_processor_of_t<InputCategory, "icelake">::template validate<chars_detail::endian_selector<InputCategory>::value, ReturnResultType>(input);
+				return simd_processor_of_t<InputCategory, "icelake">::template validate<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value, ReturnResultType>(input);
 			}
 			else
 			{
@@ -129,9 +131,9 @@ namespace gal::prometheus::chars
 		#else
 		#endif
 
-		if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+		if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 		{
-			return scalar_processor_of_t<InputCategory>::template validate<chars_detail::endian_selector<InputCategory>::value, ReturnResultType>(input);
+			return scalar_processor_of_t<InputCategory>::template validate<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value, ReturnResultType>(input);
 		}
 		else
 		{
@@ -142,14 +144,14 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, bool ReturnResultType = false>
 	[[nodiscard]] constexpr auto validate(const typename scalar_processor_of_t<InputCategory>::pointer_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
-			if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+			if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 			{
-				return simd_processor_of_t<InputCategory, "icelake">::template validate<chars_detail::endian_selector<InputCategory>::value, ReturnResultType>(input);
+				return simd_processor_of_t<InputCategory, "icelake">::template validate<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value, ReturnResultType>(input);
 			}
 			else
 			{
@@ -159,9 +161,9 @@ namespace gal::prometheus::chars
 		#else
 		#endif
 
-		if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+		if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 		{
-			return scalar_processor_of_t<InputCategory>::template validate<chars_detail::endian_selector<InputCategory>::value, ReturnResultType>(input);
+			return scalar_processor_of_t<InputCategory>::template validate<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value, ReturnResultType>(input);
 		}
 		else
 		{
@@ -172,14 +174,14 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, CharsCategory OutputCategory>
 	[[nodiscard]] constexpr auto length(const typename scalar_processor_of_t<InputCategory>::input_type input) noexcept -> typename scalar_processor_of_t<InputCategory>::size_type
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
-			if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+			if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 			{
-				return simd_processor_of_t<InputCategory, "icelake">::template length<OutputCategory, chars_detail::endian_selector<InputCategory>::value>(input);
+				return simd_processor_of_t<InputCategory, "icelake">::template length<OutputCategory, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 			}
 			else
 			{
@@ -189,9 +191,9 @@ namespace gal::prometheus::chars
 		#else
 		#endif
 
-		if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+		if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 		{
-			return scalar_processor_of_t<InputCategory>::template length<OutputCategory, chars_detail::endian_selector<InputCategory>::value>(input);
+			return scalar_processor_of_t<InputCategory>::template length<OutputCategory, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 		}
 		else
 		{
@@ -202,14 +204,14 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, CharsCategory OutputCategory>
 	[[nodiscard]] constexpr auto length(const typename scalar_processor_of_t<InputCategory>::pointer_type input) noexcept -> typename scalar_processor_of_t<InputCategory>::size_type
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
-			if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+			if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 			{
-				return simd_processor_of_t<InputCategory, "icelake">::template length<OutputCategory, chars_detail::endian_selector<InputCategory>::value>(input);
+				return simd_processor_of_t<InputCategory, "icelake">::template length<OutputCategory, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 			}
 			else
 			{
@@ -219,9 +221,9 @@ namespace gal::prometheus::chars
 		#else
 		#endif
 
-		if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+		if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 		{
-			return scalar_processor_of_t<InputCategory>::template length<OutputCategory, chars_detail::endian_selector<InputCategory>::value>(input);
+			return scalar_processor_of_t<InputCategory>::template length<OutputCategory, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 		}
 		else
 		{
@@ -235,14 +237,14 @@ namespace gal::prometheus::chars
 		typename output_type<OutputCategory>::pointer output
 	) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
-			if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+			if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 			{
-				return simd_processor_of_t<InputCategory, "icelake">::template convert<OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input, output);
+				return simd_processor_of_t<InputCategory, "icelake">::template convert<OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input, output);
 			}
 			else
 			{
@@ -252,9 +254,9 @@ namespace gal::prometheus::chars
 		#else
 		#endif
 
-		if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+		if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 		{
-			return scalar_processor_of_t<InputCategory>::template convert<OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input, output);
+			return scalar_processor_of_t<InputCategory>::template convert<OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input, output);
 		}
 		else
 		{
@@ -268,14 +270,14 @@ namespace gal::prometheus::chars
 		typename output_type<OutputCategory>::pointer output
 	) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
-			if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+			if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 			{
-				return simd_processor_of_t<InputCategory, "icelake">::template convert<OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input, output);
+				return simd_processor_of_t<InputCategory, "icelake">::template convert<OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input, output);
 			}
 			else
 			{
@@ -285,9 +287,9 @@ namespace gal::prometheus::chars
 		#else
 		#endif
 
-		if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+		if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 		{
-			return scalar_processor_of_t<InputCategory>::template convert<OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input, output);
+			return scalar_processor_of_t<InputCategory>::template convert<OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input, output);
 		}
 		else
 		{
@@ -298,14 +300,14 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, typename StringType, CharsCategory OutputCategory, InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE>
 	[[nodiscard]] constexpr auto convert(const typename scalar_processor_of_t<InputCategory>::input_type input) noexcept -> StringType
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
-			if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+			if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 			{
-				return simd_processor_of_t<InputCategory, "icelake">::template convert<StringType, OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input);
+				return simd_processor_of_t<InputCategory, "icelake">::template convert<StringType, OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 			}
 			else
 			{
@@ -315,9 +317,9 @@ namespace gal::prometheus::chars
 		#else
 		#endif
 
-		if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+		if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 		{
-			return scalar_processor_of_t<InputCategory>::template convert<StringType, OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input);
+			return scalar_processor_of_t<InputCategory>::template convert<StringType, OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 		}
 		else
 		{
@@ -328,14 +330,14 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, typename StringType, CharsCategory OutputCategory, InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE>
 	[[nodiscard]] constexpr auto convert(const typename scalar_processor_of_t<InputCategory>::pointer_type input) noexcept -> StringType
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
-			if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+			if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 			{
-				return simd_processor_of_t<InputCategory, "icelake">::template convert<StringType, OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input);
+				return simd_processor_of_t<InputCategory, "icelake">::template convert<StringType, OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 			}
 			else
 			{
@@ -345,9 +347,9 @@ namespace gal::prometheus::chars
 		#else
 		#endif
 
-		if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+		if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 		{
-			return scalar_processor_of_t<InputCategory>::template convert<StringType, OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input);
+			return scalar_processor_of_t<InputCategory>::template convert<StringType, OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 		}
 		else
 		{
@@ -358,14 +360,14 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, CharsCategory OutputCategory, InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE>
 	[[nodiscard]] constexpr auto convert(const typename scalar_processor_of_t<InputCategory>::input_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
-			if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+			if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 			{
-				return simd_processor_of_t<InputCategory, "icelake">::template convert<OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input);
+				return simd_processor_of_t<InputCategory, "icelake">::template convert<OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 			}
 			else
 			{
@@ -375,9 +377,9 @@ namespace gal::prometheus::chars
 		#else
 		#endif
 
-		if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+		if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 		{
-			return scalar_processor_of_t<InputCategory>::template convert<OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input);
+			return scalar_processor_of_t<InputCategory>::template convert<OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 		}
 		else
 		{
@@ -388,14 +390,14 @@ namespace gal::prometheus::chars
 	template<CharsCategory InputCategory, CharsCategory OutputCategory, InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE>
 	[[nodiscard]] constexpr auto convert(const typename scalar_processor_of_t<InputCategory>::pointer_type input) noexcept -> std::basic_string<typename output_type<OutputCategory>::value_type>
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
-			if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+			if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 			{
-				return simd_processor_of_t<InputCategory, "icelake">::template convert<OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input);
+				return simd_processor_of_t<InputCategory, "icelake">::template convert<OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 			}
 			else
 			{
@@ -405,9 +407,9 @@ namespace gal::prometheus::chars
 		#else
 		#endif
 
-		if constexpr (requires { chars_detail::endian_selector<InputCategory>::value; })
+		if constexpr (requires { GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value; })
 		{
-			return scalar_processor_of_t<InputCategory>::template convert<OutputCategory, ProcessPolicy, chars_detail::endian_selector<InputCategory>::value>(input);
+			return scalar_processor_of_t<InputCategory>::template convert<OutputCategory, ProcessPolicy, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::endian_selector<InputCategory>::value>(input);
 		}
 		else
 		{
@@ -417,10 +419,10 @@ namespace gal::prometheus::chars
 
 	inline auto flip_endian(const scalar_processor_of_t<CharsCategory::UTF16>::input_type input, const output_type<CharsCategory::UTF16>::pointer output) noexcept -> void
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
 			return simd_processor_of_t<CharsCategory::UTF16, "icelake">::flip_endian(input, output);
 		}
@@ -433,10 +435,10 @@ namespace gal::prometheus::chars
 	template<typename StringType>
 	[[nodiscard]] constexpr auto flip_endian(const scalar_processor_of_t<CharsCategory::UTF16>::input_type input) noexcept -> StringType
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
 			return simd_processor_of_t<CharsCategory::UTF16, "icelake">::flip_endian<StringType>(input);
 		}
@@ -448,10 +450,10 @@ namespace gal::prometheus::chars
 
 	[[nodiscard]] inline auto flip_endian(const scalar_processor_of_t<CharsCategory::UTF16>::input_type input) noexcept -> std::basic_string<output_type<CharsCategory::UTF16>::value_type>
 	{
-		[[maybe_unused]] const auto supported = chars_detail::detect_supported_instruction();
+		[[maybe_unused]] const auto supported = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::detect_supported_instruction();
 
 		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
-		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
+		if ((supported & GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required) == GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::icelake_required)
 		{
 			return simd_processor_of_t<CharsCategory::UTF16, "icelake">::flip_endian(input);
 		}
@@ -460,6 +462,4 @@ namespace gal::prometheus::chars
 
 		return scalar_processor_of_t<CharsCategory::UTF16>::flip_endian(input);
 	}
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

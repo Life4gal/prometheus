@@ -12,7 +12,7 @@ export module gal.prometheus:io.device;
 import std;
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
@@ -23,16 +23,16 @@ import :error;
 
 #include <variant>
 #include <cstdint>
+#include <vector>
 #include <utility>
 
+#include <prometheus/macro.hpp>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
-namespace gal::prometheus::io
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(io)
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	enum class DeviceKey : std::uint16_t
 	{
 		NONE,
@@ -357,6 +357,4 @@ namespace gal::prometheus::io
 			return this->key(key, down, down ? 1.f : 0.f);
 		}
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

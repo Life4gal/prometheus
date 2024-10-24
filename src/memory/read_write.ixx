@@ -25,6 +25,7 @@ import :error;
 #include <type_traits>
 #include <memory>
 #include <cstring>
+#include <bit>
 
 #include <prometheus/macro.hpp>
 #include <functional/functional.ixx>
@@ -32,7 +33,7 @@ import :error;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::memory)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(memory)
 {
 	template<typename T, typename In>
 		requires std::is_arithmetic_v<T> and

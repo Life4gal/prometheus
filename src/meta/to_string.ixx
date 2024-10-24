@@ -23,6 +23,7 @@ import :meta.enumeration;
 #include <format>
 #include <type_traits>
 #include <cstdint>
+#include <algorithm>
 
 #include <prometheus/macro.hpp>
 #include <meta/member.ixx>
@@ -30,7 +31,7 @@ import :meta.enumeration;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::meta)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
 {
 	template<
 		std::ranges::output_range<char> StringType = std::basic_string<char>,

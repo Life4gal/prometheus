@@ -23,8 +23,8 @@ import std;
 import :error;
 #endif
 
-export import :draw.font;
-export import :draw.draw_list.draw_flag;
+import :draw.font;
+export import :draw.draw_list.flag;
 export import :draw.draw_list.shared_data;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
@@ -33,6 +33,7 @@ export import :draw.draw_list.shared_data;
 
 #pragma once
 
+#include <memory>
 #include <vector>
 #include <type_traits>
 #include <utility>
@@ -59,13 +60,13 @@ export import :draw.draw_list.shared_data;
 #include <chars/chars.ixx>
 
 #include <draw/font.ixx>
-#include <draw/draw_list.draw_flag.ixx>
+#include <draw/draw_list.flag.ixx>
 #include <draw/draw_list.shared_data.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::draw)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 {
 	class DrawList final
 	{

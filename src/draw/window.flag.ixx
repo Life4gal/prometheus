@@ -7,7 +7,9 @@
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus:error.debug;
+export module gal.prometheus:draw.window.flag;
+
+import std;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -15,11 +17,21 @@ export module gal.prometheus:error.debug;
 
 #pragma once
 
+#include <cstdint>
+
 #include <prometheus/macro.hpp>
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::error)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 {
-	auto debug_break(const char* message) noexcept -> void;
-} // namespace gal::prometheus::error
+	enum class WindowFlag : std::uint8_t
+	{
+		NONE = 0,
+
+		BORDERED = 1 << 0,
+		NO_TITLE = 1 << 1,
+		NO_RESIZE = 1 << 2,
+		NO_MOVE = 1 << 3,
+	};
+}

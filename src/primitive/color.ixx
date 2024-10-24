@@ -28,7 +28,7 @@ import :primitive.multidimensional;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 {
 	using universal_32_bit_color_type = std::uint32_t;
 
@@ -533,7 +533,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	}
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
 {
 	template<std::size_t Index, typename T>
 	struct

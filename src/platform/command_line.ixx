@@ -7,13 +7,9 @@
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus:error;
+export module gal.prometheus:platform.command_line;
 
-export import :error.exception;
-export import :error.debug;
-export import :error.platform;
-export import :error.command_line;
-export import :error.instruction_set;
+import std;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -21,10 +17,15 @@ export import :error.instruction_set;
 
 #pragma once
 
-#include <error/exception.ixx>
-#include <error/debug.ixx>
-#include <error/platform.ixx>
-#include <error/command_line.ixx>
-#include <error/instruction_set.ixx>
+#include <span>
+
+#include <prometheus/macro.hpp>
 
 #endif
+
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(platform)
+{
+	auto command_line_args_count() noexcept -> int;
+
+	auto command_line_args() noexcept -> std::span<const char* const>;
+} // namespace gal::prometheus::platform

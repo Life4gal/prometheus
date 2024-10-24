@@ -34,7 +34,7 @@ import :primitive.point;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 {
 	template<std::size_t N, typename T>
 		requires std::is_arithmetic_v<T>
@@ -256,7 +256,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	using basic_extent_3d = basic_extent<3, T>;
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
 {
 	template<std::size_t Index, std::size_t N, typename T>
 	struct

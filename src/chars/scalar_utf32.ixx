@@ -25,8 +25,11 @@ import :chars.encoding;
 
 #pragma once
 
+#include <bit>
 #include <functional>
 #include <numeric>
+#include <string>
+#include <algorithm>
 
 #include <prometheus/macro.hpp>
 #include <chars/encoding.ixx>
@@ -37,7 +40,7 @@ import :chars.encoding;
 #endif
 
 // ReSharper disable once CppRedundantNamespaceDefinition
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::chars)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(chars)
 {
 	template<>
 	class Scalar<"utf32">

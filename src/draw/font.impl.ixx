@@ -29,6 +29,10 @@ import :draw.font;
 #include <algorithm>
 #include <ranges>
 #include <numeric>
+#include <vector>
+#include <cmath>
+#include <memory>
+#include <format>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H          // <freetype/freetype.h>
@@ -46,7 +50,7 @@ import :draw.font;
 
 namespace
 {
-	using namespace gal::prometheus::draw;
+	using gal::prometheus::draw::glyph_value_type;
 
 	// ReSharper disable once CppInconsistentNaming
 	constexpr glyph_value_type simplified_chinese_common_accumulative_offsets_from_0x4e00[]
@@ -142,7 +146,7 @@ namespace
 	}
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::draw)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 {
 	[[nodiscard]] auto glyph_range_latin() noexcept -> glyph_range_view_type
 	{

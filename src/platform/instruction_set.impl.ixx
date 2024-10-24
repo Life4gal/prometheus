@@ -14,11 +14,11 @@
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus:error.instruction_set.impl;
+export module gal.prometheus:platform.instruction_set.impl;
 
 import std;
 
-import :error.instruction_set;
+import :platform.instruction_set;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -37,7 +37,7 @@ import :error.instruction_set;
 
 #include <prometheus/macro.hpp>
 
-#include <error/instruction_set.ixx>
+#include <platform/instruction_set.ixx>
 
 #endif
 
@@ -223,7 +223,7 @@ namespace
 		static_assert(sizeof(id_t) == sizeof(cpu_id_t));
 		static_assert(std::is_standard_layout_v<id_t>);
 
-		id_t id;
+		id_t id{};
 		#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
 		__cpuidex(reinterpret_cast<int*>(&id), static_cast<int>(config.eax), static_cast<int>(config.ecx));
 		#else
@@ -253,7 +253,7 @@ namespace
 	}
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::error)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(platform)
 {
 	auto detect_supported_instruction() -> std::uint32_t
 	{

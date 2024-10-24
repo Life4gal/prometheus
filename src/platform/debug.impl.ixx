@@ -12,11 +12,11 @@
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus:error.debug.impl;
+export module gal.prometheus:platform.debug.impl;
 
 import std;
 
-import :error.debug;
+import :platform.debug;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -35,6 +35,8 @@ import :error.debug;
 #include <format>
 
 #include <prometheus/macro.hpp>
+
+#include <platform/debug.ixx>
 
 #endif
 
@@ -104,7 +106,7 @@ namespace
 	thread_local std::atomic<const char*> terminate_reason{nullptr};
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_IMPL_NAMESPACE(gal::prometheus::error)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(platform)
 {
 	auto debug_break(const char* message) noexcept -> void
 	{

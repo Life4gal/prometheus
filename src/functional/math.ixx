@@ -18,7 +18,7 @@ export module gal.prometheus:functional.math;
 import std;
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
@@ -29,6 +29,9 @@ import :error;
 
 #include <cmath>
 #include <numbers>
+#include <numeric>
+#include <limits>
+
 #if __has_include(<intrin.h>)
 #include <intrin.h>
 #endif
@@ -41,10 +44,8 @@ import :error;
 
 #endif
 
-namespace gal::prometheus::functional
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
 	template<typename T>
 		requires std::is_arithmetic_v<T>
 	[[nodiscard]] constexpr auto is_nan(const T value) noexcept -> bool
@@ -57,7 +58,7 @@ namespace gal::prometheus::functional
 		{
 			GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
 			{
-				//
+				// ReSharper disable once CppIdenticalOperandsInBinaryExpression
 				return value != value;
 			}
 
@@ -217,64 +218,63 @@ namespace gal::prometheus::functional
 
 		return static_cast<T>(std::hypot(x, y, z));
 	}
+}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-
-	namespace math_detail
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(functional)
+{
+	template<typename T>
+	[[nodiscard]] constexpr auto tan_series_exp(const T value) noexcept -> T
 	{
-		template<typename T>
-		[[nodiscard]] constexpr auto tan_series_exp(const T value) noexcept -> T
-		{
-			const auto z = value - std::numbers::pi_v<T> / 2;
+		const auto z = value - std::numbers::pi_v<T> / 2;
 
-			if (std::numeric_limits<T>::min() > functional::abs(z)) { return std::numbers::pi_v<T> / 2; }
+		if (std::numeric_limits<T>::min() > functional::abs(z)) { return std::numbers::pi_v<T> / 2; }
 
-			// this is based on a fourth-order expansion of tan(z) using Bernoulli numbers
-			return -1 / z + (z / 3 + (functional::pow(z, 3) / 45 + (2 * functional::pow(z, 5) / 945 + functional::pow(z, 7) / 4725)));
-		}
-
-		template<typename T>
-		[[nodiscard]] constexpr auto tan_cf_recurse(const T value, const int current, const int max) noexcept -> T
-		{
-			const auto z = static_cast<T>(2 * current - 1);
-
-			if (current < max) { return z - value / tan_cf_recurse(value, current + 1, max); }
-
-			return z;
-		}
-
-		template<typename T>
-		[[nodiscard]] constexpr auto tan_cf_main(const T value) noexcept -> T
-		{
-			if (value > static_cast<T>(1.55) and value < static_cast<T>(1.6))
-			{
-				// deals with a singularity at tan(pi/2)
-				return tan_series_exp(value);
-			}
-
-			if (value > static_cast<T>(1.4)) { return value / tan_cf_recurse(value * value, 1, 45); }
-
-			if (value > static_cast<T>(1)) { return value / tan_cf_recurse(value * value, 1, 35); }
-
-			return value / tan_cf_recurse(value * value, 1, 25);
-		}
-
-		template<typename T>
-		[[nodiscard]] constexpr auto tan_begin(const T value, const int count = 0) noexcept -> T
-		{
-			if (value > std::numbers::pi_v<T>)
-			{
-				if (count > 1) { return std::numeric_limits<T>::quiet_NaN(); }
-
-				return tan_begin(value - std::numbers::pi_v<T> * functional::floor(value - std::numbers::pi_v<T>), count + 1);
-			}
-
-			return tan_cf_main(value);
-		}
+		// this is based on a fourth-order expansion of tan(z) using Bernoulli numbers
+		return -1 / z + (z / 3 + (functional::pow(z, 3) / 45 + (2 * functional::pow(z, 5) / 945 + functional::pow(z, 7) / 4725)));
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+	template<typename T>
+	[[nodiscard]] constexpr auto tan_cf_recurse(const T value, const int current, const int max) noexcept -> T
+	{
+		const auto z = static_cast<T>(2 * current - 1);
 
+		if (current < max) { return z - value / tan_cf_recurse(value, current + 1, max); }
+
+		return z;
+	}
+
+	template<typename T>
+	[[nodiscard]] constexpr auto tan_cf_main(const T value) noexcept -> T
+	{
+		if (value > static_cast<T>(1.55) and value < static_cast<T>(1.6))
+		{
+			// deals with a singularity at tan(pi/2)
+			return tan_series_exp(value);
+		}
+
+		if (value > static_cast<T>(1.4)) { return value / tan_cf_recurse(value * value, 1, 45); }
+
+		if (value > static_cast<T>(1)) { return value / tan_cf_recurse(value * value, 1, 35); }
+
+		return value / tan_cf_recurse(value * value, 1, 25);
+	}
+
+	template<typename T>
+	[[nodiscard]] constexpr auto tan_begin(const T value, const int count = 0) noexcept -> T
+	{
+		if (value > std::numbers::pi_v<T>)
+		{
+			if (count > 1) { return std::numeric_limits<T>::quiet_NaN(); }
+
+			return tan_begin(value - std::numbers::pi_v<T> * functional::floor(value - std::numbers::pi_v<T>), count + 1);
+		}
+
+		return tan_cf_main(value);
+	}
+}
+
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+{
 	template<typename T>
 		requires std::is_arithmetic_v<T>
 	[[nodiscard]] constexpr auto tan(const T value) noexcept -> T
@@ -283,9 +283,9 @@ namespace gal::prometheus::functional
 		{
 			if (functional::is_nan(value)) { return std::numeric_limits<T>::quiet_NaN(); }
 
-			if (value < static_cast<T>(0)) { return -math_detail::tan_begin(-value); }
+			if (value < static_cast<T>(0)) { return -GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::tan_begin(-value); }
 
-			return math_detail::tan_begin(value);
+			return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::tan_begin(value);
 		}
 
 		return std::tan(value);
@@ -423,6 +423,4 @@ namespace gal::prometheus::functional
 
 		return {x, y};
 	}
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }

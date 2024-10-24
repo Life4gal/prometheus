@@ -27,6 +27,7 @@ import :primitive.multidimensional;
 
 #include <type_traits>
 #include <algorithm>
+#include <format>
 
 #include <prometheus/macro.hpp>
 #include <functional/functional.ixx>
@@ -36,7 +37,7 @@ import :primitive.multidimensional;
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 {
 	enum class DirectionCategory
 	{
@@ -414,7 +415,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::primitive)
 	using basic_point_3d = basic_point<3, T>;
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
 {
 	template<std::size_t Index, std::size_t N, typename T>
 	struct

@@ -27,6 +27,8 @@ import :string;
 #pragma once
 
 #include <type_traits>
+#include <source_location>
+#include <stacktrace>
 #include <regex>
 #include <ranges>
 #include <expected>
@@ -35,14 +37,112 @@ import :string;
 #include <iterator>
 
 #include <prometheus/macro.hpp>
-#include <error/error.ixx>
+#include <platform/platform.ixx>
 #include <meta/meta.ixx>
 #include <functional/functional.ixx>
 #include <string/string.ixx>
 
 #endif
 
-namespace gal::prometheus::infrastructure
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(clp)
+{
+	class CommandLineOptionNameFormatError final : public platform::Exception<void>
+	{
+	public:
+		using Exception::Exception;
+
+		[[noreturn]] static auto panic(
+			const std::string_view option,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> void //
+		{
+			platform::panic<CommandLineOptionNameFormatError>(
+				std::format("Cannot parse `{}` as option name", option),
+				location,
+				std::move(stacktrace)
+			);
+		}
+	};
+
+	class CommandLineOptionAlreadyExistsError final : public platform::Exception<void>
+	{
+	public:
+		using Exception::Exception;
+
+		[[noreturn]] static auto panic(
+			const std::string_view option,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> void //
+		{
+			platform::panic<CommandLineOptionAlreadyExistsError>(
+				std::format("Option `{}` already exists!", option),
+				location,
+				std::move(stacktrace)
+			);
+		}
+	};
+
+	class CommandLineOptionUnrecognizedError final : public platform::Exception<void>
+	{
+	public:
+		using Exception::Exception;
+
+		[[noreturn]] static auto panic(
+			const std::string_view option,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> void //
+		{
+			platform::panic<CommandLineOptionUnrecognizedError>(
+				std::format("Unrecognized option:\n {}", option),
+				location,
+				std::move(stacktrace)
+			);
+		}
+	};
+
+	class CommandLineOptionRequiredNotPresentError final : public platform::Exception<void>
+	{
+	public:
+		using Exception::Exception;
+
+		[[noreturn]] static auto panic(
+			const std::string_view option,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> void //
+		{
+			platform::panic<CommandLineOptionRequiredNotPresentError>(
+				std::format("Required option `{}` not present", option),
+				location,
+				std::move(stacktrace)
+			);
+		}
+	};
+
+	class CommandLineOptionRequiredNotSetError final : public platform::Exception<void>
+	{
+	public:
+		using Exception::Exception;
+
+		[[noreturn]] static auto panic(
+			const std::string_view option,
+			const std::source_location& location = std::source_location::current(),
+			std::stacktrace stacktrace = std::stacktrace::current()
+		) noexcept(false) -> void //
+		{
+			platform::panic<CommandLineOptionRequiredNotSetError>(
+				std::format("Required option `{}` not set and no default value present", option),
+				location,
+				std::move(stacktrace)
+			);
+		}
+	};
+}
+
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(clp)
 {
 	using regex_char_type = char;
 
@@ -90,7 +190,7 @@ namespace gal::prometheus::infrastructure
 	// result[1] -> [arg1]
 	// result[2] -> [,     arg7]
 	constexpr std::basic_string_view<regex_char_type> pattern_list{
-			"([[:alnum:]][-_[:alnum:]\\.]*)(" LIST_SEPARATOR_CHARS "\\s*[[:alnum:]][-_[:alnum:]]*)*"};
+		"([[:alnum:]][-_[:alnum:]\\.]*)(" LIST_SEPARATOR_CHARS "\\s*[[:alnum:]][-_[:alnum:]]*)*"};
 	constexpr std::basic_string_view<regex_char_type> pattern_list_separator{LIST_SEPARATOR_CHARS "\\s*"};
 	// ReSharper restore CppTemplateArgumentsCanBeDeduced
 	// ReSharper restore StringLiteralTypo
@@ -98,105 +198,6 @@ namespace gal::prometheus::infrastructure
 	#if defined(GAL_PROMETHEUS_COMPILER_DEBUG)
 	#define GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED 1
 	#endif
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
-	class CommandLineOptionNameFormatError final : public error::Exception<void>
-	{
-	public:
-		using Exception::Exception;
-
-		[[noreturn]] static auto panic(
-			const std::string_view option,
-			const std::source_location& location = std::source_location::current(),
-			std::stacktrace stacktrace = std::stacktrace::current()
-		) noexcept(false) -> void //
-		{
-			error::panic<CommandLineOptionNameFormatError>(
-				std::format("Cannot parse `{}` as option name", option),
-				location,
-				std::move(stacktrace)
-			);
-		}
-	};
-
-	class CommandLineOptionAlreadyExistsError final : public error::Exception<void>
-	{
-	public:
-		using Exception::Exception;
-
-		[[noreturn]] static auto panic(
-			const std::string_view option,
-			const std::source_location& location = std::source_location::current(),
-			std::stacktrace stacktrace = std::stacktrace::current()
-		) noexcept(false) -> void //
-		{
-			error::panic<CommandLineOptionAlreadyExistsError>(
-				std::format("Option `{}` already exists!", option),
-				location,
-				std::move(stacktrace)
-			);
-		}
-	};
-
-	class CommandLineOptionUnrecognizedError final : public error::Exception<void>
-	{
-	public:
-		using Exception::Exception;
-
-		[[noreturn]] static auto panic(
-			const std::string_view option,
-			const std::source_location& location = std::source_location::current(),
-			std::stacktrace stacktrace = std::stacktrace::current()
-		) noexcept(false) -> void //
-		{
-			error::panic<CommandLineOptionUnrecognizedError>(
-				std::format("Unrecognized option:\n {}", option),
-				location,
-				std::move(stacktrace)
-			);
-		}
-	};
-
-	class CommandLineOptionRequiredNotPresentError final : public error::Exception<void>
-	{
-	public:
-		using Exception::Exception;
-
-		[[noreturn]] static auto panic(
-			const std::string_view option,
-			const std::source_location& location = std::source_location::current(),
-			std::stacktrace stacktrace = std::stacktrace::current()
-		) noexcept(false) -> void //
-		{
-			error::panic<CommandLineOptionRequiredNotPresentError>(
-				std::format("Required option `{}` not present", option),
-				location,
-				std::move(stacktrace)
-			);
-		}
-	};
-
-	class CommandLineOptionRequiredNotSetError final : public error::Exception<void>
-	{
-	public:
-		using Exception::Exception;
-
-		[[noreturn]] static auto panic(
-			const std::string_view option,
-			const std::source_location& location = std::source_location::current(),
-			std::stacktrace stacktrace = std::stacktrace::current()
-		) noexcept(false) -> void //
-		{
-			error::panic<CommandLineOptionRequiredNotSetError>(
-				std::format("Required option `{}` not set and no default value present", option),
-				location,
-				std::move(stacktrace)
-			);
-		}
-	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 
 	using descriptor_boolean = bool;
 
@@ -552,14 +553,16 @@ namespace gal::prometheus::infrastructure
 			requires std::is_constructible_v<T, Range>
 		[[nodiscard]] constexpr auto parse(const Range& range) noexcept(std::is_nothrow_constructible_v<T, Range>) -> T { return T{range}; }
 	}
+}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-	template<regex_string_type StringType, regex_string_type StringViewType>
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(clp)
+{
+	template<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::regex_string_type StringType, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::regex_string_type StringViewType>
 	class CommandLineOption;
-	template<regex_string_type StringType = std::basic_string<regex_char_type>>
+	template<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::regex_string_type StringType = std::basic_string<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::regex_char_type>>
 	class CommandLineOptionParser;
 
-	template<regex_string_type StringType, regex_string_type StringViewType>
+	template<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::regex_string_type StringType, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::regex_string_type StringViewType>
 	class CommandLineOption
 	{
 	public:
@@ -661,7 +664,7 @@ namespace gal::prometheus::infrastructure
 		template<typename T>
 			requires requires
 			{
-				parser::parse<T>(std::declval<string_view_type>());
+				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::parser::parse<T>(std::declval<string_view_type>());
 			}
 		[[nodiscard]] auto as() const -> std::optional<T>
 		{
@@ -669,15 +672,15 @@ namespace gal::prometheus::infrastructure
 
 			if constexpr (
 				std::is_same_v<
-					std::remove_cvref_t<decltype(parser::parse<T>(std::declval<string_view_type>()))>,
+					std::remove_cvref_t<decltype(GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::parser::parse<T>(std::declval<string_view_type>()))>,
 					T>
 			)
 			{
-				return parser::parse(current_value_);
+				return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::parser::parse(current_value_);
 			}
 			else
 			{
-				auto value = parser::parse<T>(current_value_);
+				auto value = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::parser::parse<T>(current_value_);
 				#if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
 				if (value.has_value()) { return *std::move(value); }
 
@@ -690,7 +693,7 @@ namespace gal::prometheus::infrastructure
 		}
 	};
 
-	template<regex_string_type StringType>
+	template<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::regex_string_type StringType>
 	class CommandLineOptionParser
 	{
 	public:
@@ -753,7 +756,7 @@ namespace gal::prometheus::infrastructure
 			return functional::y_combinator{
 					functional::overloaded{
 							[this](auto& self, const string_view_type option, const typename option_type::value_type value) -> auto& {
-								const auto option_names = parse_list(option);
+								const auto option_names = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::parse_list(option);
 								if (not option_names.has_value()) { CommandLineOptionNameFormatError::panic(option); }
 
 								const auto option_view = *option_names;
@@ -793,7 +796,7 @@ namespace gal::prometheus::infrastructure
 		{
 			return functional::y_combinator{
 					[this](auto& self, const string_view_type alias_name, const string_view_type target_option_name) -> auto& {
-						const auto option_names = parse_list(alias_name);
+						const auto option_names = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::parse_list(alias_name);
 						if (not option_names.has_value()) { CommandLineOptionNameFormatError::panic(alias_name); }
 
 						const auto option_view = *option_names;
@@ -891,7 +894,7 @@ namespace gal::prometheus::infrastructure
 
 		auto parse() -> void
 		{
-			parse(error::command_line_args());
+			parse(platform::command_line_args());
 		}
 
 		auto contains(const string_view_type arg_name) const -> bool { return option_list_.contains(arg_name); }
@@ -906,8 +909,6 @@ namespace gal::prometheus::infrastructure
 			return *it->second;
 		}
 	};
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
 #if defined(GAL_PROMETHEUS_INFRASTRUCTURE_COMMAND_LINE_PARSER_USE_EXPECTED)
