@@ -11,6 +11,7 @@ export module gal.prometheus:meta.member;
 
 import std;
 
+import :meta.name;
 import :meta.string;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
@@ -25,6 +26,7 @@ import :meta.string;
 #include <utility>
 
 #include <prometheus/macro.hpp>
+#include <meta/name.ixx>
 #include <meta/string.ixx>
 
 #endif

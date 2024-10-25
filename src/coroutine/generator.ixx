@@ -52,7 +52,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(coroutine)
 		std::exception_ptr exception_{nullptr};
 
 	public:
-		[[nodiscard]] constexpr auto initial_suspend() const noexcept -> std::suspend_always
+		constexpr auto initial_suspend() const noexcept -> std::suspend_always
 		{
 			(void)this;
 			return {};

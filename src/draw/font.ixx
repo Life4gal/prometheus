@@ -70,12 +70,22 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 
 		using texture_id_type = std::uintptr_t;
 
+		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+		GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+		// Variable '%1$s' is uninitialized. Always initialize a member variable (type.6).
+		GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(26495)
+		#endif
+
 		struct glyph_type
 		{
 			rect_type rect;
 			uv_type uv;
 			float advance_x;
 		};
+
+		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+		GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
+		#endif
 
 		using glyphs_type = std::unordered_map<char_type, glyph_type>;
 

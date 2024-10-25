@@ -46,9 +46,11 @@ import :chars.scalar.ascii;
 #include <algorithm>
 
 #include <prometheus/macro.hpp>
-#include <chars/encoding.ixx>
 #include <meta/meta.ixx>
+#include <memory/memory.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+#include <chars/encoding.ixx>
+#include <chars/scalar_ascii.ixx>
 
 #endif
 

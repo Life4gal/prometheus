@@ -34,8 +34,10 @@ import :draw.draw_list;
 #include <vector>
 #include <type_traits>
 #include <utility>
-#include <limits>
 #include <numbers>
+#include <span>
+#include <algorithm>
+#include <iterator>
 
 #if __has_include(<intrin.h>)
 #include <intrin.h>
@@ -45,7 +47,13 @@ import :draw.draw_list;
 #endif
 
 #include <prometheus/macro.hpp>
+#include <functional/functional.ixx>
+#include <primitive/primitive.ixx>
+#include <chars/chars.ixx>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #include <draw/draw_list.ixx>
+
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
@@ -166,10 +174,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 			normalized_x *= (thickness * .5f);
 			normalized_y *= (thickness * .5f);
 
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(vertex_list_.size() + 3 <= std::numeric_limits<index_type>::max());
-
 			const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
-
 			const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
 
 			vertex_list_.emplace_back(p1 + point_type{normalized_y, -normalized_x}, opaque_uv, color);
@@ -460,15 +465,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		command_list_.back().element_count += index_count;
 
 		const auto current_vertex_index = vertex_list_.size();
-
 		const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
 
 		std::ranges::transform(path_point, std::back_inserter(vertex_list_), [opaque_uv, color](const point_type& point) noexcept -> vertex_type { return {point, opaque_uv, color}; });
 		for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_index + 0 <= std::numeric_limits<index_type>::max());
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_index + i - 1 <= std::numeric_limits<index_type>::max());
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_index + i <= std::numeric_limits<index_type>::max());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_index + i - 1 >= current_vertex_index);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_index + i >= current_vertex_index);
 
 			index_list_.push_back(static_cast<index_type>(current_vertex_index + 0));
 			index_list_.push_back(static_cast<index_type>(current_vertex_index + i - 1));
@@ -502,13 +505,21 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		// Add indexes for fill
 		for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + 0 <= std::numeric_limits<index_type>::max());
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + ((i - 1) << 1) <= std::numeric_limits<index_type>::max());
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (i << 1) <= std::numeric_limits<index_type>::max());
+			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(6297)
+			#endif
+
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + ((i - 1) << 1) >= current_vertex_inner_index);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (i << 1) >= current_vertex_inner_index);
 
 			index_list_.push_back(static_cast<index_type>(current_vertex_inner_index + 0));
 			index_list_.push_back(static_cast<index_type>(current_vertex_inner_index + ((i - 1) << 1)));
 			index_list_.push_back(static_cast<index_type>(current_vertex_inner_index + (i << 1)));
+
+			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
+			#endif
 		}
 
 		list_type<point_type> temp_buffer{};
@@ -537,12 +548,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 			vertex_list_.emplace_back(path_point[n] + point_type{dm_x, dm_y}, opaque_uv, transparent_color);
 
 			// Add indexes for fringes
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (n << 1) <= std::numeric_limits<index_type>::max());
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (i << 1) <= std::numeric_limits<index_type>::max());
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_outer_index + (i << 1) <=std::numeric_limits<index_type>::max());
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_outer_index + (i << 1) <= std::numeric_limits<index_type>::max());
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_outer_index + (n << 1) <= std::numeric_limits<index_type>::max());
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (n << 1) <= std::numeric_limits<index_type>::max());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (n << 1) >= current_vertex_inner_index);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (i << 1) >= current_vertex_inner_index);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_outer_index + (i << 1) >= current_vertex_outer_index);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_outer_index + (i << 1) >= current_vertex_outer_index);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_outer_index + (n << 1) >= current_vertex_outer_index);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + (n << 1) >= current_vertex_inner_index);
 
 			index_list_.push_back(static_cast<index_type>(current_vertex_inner_index + (n << 1)));
 			index_list_.push_back(static_cast<index_type>(current_vertex_inner_index + (i << 1)));

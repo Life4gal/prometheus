@@ -17,6 +17,7 @@ import :primitive.multidimensional;
 import :primitive.point;
 import :primitive.extent;
 import :primitive.rect;
+import :primitive.circle;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -35,6 +36,7 @@ import :primitive.rect;
 #include <primitive/point.ixx>
 #include <primitive/extent.ixx>
 #include <primitive/rect.ixx>
+#include <primitive/circle.ixx>
 
 #endif
 

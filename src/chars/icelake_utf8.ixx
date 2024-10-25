@@ -46,10 +46,11 @@ import :chars.scalar.utf8;
 #include <algorithm>
 
 #include <prometheus/macro.hpp>
-#include <chars/encoding.ixx>
 #include <meta/meta.ixx>
 #include <memory/memory.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+#include <chars/encoding.ixx>
+#include <chars/scalar_utf8.ixx>
 
 #endif
 
@@ -78,12 +79,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 			return shuffle<I, I, I, I>(value);
 		}
 
-		// warning: ignoring attributes on template argument ‘gal::prometheus::chars::icelake_utf8_detail::data_type’ {aka ‘__m512i’} [-Wignored-attributes]
-		#if defined(GAL_PROMETHEUS_COMPILER_GNU)
 		[[nodiscard]] inline auto expand_and_identify(const data_type lane_0, const data_type lane_1, int& valid_count) noexcept -> data_type
-		#else
-		[[nodiscard]] inline auto expand_and_identify(const data_type lane_0, const data_type lane_1) noexcept -> std::pair<data_type, int>
-		#endif
 		{
 			const auto expand_ver2 = _mm512_setr_epi64(
 				0x0403'0201'0302'0100,
@@ -103,15 +99,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 			const auto t0 = _mm512_and_si512(input, v_00c0);
 			const auto leading_bytes = _mm512_cmpneq_epu32_mask(t0, v_0080);
 
-			#if defined(GAL_PROMETHEUS_COMPILER_GNU)
 			valid_count = static_cast<int>(std::popcount(leading_bytes));
 			return _mm512_mask_compress_epi32(_mm512_setzero_si512(), leading_bytes, input);
-			#else
-			return {
-				_mm512_mask_compress_epi32(_mm512_setzero_si512(), leading_bytes, input),
-				static_cast<int>(std::popcount(leading_bytes))
-			};
-			#endif
 		}
 
 		[[nodiscard]] inline auto expand_utf8_to_utf32(const data_type input, const data_type char_class) noexcept -> data_type
@@ -983,7 +972,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 					{
 						constexpr auto is_big_endian = OutputCategory == CharsCategory::UTF16_BE;
 
-						const auto process = [&it_input_current, &it_output_current, byte_flip]<bool MaskOut>(const auto remaining) noexcept -> bool
+						const auto process = [&it_input_current, &it_output_current]<bool MaskOut>(const auto remaining, const auto in_byte_flip) noexcept -> bool
 						{
 							// clang-format off
 							const auto mask_identity = _mm512_set_epi8(
@@ -1090,22 +1079,17 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 								{
 									it_input_current += remaining;
 
-									const auto in_1 = [in, byte_flip]() noexcept -> auto
+									const auto in_1 = [in]([[maybe_unused]] const auto bf) noexcept -> auto
 									{
 										if constexpr (is_big_endian)
 										{
-											return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_castsi512_si256(in)), byte_flip);
+											return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_castsi512_si256(in)), bf);
 										}
 										else
 										{
-											#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
-											// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
-											(void)byte_flip;
-											#endif
-
 											return _mm512_cvtepu8_epi16(_mm512_castsi512_si256(in));
 										}
-									}();
+									}(in_byte_flip);
 
 									if (remaining <= 32)
 									{
@@ -1114,22 +1098,17 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 									}
 									else
 									{
-										const auto in_2 = [in, byte_flip]() noexcept -> auto
+										const auto in_2 = [in]([[maybe_unused]] const auto bf) noexcept -> auto
 										{
 											if constexpr (is_big_endian)
 											{
-												return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1)), byte_flip);
+												return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1)), bf);
 											}
 											else
 											{
-												#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
-												// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
-												(void)byte_flip;
-												#endif
-
 												return _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1));
 											}
-										}();
+										}(in_byte_flip);
 
 										_mm512_storeu_si512(it_output_current, in_1);
 										it_output_current += 32;
@@ -1142,38 +1121,28 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 									// we convert a full 64-byte block, writing 128 bytes.
 									it_input_current += 64;
 
-									const auto in_1 = [in, byte_flip]() noexcept -> auto
+									const auto in_1 = [in]([[maybe_unused]] const auto bf) noexcept -> auto
 									{
 										if constexpr (is_big_endian)
 										{
-											return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_castsi512_si256(in)), byte_flip);
+											return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_castsi512_si256(in)), bf);
 										}
 										else
 										{
-											#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
-											// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
-											(void)byte_flip;
-											#endif
-
 											return _mm512_cvtepu8_epi16(_mm512_castsi512_si256(in));
 										}
-									}();
-									const auto in_2 = [in, byte_flip]() noexcept -> auto
+									}(in_byte_flip);
+									const auto in_2 = [in]([[maybe_unused]] const auto bf) noexcept -> auto
 									{
 										if constexpr (is_big_endian)
 										{
-											return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1)), byte_flip);
+											return _mm512_shuffle_epi8(_mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1)), bf);
 										}
 										else
 										{
-											#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
-											// error : lambda capture 'byte_flip' is not used [-Werror,-Wunused-lambda-capture]
-											(void)byte_flip;
-											#endif
-
 											return _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64(in, 1));
 										}
-									}();
+									}(in_byte_flip);
 
 									_mm512_storeu_si512(it_output_current, in_1);
 									it_output_current += 32;
@@ -1205,19 +1174,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 
 								// 0xf0 <= zmm0 (4 byte start bytes)
 								const auto mask_byte_4 = _mm512_cmp_epu8_mask(in, v_f0f0_f0f0, _MM_CMPINT_NLT);
-								const auto mask_not_ascii = [remaining_mask, mask_byte_1]() noexcept -> auto
+								const auto mask_not_ascii = [mask_byte_1]([[maybe_unused]] const auto rm) noexcept -> auto
 								{
-									if constexpr (MaskOut) { return _kand_mask64(_knot_mask64(mask_byte_1), remaining_mask); }
-									else
-									{
-										#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
-										// error : lambda capture 'remaining_mask' is not used [-Werror,-Wunused-lambda-capture]
-										(void)remaining_mask;
-										#endif
-
-										return _knot_mask64(mask_byte_1);
-									}
-								}();
+									if constexpr (MaskOut) { return _kand_mask64(_knot_mask64(mask_byte_1), rm); }
+									else { return _knot_mask64(mask_byte_1); }
+								}(remaining_mask);
 
 								const auto mask_pattern_1 = _kshiftli_mask64(mask_byte_234, 1);
 								const auto mask_patten_2 = _kshiftli_mask64(mask_byte_34, 2);
@@ -1239,19 +1200,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 									}
 
 									// identifying the last bytes of each sequence to be decoded
-									const auto mend = [mask_byte_1234, remaining]() noexcept -> auto
+									const auto mend = [mask_byte_1234]([[maybe_unused]] const auto r) noexcept -> auto
 									{
-										if constexpr (MaskOut) { return _kor_mask64(_kshiftri_mask64(mask_byte_1234, 1), __mmask64{1} << (remaining - 1)); }
-										else
-										{
-											#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
-											// error : lambda capture 'remaining' is not used [-Werror,-Wunused-lambda-capture]
-											(void)remaining;
-											#endif
-
-											return _kshiftri_mask64(mask_byte_1234, 1);
-										}
-									}();
+										if constexpr (MaskOut) { return _kor_mask64(_kshiftri_mask64(mask_byte_1234, 1), __mmask64{1} << (r - 1)); }
+										else { return _kshiftri_mask64(mask_byte_1234, 1); }
+									}(remaining);
 
 									const auto last_and_third = _mm512_maskz_compress_epi8(mend, mask_identity);
 									const auto last_and_third_u16 = _mm512_cvtepu8_epi16(_mm512_castsi512_si256(last_and_third));
@@ -1279,9 +1232,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 									const auto third_last_bytes = _mm512_slli_epi16(
 										// the third last bytes (of three byte sequences, high surrogate)
 										_mm512_maskz_permutexvar_epi8(0x5555'5555'5555'5555,
-											                            index_of_third_last_bytes,
-											                            // only those that are the third last byte of a sequence
-											                            _mm512_maskz_mov_epi8(mask_byte_34, cleared_bytes)),
+										                              index_of_third_last_bytes,
+										                              // only those that are the third last byte of a sequence
+										                              _mm512_maskz_mov_epi8(mask_byte_34, cleared_bytes)),
 										12);
 
 									// the elements of out excluding the last element if it happens to be a high surrogate
@@ -1315,7 +1268,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 
 									if constexpr (is_big_endian)
 									{
-										_mm512_mask_storeu_epi16(it_output_current, static_cast<__mmask32>((__mmask64{1} << num_out) - 1), _mm512_shuffle_epi8(out, byte_flip));
+										_mm512_mask_storeu_epi16(it_output_current, static_cast<__mmask32>((__mmask64{1} << num_out) - 1), _mm512_shuffle_epi8(out, in_byte_flip));
 									}
 									else { _mm512_mask_storeu_epi16(it_output_current, static_cast<__mmask32>((__mmask64{1} << num_out) - 1), out); }
 
@@ -1331,24 +1284,19 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 								const auto mask_byte_1234 = _kor_mask64(mask_byte_1, mask_byte_234);
 
 								// identifying the last bytes of each sequence to be decoded
-								const auto mend = [mask_byte_1234, mask_pattern_3, remaining]() noexcept -> auto
+								const auto mend = [mask_byte_1234, mask_pattern_3]([[maybe_unused]] const auto r) noexcept -> auto
 								{
 									if constexpr (MaskOut)
 									{
 										return _kor_mask64(
 											_kor_mask64(_kshiftri_mask64(_kor_mask64(mask_pattern_3, mask_byte_1234), 1), mask_pattern_3),
-											__mmask64{1} << (remaining - 1));
+											__mmask64{1} << (r - 1));
 									}
 									else
 									{
-										#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
-										// error : lambda capture 'remaining' is not used [-Werror,-Wunused-lambda-capture]
-										(void)remaining;
-										#endif
-
 										return _kor_mask64(_kshiftri_mask64(_kor_mask64(mask_pattern_3, mask_byte_1234), 1), mask_pattern_3);
 									}
-								}();
+								}(remaining);
 
 								const auto last_and_third = _mm512_maskz_compress_epi8(mend, mask_identity);
 								const auto last_and_third_u16 = _mm512_cvtepu8_epi16(_mm512_castsi512_si256(last_and_third));
@@ -1421,19 +1369,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 								}
 
 								// we adjust mend at the end of the output.
-								const auto mask_processed = [m = ~(mask_mp3_high & 0x8000'0000), mend, remaining_mask]() noexcept -> auto
+								const auto mask_processed = [m = ~(mask_mp3_high & 0x8000'0000), mend]([[maybe_unused]] const auto rm) noexcept -> auto
 								{
-									if constexpr (MaskOut) { return _pdep_u64(m, _kand_mask64(mend, remaining_mask)); }
-									else
-									{
-										#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
-										// error : lambda capture 'remaining_mask' is not used [-Werror,-Wunused-lambda-capture]
-										(void)remaining_mask;
-										#endif
-
-										return _pdep_u64(m, mend);
-									}
-								}();
+									if constexpr (MaskOut) { return _pdep_u64(m, _kand_mask64(mend, rm)); }
+									else { return _pdep_u64(m, mend); }
+								}(remaining_mask);
 
 								const auto num_out = std::popcount(mask_processed);
 
@@ -1442,7 +1382,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 									_mm512_mask_storeu_epi16(
 										it_output_current,
 										(__mmask32{1} << num_out) - 1,
-										_mm512_shuffle_epi8(out, byte_flip)
+										_mm512_shuffle_epi8(out, in_byte_flip)
 									);
 								}
 								else { _mm512_mask_storeu_epi16(it_output_current, (__mmask32{1} << num_out) - 1, out); }
@@ -1453,35 +1393,19 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 							}
 
 							// all ASCII or 2 byte
-							const auto continuation_or_ascii = [mask_byte_234, remaining_mask]() noexcept -> auto
+							const auto continuation_or_ascii = [mask_byte_234]([[maybe_unused]] const auto rm) noexcept -> auto
 							{
-								if constexpr (MaskOut) { return _kand_mask64(_knot_mask64(mask_byte_234), remaining_mask); }
-								else
-								{
-									#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
-									// error : lambda capture 'remaining_mask' is not used [-Werror,-Wunused-lambda-capture]
-									(void)remaining_mask;
-									#endif
-
-									return _knot_mask64(mask_byte_234);
-								}
-							}();
+								if constexpr (MaskOut) { return _kand_mask64(_knot_mask64(mask_byte_234), rm); }
+								else { return _knot_mask64(mask_byte_234); }
+							}(remaining_mask);
 
 							// on top of -0xc0 we subtract -2 which we get back later of the continuation byte tags
 							const auto leading_two_bytes = _mm512_maskz_sub_epi8(mask_byte_234, in, v_c2c2_c2c2);
-							const auto leading_mask = [mask_byte_1, mask_byte_234, remaining_mask]() noexcept -> auto
+							const auto leading_mask = [mask_byte_1, mask_byte_234]([[maybe_unused]] const auto rm) noexcept -> auto
 							{
-								if constexpr (MaskOut) { return _kand_mask64(_kor_mask64(mask_byte_1, mask_byte_234), remaining_mask); }
-								else
-								{
-									#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
-									// error : lambda capture 'remaining_mask' is not used [-Werror,-Wunused-lambda-capture]
-									(void)remaining_mask;
-									#endif
-
-									return _kor_mask64(mask_byte_1, mask_byte_234);
-								}
-							}();
+								if constexpr (MaskOut) { return _kand_mask64(_kor_mask64(mask_byte_1, mask_byte_234), rm); }
+								else { return _kor_mask64(mask_byte_1, mask_byte_234); }
+							}(remaining_mask);
 
 							if constexpr (MaskOut)
 							{
@@ -1520,7 +1444,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 
 								const auto follow = _mm512_cvtepu8_epi16(_mm512_castsi512_si256(_mm512_maskz_compress_epi8(continuation_or_ascii, in)));
 
-								if constexpr (is_big_endian) { return _mm512_shuffle_epi8(_mm512_add_epi16(follow, lead), byte_flip); }
+								if constexpr (is_big_endian) { return _mm512_shuffle_epi8(_mm512_add_epi16(follow, lead), in_byte_flip); }
 								else { return _mm512_add_epi16(follow, lead); }
 							}();
 
@@ -1547,11 +1471,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 						{
 							if (it_input_current + 64 <= it_input_end)
 							{
-								success = process.template operator()<false>(it_input_end - it_input_current);
+								success = process.template operator()<false>(it_input_end - it_input_current, byte_flip);
 							}
 							else if (it_input_current < it_input_end)
 							{
-								success = process.template operator()<true>(it_input_end - it_input_current);
+								success = process.template operator()<true>(it_input_end - it_input_current, byte_flip);
 							}
 							else { break; }
 						}
@@ -1576,7 +1500,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 					else if constexpr (OutputCategory == CharsCategory::UTF32)
 					{
 						avx512_utf8_checker checker{};
-							const auto process = [&it_input_current, it_input_end, &it_output_current, byte_flip, &checker]() noexcept -> bool
+						const auto process = [&it_input_current, it_input_end, &it_output_current, &checker](const auto in_byte_flip) noexcept -> bool
 						{
 							// In the main loop, we consume 64 bytes per iteration, but we access 64 + 4 bytes.
 							// We check for it_input_current + 64 + 64 <= it_input_end because
@@ -1586,7 +1510,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 								const auto in = _mm512_loadu_si512(it_input_current);
 								if (checker.check_input(in))
 								{
-									it_output_current += icelake_utf8_detail::store_ascii<OutputCategory>(in, byte_flip, it_output_current);
+									it_output_current += icelake_utf8_detail::store_ascii<OutputCategory>(in, in_byte_flip, it_output_current);
 									it_input_current += 64;
 									continue;
 								}
@@ -1599,15 +1523,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 								const auto lane_3 = icelake_utf8_detail::broadcast<3>(in);
 								const auto lane_4 = _mm512_set1_epi32(static_cast<int>(memory::unaligned_load<std::uint32_t>(it_input_current + 64)));
 
-								#if defined(GAL_PROMETHEUS_COMPILER_GNU)
-								int valid_count_0 = 0;
+								int valid_count_0 = -1;
 								auto vec_0 = icelake_utf8_detail::expand_and_identify(lane_0, lane_1, valid_count_0);
-								int valid_count_1 = 0;
-								auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);// NOLINT(readability-suspicious-call-argument)
-								#else
-								auto [vec_0, valid_count_0] = icelake_utf8_detail::expand_and_identify(lane_0, lane_1);
-								auto [vec_1, valid_count_1] = icelake_utf8_detail::expand_and_identify(lane_1, lane_2); // NOLINT(readability-suspicious-call-argument)
-								#endif
+								GAL_PROMETHEUS_ERROR_ASSUME(valid_count_0 != -1);
+								int valid_count_1 = -1;
+								auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);
+								GAL_PROMETHEUS_ERROR_ASSUME(valid_count_1 != -1);
 
 								if (valid_count_0 + valid_count_1 <= 16)
 								{
@@ -1621,7 +1542,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 
 									it_output_current += icelake_utf8_detail::store_utf16_or_utf32<OutputCategory, false>(
 										vec_0,
-										byte_flip,
+										in_byte_flip,
 										valid_count_0,
 										it_output_current
 									);
@@ -1633,27 +1554,24 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 
 									it_output_current += icelake_utf8_detail::store_utf16_or_utf32<OutputCategory, false>(
 										vec_0,
-										byte_flip,
+										in_byte_flip,
 										valid_count_0,
 										it_output_current
 									);
 									it_output_current += icelake_utf8_detail::store_utf16_or_utf32<OutputCategory, false>(
 										vec_1,
-										byte_flip,
+										in_byte_flip,
 										valid_count_1,
 										it_output_current
 									);
 								}
 
-								#if defined(GAL_PROMETHEUS_COMPILER_GNU)
-								int valid_count_2 = 0;
+								int valid_count_2 = -1;
 								auto vec_2 = icelake_utf8_detail::expand_and_identify(lane_2, lane_3, valid_count_2);
-								int valid_count_3 = 0;
+								GAL_PROMETHEUS_ERROR_ASSUME(valid_count_2 != -1);
+								int valid_count_3 = -1;
 								auto vec_3 = icelake_utf8_detail::expand_and_identify(lane_3, lane_4, valid_count_3);
-								#else
-								auto [vec_2, valid_count_2] = icelake_utf8_detail::expand_and_identify(lane_2, lane_3);
-								auto [vec_3, valid_count_3] = icelake_utf8_detail::expand_and_identify(lane_3, lane_4);
-								#endif
+								GAL_PROMETHEUS_ERROR_ASSUME(valid_count_3 != -1);
 
 								if (valid_count_2 + valid_count_3 <= 16)
 								{
@@ -1667,7 +1585,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 
 									it_output_current += icelake_utf8_detail::store_utf16_or_utf32<OutputCategory, false>(
 										vec_2,
-										byte_flip,
+										in_byte_flip,
 										valid_count_2,
 										it_output_current
 									);
@@ -1679,13 +1597,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 
 									it_output_current += icelake_utf8_detail::store_utf16_or_utf32<OutputCategory, false>(
 										vec_2,
-										byte_flip,
+										in_byte_flip,
 										valid_count_2,
 										it_output_current
 									);
 									it_output_current += icelake_utf8_detail::store_utf16_or_utf32<OutputCategory, false>(
 										vec_3,
-										byte_flip,
+										in_byte_flip,
 										valid_count_3,
 										it_output_current
 									);
@@ -1704,7 +1622,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 								if (const auto in = _mm512_loadu_si512(it_input_current);
 									checker.check_input(in))
 								{
-									it_output_current += icelake_utf8_detail::store_ascii<OutputCategory>(in, byte_flip, it_output_current);
+									it_output_current += icelake_utf8_detail::store_ascii<OutputCategory>(in, in_byte_flip, it_output_current);
 									it_input_current += 64;
 								}
 								else if (checker.has_error()) { return false; }
@@ -1715,15 +1633,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 									const auto lane_2 = icelake_utf8_detail::broadcast<2>(in);
 									const auto lane_3 = icelake_utf8_detail::broadcast<3>(in);
 
-									#if defined(GAL_PROMETHEUS_COMPILER_GNU)
-									int valid_count_0 = 0;
+									int valid_count_0 = -1;
 									auto vec_0 = icelake_utf8_detail::expand_and_identify(lane_0, lane_1, valid_count_0);
-									int valid_count_1 = 0;
-									auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);// NOLINT(readability-suspicious-call-argument)
-									#else
-									auto [vec_0, valid_count_0] = icelake_utf8_detail::expand_and_identify(lane_0, lane_1);
-									auto [vec_1, valid_count_1] = icelake_utf8_detail::expand_and_identify(lane_1, lane_2); // NOLINT(readability-suspicious-call-argument)
-									#endif
+									GAL_PROMETHEUS_ERROR_ASSUME(valid_count_0 != -1);
+									int valid_count_1 = -1;
+									auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);
+									GAL_PROMETHEUS_ERROR_ASSUME(valid_count_1 != -1);
 
 									if (valid_count_0 + valid_count_1 <= 16)
 									{
@@ -1737,7 +1652,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 
 										it_output_current += icelake_utf8_detail::store_utf16_or_utf32<OutputCategory, true>(
 											vec_0,
-											byte_flip,
+											in_byte_flip,
 											valid_count_0,
 											it_output_current
 										);
@@ -1749,19 +1664,19 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 
 										it_output_current += icelake_utf8_detail::store_utf16_or_utf32<OutputCategory, true>(
 											vec_0,
-											byte_flip,
+											in_byte_flip,
 											valid_count_0,
 											it_output_current
 										);
 										it_output_current += icelake_utf8_detail::store_utf16_or_utf32<OutputCategory, true>(
 											vec_1,
-											byte_flip,
+											in_byte_flip,
 											valid_count_1,
 											it_output_current
 										);
 									}
 
-									it_output_current += icelake_utf8_detail::transcode_16<OutputCategory, true>(lane_2, lane_3, byte_flip, it_output_current);
+									it_output_current += icelake_utf8_detail::transcode_16<OutputCategory, true>(lane_2, lane_3, in_byte_flip, it_output_current);
 									it_input_current += 3 * 16;
 								}
 								it_valid_input_current += 4 * 16;
@@ -1779,7 +1694,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 						};
 
 						if (
-							const auto success = process();
+							const auto success = process(byte_flip);
 							not success
 						)
 						{
@@ -1841,15 +1756,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 						const auto lane_3 = icelake_utf8_detail::broadcast<3>(in);
 						const auto lane_4 = _mm512_set1_epi32(static_cast<int>(memory::unaligned_load<std::uint32_t>(it_input_current + 64)));
 
-						#if defined(GAL_PROMETHEUS_COMPILER_GNU)
-						int valid_count_0 = 0;
+						int valid_count_0 = -1;
 						auto vec_0 = icelake_utf8_detail::expand_and_identify(lane_0, lane_1, valid_count_0);
-						int valid_count_1 = 0;
-						auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);// NOLINT(readability-suspicious-call-argument)
-						#else
-						auto [vec_0, valid_count_0] = icelake_utf8_detail::expand_and_identify(lane_0, lane_1);
-						auto [vec_1, valid_count_1] = icelake_utf8_detail::expand_and_identify(lane_1, lane_2); // NOLINT(readability-suspicious-call-argument)
-						#endif
+						GAL_PROMETHEUS_ERROR_ASSUME(valid_count_0 != -1);
+						int valid_count_1 = -1;
+						auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);
+						GAL_PROMETHEUS_ERROR_ASSUME(valid_count_1 != -1);
 
 						if (valid_count_0 + valid_count_1 <= 16)
 						{
@@ -1887,15 +1799,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 							);
 						}
 
-						#if defined(GAL_PROMETHEUS_COMPILER_GNU)
-						int valid_count_2 = 0;
+						int valid_count_2 = -1;
 						auto vec_2 = icelake_utf8_detail::expand_and_identify(lane_2, lane_3, valid_count_2);
-						int valid_count_3 = 0;
+						GAL_PROMETHEUS_ERROR_ASSUME(valid_count_2 != -1);
+						int valid_count_3 = -1;
 						auto vec_3 = icelake_utf8_detail::expand_and_identify(lane_3, lane_4, valid_count_3);
-						#else
-						auto [vec_2, valid_count_2] = icelake_utf8_detail::expand_and_identify(lane_2, lane_3);
-						auto [vec_3, valid_count_3] = icelake_utf8_detail::expand_and_identify(lane_3, lane_4);
-						#endif
+						GAL_PROMETHEUS_ERROR_ASSUME(valid_count_3 != -1);
 
 						if (valid_count_2 + valid_count_3 <= 16)
 						{
@@ -1953,15 +1862,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 							const auto lane_2 = icelake_utf8_detail::broadcast<2>(in);
 							const auto lane_3 = icelake_utf8_detail::broadcast<3>(in);
 
-							#if defined(GAL_PROMETHEUS_COMPILER_GNU)
-							int valid_count_0 = 0;
+							int valid_count_0 = -1;
 							auto vec_0 = icelake_utf8_detail::expand_and_identify(lane_0, lane_1, valid_count_0);
-							int valid_count_1 = 0;
-							auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);// NOLINT(readability-suspicious-call-argument)
-							#else
-							auto [vec_0, valid_count_0] = icelake_utf8_detail::expand_and_identify(lane_0, lane_1);
-							auto [vec_1, valid_count_1] = icelake_utf8_detail::expand_and_identify(lane_1, lane_2); // NOLINT(readability-suspicious-call-argument)
-							#endif
+							GAL_PROMETHEUS_ERROR_ASSUME(valid_count_0 != -1);
+							int valid_count_1 = -1;
+							auto vec_1 = icelake_utf8_detail::expand_and_identify(lane_1, lane_2, valid_count_1);
+							GAL_PROMETHEUS_ERROR_ASSUME(valid_count_1 != -1);
 
 							if (valid_count_0 + valid_count_1 <= 16)
 							{

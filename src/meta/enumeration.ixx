@@ -378,11 +378,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(meta)
 	}
 
 	template<
-			typename EnumType,
-			std::underlying_type_t<EnumType> Min = user_defined::enum_range<EnumType>::min,
-			std::underlying_type_t<EnumType> Max = user_defined::enum_range<EnumType>::max,
-			std::size_t StrideShift = 5,
-			bool Found = false
+		typename EnumType,
+		std::underlying_type_t<EnumType> Min = user_defined::enum_range<EnumType>::min,
+		std::underlying_type_t<EnumType> Max = user_defined::enum_range<EnumType>::max,
+		std::size_t StrideShift = 5,
+		bool Found = false
 	>
 	[[nodiscard]] constexpr auto enum_value_min() noexcept -> std::underlying_type_t<EnumType>
 	{
@@ -447,11 +447,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(meta)
 	}
 
 	template<
-			typename EnumType,
-			std::underlying_type_t<EnumType> Min = user_defined::enum_range<EnumType>::min,
-			std::underlying_type_t<EnumType> Max = user_defined::enum_range<EnumType>::max,
-			std::size_t StrideShift = 5,
-			bool Found = false
+		typename EnumType,
+		std::underlying_type_t<EnumType> Min = user_defined::enum_range<EnumType>::min,
+		std::underlying_type_t<EnumType> Max = user_defined::enum_range<EnumType>::max,
+		std::size_t StrideShift = 5,
+		bool Found = false
 	>
 		requires(StrideShift <= 5)
 	[[nodiscard]] constexpr auto enum_value_max() noexcept -> std::underlying_type_t<EnumType>
@@ -585,15 +585,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(meta)
 		{
 			return //
 					return_type{
-						//
-						typename return_type::value_type{
 							//
-							flag_dynamic_enum_values<EnumType>()[Index],
-							trim_full_name<EnumType, Policy>(
-								name_of<static_cast<EnumType>(flag_dynamic_enum_values<EnumType>()[Index])>()
-							)
-					}...
-			};
+							typename return_type::value_type{
+									//
+									flag_dynamic_enum_values<EnumType>()[Index],
+									trim_full_name<EnumType, Policy>(
+										name_of<static_cast<EnumType>(flag_dynamic_enum_values<EnumType>()[Index])>()
+									)
+							}...
+					};
 		}(std::make_index_sequence<size>{});
 	}
 
@@ -615,13 +615,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(meta)
 		{
 			return //
 			{
-				//
-				typename return_type::value_type{
-					static_cast<EnumType>(min + Index),
-					trim_full_name<EnumType, Policy>(
-						name_of<static_cast<EnumType>(min + Index)>()
-					)
-				}...
+					//
+					typename return_type::value_type{
+							static_cast<EnumType>(min + Index),
+							trim_full_name<EnumType, Policy>(
+								name_of<static_cast<EnumType>(min + Index)>()
+							)
+					}...
 			};
 		}(std::make_index_sequence<size>{});
 	}
@@ -890,11 +890,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
 	{
 		constexpr auto list = names_of<EnumType, Policy>();
 
+		// error C2662: `const std::ranges::split_view<std::basic_string_view<char,std::char_traits<char>>,std::basic_string_view<char,std::char_traits<char>>>` => `std::ranges::split_view<std::basic_string_view<char,std::char_traits<char>>,std::basic_string_view<char,std::char_traits<char>>> &`
 		// ReSharper disable once CppLocalVariableMayBeConst
 		auto names = enum_name | std::views::split(split);
 		auto result = std::to_underlying(empty);
 
-		for (const auto each: names)
+		for (const auto& each: names)
 		{
 			const std::string_view s{each};
 

@@ -90,6 +90,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 
 		using size_type = std::size_t;
 
+		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+		GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+		// Variable '%1$s' is uninitialized. Always initialize a member variable (type.6).
+		GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(26495)
+		#endif
+
 		struct command_type
 		{
 			rect_type clip_rect;
@@ -105,6 +111,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 			// number of indices (multiple of 3) to be rendered as triangles
 			size_type element_count;
 		};
+
+		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+		GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
+		#endif
 
 		using command_list_type = list_type<command_type>;
 		using vertex_list_type = list_type<vertex_type>;
