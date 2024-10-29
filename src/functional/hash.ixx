@@ -29,8 +29,11 @@ import std;
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 {
 	using hash_result_type = std::uint64_t;
+}
 
-	template<typename T, typename Hash = std::hash<T>>
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(functional)
+{
+	template<typename T, typename Hash>
 	struct hash
 	{
 		using value_type = T;
@@ -96,6 +99,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 			return hash_type{}(pointer);
 		}
 	};
+}
+
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+{
+	template<typename T, typename Hash = std::hash<T>>
+	constexpr auto hash = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::hash<T, Hash>{};
 
 	[[nodiscard]] constexpr auto hash_combine_2(const hash_result_type hash1, const hash_result_type hash2) noexcept -> hash_result_type
 	{
@@ -106,20 +115,20 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 	template<typename First, typename Second, typename... Reset>
 	[[nodiscard]] constexpr auto hash_combine(First&& first, Second&& second, Reset&&... reset) noexcept -> hash_result_type requires requires
 	{
-		hash<std::remove_cvref_t<First>>{};
-		hash<std::remove_cvref_t<Second>>{};
-		(hash<std::remove_cvref_t<Reset>>{}, ...);
+		hash<std::remove_cvref_t<First>>;
+		hash<std::remove_cvref_t<Second>>;
+		(hash<std::remove_cvref_t<Reset>>, ...);
 	}
 	{
 		if constexpr (sizeof...(Reset) == 0)
 		{
-			const auto hash1 = hash<std::remove_cvref_t<First>>{}(std::forward<First>(first));
-			const auto hash2 = hash<std::remove_cvref_t<Second>>{}(std::forward<Second>(second));
+			const auto hash1 = hash<std::remove_cvref_t<First>>(std::forward<First>(first));
+			const auto hash2 = hash<std::remove_cvref_t<Second>>(std::forward<Second>(second));
 			return hash_combine_2(hash1, hash2);
 		}
 		else
 		{
-			const auto hash1 = hash<std::remove_cvref_t<First>>{}(std::forward<First>(first));
+			const auto hash1 = hash<std::remove_cvref_t<First>>(std::forward<First>(first));
 			const auto hash2 = hash_combine(std::forward<Second>(second), std::forward<Reset>(reset)...);
 			return hash_combine_2(hash1, hash2);
 		}
