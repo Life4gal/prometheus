@@ -30,7 +30,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		NONE = 0,
 
 		BORDERED = 1 << 0,
-		NO_TITLE = 1 << 1,
+		NO_TITLE_BAR = 1 << 1,
 		NO_RESIZE = 1 << 2,
 		NO_MOVE = 1 << 3,
 	};

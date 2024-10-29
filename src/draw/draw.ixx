@@ -9,17 +9,9 @@ export module gal.prometheus:draw;
 
 export import :draw.font;
 export import :draw.draw_list;
+export import :draw.theme;
 export import :draw.window;
-
-// export import :widgets;
-
-// export import :surface;
-// export import :style;
-//
-// export import :options;
-//
-// export import :element;
-// export import :component;
+export import :draw.context;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -29,16 +21,8 @@ export import :draw.window;
 
 #include <draw/font.ixx>
 #include <draw/draw_list.ixx>
+#include <draw/theme.ixx>
 #include <draw/window.ixx>
-
-// #include <draw/widgets.ixx>
-
-// #include <draw/surface.ixx>
-// #include <draw/style.ixx>
-//
-// #include <draw/detail/options.ixx>
-//
-// #include <draw/element.ixx>
-// #include <draw/component.ixx>
+#include <draw/context.ixx>
 
 #endif

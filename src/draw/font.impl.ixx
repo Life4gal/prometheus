@@ -20,7 +20,10 @@ export module gal.prometheus:draw.font.impl;
 
 import std;
 
+import :chars;
+
 import :draw.font;
+import :draw.draw_list;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -44,7 +47,9 @@ import :draw.font;
 #include <stb_rect_pack.h>
 
 #include <prometheus/macro.hpp>
+#include <chars/chars.ixx>
 #include <draw/font.ixx>
+#include <draw/draw_list.ixx>
 
 #endif
 
@@ -477,5 +482,160 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 	[[nodiscard]] auto Font::load(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_views_type glyph_ranges) noexcept -> texture_type
 	{
 		return loader{}(*this, font_path, pixel_height, glyph_ranges);
+	}
+
+	auto Font::text_size(
+		const std::string_view utf8_text,
+		const float font_size,
+		const float wrap_width,
+		std::basic_string<char_type>& out_text
+	) const noexcept -> DrawListSharedData::extent_type
+	{
+		const auto utf32_text = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(utf8_text);
+
+		const auto line_height = font_size;
+		const auto scale = line_height / pixel_height_;
+		const auto& glyphs = glyphs_;
+		const auto& fallback_glyph = fallback_glyph_;
+
+		float max_width = 0;
+		float current_width = 0;
+		float total_height = 0;
+
+		auto it_input_current = utf32_text.begin();
+		const auto it_input_end = utf32_text.end();
+
+		while (it_input_current != it_input_end)
+		{
+			const auto this_char = *it_input_current;
+			it_input_current += 1;
+
+			if (this_char == U'\n')
+			{
+				max_width = std::ranges::max(max_width, current_width);
+				current_width = 0;
+				total_height += line_height;
+			}
+			else
+			{
+				const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&glyphs, &fallback_glyph](const auto c) -> const auto& {
+					if (const auto it = glyphs.find(c);
+						it != glyphs.end())
+					{
+						return it->second;
+					}
+
+					return fallback_glyph;
+				}(this_char);
+
+				const auto advance_x = glyph_advance_x * scale;
+				if (current_width + advance_x > wrap_width)
+				{
+					max_width = std::ranges::max(max_width, current_width);
+					current_width = advance_x;
+					total_height += line_height;
+				}
+				else
+				{
+					current_width += advance_x;
+				}
+			}
+		}
+
+		max_width = std::ranges::max(max_width, current_width);
+		out_text = std::move(utf32_text);
+
+		return {max_width, total_height};
+	}
+
+	auto Font::text_size(
+		const std::string_view utf8_text,
+		const float font_size,
+		const float wrap_width
+	) const noexcept -> DrawListSharedData::extent_type
+	{
+		std::basic_string<char_type> out;
+		return text_size(utf8_text, font_size, wrap_width, out);
+	}
+
+	auto Font::draw_text(
+		DrawList& draw_list,
+		const float font_size,
+		const DrawListSharedData::point_type& p,
+		const DrawListSharedData::color_type& color,
+		const std::string_view utf8_text,
+		const float wrap_width
+	) const noexcept -> void
+	{
+		const auto utf32_text = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(utf8_text);
+
+		const auto vertex_count = 4 * utf32_text.size();
+		const auto index_count = 6 * utf32_text.size();
+		draw_list.vertex_list_.reserve(draw_list.vertex_list_.size() + vertex_count);
+		draw_list.index_list_.reserve(draw_list.index_list_.size() + index_count);
+
+		draw_list.command_list_.back().element_count += index_count;
+
+		const auto line_height = font_size;
+		const auto scale = line_height / pixel_height_;
+		const auto& glyphs = glyphs_;
+		const auto& fallback_glyph = fallback_glyph_;
+
+		auto cursor = p + DrawListSharedData::point_type{0, font_size};
+
+		auto it_input_current = utf32_text.begin();
+		const auto it_input_end = utf32_text.end();
+
+		while (it_input_current != it_input_end)
+		{
+			const auto this_char = *it_input_current;
+			it_input_current += 1;
+
+			if (this_char == U'\n')
+			{
+				cursor.x = p.x;
+				cursor.y += line_height;
+				draw_list.command_list_.back().element_count -= 6;
+				continue;
+			}
+
+			const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&glyphs, &fallback_glyph](const auto c) -> const auto& {
+				if (const auto it = glyphs.find(c);
+					it != glyphs.end())
+				{
+					return it->second;
+				}
+
+				return fallback_glyph;
+			}(this_char);
+
+			const auto advance_x = glyph_advance_x * scale;
+			if (cursor.x + advance_x > wrap_width)
+			{
+				cursor.x = p.x;
+				cursor.y += line_height;
+			}
+
+			const DrawListSharedData::rect_type char_rect
+			{
+					cursor + DrawListSharedData::point_type{static_cast<DrawListSharedData::point_type::value_type>(glyph_rect.left_top().x), -static_cast<DrawListSharedData::point_type::value_type>(glyph_rect.left_top().y)} * scale,
+					static_cast<DrawListSharedData::rect_type::extent_type>(glyph_rect.size()) * scale
+			};
+			cursor.x += advance_x;
+
+			const auto current_vertex_index = static_cast<DrawListSharedData::index_type>(draw_list.vertex_list_.size());
+
+			draw_list.vertex_list_.emplace_back(char_rect.left_top(), glyph_uv.left_top(), color);
+			draw_list.vertex_list_.emplace_back(char_rect.right_top(), glyph_uv.right_top(), color);
+			draw_list.vertex_list_.emplace_back(char_rect.right_bottom(), glyph_uv.right_bottom(), color);
+			draw_list.vertex_list_.emplace_back(char_rect.left_bottom(), glyph_uv.left_bottom(), color);
+
+			draw_list.index_list_.push_back(current_vertex_index + 0);
+			draw_list.index_list_.push_back(current_vertex_index + 1);
+			draw_list.index_list_.push_back(current_vertex_index + 2);
+			draw_list.index_list_.push_back(current_vertex_index + 0);
+			draw_list.index_list_.push_back(current_vertex_index + 2);
+			draw_list.index_list_.push_back(current_vertex_index + 3);
+		}
 	}
 }

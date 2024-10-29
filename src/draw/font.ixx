@@ -13,6 +13,8 @@ import std;
 
 import :primitive;
 
+import :draw.draw_list.shared_data;
+
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #if not GAL_PROMETHEUS_USE_MODULE
@@ -28,6 +30,7 @@ import :primitive;
 
 #include <prometheus/macro.hpp>
 #include <primitive/primitive.ixx>
+#include <draw/draw_list.shared_data.ixx>
 
 #endif
 
@@ -55,6 +58,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 	// Latin + Half-Width + Japanese Hiragana/Katakana + full set of about 21000 CJK Unified Ideographs
 	[[nodiscard]] auto glyph_range_simplified_chinese_all() noexcept -> glyph_range_view_type;
 
+	class DrawList;
+
 	class Font final
 	{
 	public:
@@ -62,9 +67,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		using point_type = rect_type::point_type;
 		using extent_type = rect_type::extent_type;
 
-		using uv_type = primitive::basic_rect_2d<float>;
-		using uv_point_type = uv_type::point_type;
-		using uv_extent_type = uv_type::extent_type;
+		using uv_rect_type = primitive::basic_rect_2d<float>;
+		using uv_point_type = uv_rect_type::point_type;
+		using uv_extent_type = uv_rect_type::extent_type;
 
 		using char_type = char32_t;
 
@@ -79,7 +84,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		struct glyph_type
 		{
 			rect_type rect;
-			uv_type uv;
+			uv_rect_type uv;
 			float advance_x;
 		};
 
@@ -99,7 +104,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 			texture_id_type& id;
 		};
 
-		using baked_line_uv_type = std::vector<uv_type>;
+		using baked_line_uv_type = std::vector<uv_rect_type>;
 
 	private:
 		struct loader;
@@ -182,8 +187,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 
 		constexpr auto set_baked_line_max_width(const int width) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width > 0);
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not loaded());
+			// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width > 0);
+			// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not loaded());
 
 			baked_line_max_width_ = width;
 		}
@@ -193,5 +198,30 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		[[nodiscard]] auto load(std::string_view font_path, std::uint32_t pixel_height, glyph_ranges_view_type glyph_ranges) noexcept -> texture_type;
 
 		[[nodiscard]] auto load(std::string_view font_path, std::uint32_t pixel_height, glyph_range_views_type glyph_ranges) noexcept -> texture_type;
+
+		// =========================================
+		// DRAW TEXT
+
+		[[nodiscard]] auto text_size(
+			std::string_view utf8_text,
+			float font_size,
+			float wrap_width,
+			std::basic_string<char_type>& out_text
+		) const noexcept -> DrawListSharedData::extent_type;
+
+		[[nodiscard]] auto text_size(
+			std::string_view utf8_text,
+			float font_size,
+			float wrap_width
+		) const noexcept -> DrawListSharedData::extent_type;
+
+		auto draw_text(
+			DrawList& draw_list,
+			float font_size,
+			const DrawListSharedData::point_type& p,
+			const DrawListSharedData::color_type& color,
+			std::string_view utf8_text,
+			float wrap_width
+		) const noexcept -> void;
 	};
 }

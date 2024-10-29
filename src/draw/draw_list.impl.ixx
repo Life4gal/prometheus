@@ -7,6 +7,14 @@
 
 #include <prometheus/macro.hpp>
 
+#if not defined(GAL_PROMETHEUS_DRAW_LIST_DEBUG)
+#if defined(DEBUG) or defined(_DEBUG)
+#define GAL_PROMETHEUS_DRAW_LIST_DEBUG 1
+#else
+#define GAL_PROMETHEUS_DRAW_LIST_DEBUG 0
+#endif
+#endif
+
 #if __has_include(<intrin.h>)
 #include <intrin.h>
 #endif
@@ -20,12 +28,12 @@ import std;
 
 import :functional;
 import :primitive;
-import :chars;
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 import :draw.draw_list;
+import :draw.context;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -47,14 +55,21 @@ import :draw.draw_list;
 #endif
 
 #include <prometheus/macro.hpp>
+
+#if not defined(GAL_PROMETHEUS_DRAW_LIST_DEBUG)
+#if defined(DEBUG) or defined(_DEBUG)
+#define GAL_PROMETHEUS_DRAW_LIST_DEBUG 1
+#else
+#define GAL_PROMETHEUS_DRAW_LIST_DEBUG 0
+#endif
+#endif
+
 #include <functional/functional.ixx>
 #include <primitive/primitive.ixx>
-#include <chars/chars.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #include <draw/draw_list.ixx>
-
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+#include <draw/context.ixx>
 
 #endif
 
@@ -105,7 +120,7 @@ namespace
 	}
 
 	// fixme
-	constexpr static std::size_t bezier_curve_casteljau_max_level = 10;
+	constexpr std::size_t bezier_curve_casteljau_max_level = 10;
 
 	using point_type = draw::DrawListSharedData::point_type;
 
@@ -175,7 +190,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 			normalized_y *= (thickness * .5f);
 
 			const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
-			const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
+			const auto& opaque_uv = Context::instance().current_font().white_pixel_uv();
 
 			vertex_list_.emplace_back(p1 + point_type{normalized_y, -normalized_x}, opaque_uv, color);
 			vertex_list_.emplace_back(p2 + point_type{normalized_y, -normalized_x}, opaque_uv, color);
@@ -201,7 +216,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 			return;
 		}
 
-		const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
+		const auto& opaque_uv = Context::instance().current_font().white_pixel_uv();
 		const auto transparent_color = color.transparent();
 
 		const auto is_closed = not functional::exclude(draw_flag, DrawFlag::CLOSED);
@@ -215,7 +230,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		const auto is_use_texture =
 		(
 			functional::contains<functional::EnumCheckPolicy::ANY_BIT>(draw_list_flag_, DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE) and
-			(thickness_integer < shared_data_->get_default_font().baked_line_max_width()) and
+			(thickness_integer < Context::instance().current_font().baked_line_max_width()) and
 			(thickness_fractional <= .00001f));
 
 		const auto vertex_cont = is_use_texture ? (path_point_count * 2) : (is_thick_line ? path_point_count * 4 : path_point_count * 3);
@@ -331,9 +346,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 			// Add vertexes for each point on the line
 			if (is_use_texture)
 			{
-				GAL_PROMETHEUS_ERROR_ASSUME(not shared_data_->get_default_font().baked_line_uv().empty(), "draw::FontAtlasFlag::NO_BAKED_LINE");
+				GAL_PROMETHEUS_ERROR_ASSUME(not Context::instance().current_font().baked_line_uv().empty(), "draw::FontAtlasFlag::NO_BAKED_LINE");
 
-				const auto& uv = shared_data_->get_default_font().baked_line_uv()[thickness_integer];
+				const auto& uv = Context::instance().current_font().baked_line_uv()[thickness_integer];
 
 				const auto uv0 = uv.left_top();
 				const auto uv1 = uv.right_bottom();
@@ -465,7 +480,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		command_list_.back().element_count += index_count;
 
 		const auto current_vertex_index = vertex_list_.size();
-		const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
+		const auto& opaque_uv = Context::instance().current_font().white_pixel_uv();
 
 		std::ranges::transform(path_point, std::back_inserter(vertex_list_), [opaque_uv, color](const point_type& point) noexcept -> vertex_type { return {point, opaque_uv, color}; });
 		for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
@@ -489,7 +504,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 			return;
 		}
 
-		const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
+		const auto& opaque_uv = Context::instance().current_font().white_pixel_uv();
 		const auto transparent_color = color.transparent();
 
 		const auto vertex_count = path_point_count * 2;
@@ -580,7 +595,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 
 		command_list_.back().element_count += index_count;
 
-		const auto& opaque_uv = shared_data_->get_default_font().white_pixel_uv();
+		const auto& opaque_uv = Context::instance().current_font().white_pixel_uv();
 
 		const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
 
@@ -613,71 +628,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 			push_texture_id(font.texture_id());
 		}
 
-		const auto utf32_text = chars::convert<chars::CharsCategory::UTF8_CHAR, chars::CharsCategory::UTF32>(utf8_text);
-
-		const auto vertex_count = 4 * utf32_text.size();
-		const auto index_count = 6 * utf32_text.size();
-		vertex_list_.reserve(vertex_list_.size() + vertex_count);
-		index_list_.reserve(index_list_.size() + index_count);
-
-		command_list_.back().element_count += index_count;
-
-		const float scale = font_size / font.pixel_height();
-		const auto& glyphs = font.glyphs();
-		const auto& fallback_glyph = font.fallback_glyph();
-
-		auto it_input_current = utf32_text.begin();
-		const auto it_input_end = utf32_text.end();
-
-		auto cursor = p + point_type{0, font_size};
-
-		while (it_input_current != it_input_end)
-		{
-			const auto c = *it_input_current;
-			it_input_current += 1;
-
-			if (c == U'\n' or (wrap_width > 0 and cursor.x - p.x > wrap_width))
-			{
-				cursor.x = p.x;
-				cursor.y += font.pixel_height() * scale;
-				if (c == U'\n')
-				{
-					command_list_.back().element_count -= 6;
-					continue;
-				}
-			}
-
-			const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&]() -> const auto& {
-				if (const auto it = glyphs.find(c);
-					it != glyphs.end())
-				{
-					return it->second;
-				}
-
-				return fallback_glyph;
-			}();
-
-			const auto advance_x = glyph_advance_x * scale;
-			const rect_type char_rect{
-					cursor + point_type{static_cast<point_type::value_type>(glyph_rect.left_top().x), -static_cast<point_type::value_type>(glyph_rect.left_top().y)} * scale,
-					static_cast<rect_type::extent_type>(glyph_rect.size()) * scale
-			};
-			cursor.x += advance_x;
-
-			const auto current_vertex_index = static_cast<index_type>(vertex_list_.size());
-
-			vertex_list_.emplace_back(char_rect.left_top(), glyph_uv.left_top(), color);
-			vertex_list_.emplace_back(char_rect.right_top(), glyph_uv.right_top(), color);
-			vertex_list_.emplace_back(char_rect.right_bottom(), glyph_uv.right_bottom(), color);
-			vertex_list_.emplace_back(char_rect.left_bottom(), glyph_uv.left_bottom(), color);
-
-			index_list_.push_back(current_vertex_index + 0);
-			index_list_.push_back(current_vertex_index + 1);
-			index_list_.push_back(current_vertex_index + 2);
-			index_list_.push_back(current_vertex_index + 0);
-			index_list_.push_back(current_vertex_index + 2);
-			index_list_.push_back(current_vertex_index + 3);
-		}
+		font.draw_text(*this, font_size, p, color, utf8_text, wrap_width);
 
 		if (new_texture)
 		{
@@ -1189,5 +1140,1042 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 				path_pin(bezier_quadratic_calc(p1, p2, p3, step * static_cast<float>(i)));
 			}
 		}
+	}
+
+	auto DrawList::reset() noexcept -> void
+	{
+		command_list_.resize(0);
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		command_message_.resize(0);
+		#endif
+		vertex_list_.resize(0);
+		index_list_.resize(0);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.resize(0);
+		debug_list_info_list_.resize(0);
+		#endif
+
+		// we don't know the size of the clip rect, so we need the user to set it
+		this_command_clip_rect_ = {};
+		// the first texture is always the (default) font texture
+		this_command_texture_id_ = Context::instance().current_font().texture_id();
+
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(path_list_.empty());
+
+		// we always have a command ready in the buffer
+		command_list_.emplace_back(
+			command_type
+			{
+					.clip_rect = this_command_clip_rect_,
+					.texture_id = this_command_texture_id_,
+					.index_offset = index_list_.size(),
+					// set by subsequent draw_xxx
+					.element_count = 0
+			}
+		);
+	}
+
+	// ReSharper disable once CppMemberFunctionMayBeStatic
+	auto DrawList::bind_debug_info() noexcept -> void
+	{
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(debug_range_info_list_.size() == debug_list_info_list_.size());
+
+		for (size_type i = 0; i < debug_list_info_list_.size(); ++i)
+		{
+			auto& [range_vertices, range_indices] = debug_range_info_list_[i];
+			auto& [what, list_vertices, list_indices] = debug_list_info_list_[i];
+			list_vertices = {vertex_list_.begin() + range_vertices.first, vertex_list_.begin() + range_vertices.second};
+			list_indices = {index_list_.begin() + range_indices.first, index_list_.begin() + range_indices.second};
+		}
+		#endif
+	}
+
+	auto DrawList::push_clip_rect(const rect_type& rect, const bool intersect_with_current_clip_rect) noexcept -> rect_type&
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not command_list_.empty());
+
+		const auto& [current_clip_rect, current_texture, current_index_offset, current_element_count] = command_list_.back();
+
+		this_command_clip_rect_ = intersect_with_current_clip_rect ? rect.combine_min(current_clip_rect) : rect;
+
+		on_element_changed<ChangedElement::CLIP_RECT>();
+		return command_list_.back().clip_rect;
+	}
+
+	auto DrawList::push_clip_rect(const point_type& left_top, const point_type& right_bottom, const bool intersect_with_current_clip_rect) noexcept -> rect_type&
+	{
+		return push_clip_rect({left_top, right_bottom}, intersect_with_current_clip_rect);
+	}
+
+	auto DrawList::pop_clip_rect() noexcept -> void
+	{
+		// todo
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(command_list_.size() > 1);
+		this_command_clip_rect_ = command_list_[command_list_.size() - 2].clip_rect;
+
+		on_element_changed<ChangedElement::CLIP_RECT>();
+	}
+
+	auto DrawList::push_texture_id(const texture_id_type texture) noexcept -> void
+	{
+		this_command_texture_id_ = texture;
+
+		on_element_changed<ChangedElement::TEXTURE_ID>();
+	}
+
+	auto DrawList::pop_texture_id() noexcept -> void
+	{
+		// todo
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(command_list_.size() > 1);
+		this_command_texture_id_ = command_list_[command_list_.size() - 2].texture_id;
+
+		on_element_changed<ChangedElement::TEXTURE_ID>();
+	}
+
+	auto DrawList::line(const point_type& from, const point_type& to, const color_type& color, const float thickness) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0)
+		{
+			return;
+		}
+
+		// path_pin(from + point_type{.5f, .5f});
+		// path_pin(to + point_type{.5f, .5f});
+		path_pin(from);
+		path_pin(to);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color, DrawFlag::NONE, thickness);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[LINE] [{} => {}]{}({:.3f})", from, to, color, thickness),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::triangle(const point_type& a, const point_type& b, const point_type& c, const color_type& color, const float thickness) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0)
+		{
+			return;
+		}
+
+		path_pin(a);
+		path_pin(b);
+		path_pin(c);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color, DrawFlag::CLOSED, thickness);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[TRIANGLE] [{} △ {} △ {}]{}({:.3f})", a, b, c, color, thickness),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::triangle_filled(const point_type& a, const point_type& b, const point_type& c, const color_type& color) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0)
+		{
+			return;
+		}
+
+		path_pin(a);
+		path_pin(b);
+		path_pin(c);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[TRIANGLE FILLED] [{} ▲ {} ▲ {}]{}", a, b, c, color),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::rect(const rect_type& rect, const color_type& color, const float rounding, const DrawFlag flag, const float thickness) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0)
+		{
+			return;
+		}
+
+		// path_rect(rect_type{rect.left_top() + point_type{.5f, .5f}, rect.right_bottom() - point_type{.5f, .5f}}, rounding, flag);
+		path_rect(rect, rounding, flag);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color, DrawFlag::CLOSED, thickness);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[RECT] □ {}{}({:.3f})", rect, color, thickness),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::rect(const point_type& left_top, const point_type& right_bottom, const color_type& color, const float rounding, const DrawFlag flag, const float thickness) noexcept -> void
+	{
+		return rect(rect_type{left_top, right_bottom}, color, rounding, flag, thickness);
+	}
+
+	auto DrawList::rect_filled(const rect_type& rect, const color_type& color, const float rounding, const DrawFlag flag) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0)
+		{
+			return;
+		}
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		using functional::operators::operator&;
+		if (rounding < .5f or (DrawFlag::ROUND_CORNER_MASK & flag) == DrawFlag::ROUND_CORNER_NONE)
+		{
+			draw_rect_filled(rect, color, color, color, color);
+		}
+		else
+		{
+			path_rect(rect, rounding, flag);
+			path_stroke(color);
+		}
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[RECT FILLED] ■ {}{}", rect, color),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::rect_filled(const point_type& left_top, const point_type& right_bottom, const color_type& color, const float rounding, const DrawFlag flag) noexcept -> void
+	{
+		return rect_filled(rect_type{left_top, right_bottom}, color, rounding, flag);
+	}
+
+	auto DrawList::rect_filled(const rect_type& rect,
+	                           const color_type& color_left_top,
+	                           const color_type& color_right_top,
+	                           const color_type& color_left_bottom,
+	                           const color_type& color_right_bottom) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color_left_top.alpha == 0 or color_right_top.alpha == 0 or color_left_bottom.alpha == 0 or color_right_bottom.alpha == 0)
+		{
+			return;
+		}
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		draw_rect_filled(rect, color_left_top, color_right_top, color_left_bottom, color_right_bottom);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[RECT FILLED] ■ {}({}/{}/{}/{})", rect, color_left_top, color_right_top, color_left_bottom, color_right_bottom),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::rect_filled(
+		const point_type& left_top,
+		const point_type& right_bottom,
+		const color_type& color_left_top,
+		const color_type& color_right_top,
+		const color_type& color_left_bottom,
+		const color_type& color_right_bottom
+	) noexcept -> void
+	{
+		return rect_filled({left_top, right_bottom}, color_left_top, color_right_top, color_left_bottom, color_right_bottom);
+	}
+
+	auto DrawList::quadrilateral(
+		const point_type& p1,
+		const point_type& p2,
+		const point_type& p3,
+		const point_type& p4,
+		const color_type& color,
+		const float thickness
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0)
+		{
+			return;
+		}
+
+		path_quadrilateral(p1, p2, p3, p4);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color, DrawFlag::CLOSED, thickness);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[QUADRILATERAL] ▱ [{}-{}-{}-{}]{}({:.3f})", p1, p2, p3, p4, color, thickness),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::quadrilateral_filled(
+		const point_type& p1,
+		const point_type& p2,
+		const point_type& p3,
+		const point_type& p4,
+		const color_type& color
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0)
+		{
+			return;
+		}
+
+		path_quadrilateral(p1, p2, p3, p4);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[QUADRILATERAL FILLED] ▰ [{}-{}-{}-{}]{}", p1, p2, p3, p4, color),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::circle_n(
+		const circle_type& circle,
+		const color_type& color,
+		const std::uint32_t segments,
+		const float thickness
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0 or circle.radius<.5f or segments < 3)
+		                                      {
+				return;
+		                                      }
+
+		                                      path_arc_n(circle, 0, std::numbers::pi_v<float> * 2, segments);
+
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+			const auto current_vertex_size = vertex_list_.size();
+				const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color, DrawFlag::CLOSED, thickness);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[CIRCLE] ○ {}{}({:.3f})", circle, color, thickness),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::circle_n(
+		const point_type& center,
+		const float radius,
+		const color_type& color,
+		const std::uint32_t segments,
+		const float thickness
+	) noexcept -> void
+	{
+		return circle_n({center, radius}, color, segments, thickness);
+	}
+
+	auto DrawList::ellipse_n(
+		const ellipse_type& ellipse,
+		const color_type& color,
+		const std::uint32_t segments,
+		const float thickness
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0 or ellipse.radius.width<.5f or ellipse.radius.height<.5f or segments < 3)
+		                                                                          {
+				return;
+		                                                                          }
+
+		                                                                          path_arc_elliptical_n(ellipse, 0, std::numbers::pi_v<float> * 2, segments);
+
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+			const auto current_vertex_size = vertex_list_.size();
+				const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color, DrawFlag::CLOSED, thickness);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[ELLIPSE] ○ {}{}({:.3f})", ellipse, color, thickness),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::ellipse_n(
+		const point_type& center,
+		const extent_type& radius,
+		const float rotation,
+		const color_type& color,
+		const std::uint32_t segments,
+		const float thickness
+	) noexcept -> void
+	{
+		return ellipse_n({center, radius, rotation}, color, segments, thickness);
+	}
+
+	auto DrawList::circle_n_filled(
+		const circle_type& circle,
+		const color_type& color,
+		const std::uint32_t segments
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0 or circle.radius<.5f or segments < 3)
+		                                      {
+				return;
+		                                      }
+
+		                                      path_arc_n(circle, 0, std::numbers::pi_v<float> * 2, segments);
+
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+			const auto current_vertex_size = vertex_list_.size();
+				const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[CIRCLE FILLED] ● {}{}", circle, color),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::circle_n_filled(
+		const point_type& center,
+		const float radius,
+		const color_type& color,
+		const std::uint32_t segments
+	) noexcept -> void
+	{
+		return circle_n_filled({center, radius}, color, segments);
+	}
+
+	auto DrawList::ellipse_n_filled(
+		const ellipse_type& ellipse,
+		const color_type& color,
+		const std::uint32_t segments
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0 or ellipse.radius.width<.5f or ellipse.radius.height<.5f or segments < 3)
+		                                                                          {
+				return;
+		                                                                          }
+
+		                                                                          path_arc_elliptical_n(ellipse, 0, std::numbers::pi_v<float> * 2, segments);
+
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+			const auto current_vertex_size = vertex_list_.size();
+				const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[ELLIPSE FILLED] ● {}{}", ellipse, color),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::ellipse_n_filled(
+		const point_type& center,
+		const extent_type& radius,
+		const float rotation,
+		const color_type& color,
+		const std::uint32_t segments
+	) noexcept -> void
+	{
+		return ellipse_n_filled({center, radius, rotation}, color, segments);
+	}
+
+	auto DrawList::circle(
+		const circle_type& circle,
+		const color_type& color,
+		const std::uint32_t segments,
+		const float thickness
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0 or circle.radius < .5f)
+		{
+			return;
+		}
+
+		if (segments == 0)
+		{
+			path_arc_fast(circle, 0, DrawListSharedData::vertex_sample_points_count - 1);
+
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+			const auto current_vertex_size = vertex_list_.size();
+			const auto current_index_size = index_list_.size();
+			#endif
+
+			path_stroke(color, DrawFlag::CLOSED, thickness);
+
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+			debug_range_info_list_.emplace_back(
+				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+				debug_index_range_type{current_index_size, index_list_.size()}
+			);
+			debug_list_info_list_.emplace_back(
+				std::format("[CIRCLE] ○ {}{}({:.3f})", circle, color, thickness),
+				// the data stored now is unreliable
+				debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+				// the data stored now is unreliable
+				debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+			);
+			#endif
+		}
+		else
+		{
+			const auto clamped_segments = std::ranges::clamp(segments, DrawListSharedData::circle_segments_min, DrawListSharedData::circle_segments_max);
+
+			circle_n(circle, color, clamped_segments, thickness);
+		}
+	}
+
+	auto DrawList::circle(
+		const point_type& center,
+		const float radius,
+		const color_type& color,
+		const std::uint32_t segments,
+		const float thickness
+	) noexcept -> void
+	{
+		return circle({center, radius}, color, segments, thickness);
+	}
+
+	auto DrawList::circle_filled(
+		const circle_type& circle,
+		const color_type& color,
+		const std::uint32_t segments
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0 or circle.radius < .5f)
+		{
+			return;
+		}
+
+		if (segments == 0)
+		{
+			path_arc_fast(circle, 0, DrawListSharedData::vertex_sample_points_count - 1);
+
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+			const auto current_vertex_size = vertex_list_.size();
+			const auto current_index_size = index_list_.size();
+			#endif
+
+			path_stroke(color);
+
+			#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+			debug_range_info_list_.emplace_back(
+				debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+				debug_index_range_type{current_index_size, index_list_.size()}
+			);
+			debug_list_info_list_.emplace_back(
+				std::format("[CIRCLE FILLED] ● {}{}", circle, color),
+				// the data stored now is unreliable
+				debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+				// the data stored now is unreliable
+				debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+			);
+			#endif
+		}
+		else
+		{
+			const auto clamped_segments = std::ranges::clamp(segments, DrawListSharedData::circle_segments_min, DrawListSharedData::circle_segments_max);
+
+			circle_n_filled(circle, color, clamped_segments);
+		}
+	}
+
+	auto DrawList::circle_filled(
+		const point_type& center,
+		const float radius,
+		const color_type& color,
+		const std::uint32_t segments
+	) noexcept -> void
+	{
+		return circle_filled({center, radius}, color, segments);
+	}
+
+	auto DrawList::ellipse(
+		const ellipse_type& ellipse,
+		const color_type& color,
+		std::uint32_t segments,
+		const float thickness
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0 or ellipse.radius.width<.5f or ellipse.radius.height < .5f)
+		                                             {
+				return;
+		                                             }
+
+			if (segments == 0)
+		{
+			// fixme: maybe there's a better computation to do here
+			segments = shared_data_->get_circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
+		}
+
+		ellipse_n(ellipse, color, segments, thickness);
+	}
+
+	auto DrawList::ellipse(
+		const point_type& center,
+		const extent_type& radius,
+		const float rotation,
+		const color_type& color,
+		const std::uint32_t segments,
+		const float thickness
+	) noexcept -> void
+	{
+		return ellipse({center, radius, rotation}, color, segments, thickness);
+	}
+
+	auto DrawList::ellipse_filled(
+		const ellipse_type& ellipse,
+		const color_type& color,
+		std::uint32_t segments
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0 or ellipse.radius.width<.5f or ellipse.radius.height < .5f)
+		                                             {
+				return;
+		                                             }
+
+			if (segments == 0)
+		{
+			// fixme: maybe there's a better computation to do here
+			segments = shared_data_->get_circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
+		}
+
+		ellipse_n_filled(ellipse, color, segments);
+	}
+
+	auto DrawList::ellipse_filled(
+		const point_type& center,
+		const extent_type& radius,
+		const float rotation,
+		const color_type& color,
+		const std::uint32_t segments
+	) noexcept -> void
+	{
+		return ellipse_filled({center, radius, rotation}, color, segments);
+	}
+
+	auto DrawList::bezier_cubic(
+		const point_type& p1,
+		const point_type& p2,
+		const point_type& p3,
+		const point_type& p4,
+		const color_type& color,
+		const std::uint32_t segments,
+		const float thickness
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0)
+		{
+			return;
+		}
+
+		path_bezier_curve(p1, p2, p3, p4, segments);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color, DrawFlag::NONE, thickness);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[BEZIER CUBIC] ∫ [{}-{}-{}-{}]{}({:.3f})", p1, p2, p3, p4, color, thickness),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::bezier_quadratic(
+		const point_type& p1,
+		const point_type& p2,
+		const point_type& p3,
+		const color_type& color,
+		const std::uint32_t segments,
+		const float thickness
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0)
+		{
+			return;
+		}
+
+		path_bezier_quadratic_curve(p1, p2, p3, segments);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		path_stroke(color, DrawFlag::NONE, thickness);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[BEZIER QUADRATIC] ৲ [{}-{}-{}]{}({:.3f})", p1, p2, p3, color, thickness),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::text(
+		const Font& font,
+		const float font_size,
+		const point_type& p,
+		const color_type& color,
+		const std::string_view utf8_text,
+		const float wrap_width
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0) { return; }
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		draw_text(font, font_size, p, color, utf8_text, wrap_width);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+
+		debug_list_info_list_.emplace_back(
+			std::format("[TEXT] [{}({:.3f}): {}]({})", p, font_size, utf8_text, color),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::text(
+		const float font_size,
+		const point_type& p,
+		const color_type& color,
+		const std::string_view utf8_text,
+		const float wrap_width
+	) noexcept -> void
+	{
+		this->text(Context::instance().current_font(), font_size, p, color, utf8_text, wrap_width);
+	}
+
+	auto DrawList::image(
+		const texture_id_type texture_id,
+		const point_type& display_p1,
+		const point_type& display_p2,
+		const point_type& display_p3,
+		const point_type& display_p4,
+		const uv_type& uv_p1,
+		const uv_type& uv_p2,
+		const uv_type& uv_p3,
+		const uv_type& uv_p4,
+		const color_type& color
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0) { return; }
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		draw_image(texture_id, display_p1, display_p2, display_p3, display_p4, uv_p1, uv_p2, uv_p3, uv_p4, color);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[IMAGE] [{}: {}-{}-{}-{}/{}-{}-{}-{}]{}", texture_id, display_p1, display_p2, display_p3, display_p4, uv_p1, uv_p2, uv_p3, uv_p4, color),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::image(
+		const texture_id_type texture_id,
+		const rect_type& display_rect,
+		const rect_type& uv_rect,
+		const color_type& color
+	) noexcept -> void
+	{
+		image(
+			texture_id,
+			display_rect.left_top(),
+			display_rect.right_top(),
+			display_rect.right_bottom(),
+			display_rect.left_bottom(),
+			uv_rect.left_top(),
+			uv_rect.right_top(),
+			uv_rect.right_bottom(),
+			uv_rect.left_bottom(),
+			color
+		);
+	}
+
+	auto DrawList::image(
+		const texture_id_type texture_id,
+		const point_type& display_left_top,
+		const point_type& display_right_bottom,
+		const uv_type& uv_left_top,
+		const uv_type& uv_right_bottom,
+		const color_type& color
+	) noexcept -> void
+	{
+		image(texture_id, {display_left_top, display_right_bottom}, {uv_left_top, uv_right_bottom}, color);
+	}
+
+	auto DrawList::image_rounded(
+		const texture_id_type texture_id,
+		const rect_type& display_rect,
+		const float rounding,
+		const DrawFlag flag,
+		const rect_type& uv_rect,
+		const color_type& color
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(shared_data_ != nullptr);
+
+		if (color.alpha == 0)
+		{
+			return;
+		}
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		const auto current_vertex_size = vertex_list_.size();
+		const auto current_index_size = index_list_.size();
+		#endif
+
+		draw_image_rounded(texture_id, display_rect, uv_rect, color, rounding, flag);
+
+		#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
+		debug_range_info_list_.emplace_back(
+			debug_vertex_range_type{current_vertex_size, vertex_list_.size()},
+			debug_index_range_type{current_index_size, index_list_.size()}
+		);
+		debug_list_info_list_.emplace_back(
+			std::format("[IMAGE] [{}: {}/{}]{}", texture_id, display_rect, uv_rect, color),
+			// the data stored now is unreliable
+			debug_vertex_list_type{vertex_list_.begin() + current_vertex_size, vertex_list_.end()},
+			// the data stored now is unreliable
+			debug_index_list_type{index_list_.begin() + current_index_size, index_list_.end()}
+		);
+		#endif
+	}
+
+	auto DrawList::image_rounded(
+		const texture_id_type texture_id,
+		const point_type& display_left_top,
+		const point_type& display_right_bottom,
+		const float rounding,
+		const DrawFlag flag,
+		const uv_type& uv_left_top,
+		const uv_type& uv_right_bottom,
+		const color_type& color
+	) noexcept -> void
+	{
+		image_rounded(texture_id, {display_left_top, display_right_bottom}, rounding, flag, {uv_left_top, uv_right_bottom}, color);
 	}
 }

@@ -14,10 +14,8 @@ import std;
 import :primitive;
 import :functional;
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
-
-import :draw.font;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -29,14 +27,13 @@ import :draw.font;
 #include <cmath>
 #include <numbers>
 #include <string>
+#include <array>
 
 #include <prometheus/macro.hpp>
 
 #include <primitive/primitive.ixx>
 #include <functional/functional.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
-
-#include <draw/font.ixx>
 
 #endif
 
@@ -88,8 +85,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		// Tessellation tolerance when using `path_bezier_curve` without a specific number of segments.
 		// Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
 		float curve_tessellation_tolerance_;
-
-		Font default_font_;
 
 		// @see https://stackoverflow.com/a/2244088/15194693
 		// Number of segments (N) is calculated using equation:
@@ -177,41 +172,6 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 				return circle_segment_counts_[radius_index];
 			}
 			return static_cast<circle_segment_counts_type::value_type>(circle_segments_calc(radius, circle_segment_max_error_));
-		}
-
-		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_ranges_view_type glyph_ranges) noexcept -> Font::texture_type
-		{
-			return default_font_.load(font_path, pixel_height, glyph_ranges);
-		}
-
-		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_ranges_type& glyph_ranges) noexcept -> Font::texture_type
-		{
-			return load_default_font(font_path, pixel_height, {glyph_ranges.data(), glyph_ranges.size()});
-		}
-
-		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_type& glyph_range) noexcept -> Font::texture_type
-		{
-			return load_default_font(font_path, pixel_height, {&glyph_range, 1});
-		}
-
-		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_views_type glyph_ranges) noexcept -> Font::texture_type
-		{
-			return default_font_.load(font_path, pixel_height, glyph_ranges);
-		}
-
-		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_view_type glyph_range) noexcept -> Font::texture_type
-		{
-			return load_default_font(font_path, pixel_height, {&glyph_range, 1});
-		}
-
-		[[nodiscard]] constexpr auto get_default_font() noexcept -> Font&
-		{
-			return default_font_;
-		}
-		
-		[[nodiscard]] constexpr auto get_default_font() const noexcept -> const Font&
-		{
-			return default_font_;
 		}
 	};
 
