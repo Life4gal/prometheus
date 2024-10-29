@@ -20,7 +20,6 @@ import :meta.name;
 #pragma once
 
 #include <string_view>
-#include <source_location>
 #include <limits>
 #include <type_traits>
 #include <vector>
