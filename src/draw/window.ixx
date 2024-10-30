@@ -14,8 +14,8 @@ import std;
 import :functional;
 import :primitive;
 
-export import :draw.draw_list.shared_data;
-export import :draw.window.flag;
+export import :draw.def;
+export import :draw.draw_list;
 export import :draw.theme;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
@@ -32,9 +32,9 @@ export import :draw.theme;
 #include <functional/functional.ixx>
 #include <primitive/primitive.ixx>
 
+#include <draw/def.ixx>
 #include <draw/draw_list.ixx>
 #include <draw/theme.ixx>
-#include <draw/window.flag.ixx>
 
 #endif
 
@@ -87,6 +87,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		bool collapse_;
 
 		// -----------------------------------
+		// ID
 
 		[[nodiscard]] auto get_id(name_view_type name) noexcept -> id_type;
 

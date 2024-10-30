@@ -19,6 +19,7 @@ export module gal.prometheus:draw.context;
 
 import std;
 
+import :draw.def;
 import :draw.font;
 import :draw.theme;
 import :draw.window;
@@ -47,6 +48,7 @@ import :draw.window;
 #include <source_location>
 #endif
 
+#include <draw/def.ixx>
 #include <draw/font.ixx>
 #include <draw/theme.ixx>
 #include <draw/window.ixx>
@@ -198,10 +200,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		using list_type = std::vector<T>;
 
 	private:
+		DrawListSharedData draw_list_shared_data_;
+		DrawListSharedData* current_draw_list_shared_data_;
+
 		Font default_font_;
 		Font* current_font_;
 
 		Theme theme_;
+		Theme* current_theme_;
+
 		tooltip_type tooltip_;
 
 		Mouse mouse_;
@@ -225,60 +232,25 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		[[nodiscard]] static auto instance() noexcept -> Context&;
 
 		// ---------------------------------------------
+		// DRAW LIST SHARED DATA
+
+		[[nodiscard]] auto draw_list_shared_data() const noexcept -> const DrawListSharedData&;
+
+		// ---------------------------------------------
 		// FONT
 
-		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_ranges_view_type glyph_ranges) noexcept -> Font::texture_type
-		{
-			return default_font_.load(font_path, pixel_height, glyph_ranges);
-		}
+		[[nodiscard]] auto load_default_font(const FontOption& option) noexcept -> Font::texture_type;
 
-		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_ranges_type& glyph_ranges) noexcept -> Font::texture_type
-		{
-			return load_default_font(font_path, pixel_height, {glyph_ranges.data(), glyph_ranges.size()});
-		}
-
-		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_type& glyph_range) noexcept -> Font::texture_type
-		{
-			return load_default_font(font_path, pixel_height, {&glyph_range, 1});
-		}
-
-		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_views_type glyph_ranges) noexcept -> Font::texture_type
-		{
-			return default_font_.load(font_path, pixel_height, glyph_ranges);
-		}
-
-		[[nodiscard]] auto load_default_font(const std::string_view font_path, const std::uint32_t pixel_height, const glyph_range_view_type glyph_range) noexcept -> Font::texture_type
-		{
-			return load_default_font(font_path, pixel_height, {&glyph_range, 1});
-		}
+		[[nodiscard]] auto font() const noexcept -> const Font&;
 
 		// ---------------------------------------------
 		// 
 
-		[[nodiscard]] constexpr auto current_font() noexcept -> Font&
-		{
-			return default_font_;
-		}
+		[[nodiscard]] auto theme() const noexcept -> const Theme&;
 
-		[[nodiscard]] constexpr auto current_font() const noexcept -> const Font&
-		{
-			return default_font_;
-		}
+		[[nodiscard]] auto mouse() const noexcept -> const Mouse&;
 
-		[[nodiscard]] auto theme() const noexcept -> const Theme&
-		{
-			return theme_;
-		}
-
-		[[nodiscard]] auto mouse() const noexcept -> const Mouse&
-		{
-			return mouse_;
-		}
-
-		[[nodiscard]] auto tooltip() const noexcept -> const tooltip_type&
-		{
-			return tooltip_;
-		}
+		[[nodiscard]] auto tooltip() const noexcept -> const tooltip_type&;
 
 		// ---------------------------------------------
 

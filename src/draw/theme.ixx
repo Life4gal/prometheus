@@ -13,7 +13,7 @@ import std;
 
 import :primitive;
 
-export import :draw.draw_list.shared_data;
+export import :draw.def;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -26,7 +26,7 @@ export import :draw.draw_list.shared_data;
 
 #include <prometheus/macro.hpp>
 #include <primitive/primitive.ixx>
-#include <draw/draw_list.shared_data.ixx>
+#include <draw/def.ixx>
 
 #endif
 
@@ -37,8 +37,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		TEXT = 0,
 		BORDER,
 
-		BACKGROUND_WINDOW,
-		BACKGROUND_WIDGET,
+		WINDOW_BACKGROUND,
+
+		WIDGET_BACKGROUND,
+		WIDGET_ACTIVATED,
 
 		TITLE_BAR,
 		TITLE_BAR_COLLAPSED,
@@ -68,12 +70,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 	public:
 		using name_type = std::string;
 
-		using rect_type = DrawListSharedData::rect_type;
-		using point_type = DrawListSharedData::point_type;
-		using extent_type = DrawListSharedData::extent_type;
+		using rect_type = DrawListType::rect_type;
+		using point_type = DrawListType::point_type;
+		using extent_type = DrawListType::extent_type;
 		using value_type = point_type::value_type;
 
-		using color_type = DrawListSharedData::color_type;
+		using color_type = DrawListType::color_type;
 		using colors_type = std::array<color_type, theme_category_count>;
 
 		name_type font_name;

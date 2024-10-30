@@ -7,6 +7,7 @@
 
 export module gal.prometheus:draw;
 
+export import :draw.def;
 export import :draw.font;
 export import :draw.draw_list;
 export import :draw.theme;
@@ -19,6 +20,7 @@ export import :draw.context;
 
 #pragma once
 
+#include <draw/def.ixx>
 #include <draw/font.ixx>
 #include <draw/draw_list.ixx>
 #include <draw/theme.ixx>

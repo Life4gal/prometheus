@@ -35,27 +35,29 @@ namespace
 		colors_type colors{};
 
 		colors[static_cast<std::size_t>(ThemeCategory::TEXT)] = primitive::colors::black;
-		colors[static_cast<std::size_t>(ThemeCategory::BORDER)] = primitive::colors::red;
+		colors[static_cast<std::size_t>(ThemeCategory::BORDER)] = primitive::colors::magenta;
 
-		colors[static_cast<std::size_t>(ThemeCategory::BACKGROUND_WINDOW)] = primitive::colors::blue;
-		colors[static_cast<std::size_t>(ThemeCategory::BACKGROUND_WIDGET)] = primitive::colors::green;
+		colors[static_cast<std::size_t>(ThemeCategory::WINDOW_BACKGROUND)] = primitive::colors::gains_boro;
 
-		colors[static_cast<std::size_t>(ThemeCategory::TITLE_BAR)] = primitive::colors::red;
-		colors[static_cast<std::size_t>(ThemeCategory::TITLE_BAR_COLLAPSED)] = primitive::colors::red;
+		colors[static_cast<std::size_t>(ThemeCategory::WIDGET_BACKGROUND)] = primitive::colors::white;
+		colors[static_cast<std::size_t>(ThemeCategory::WIDGET_ACTIVATED)] = primitive::colors::dark_salmon;
 
-		colors[static_cast<std::size_t>(ThemeCategory::SLIDER)] = primitive::colors::red;
-		colors[static_cast<std::size_t>(ThemeCategory::SLIDER_ACTIVATED)] = primitive::colors::red;
+		colors[static_cast<std::size_t>(ThemeCategory::TITLE_BAR)] = primitive::colors::light_coral;
+		colors[static_cast<std::size_t>(ThemeCategory::TITLE_BAR_COLLAPSED)] = primitive::colors::dark_khaki;
 
-		colors[static_cast<std::size_t>(ThemeCategory::BUTTON)] = primitive::colors::red;
-		colors[static_cast<std::size_t>(ThemeCategory::BUTTON_HOVERED)] = primitive::colors::red;
-		colors[static_cast<std::size_t>(ThemeCategory::BUTTON_ACTIVATED)] = primitive::colors::red;
+		colors[static_cast<std::size_t>(ThemeCategory::SLIDER)] = primitive::colors::light_blue;
+		colors[static_cast<std::size_t>(ThemeCategory::SLIDER_ACTIVATED)] = primitive::colors::deep_sky_blue;
+
+		colors[static_cast<std::size_t>(ThemeCategory::BUTTON)] = primitive::colors::sienna;
+		colors[static_cast<std::size_t>(ThemeCategory::BUTTON_HOVERED)] = primitive::colors::slate_gray;
+		colors[static_cast<std::size_t>(ThemeCategory::BUTTON_ACTIVATED)] = primitive::colors::steel_blue;
 
 		colors[static_cast<std::size_t>(ThemeCategory::RESIZE_GRIP)] = primitive::colors::gold;
-		colors[static_cast<std::size_t>(ThemeCategory::RESIZE_GRIP_HOVERED)] = primitive::colors::gold;
-		colors[static_cast<std::size_t>(ThemeCategory::RESIZE_GRIP_ACTIVATED)] = primitive::colors::gold;
+		colors[static_cast<std::size_t>(ThemeCategory::RESIZE_GRIP_HOVERED)] = primitive::colors::peru;
+		colors[static_cast<std::size_t>(ThemeCategory::RESIZE_GRIP_ACTIVATED)] = primitive::colors::powder_blue;
 
 		colors[static_cast<std::size_t>(ThemeCategory::TOOLTIP_BACKGROUND)] = primitive::colors::black;
-		colors[static_cast<std::size_t>(ThemeCategory::TOOLTIP_TEXT)] = primitive::colors::yellow;
+		colors[static_cast<std::size_t>(ThemeCategory::TOOLTIP_TEXT)] = primitive::colors::red;
 
 		return colors;
 	}

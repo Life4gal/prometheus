@@ -249,7 +249,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 			return;
 		}
 
-		draw_list.rect_filled(canvas_rect, theme.color<ThemeCategory::BACKGROUND_WINDOW>(), theme.window_rounding, DrawFlag::ROUND_CORNER_ALL);
+		draw_list.rect_filled(canvas_rect, theme.color<ThemeCategory::WINDOW_BACKGROUND>(), theme.window_rounding, DrawFlag::ROUND_CORNER_ALL);
 		if (flag_value & std::to_underlying(WindowFlag::BORDERED))
 		{
 			draw_list.rect(canvas_rect, theme.color<ThemeCategory::BORDER>(), theme.window_rounding, DrawFlag::ROUND_CORNER_ALL);

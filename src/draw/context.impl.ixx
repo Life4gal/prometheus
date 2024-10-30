@@ -16,7 +16,11 @@ import :functional;
 import :platform;
 #endif
 
+import :draw.def;
+import :draw.font;
+import :draw.theme;
 import :draw.window;
+import :draw.context;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -30,6 +34,11 @@ import :draw.window;
 #include <prometheus/macro.hpp>
 #include <functional/functional.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
+#include <draw/def.ixx>
+#include <draw/font.ixx>
+#include <draw/theme.ixx>
+#include <draw/window.ixx>
 #include <draw/context.ixx>
 
 #endif
@@ -53,9 +62,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 
 	Context::Context() noexcept
 		:
+		draw_list_shared_data_{},
+		current_draw_list_shared_data_{std::addressof(draw_list_shared_data_)},
 		default_font_{},
 		current_font_{std::addressof(default_font_)},
 		theme_{Theme::default_theme()},
+		current_theme_{std::addressof(theme_)},
 		tooltip_{},
 		mouse_{.3f, 36},
 		windows_{},
@@ -74,6 +86,42 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 		return context;
 	}
 
+	auto Context::draw_list_shared_data() const noexcept -> const DrawListSharedData&
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_draw_list_shared_data_ != nullptr);
+
+		return *current_draw_list_shared_data_;
+	}
+
+	auto Context::load_default_font(const FontOption& option) noexcept -> Font::texture_type
+	{
+		return default_font_.load(option);
+	}
+
+	auto Context::font() const noexcept -> const Font&
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_font_ != nullptr);
+
+		return *current_font_;
+	}
+
+	auto Context::theme() const noexcept -> const Theme&
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_theme_ != nullptr);
+
+		return *current_theme_;
+	}
+
+	auto Context::mouse() const noexcept -> const Mouse&
+	{
+		return mouse_;
+	}
+
+	auto Context::tooltip() const noexcept -> const tooltip_type&
+	{
+		return tooltip_;
+	}
+
 	auto Context::is_widget_hovered(const id_type id) const noexcept -> bool
 	{
 		return widget_id_hovered_ == id;
@@ -86,8 +134,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 
 	auto Context::invalidate_widget_hovered(
 		#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
-			const std::string& reason,
-			const std::source_location& location
+		const std::string& reason,
+		const std::source_location& location
 		#endif
 	) noexcept -> void
 	{
@@ -99,8 +147,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 
 	auto Context::invalidate_widget_activated(
 		#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
-			const std::string& reason,
-			const std::source_location& location
+		const std::string& reason,
+		const std::source_location& location
 		#endif
 	) noexcept -> void
 	{
@@ -115,8 +163,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 		const rect_type& widget_rect,
 		const bool repeat
 		#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
-			,
-			const std::string& reason
+		,
+		const std::string& reason
 		#endif
 	) noexcept -> widget_status_type
 	{
