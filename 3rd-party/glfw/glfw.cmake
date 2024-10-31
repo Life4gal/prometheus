@@ -1,4 +1,4 @@
-function(link_3rd_library_glfw project_name)
+function(link_3rd_party_library_glfw project_name)
 	CPMAddPackage(
 			NAME glfw
 			GIT_TAG 3.4
@@ -13,4 +13,4 @@ function(link_3rd_library_glfw project_name)
 			glfw 
 			PRIVATE
 	)
-endfunction(link_3rd_library_glfw project_name)
+endfunction(link_3rd_party_library_glfw project_name)

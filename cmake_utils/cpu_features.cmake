@@ -3,9 +3,9 @@ function(check_cpu_features feature_name)
 
 	try_run(
 		RUN_RESULT COMPILE_RESULT
-		SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/cmake_utils/check_cpu_features_${feature_name}.cpp
+		SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/cmake_utils/cpu_features_${feature_name}.cpp
 
-		COMPILE_DEFINITIONS "-D${${PROJECT_NAME_PREFIX}PLATFORM}"
+		COMPILE_DEFINITIONS "-D${${PROJECT_NAME_PREFIX}PLATFORM_NAME} -march=native"
 		COMPILE_OUTPUT_VARIABLE COMPILE_OUTPUT_RESULT
 		CXX_STANDARD 23
 		CXX_STANDARD_REQUIRED true

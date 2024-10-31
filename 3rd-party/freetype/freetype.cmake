@@ -1,20 +1,20 @@
-function(link_3rd_library_freetype project_name)
+function(link_3rd_party_library_freetype project_name)
 	target_include_directories(
 		${project_name}
 		PRIVATE
-		${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/include
+		${${PROJECT_NAME_PREFIX}3RD_PARTY_LIBRARY_PATH}/freetype/include
 	)
 
 	if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 		# freetype 2.13.2
-		set(freetype_dll_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/freetype.dll)
-		set(freetype_lib_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/freetype.lib)
+		set(freetype_dll_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_LIBRARY_PATH}/freetype/freetype.dll)
+		set(freetype_lib_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_LIBRARY_PATH}/freetype/freetype.lib)
 
-		set(zlib1_dll_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/zlib1.dll)
-		set(bz2_dll_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/bz2.dll)
-		set(libpng16_dll_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/libpng16.dll)
-		set(brotlidec_dll_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/brotlidec.dll)
-		set(brotlicommon_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_PATH}/freetype/brotlicommon.dll)
+		set(zlib1_dll_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_LIBRARY_PATH}/freetype/zlib1.dll)
+		set(bz2_dll_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_LIBRARY_PATH}/freetype/bz2.dll)
+		set(libpng16_dll_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_LIBRARY_PATH}/freetype/libpng16.dll)
+		set(brotlidec_dll_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_LIBRARY_PATH}/freetype/brotlidec.dll)
+		set(brotlicommon_path ${${PROJECT_NAME_PREFIX}3RD_PARTY_LIBRARY_PATH}/freetype/brotlicommon.dll)
 
 		if(NOT TARGET freetype_library)
 			add_library(
@@ -75,4 +75,4 @@ function(link_3rd_library_freetype project_name)
 	else ()
 		message(FATAL_ERROR "Unsupported Platform: ${CMAKE_SYSTEM_NAME}")
 	endif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-endfunction(link_3rd_library_freetype project_name)
+endfunction(link_3rd_party_library_freetype project_name)
