@@ -25,12 +25,17 @@ import :primitive.color;
 #include <format>
 
 #include <prometheus/macro.hpp>
+
 #include <primitive/point.ixx>
 #include <primitive/color.ixx>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: primitive
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
+#endif
 {
 	template<
 		typename, // point type

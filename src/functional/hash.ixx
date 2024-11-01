@@ -26,7 +26,11 @@ import std;
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: functional
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+#endif
 {
 	using hash_result_type = std::uint64_t;
 }
@@ -101,7 +105,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(functional)
 	};
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: functional
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+#endif
 {
 	template<typename T, typename Hash = std::hash<T>>
 	constexpr auto hash = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::hash<T, Hash>{};

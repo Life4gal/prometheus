@@ -24,6 +24,7 @@ import :meta;
 #include <utility>
 
 #include <prometheus/macro.hpp>
+
 #include <functional/functional.ixx>
 #include <meta/meta.ixx>
 
@@ -672,7 +673,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(sm)
 		};
 	}
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: sm
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(sm)
+#endif
 {
 		template<meta::basic_fixed_string State>
 		[[nodiscard]] constexpr auto operator""_s() noexcept

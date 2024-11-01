@@ -24,7 +24,9 @@ import :functional;
 import :platform;
 #endif
 
+import :draw.def;
 import :draw.window;
+import :draw.context;
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
@@ -51,6 +53,8 @@ import :draw.window;
 
 #include <functional/functional.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
+#include <draw/def.ixx>
 #include <draw/window.ixx>
 #include <draw/context.ixx>
 
@@ -372,12 +376,12 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 		return rect_.includes(mouse);
 	}
 
-	auto Window::draw_text(const std::string_view text)
+	auto Window::draw_text(const std::string_view text) noexcept -> void
 	{
 		const auto& context = Context::instance();
 		const auto& theme = context.theme();
 
-		draw_list_.text(theme.font_size, canvas_.cursor_current_line, theme.color<ThemeCategory::TEXT>(), text);
+		draw_list_.text(theme.font_size, canvas_.cursor_current_line +rect_.left_top(), theme.color<ThemeCategory::TEXT>(), text);
 	}
 
 	auto Window::render() noexcept -> DrawList&

@@ -12,7 +12,7 @@ export module gal.prometheus:chars.scalar;
 import std;
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 import :chars.encoding;
@@ -32,18 +32,23 @@ export import :chars.scalar.utf32;
 #include <span>
 
 #include <prometheus/macro.hpp>
+
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #include <chars/encoding.ixx>
 #include <chars/scalar_ascii.ixx>
 #include <chars/scalar_utf8.ixx>
 #include <chars/scalar_utf16.ixx>
 #include <chars/scalar_utf32.ixx>
 
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
-
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
 // ReSharper disable once CppRedundantNamespaceDefinition
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: chars
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(chars)
+#endif
 {
 	template<>
 	class Encoding<"scalar">

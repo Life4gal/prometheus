@@ -28,8 +28,10 @@ import :numeric.random_engine;
 #include <chrono>
 
 #include <prometheus/macro.hpp>
-#include <numeric/random_engine.ixx>
+
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
+#include <numeric/random_engine.ixx>
 
 #endif
 
@@ -43,7 +45,11 @@ import :numeric.random_engine;
 #define RANDOM_WORKAROUND_OPERATOR_THIS(type) this->template
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: numeric
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
+#endif
 {
 	template<typename T>
 	using default_int_distribution = std::uniform_int_distribution<T>;
@@ -81,7 +87,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(numeric)
 	constexpr auto is_user_defined_distribution_v = is_user_defined_distribution<Distribution, T>::value;
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: numeric
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
+#endif
 {
 	template<template<typename> typename, typename>
 	struct is_distribution_compatible : std::false_type {};

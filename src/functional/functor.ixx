@@ -19,6 +19,7 @@ import std;
 
 #include <utility>
 #include <type_traits>
+#include <functional>
 
 #include <prometheus/macro.hpp>
 
@@ -129,7 +130,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(functional)
 		}
 	};
 
-	[[maybe_unused]] constexpr auto as_boolean = [](const auto& i) noexcept((static_cast<bool>(i))) -> bool { return static_cast<bool>(i); };
+	[[maybe_unused]] constexpr auto as_boolean = [](const auto& i) noexcept(noexcept(static_cast<bool>(i))) -> bool { return static_cast<bool>(i); };
 	[[maybe_unused]] constexpr auto compare_greater_than = [](const auto& lhs, const auto& rhs) noexcept(noexcept(lhs > rhs)) -> bool
 	{
 		return lhs > rhs;
@@ -156,7 +157,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(functional)
 	};
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: functional
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+#endif
 {
 	template<typename FunctionType>
 	struct y_combinator

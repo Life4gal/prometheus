@@ -24,11 +24,16 @@ import :primitive.multidimensional;
 #include <format>
 
 #include <prometheus/macro.hpp>
+
 #include <primitive/multidimensional.ixx>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: primitive
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
+#endif
 {
 	using universal_32_bit_color_type = std::uint32_t;
 

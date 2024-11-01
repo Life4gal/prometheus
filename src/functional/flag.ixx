@@ -24,7 +24,11 @@ import std;
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: functional
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+#endif
 {
 	namespace operators
 	{

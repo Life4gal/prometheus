@@ -12,7 +12,7 @@ export module gal.prometheus:functional.function_ref;
 import std;
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 import :functional.aligned_union;
@@ -25,11 +25,19 @@ import :functional.aligned_union;
 
 #include <type_traits>
 #include <tuple>
+#include <functional>
 
 #include <prometheus/macro.hpp>
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+#include <platform/platform.hpp>
+
+#include <functional/aligned_union.hpp>
+#else
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
-#include <functional/aligned_union.ixx>
+
+#include<functional/aligned_union.ixx>
+#endif
 
 #endif
 
@@ -57,7 +65,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(functional)
 	};
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: functional
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+#endif
 {
 	template<typename Signature>
 	class FunctionRef;

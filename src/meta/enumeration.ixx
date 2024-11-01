@@ -253,7 +253,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(meta)
 	struct cached_flag_dynamic_enum_values_size : std::integral_constant<std::size_t, flag_dynamic_enum_values<EnumType>().size()> {};
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: meta
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
+#endif
 {
 	enum class EnumNamePolicy
 	{
@@ -630,7 +634,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(meta)
 	constexpr auto names_of_enum = generate_enum_names<EnumType, Policy>();
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: meta
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
+#endif
 {
 	template<typename EnumType>
 		requires std::is_enum_v<EnumType>

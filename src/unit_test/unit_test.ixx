@@ -16,7 +16,7 @@ import std;
 import :functional;
 import :meta;
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
@@ -27,6 +27,7 @@ import :error;
 
 #include <string>
 #include <chrono>
+#include <utility>
 #include <vector>
 #include <functional>
 #include <iostream>
@@ -39,13 +40,18 @@ import :error;
 #endif
 
 #include <prometheus/macro.hpp>
+
 #include <functional/functional.ixx>
 #include <meta/meta.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: unit_test
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(unit_test)
+#endif
 {
 	struct color_type
 	{
@@ -5041,7 +5047,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(unit_test)
 	} // namespace dispatcher
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: unit_test
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(unit_test)
+#endif
 {
 	// =========================================
 	// OPERANDS

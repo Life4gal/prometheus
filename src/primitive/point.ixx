@@ -14,7 +14,7 @@ import std;
 import :functional;
 import :meta;
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 import :primitive.multidimensional;
@@ -30,14 +30,20 @@ import :primitive.multidimensional;
 #include <format>
 
 #include <prometheus/macro.hpp>
+
 #include <functional/functional.ixx>
 #include <meta/meta.ixx>
-#include <primitive/multidimensional.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
+#include <primitive/multidimensional.ixx>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: primitive
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
+#endif
 {
 	enum class DirectionCategory
 	{

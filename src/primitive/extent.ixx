@@ -28,13 +28,19 @@ import :primitive.point;
 #include <format>
 
 #include <prometheus/macro.hpp>
+
 #include <meta/meta.ixx>
+
 #include <primitive/multidimensional.ixx>
 #include <primitive/point.ixx>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: primitive
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
+#endif
 {
 	template<std::size_t N, typename T>
 		requires std::is_arithmetic_v<T>

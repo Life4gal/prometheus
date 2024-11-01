@@ -25,46 +25,19 @@ export import :draw.def;
 #include <vector>
 
 #include <prometheus/macro.hpp>
+
 #include <primitive/primitive.ixx>
+
 #include <draw/def.ixx>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: draw
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
+#endif
 {
-	enum class ThemeCategory
-	{
-		TEXT = 0,
-		BORDER,
-
-		WINDOW_BACKGROUND,
-
-		WIDGET_BACKGROUND,
-		WIDGET_ACTIVATED,
-
-		TITLE_BAR,
-		TITLE_BAR_COLLAPSED,
-
-		SLIDER,
-		SLIDER_ACTIVATED,
-
-		BUTTON,
-		BUTTON_HOVERED,
-		BUTTON_ACTIVATED,
-
-		RESIZE_GRIP,
-		RESIZE_GRIP_HOVERED,
-		RESIZE_GRIP_ACTIVATED,
-
-		TOOLTIP_BACKGROUND,
-		TOOLTIP_TEXT,
-
-		// -------------------------------
-		INTERNAL_COUNT
-	};
-
-	constexpr auto theme_category_count = static_cast<std::size_t>(ThemeCategory::INTERNAL_COUNT);
-
 	class [[nodiscard]] Theme
 	{
 	public:

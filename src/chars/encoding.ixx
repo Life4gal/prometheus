@@ -26,12 +26,17 @@ import :platform;
 #include <span>
 
 #include <prometheus/macro.hpp>
+
 #include <meta/meta.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: chars
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(chars)
+#endif
 {
 	enum class EncodingType
 	{

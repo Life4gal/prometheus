@@ -25,12 +25,17 @@ import :functional.functor;
 #include <memory>
 
 #include <prometheus/macro.hpp>
+
 #include <functional/type_list.ixx>
 #include <functional/functor.ixx>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: functional
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+#endif
 {
 	template<typename... Ts>
 	class AlignedUnion final

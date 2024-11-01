@@ -25,12 +25,18 @@ import :concurrency.thread;
 #include <atomic>
 
 #include <prometheus/macro.hpp>
-#include <concurrency/thread.ixx>
+
 #include <meta/meta.ixx>
+
+#include <concurrency/thread.ixx>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: concurrency
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(concurrency)
+#endif
 {
 	class UnfairMutex final
 	{

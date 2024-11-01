@@ -11,7 +11,7 @@ export module gal.prometheus:chars;
 
 import std;
 
-import :error;
+import :platform;
 
 export import :chars.encoding;
 export import :chars.scalar;
@@ -30,10 +30,11 @@ export import :chars.icelake;
 #include <string>
 
 #include <prometheus/macro.hpp>
+
 #include <platform/platform.ixx>
+
 #include <chars/encoding.ixx>
 #include <chars/scalar.ixx>
-
 #if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 #include <chars/icelake.ixx>
 #endif
@@ -79,7 +80,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 	};
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: chars
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(chars)
+#endif
 {
 	[[nodiscard]] inline auto encoding_of(const std::span<const char8_t> input) noexcept -> EncodingType
 	{

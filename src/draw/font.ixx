@@ -29,12 +29,18 @@ import :draw.def;
 #include <unordered_map>
 
 #include <prometheus/macro.hpp>
+
 #include <primitive/primitive.ixx>
+
 #include <draw/def.ixx>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: draw
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
+#endif
 {
 	class DrawList;
 

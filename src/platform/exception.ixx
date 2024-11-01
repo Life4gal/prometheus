@@ -20,12 +20,17 @@ import std;
 #include <string>
 #include <source_location>
 #include <stacktrace>
+#include <utility>
 
 #include <prometheus/macro.hpp>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: platform
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(platform)
+#endif
 {
 	class AbstractException
 	{

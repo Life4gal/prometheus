@@ -26,6 +26,7 @@ import :meta.string;
 #include <utility>
 
 #include <prometheus/macro.hpp>
+
 #include <meta/name.ixx>
 #include <meta/string.ixx>
 
@@ -3066,7 +3067,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(meta)
 	}
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: meta
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
+#endif
 {
 	template<typename T>
 	constexpr auto is_member_gettable_v = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_member_gettable_v<T>;
@@ -3301,7 +3306,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(meta)
 	}
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: meta
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
+#endif
 {
 	template<typename T, basic_fixed_string Name>
 		requires member_gettable_t<std::remove_cvref_t<T>>

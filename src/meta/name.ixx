@@ -28,15 +28,34 @@ import std;
 
 struct dummy_struct_do_not_put_into_any_namespace {};
 
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(meta)
 {
-	// ReSharper disable once CppTemplateParameterNeverUsed
-	template<typename... Ts> // DO NOT REMOVE `Ts`
-	[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return std::source_location::current().function_name(); }
+	template <typename...>
+	struct unused_type {};
 
-	// ReSharper disable once CppTemplateParameterNeverUsed
-	template<auto... Vs> // DO NOT REMOVE `Vs`
-	[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view { return std::source_location::current().function_name(); }
+	template<auto...>
+	struct unused_value {};
+}
+
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: meta
+#else
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
+#endif
+{
+	template<typename... Ts>
+	[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view
+	{
+		[[maybe_unused]] constexpr GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::unused_type<Ts...> _{};
+		return std::source_location::current().function_name();
+	}
+
+	template<auto... Vs>
+	[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view
+	{
+		[[maybe_unused]] constexpr GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::unused_value<Vs...> _{};
+		return std::source_location::current().function_name();
+	}
 
 	template<typename T>
 	[[nodiscard]] constexpr auto name_of() noexcept -> std::string_view

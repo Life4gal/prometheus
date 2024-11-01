@@ -27,11 +27,16 @@ import :platform;
 #include <utility>
 
 #include <prometheus/macro.hpp>
+
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: io
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(io)
+#endif
 {
 	enum class DeviceKey : std::uint16_t
 	{

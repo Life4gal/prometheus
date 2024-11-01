@@ -26,7 +26,11 @@ import std;
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: wildcard
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(wildcard)
+#endif
 {
 	// https://en.cppreference.com/w/cpp/language/string_literal
 	/**
@@ -1189,7 +1193,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(wildcard)
 		}
 	}
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: wildcard
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(wildcard)
+#endif
 {
 	template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator = std::ranges::equal_to>
 	constexpr auto match(

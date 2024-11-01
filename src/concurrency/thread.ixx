@@ -25,7 +25,11 @@ import std;
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: concurrency
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(concurrency)
+#endif
 {
 	using thread_id = std::uint32_t;
 	using process_id = std::uint32_t;

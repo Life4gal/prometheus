@@ -11,6 +11,7 @@ export module gal.prometheus:meta.to_string;
 
 import std;
 
+import :meta.name;
 import :meta.member;
 import :meta.enumeration;
 
@@ -26,12 +27,18 @@ import :meta.enumeration;
 #include <algorithm>
 
 #include <prometheus/macro.hpp>
+
+#include <meta/name.ixx>
 #include <meta/member.ixx>
 #include <meta/enumeration.ixx>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: meta
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
+#endif
 {
 	template<
 		std::ranges::output_range<char> StringType = std::basic_string<char>,
@@ -42,7 +49,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
 	constexpr auto to_string(const T& t, StringType& out) noexcept -> void
 	{
 		using type = T;
-
+		
 		// formatter
 		if constexpr (std::formattable<type, char>)
 		{

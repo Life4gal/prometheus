@@ -26,7 +26,11 @@ import std;
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: coroutine
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(coroutine)
+#endif
 {
 	template<typename ReturnType>
 	class Task;
@@ -148,7 +152,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(coroutine)
 	}
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: coroutine
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(coroutine)
+#endif
 {
 	template<typename ReturnType>
 	class [[nodiscard]] Task final

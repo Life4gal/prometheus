@@ -491,7 +491,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(functional)::value_list_detail
 	};
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: functional
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+#endif
 {
 	template<auto... Values>
 	using value_list_type = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::value_list_detail::list<Values...>;

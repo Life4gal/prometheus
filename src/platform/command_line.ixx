@@ -23,7 +23,11 @@ import std;
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: platform
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(platform)
+#endif
 {
 	auto command_line_args_count() noexcept -> int;
 

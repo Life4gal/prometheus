@@ -29,6 +29,7 @@ import :draw.def;
 #include <prometheus/macro.hpp>
 #include <primitive/primitive.ixx>
 #include <functional/functional.ixx>
+
 #include <draw/def.ixx>
 
 #endif
@@ -160,6 +161,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 		return *this;
 	}
 
+	auto FontGlyphRangeBuilder::latin() && noexcept -> FontGlyphRangeBuilder&&
+	{
+		auto& self = *this;
+		self.latin();
+		return std::move(self);
+	}
+
 	auto FontGlyphRangeBuilder::greek() & noexcept -> FontGlyphRangeBuilder&
 	{
 		latin();
@@ -169,28 +177,31 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 		return *this;
 	}
 
+	auto FontGlyphRangeBuilder::greek() && noexcept -> FontGlyphRangeBuilder&&
+	{
+		auto& self = *this;
+		self.greek();
+		return std::move(self);
+	}
+
 	auto FontGlyphRangeBuilder::simplified_chinese_common() & noexcept -> FontGlyphRangeBuilder&
 	{
-		const auto unpack = []<std::size_t I>() constexpr noexcept -> glyph_pair_type
+		// const auto unpack = []<std::size_t I>() constexpr noexcept -> glyph_pair_type
+		const auto unpack = [](const auto i) constexpr noexcept -> glyph_pair_type
 		{
 			const auto codepoint =
 					0x4e00 +
-					// // fixme: fatal error C1128: number of sections exceeded object file format limit : compile with /bigobj
-					// std::ranges::fold_left(
-					// 	std::ranges::subrange{
-					// 			std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00),
-					// 			std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00) + 1 + I
-					// 	},
-					// 	glyph_value_type{0},
-					// 	[](const glyph_value_type total, const glyph_value_type current) noexcept -> glyph_value_type
-					// 	{
-					// 		return total + current;
-					// 	}
-					// );
-					std::accumulate(
-						std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00),
-						std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00) + 1 + I,
-						glyph_value_type{0}
+					std::ranges::fold_left(
+						std::ranges::subrange{
+								std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00),
+								// std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00) + 1 + I
+								std::ranges::begin(simplified_chinese_common_accumulative_offsets_from_0x4e00) + 1 + i
+						},
+						glyph_value_type{0},
+						[](const glyph_value_type total, const glyph_value_type current) noexcept -> glyph_value_type
+						{
+							return total + current;
+						}
 					);
 			return {codepoint, codepoint};
 		};
@@ -222,12 +233,26 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 		glyph_range_.emplace_back(0xff00, 0xffef);
 		// Invalid
 		glyph_range_.emplace_back(0xfffd, 0xfffd);
-		[this, unpack]<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> void
-		{
-			(glyph_range_.emplace_back(unpack.operator()<Index>()), ...);
-		}(std::make_index_sequence<std::ranges::size(simplified_chinese_common_accumulative_offsets_from_0x4e00)>{});
+		// [this, unpack]<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> void
+		// {
+			// (glyph_range_.emplace_back(unpack.operator()<Index>()), ...);
+		// }(std::make_index_sequence<std::ranges::size(simplified_chinese_common_accumulative_offsets_from_0x4e00)>{});
+		std::ranges::for_each(
+			std::views::iota(0ull, std::ranges::size(simplified_chinese_common_accumulative_offsets_from_0x4e00)),
+			[this, unpack](const auto i) noexcept -> void
+			{
+				glyph_range_.emplace_back(unpack(i));
+			}
+		);
 
 		return *this;
+	}
+
+	auto FontGlyphRangeBuilder::simplified_chinese_common() && noexcept -> FontGlyphRangeBuilder&&
+	{
+		auto& self = *this;
+		self.simplified_chinese_common();
+		return std::move(self);
 	}
 
 	auto FontGlyphRangeBuilder::simplified_chinese_all() & noexcept -> FontGlyphRangeBuilder&
@@ -264,6 +289,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 		glyph_range_.emplace_back(0x4e00, 0x9faf);
 
 		return *this;
+	}
+
+	auto FontGlyphRangeBuilder::simplified_chinese_all() && noexcept -> FontGlyphRangeBuilder&&
+	{
+		auto& self = *this;
+		self.simplified_chinese_all();
+		return std::move(self);
 	}
 
 	DrawListSharedData::DrawListSharedData() noexcept

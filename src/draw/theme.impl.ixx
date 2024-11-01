@@ -13,13 +13,19 @@ import std;
 
 import :primitive;
 
+import :draw.theme;
+
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #if not GAL_PROMETHEUS_USE_MODULE
 
+#include <utility>
+
 #include <prometheus/macro.hpp>
-#include <draw/theme.ixx>
+
 #include <primitive/primitive.ixx>
+
+#include <draw/theme.ixx>
 
 #endif
 
@@ -73,7 +79,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 				.font_name = R"(C:\Windows\Fonts\msyh.ttc)",
 				.font_size = 18,
 				#else
-				#error "fixme
+				#error "fixme"
 				#endif
 				.title_bar_height = 20,
 				.window_rounding = 0,

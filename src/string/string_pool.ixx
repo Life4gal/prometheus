@@ -28,11 +28,16 @@ import :platform;
 #include <ranges>
 
 #include <prometheus/macro.hpp>
+
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: string
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(string)
+#endif
 {
 	template<typename CharType = char, bool IsNullTerminate = true, typename CharTrait = std::char_traits<CharType>>
 	class StringPool

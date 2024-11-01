@@ -416,7 +416,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(functional)::type_list_detail
 	};
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: functional
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+#endif
 {
 	template<typename... Ts>
 	using type_list_type = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::type_list_detail::list<Ts...>;

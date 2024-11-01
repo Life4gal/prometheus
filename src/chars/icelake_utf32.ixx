@@ -20,7 +20,7 @@ import std;
 import :meta;
 import :memory;
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 import :chars.encoding;
@@ -47,9 +47,11 @@ import :chars.scalar.utf32;
 #include <algorithm>
 
 #include <prometheus/macro.hpp>
+
 #include <meta/meta.ixx>
 #include <memory/memory.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #include <chars/encoding.ixx>
 #include <chars/scalar_utf32.ixx>
 
@@ -579,7 +581,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)::icelake_utf32_detail
 	};
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: chars
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(chars)
+#endif
 {
 	template<>
 	class Simd<"icelake.utf32">

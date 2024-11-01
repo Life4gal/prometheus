@@ -28,11 +28,16 @@ import :primitive;
 #include <memory>
 
 #include <prometheus/macro.hpp>
+
 #include <primitive/primitive.ixx>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: draw
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
+#endif
 {
 	enum class DrawFlag : std::uint8_t
 	{
@@ -89,7 +94,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 		using rect_type = primitive::basic_rect_2d<float, float>;
 		using point_type = rect_type::point_type;
 		using extent_type = rect_type::extent_type;
-
+		
 		using circle_type = primitive::basic_circle_2d<float, float>;
 		using ellipse_type = primitive::basic_ellipse_2d<float, float, float>;
 
@@ -166,15 +171,19 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 
 		// Latin
 		auto latin() & noexcept -> FontGlyphRangeBuilder&;
+		auto latin() && noexcept -> FontGlyphRangeBuilder&&;
 
 		// Latin + Greek and Coptic
 		auto greek() & noexcept -> FontGlyphRangeBuilder&;
+		auto greek() && noexcept -> FontGlyphRangeBuilder&&;
 
 		// Latin + Half-Width + Japanese Hiragana/Katakana + set of 2500 CJK Unified Ideographs for common simplified Chinese
 		auto simplified_chinese_common() & noexcept -> FontGlyphRangeBuilder&;
+		auto simplified_chinese_common() && noexcept -> FontGlyphRangeBuilder&&;
 
 		// Latin + Half-Width + Japanese Hiragana/Katakana + full set of about 21000 CJK Unified Ideographs
 		auto simplified_chinese_all() & noexcept -> FontGlyphRangeBuilder&;
+		auto simplified_chinese_all() && noexcept -> FontGlyphRangeBuilder&&;
 	};
 
 	class FontOption
@@ -318,6 +327,39 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
 
 		GAL_PROMETHEUS_ERROR_UNREACHABLE();
 	}
+
+	enum class ThemeCategory
+	{
+		TEXT = 0,
+		BORDER,
+
+		WINDOW_BACKGROUND,
+
+		WIDGET_BACKGROUND,
+		WIDGET_ACTIVATED,
+
+		TITLE_BAR,
+		TITLE_BAR_COLLAPSED,
+
+		SLIDER,
+		SLIDER_ACTIVATED,
+
+		BUTTON,
+		BUTTON_HOVERED,
+		BUTTON_ACTIVATED,
+
+		RESIZE_GRIP,
+		RESIZE_GRIP_HOVERED,
+		RESIZE_GRIP_ACTIVATED,
+
+		TOOLTIP_BACKGROUND,
+		TOOLTIP_TEXT,
+
+		// -------------------------------
+		INTERNAL_COUNT
+	};
+
+	constexpr auto theme_category_count = static_cast<std::size_t>(ThemeCategory::INTERNAL_COUNT);
 
 	enum class WindowFlag : std::uint8_t
 	{

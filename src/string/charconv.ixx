@@ -25,11 +25,16 @@ import :platform;
 #include <format>
 
 #include <prometheus/macro.hpp>
+
 #include <platform/platform.ixx>
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: string
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(string)
+#endif
 {
 	[[nodiscard]] constexpr auto is_upper(const char c) noexcept -> bool
 	{

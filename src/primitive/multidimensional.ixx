@@ -25,6 +25,7 @@ import :meta;
 #include <functional>
 
 #include <prometheus/macro.hpp>
+
 #include <meta/meta.ixx>
 
 #endif
@@ -86,7 +87,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(primitive)
 	concept convertible_type_t = is_convertible_type<T, ThisDerived>();
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: primitive
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
+#endif
 {
 	template<typename Derived>
 	struct [[nodiscard]] multidimensional

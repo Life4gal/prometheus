@@ -19,7 +19,11 @@ export module gal.prometheus:platform.debug;
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: platform
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(platform)
+#endif
 {
 	auto debug_break(const char* message) noexcept -> void;
 } // namespace gal::prometheus::platform

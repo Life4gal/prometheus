@@ -49,6 +49,7 @@ import :draw.draw_list;
 
 #include <prometheus/macro.hpp>
 #include <chars/chars.ixx>
+
 #include <draw/def.ixx>
 #include <draw/font.ixx>
 #include <draw/draw_list.ixx>
@@ -284,9 +285,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(draw)
 			{
 				continue;
 			}
-
+			
 			const auto& g = ft_face->glyph;
-
+		
 			for (std::uint32_t y = 0; y < g->bitmap.rows; ++y)
 			{
 				for (std::uint32_t x = 0; x < g->bitmap.width; ++x)

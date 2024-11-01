@@ -19,6 +19,7 @@ export module gal.prometheus:draw.draw_list;
 
 import std;
 
+import :primitive;
 #if GAL_PROMETHEUS_COMPILER_DEBUG
 import :platform;
 #endif
@@ -52,7 +53,6 @@ import :draw.def;
 #include <span>
 #endif
 
-#include <functional/functional.ixx>
 #include <primitive/primitive.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
@@ -60,7 +60,11 @@ import :draw.def;
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: draw
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(draw)
+#endif
 {
 	class Font;
 

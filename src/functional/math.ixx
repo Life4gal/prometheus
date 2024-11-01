@@ -6,6 +6,7 @@
 #if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
+
 #if __has_include(<intrin.h>)
 #include <intrin.h>
 #endif
@@ -40,11 +41,16 @@ import :platform;
 #endif
 
 #include <prometheus/macro.hpp>
+
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: functional
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+#endif
 {
 	template<typename T>
 		requires std::is_arithmetic_v<T>
@@ -273,7 +279,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(functional)
 	}
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: functional
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
+#endif
 {
 	template<typename T>
 		requires std::is_arithmetic_v<T>

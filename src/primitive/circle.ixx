@@ -29,6 +29,7 @@ import :primitive.rect;
 #include <tuple>
 
 #include <prometheus/macro.hpp>
+
 #include <primitive/multidimensional.ixx>
 #include <primitive/point.ixx>
 #include <primitive/extent.ixx>
@@ -36,7 +37,11 @@ import :primitive.rect;
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: primitive
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
+#endif
 {
 	template<std::size_t N, typename PointValueType, typename RadiusType = PointValueType>
 		requires (std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<RadiusType>)

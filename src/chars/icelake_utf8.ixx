@@ -20,7 +20,7 @@ import std;
 import :meta;
 import :memory;
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 import :chars.encoding;
@@ -46,9 +46,11 @@ import :chars.scalar.utf8;
 #include <algorithm>
 
 #include <prometheus/macro.hpp>
+
 #include <meta/meta.ixx>
 #include <memory/memory.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #include <chars/encoding.ixx>
 #include <chars/scalar_utf8.ixx>
 
@@ -2032,7 +2034,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(chars)
 	};
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: chars
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(chars)
+#endif
 {
 	using GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::avx512_utf8_checker;
 

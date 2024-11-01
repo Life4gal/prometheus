@@ -15,7 +15,7 @@ export module gal.prometheus:command_line_parser;
 
 import std;
 
-import :error;
+import :platform;
 import :meta;
 import :functional;
 import :string;
@@ -37,6 +37,7 @@ import :string;
 #include <iterator>
 
 #include <prometheus/macro.hpp>
+
 #include <platform/platform.ixx>
 #include <meta/meta.ixx>
 #include <functional/functional.ixx>
@@ -44,7 +45,11 @@ import :string;
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: clp
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(clp)
+#endif
 {
 	class CommandLineOptionNameFormatError final : public platform::Exception<void>
 	{
@@ -555,7 +560,11 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(clp)
 	}
 }
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: clp
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(clp)
+#endif
 {
 	template<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::regex_string_type StringType, GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::regex_string_type StringViewType>
 	class CommandLineOption;

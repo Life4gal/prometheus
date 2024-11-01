@@ -13,7 +13,7 @@ import std;
 
 import :functional;
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-import :error;
+import :platform;
 #endif
 
 #endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
@@ -28,12 +28,17 @@ import :error;
 #include <bit>
 
 #include <prometheus/macro.hpp>
+
 #include <functional/functional.ixx>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #endif
 
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: memory
+#else
 GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(memory)
+#endif
 {
 	template<typename T, typename In>
 		requires std::is_arithmetic_v<T> and
