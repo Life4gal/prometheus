@@ -976,34 +976,101 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(unit_test)
 
 			[[nodiscard]] constexpr auto do_check() const noexcept -> bool
 			{
-				const auto do_compare = [&e = epsilon_](const auto& left, const auto& right) noexcept -> bool
+				const auto do_compare = [](const auto& left, const auto& right, const auto& epsilon) noexcept -> bool
 				{
-					#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
-					// error : lambda capture 'e' is not used [-Werror,-Wunused-lambda-capture]
-					(void)e;
-					#endif
-
 					if constexpr (category == ExpressionCategory::EQUAL)
 					{
 						using std::operator==;
-						return left == right;
+						using std::operator!=;
+						if constexpr (requires {left == right;})
+						{
+							return left == right;
+						}
+						else if constexpr (requires {right == left;})
+						{
+							return right == left;
+						}
+						else if constexpr (requires {left != right;})
+						{
+							return not (left != right);
+						}
+						else if constexpr (requires {right != left;})
+						{
+							return not (right != left);
+						}
+						else if constexpr (requires {{left.compare(right)} -> std::same_as<bool>;})
+						{
+							return left.compare(right);
+						}
+						else if constexpr (requires {left.compare(right);})
+						{
+							return left.compare(right) == 0;
+						}
+						else if constexpr (requires {{right.compare(left)} -> std::same_as<bool>;})
+						{
+							return right.compare(left);
+						}
+						else if constexpr (requires {right.compare(left);})
+						{
+							return right.compare(left) == 0;
+						}
+						else
+						{
+							GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("Not comparable!");
+						}
 					}
 					else if constexpr (category == ExpressionCategory::APPROX)
 					{
 						using std::operator-;
 						using std::operator<;
-						return functional::abs(left - right) < e; // NOLINT(clang-diagnostic-implicit-int-float-conversion)
+						return functional::abs(left - right) < epsilon; // NOLINT(clang-diagnostic-implicit-int-float-conversion)
 					}
 					else if constexpr (category == ExpressionCategory::NOT_EQUAL)
 					{
 						using std::operator!=;
-						return left != right;
+						using std::operator==;
+						if constexpr (requires {left != right;})
+						{
+							return left != right;
+						}
+						else if constexpr (requires {right != left;})
+						{
+							return right != left;
+						}
+						else if constexpr (requires {left == right;})
+						{
+							return not (left == right);
+						}
+						else if constexpr (requires {right == left;})
+						{
+							return not (right == left);
+						}
+						else if constexpr (requires {{left.compare(right)} -> std::same_as<bool>;})
+						{
+							return not left.compare(right);
+						}
+						else if constexpr (requires {left.compare(right);})
+						{
+							return left.compare(right) != 0;
+						}
+						else if constexpr (requires {{right.compare(left)} -> std::same_as<bool>;})
+						{
+							return not right.compare(left);
+						}
+						else if constexpr (requires {right.compare(left);})
+						{
+							return right.compare(left) != 0;
+						}
+						else
+						{
+							GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("Not comparable!");
+						}
 					}
 					else if constexpr (category == ExpressionCategory::NOT_APPROX)
 					{
 						using std::operator-;
 						using std::operator<;
-						return e < functional::abs(left - right);
+						return epsilon < functional::abs(left - right);
 					}
 					else if constexpr (category == ExpressionCategory::GREATER_THAN)
 					{
@@ -1032,13 +1099,17 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(unit_test)
 
 				const auto get_value = []<typename T>([[maybe_unused]] const T& target) noexcept -> decltype(auto) //
 				{
-					if constexpr (requires { T::value; })
+					[[maybe_unused]] constexpr auto not_member_function_pointer = []<typename P>(P) constexpr noexcept { return not std::is_member_function_pointer_v<std::decay_t<P>>; };
+
+					if constexpr (requires { target.value(); })
 					{
-						return T::value;
-					}
-					else if constexpr (requires { target.value(); })
-					{
+						// member function
 						return target.value();
+					}
+					else if constexpr (requires { not_member_function_pointer(T::value); })
+					{
+						// static variable
+						return T::value;
 					}
 					else
 					{
@@ -1046,7 +1117,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(unit_test)
 					}
 				};
 
-				return do_compare(get_value(left_), get_value(right_));
+				return do_compare(get_value(left_), get_value(right_), get_value(epsilon_));
 			}
 
 		public:
