@@ -32,10 +32,6 @@ elseif (${PROJECT_NAME_PREFIX}COMPILER_CLANG)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Werror")
 	endif ()
 
-	# <stacktrace>
-	#list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "--enable-libstdcxx-backtrace")
-	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-lstdc++_libbacktrace")
-
 	if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 		# chars/icelake_xxx
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-march=native")
@@ -48,12 +44,6 @@ elseif (${PROJECT_NAME_PREFIX}COMPILER_GNU)
 	if (${PROJECT_NAME_PREFIX}WERROR)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Werror")
 	endif ()
-
-	# <stacktrace>
-	#list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "--enable-libstdcxx-backtrace")
-	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-lstdc++_libbacktrace")
-	# <print>
-	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-lstdc++exp")
 
 	if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 		# chars/icelake_xxx
@@ -132,3 +122,15 @@ set_target_properties(
 		PUBLIC_HEADER "${${PROJECT_NAME_PREFIX}HEADER}"
 		DEBUG_POSTFIX "${${PROJECT_NAME_PREFIX}DEBUG_POSTFIX}"
 )
+
+if (${PROJECT_NAME_PREFIX}COMPILER_CLANG OR ${PROJECT_NAME_PREFIX}COMPILER_GNU)
+	target_link_libraries(
+			${PROJECT_NAME}
+			PRIVATE
+
+			# <stacktrace>
+			#stdc++_libbacktrace
+			# <print>
+			stdc++exp
+	)
+endif (${PROJECT_NAME_PREFIX}COMPILER_CLANG OR ${PROJECT_NAME_PREFIX}COMPILER_GNU)
