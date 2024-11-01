@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <version>
+
 // =========================================================
 // COMPILER
 // =========================================================
@@ -16,6 +18,11 @@
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+#if __cpp_lib_unreachable >= 202202L
+#define GAL_PROMETHEUS_COMPILER_UNREACHABLE() std::unreachable()
+#else
+#define GAL_PROMETHEUS_COMPILER_UNREACHABLE() __assume(0)
+#endif
 #define GAL_PROMETHEUS_COMPILER_DEBUG_TRAP() __debugbreak()
 #define GAL_PROMETHEUS_COMPILER_IMPORTED_SYMBOL __declspec(dllimport)
 #define GAL_PROMETHEUS_COMPILER_EXPORTED_SYMBOL __declspec(dllexport)
@@ -26,6 +33,11 @@
 #define GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(warningNumber) __pragma(warning(disable \
 																			   : warningNumber))
 #elif defined(GAL_PROMETHEUS_COMPILER_GNU)
+#if __cpp_lib_unreachable >= 202202L
+#define GAL_PROMETHEUS_COMPILER_UNREACHABLE() std::unreachable()
+#else
+#define GAL_PROMETHEUS_COMPILER_UNREACHABLE() __builtin_unreachable()
+#endif
 #define GAL_PROMETHEUS_COMPILER_DEBUG_TRAP() __builtin_trap()
 #define GAL_PROMETHEUS_COMPILER_IMPORTED_SYMBOL __attribute__((visibility("default")))
 #define GAL_PROMETHEUS_COMPILER_EXPORTED_SYMBOL __attribute__((visibility("default")))
@@ -37,6 +49,11 @@
 #define GAL_PROMETHEUS_COMPILER_PRIVATE_DO_PRAGMA(X) _Pragma(#X)
 #define GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(warningName) GAL_PROMETHEUS_COMPILER_PRIVATE_DO_PRAGMA(GCC diagnostic ignored #warningName)
 #elif defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+#if __cpp_lib_unreachable >= 202202L
+#define GAL_PROMETHEUS_COMPILER_UNREACHABLE() std::unreachable()
+#else
+#define GAL_PROMETHEUS_COMPILER_UNREACHABLE() __builtin_unreachable()
+#endif
 #define GAL_PROMETHEUS_COMPILER_DEBUG_TRAP() __builtin_trap()
 #define GAL_PROMETHEUS_COMPILER_IMPORTED_SYMBOL __attribute__((visibility("default")))
 #define GAL_PROMETHEUS_COMPILER_EXPORTED_SYMBOL __attribute__((visibility("default")))
@@ -48,6 +65,7 @@
 #define GAL_PROMETHEUS_COMPILER_PRIVATE_DO_PRAGMA(X) _Pragma(#X)
 #define GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(warningName) GAL_PROMETHEUS_COMPILER_PRIVATE_DO_PRAGMA(clang diagnostic ignored #warningName)
 #else
+#define GAL_PROMETHEUS_COMPILER_UNREACHABLE()
 #define GAL_PROMETHEUS_COMPILER_DEBUG_TRAP()
 #define GAL_PROMETHEUS_COMPILER_IMPORTED_SYMBOL
 #define GAL_PROMETHEUS_COMPILER_EXPORTED_SYMBOL
@@ -133,7 +151,7 @@
 
 #define GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(...)                                                             \
 	[]<bool AlwaysFalse = false>() { static_assert(AlwaysFalse, "[UNREACHABLE BRANCH]" __VA_OPT__(":\"") __VA_ARGS__ __VA_OPT__("\"")); }(); \
-	std::unreachable()
+	GAL_PROMETHEUS_COMPILER_UNREACHABLE()
 
 #if defined(__cpp_if_consteval)
 #define GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED if consteval
@@ -340,7 +358,7 @@
 			}                                                                                                                                               \
 		} while (false)
 
-#define GAL_PROMETHEUS_ERROR_UNREACHABLE(...) std::unreachable()
+#define GAL_PROMETHEUS_ERROR_UNREACHABLE(...) GAL_PROMETHEUS_COMPILER_UNREACHABLE()
 
 #if __has_cpp_attribute(assume)
 #define GAL_PROMETHEUS_ERROR_ASSUME(expression, ...) \

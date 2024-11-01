@@ -51,6 +51,7 @@ namespace
 			return true;
 		}
 
+		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 		__try // NOLINT(clang-diagnostic-language-extension-token)
 		{
 			__try // NOLINT(clang-diagnostic-language-extension-token)
@@ -79,6 +80,28 @@ namespace
 
 		// The jit-debugger was configured, but the user pressed Cancel.
 		return false;
+		#else
+		EXCEPTION_RECORD ExceptionRecord;
+		ZeroMemory(&ExceptionRecord, sizeof(ExceptionRecord));
+		ExceptionRecord.ExceptionCode = EXCEPTION_BREAKPOINT;
+
+		CONTEXT Context;
+		ZeroMemory(&Context, sizeof(Context));
+		Context.ContextFlags = CONTEXT_FULL;
+		RtlCaptureContext(&Context);
+
+		EXCEPTION_POINTERS ExceptionPointers;
+		ExceptionPointers.ExceptionRecord = &ExceptionRecord;
+		ExceptionPointers.ContextRecord = &Context;
+
+		if (UnhandledExceptionFilter(&ExceptionPointers) == EXCEPTION_CONTINUE_EXECUTION)
+		{
+			return true;
+		}
+
+		return false;
+		#endif
+
 		#else
 		// Check if we're running under a debugger by checking the process status.
 		static bool debugger_present = false;

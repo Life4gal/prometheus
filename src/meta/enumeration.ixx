@@ -26,6 +26,7 @@ import :meta.name;
 #include <array>
 #include <ranges>
 #include <algorithm>
+#include <utility>
 
 #include <prometheus/macro.hpp>
 
@@ -124,6 +125,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(meta)
 		// CLANG
 		// (MyEnum)1
 		// (anonymous namespace)::(MyEnum)1
+		// GNU
+		// (MyEnum)1
+		// (<unnamed>::MyEnum)1
 		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 		return not name.starts_with('(');
 		#elif defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
@@ -131,6 +135,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(meta)
 		{
 			return not name.starts_with("(anonymous namespace)::(");
 		}
+		return not name.starts_with('(');
+		#elif defined(GAL_PROMETHEUS_COMPILER_GNU)
 		return not name.starts_with('(');
 		#else
 		#error "fixme"
@@ -815,7 +821,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
 		if (std::popcount(unsigned_value) == 1)
 		{
 			const auto i = std::countr_zero(unsigned_value);
-			result.append_range(name_of<EnumType, Policy>(1 << i));
+			if constexpr (requires { result.append_range(name_of<EnumType, Policy>(1 << i)); })
+			{
+				result.append_range(name_of<EnumType, Policy>(1 << i));
+			}
+			else
+			{
+				result.append(name_of<EnumType, Policy>(1 << i));
+			}
+
 			return result;
 		}
 
@@ -823,8 +837,16 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
 		{
 			if (value & (1 << i))
 			{
-				result.append_range(name_of<EnumType, Policy>(1 << i));
-				result.append_range(split);
+				if constexpr (requires { result.append_range(name_of<EnumType, Policy>(1 << i)); })
+				{
+					result.append_range(name_of<EnumType, Policy>(1 << i));
+					result.append_range(split);
+				}
+				else
+				{
+					result.append(name_of<EnumType, Policy>(1 << i));
+					result.append(split);
+				}
 			}
 		}
 
