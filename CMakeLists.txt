@@ -96,7 +96,7 @@ endif (${PROJECT_NAME_PREFIX}MASTER_PROJECT)
 option(${PROJECT_NAME_PREFIX}PEDANTIC "Enable extra warnings and expensive tests." ON)
 option(${PROJECT_NAME_PREFIX}WERROR "Halt the compilation with an error on compiler warnings." OFF)
 option(${PROJECT_NAME_PREFIX}MODULE "Enable module." OFF)
-option(${PROJECT_NAME_PREFIX}DOC "Generate the doc target." ${${PROJECT_NAME_PREFIX}MASTER_PROJECT}) # Do we have the documentation? :)
+option(${PROJECT_NAME_PREFIX}DOC "Generate the doc target." ${${PROJECT_NAME_PREFIX}MASTER_PROJECT})
 option(${PROJECT_NAME_PREFIX}INSTALL "Generate the install target." ${${PROJECT_NAME_PREFIX}MASTER_PROJECT})
 option(${PROJECT_NAME_PREFIX}TEST "Generate the test target." ${${PROJECT_NAME_PREFIX}MASTER_PROJECT})
 
@@ -126,10 +126,6 @@ add_library(
 # SOURCE
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake_utils/compile_flag_and_definition.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake_utils/module_source.cmake)
-
-# 3RD PARTY
-link_3rd_party_library_freetype(${PROJECT_NAME})
-link_3rd_party_library_stb(${PROJECT_NAME})
 
 # DOCUMENTS
 if (${PROJECT_NAME_PREFIX}DOC)

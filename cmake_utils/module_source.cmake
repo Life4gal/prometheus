@@ -228,6 +228,11 @@ set(${PROJECT_NAME_PREFIX}MODULE_FRAGMENT_MACRO_NAME "${PROJECT_NAME_PREFIX}MODU
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	if (CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+		target_compile_options(
+				${PROJECT_NAME}
+				PUBLIC
+				"-Wno-extra-tokens"
+		)
 	else ()
 		target_compile_options(
 				${PROJECT_NAME}
@@ -462,3 +467,7 @@ target_sources(
 
 		${PROJECT_SOURCE_DIR}/src/prometheus/macro.hpp
 )
+
+# 3RD PARTY LIBRARY
+link_3rd_party_library_freetype(${PROJECT_NAME})
+link_3rd_party_library_stb(${PROJECT_NAME})
