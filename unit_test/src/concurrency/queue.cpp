@@ -20,20 +20,20 @@ namespace
 	{
 		using namespace unit_test;
 
-		constexpr std::size_t producers_count = 1;
-		constexpr std::size_t consumers_count = 2;
-		constexpr std::size_t queue_capacity = 1024;
+		constexpr static std::size_t producers_count = 1;
+		constexpr static std::size_t consumers_count = 2;
+		constexpr static std::size_t queue_capacity = 1024;
 
 		"atomic_queue"_test = []
 		{
 			using production_type = std::uint32_t;
 			using sum_production_type = std::uint64_t;
 
-			constexpr production_type nil_value = std::numeric_limits<production_type>::max();
-			constexpr production_type terminate_product = 42;
+			constexpr static production_type nil_value = std::numeric_limits<production_type>::max();
+			constexpr static production_type terminate_product = 42;
 
-			constexpr sum_production_type production_per_producer = 1'000'000;
-			constexpr auto expected_total_production =
+			constexpr static sum_production_type production_per_producer = 1'000'000;
+			[[maybe_unused]] constexpr static auto expected_total_production =
 					static_cast<std::uint64_t>(static_cast<double>(production_per_producer + terminate_product + 1) /
 					                           2 *
 					                           (production_per_producer - terminate_product) *
@@ -96,7 +96,7 @@ namespace
 				);
 			};
 
-			const auto do_start_and_check = [value = expected_total_production](
+			const auto do_start_and_check = [](
 				auto& queue,
 				std::span<sum_production_type, consumers_count> sums,
 				std::span<std::thread, consumers_count> consumers,
@@ -113,7 +113,7 @@ namespace
 					[](const auto t, const auto c) noexcept -> std::uint64_t { return t + c; }
 				);
 
-				expect(total == unit_test::value(value));
+				expect(total == unit_test::value(expected_total_production));
 			};
 
 			"fixed_atomic_queue"_test = [
@@ -164,18 +164,18 @@ namespace
 			};
 			using sum_production_type = std::uint64_t;
 
-			constexpr std::uint32_t terminate_product_id = 42;
-			const production_type terminate_product{.name = "", .id = terminate_product_id};
+			constexpr static std::uint32_t terminate_product_id = 42;
+			const static production_type terminate_product{.name = "", .id = terminate_product_id};
 
-			constexpr sum_production_type production_per_producer = 1'000'000;
-			constexpr auto expected_total_production =
+			constexpr static sum_production_type production_per_producer = 1'000'000;
+			[[maybe_unused]] constexpr static auto expected_total_production =
 					static_cast<std::uint64_t>(static_cast<double>(production_per_producer + terminate_product_id + 1) /
 					                           2 *
 					                           (production_per_producer - terminate_product_id) *
 					                           producers_count
 					);
 
-			const auto do_create_consumers = [&terminate_product](
+			const auto do_create_consumers = [](
 				auto& queue,
 				std::span<sum_production_type, consumers_count> sums,
 				std::span<std::thread, consumers_count> consumers
@@ -183,12 +183,12 @@ namespace
 			{
 				std::ranges::for_each(
 					std::views::zip(sums, consumers),
-					[&terminate_product, &queue](const std::tuple<std::uint64_t&, std::thread&>& pack) noexcept -> void
+					[&queue](const std::tuple<std::uint64_t&, std::thread&>& pack) noexcept -> void
 					{
 						auto& [sum, consumer] = pack;
 
 						consumer = std::thread{
-								[&terminate_product, &queue, &sum]() noexcept -> void
+								[&queue, &sum]() noexcept -> void
 								{
 									std::uint64_t total = 0;
 									while (true)
@@ -209,17 +209,17 @@ namespace
 				);
 			};
 
-			const auto do_create_producers = [&terminate_product](
+			const auto do_create_producers = [](
 				auto& queue,
 				std::span<std::thread, producers_count> producers
 			) noexcept -> void
 			{
 				std::ranges::for_each(
 					producers,
-					[&terminate_product, &queue](std::thread& producer) noexcept -> void
+					[&queue](std::thread& producer) noexcept -> void
 					{
 						producer = std::thread{
-								[&terminate_product, &queue]() noexcept -> void
+								[&queue]() noexcept -> void
 								{
 									for (auto n = production_per_producer; n != terminate_product.id; --n)
 									{
@@ -234,7 +234,7 @@ namespace
 				);
 			};
 
-			const auto do_start_and_check = [&terminate_product, value = expected_total_production](
+			const auto do_start_and_check = [](
 				auto& queue,
 				std::span<sum_production_type, consumers_count> sums,
 				std::span<std::thread, consumers_count> consumers,
@@ -242,7 +242,7 @@ namespace
 			) noexcept -> void
 			{
 				std::ranges::for_each(producers, &std::thread::join);
-				std::ranges::for_each(std::views::iota(0) | std::views::take(consumers_count), [&terminate_product, &queue](auto) { queue.push(terminate_product); });
+				std::ranges::for_each(std::views::iota(0) | std::views::take(consumers_count), [&queue](auto) { queue.push(terminate_product); });
 				std::ranges::for_each(consumers, &std::thread::join);
 
 				const auto total = std::ranges::fold_left(
@@ -251,7 +251,7 @@ namespace
 					[](const auto t, const auto c) noexcept -> std::uint64_t { return t + c; }
 				);
 
-				expect(total == unit_test::value(value));
+				expect(total == unit_test::value(expected_total_production));
 			};
 
 			"fixed_queue"_test = [
