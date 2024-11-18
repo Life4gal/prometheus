@@ -3,22 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#include <prometheus/macro.hpp>
-
-export module gal.prometheus:meta.to_string;
-
-import std;
-
-import :meta.name;
-import :meta.member;
-import :meta.enumeration;
-
-#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if not GAL_PROMETHEUS_USE_MODULE
-
 #pragma once
 
 #include <format>
@@ -28,17 +12,11 @@ import :meta.enumeration;
 
 #include <prometheus/macro.hpp>
 
-#include <meta/name.ixx>
-#include <meta/member.ixx>
-#include <meta/enumeration.ixx>
+#include <meta/name.hpp>
+#include <meta/member.hpp>
+#include <meta/enumeration.hpp>
 
-#endif
-
-#if GAL_PROMETHEUS_INTELLISENSE_WORKING
-namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: meta
-#else
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
-#endif
+namespace gal::prometheus::meta
 {
 	template<
 		std::ranges::output_range<char> StringType = std::basic_string<char>,
@@ -49,7 +27,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(meta)
 	constexpr auto to_string(const T& t, StringType& out) noexcept -> void
 	{
 		using type = T;
-		
+
 		// formatter
 		if constexpr (std::formattable<type, char>)
 		{

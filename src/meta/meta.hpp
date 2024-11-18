@@ -9,3 +9,4 @@
 #include <meta/string.hpp>
 #include <meta/enumeration.hpp>
 #include <meta/member.hpp>
+#include <meta/to_string.hpp>
