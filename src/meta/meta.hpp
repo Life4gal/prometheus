@@ -7,3 +7,4 @@
 
 #include <meta/name.hpp>
 #include <meta/string.hpp>
+#include <meta/enumeration.hpp>
