@@ -1,9 +1,13 @@
-#pragma once
-
-// instruction_set.ixx + instruction_set.impl.ixx
-
-// instruction_set.ixx
 #include <cstdint>
+#include <bit>
+#include <type_traits>
+
+#if __has_include(<intrin.h>)
+#include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
+#endif
 
 enum class InstructionSet : std::uint32_t
 {
@@ -22,17 +26,6 @@ enum class InstructionSet : std::uint32_t
 	AVX512VBMI2 = 0b0000'0100'0000'0000,
 	AVX512VPOPCNTDQ = 0b0000'1000'0000'0000,
 };
-
-// instruction_set.impl.ixx
-#if __has_include(<intrin.h>)
-#include <intrin.h>
-#endif
-#if __has_include(<x86intrin.h>)
-#include <x86intrin.h>
-#endif
-
-#include <bit>
-#include <type_traits>
 
 namespace
 {
@@ -67,7 +60,7 @@ namespace
 	 * Bit 00: FSGSBASE. Supports RDFSBASE/RDGSBASE/WRFSBASE/WRGSBASE if 1.
 	 * Bit 01: IA32_TSC_ADJUST MSR is supported if 1.
 	 * Bit 02: SGX. Supports Intel® Software Guard Extensions (Intel® SGX Extensions) if 1.
-	 * Bit 03: BMI1. 
+	 * Bit 03: BMI1.
 	 * Bit 04: HLE.
 	 * Bit 05: AVX2. Supports Intel® Advanced Vector Extensions 2 (Intel® AVX2) if 1.
 	 * Bit 06: FDP_EXCPTN_ONLY. x87 FPU Data Pointer updated only on x87 exceptions if 1.
@@ -251,7 +244,7 @@ namespace
 	}
 }
 
-inline auto detect_supported_instruction() -> std::uint32_t
+auto detect_supported_instruction() -> std::uint32_t
 {
 	std::uint32_t host_isa = 0;
 

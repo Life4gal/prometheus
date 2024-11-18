@@ -1,0 +1,2 @@
+include(GNUInstallDirs)
+include(CheckCXXCompilerFlag)
