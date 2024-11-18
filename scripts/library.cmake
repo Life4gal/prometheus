@@ -138,6 +138,11 @@ set_target_properties(
 set(
 		${PROJECT_NAME_PREFIX}LIBRARY_SOURCE_PUBLIC
 
+		# =========================
+		# META
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/meta/meta.hpp
 )
 
 set(
