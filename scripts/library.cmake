@@ -142,6 +142,9 @@ set(
 		# META
 		# =========================
 
+		${PROJECT_SOURCE_DIR}/src/meta/name.hpp
+		${PROJECT_SOURCE_DIR}/src/meta/string.hpp
+
 		${PROJECT_SOURCE_DIR}/src/meta/meta.hpp
 )
 

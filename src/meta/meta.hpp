@@ -5,4 +5,5 @@
 
 #pragma once
 
+#include <meta/name.hpp>
 #include <meta/string.hpp>
