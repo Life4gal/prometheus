@@ -160,6 +160,12 @@ set(
 		${PROJECT_SOURCE_DIR}/src/platform/environment.hpp
 
 		${PROJECT_SOURCE_DIR}/src/platform/platform.hpp
+
+		# =========================
+		# FUNCTIONAL
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
 )
 
 set(
