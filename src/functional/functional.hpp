@@ -7,3 +7,4 @@
 
 #include <functional/type_list.hpp>
 #include <functional/value_list.hpp>
+#include <functional/functor.hpp>

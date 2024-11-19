@@ -167,6 +167,7 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/functional/type_list.hpp
 		${PROJECT_SOURCE_DIR}/src/functional/value_list.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/functor.hpp
 
 		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
 )
