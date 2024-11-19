@@ -1,47 +1,28 @@
-// This file is part of prometheus
-// Copyright (C) 2022-2024 Life4gal <life4gal@gmail.com>
-// This file is subject to the license terms in the LICENSE file
-// found in the top-level directory of this distribution.
-
-#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
-#include <Windows.h>
-#else
-#endif
-
-#include <prometheus/macro.hpp>
-
-export module gal.prometheus:platform.debug.impl;
-
-import std;
-
-import :platform.debug;
-
-#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if not GAL_PROMETHEUS_USE_MODULE
-
-#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
-#include <Windows.h>
-#else
-#endif
-
-#if __has_include(<print>)
+#include <string>
 #include <print>
-#endif
-#include <iostream>
 #include <atomic>
 #include <format>
+#include <system_error>
+
+#if __has_include(<debugging>)
+#include <debugging>
+#define HAS_STD_DEBUGGING
+#endif
 
 #include <prometheus/macro.hpp>
 
-#include <platform/debug.ixx>
+#include <platform/os.hpp>
 
+#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
+#include <Windows.h>
+#else
+#include <cerrno>
 #endif
 
 namespace
 {
+	thread_local std::atomic<const char*> breakpoint_reason;
+
 	auto call_debugger() noexcept -> bool
 	{
 		#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
@@ -125,27 +106,58 @@ namespace
 		return false;
 		#endif
 	}
-
-	thread_local std::atomic<const char*> terminate_reason{nullptr};
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(platform)
+namespace gal::prometheus::platform
 {
-	auto debug_break(const char* message) noexcept -> void
+	auto os_error_reason() -> std::string
 	{
-		if (not call_debugger())
-		{
-			#if __has_include(<print>)
-			std::println(
-				std::cerr,
-				"Unexpected behavior occurred but did not run under the debugger, terminate the program. \nReason. {}\n",
-				message
-			);
+		return std::system_category().message(
+			#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
+			static_cast<int>(GetLastError())
 			#else
-			std::cerr << std::format("Unexpected behavior occurred but did not run under the debugger, terminate the program. \nReason. {}\n\n", message);
+			errno
 			#endif
-			terminate_reason.store(message, std::memory_order_relaxed);
+		);
+	}
+
+	auto breakpoint(const char* reason) noexcept -> void
+	{
+		breakpoint_reason.store(reason, std::memory_order::relaxed);
+
+		auto fallback = [reason]
+		{
+			std::println(
+				stderr,
+				"Unexpected behavior occurred but did not run under the debugger, terminate the program. \nReason. {}\n",
+				reason
+			);
 			std::terminate();
+		};
+
+		#if defined(HAS_STD_DEBUGGING)
+		#if __cpp_lib_debugging >= 202601L
+		std::breakpoint_if_debugging();
+		#elif __cpp_lib_debugging >= 202403L
+		if (std::is_debugger_present())
+		{
+			std::breakpoint();
+			return;
+		}
+		else
+		{
+			fallback();
+		}
+		#endif
+		#endif
+
+		if (call_debugger())
+		{
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+		}
+		else
+		{
+			fallback();
 		}
 	}
 }

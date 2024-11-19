@@ -6,4 +6,5 @@
 #pragma once
 
 #include <platform/exception.hpp>
+#include <platform/os.hpp>
 
