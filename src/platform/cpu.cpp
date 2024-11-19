@@ -3,33 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if __has_include(<intrin.h>)
-#include <intrin.h>
-#endif
-#if __has_include(<x86intrin.h>)
-#include <x86intrin.h>
-#endif
-
-#include <prometheus/macro.hpp>
-
-export module gal.prometheus:platform.instruction_set.impl;
-
-import std;
-
-import :platform.instruction_set;
-
-#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if not GAL_PROMETHEUS_USE_MODULE
-
-#if __has_include(<intrin.h>)
-#include <intrin.h>
-#endif
-#if __has_include(<x86intrin.h>)
-#include <x86intrin.h>
-#endif
+// @see <PROJECT-ROOT>/scripts/detect_supported_instruction.cpp
 
 #include <cstdint>
 #include <bit>
@@ -37,8 +11,13 @@ import :platform.instruction_set;
 
 #include <prometheus/macro.hpp>
 
-#include <platform/instruction_set.ixx>
+#include <platform/cpu.hpp>
 
+#if __has_include(<intrin.h>)
+#include <intrin.h>
+#endif
+#if __has_include(<x86intrin.h>)
+#include <x86intrin.h>
 #endif
 
 namespace
@@ -48,6 +27,10 @@ namespace
 	// =======================================
 	// When CPUID executes with EAX set to 01H, feature information is returned in ECX and EDX.
 	// =======================================
+
+	// ReSharper disable CommentTypo
+	// ReSharper disable CppInconsistentNaming
+	// ReSharper disable IdentifierTypo
 
 	/**
 	 * [Figure 3-7](https://www.felixcloutier.com/x86/cpuid#fig-3-7). Feature Information Returned in the ECX Register
@@ -203,6 +186,10 @@ namespace
 		constexpr auto avx512saved = std::uint64_t{0b1110'0000};
 	}
 
+	// ReSharper restore IdentifierTypo
+	// ReSharper restore CppInconsistentNaming
+	// ReSharper restore CommentTypo
+
 	struct cpu_id_t
 	{
 		std::uint32_t eax;
@@ -253,7 +240,7 @@ namespace
 	}
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT_IMPL(platform)
+namespace gal::prometheus::platform
 {
 	auto detect_supported_instruction() -> std::uint32_t
 	{

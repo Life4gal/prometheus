@@ -7,4 +7,5 @@
 
 #include <platform/exception.hpp>
 #include <platform/os.hpp>
+#include <platform/cpu.hpp>
 

@@ -3,17 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#include <prometheus/macro.hpp>
-
-export module gal.prometheus:platform.instruction_set;
-
-import std;
-
-#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if not GAL_PROMETHEUS_USE_MODULE
+// @see <PROJECT-ROOT>/scripts/detect_supported_instruction.cpp
 
 #pragma once
 
@@ -21,18 +11,12 @@ import std;
 
 #include <prometheus/macro.hpp>
 
-#endif
-
-#if GAL_PROMETHEUS_INTELLISENSE_WORKING
-namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: platform
-#else
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(platform)
-#endif
+namespace gal::prometheus::platform
 {
 	// ReSharper disable CppInconsistentNaming
 	// ReSharper disable IdentifierTypo
 
-	enum class InstructionSet : std::uint32_t
+	enum class InstructionSet : std::uint32_t  // NOLINT(performance-enum-size)
 	{
 		DEFAULT = 0b0000'0000'0000'0000,
 
@@ -54,4 +38,4 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(platform)
 	// ReSharper restore CppInconsistentNaming
 
 	auto detect_supported_instruction() -> std::uint32_t;
-} // namespace gal::prometheus::platform
+}

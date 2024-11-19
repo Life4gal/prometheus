@@ -156,6 +156,7 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/platform/exception.hpp
 		${PROJECT_SOURCE_DIR}/src/platform/os.hpp
+		${PROJECT_SOURCE_DIR}/src/platform/cpu.hpp
 
 		${PROJECT_SOURCE_DIR}/src/platform/platform.hpp
 )
@@ -169,6 +170,7 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/platform/exception.cpp
 		${PROJECT_SOURCE_DIR}/src/platform/os.cpp
+		${PROJECT_SOURCE_DIR}/src/platform/cpu.cpp
 )
 
 if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
