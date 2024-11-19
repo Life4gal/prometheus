@@ -149,12 +149,24 @@ set(
 		${PROJECT_SOURCE_DIR}/src/meta/to_string.hpp
 
 		${PROJECT_SOURCE_DIR}/src/meta/meta.hpp
+
+		# =========================
+		# PLATFORM
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/platform/exception.hpp
+
+		${PROJECT_SOURCE_DIR}/src/platform/platform.hpp
 )
 
 set(
 		${PROJECT_NAME_PREFIX}LIBRARY_SOURCE_PRIVATE
 
-		${PROJECT_SOURCE_DIR}/src/test.cpp
+		# =========================
+		# PLATFORM
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/platform/exception.cpp
 )
 
 if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
