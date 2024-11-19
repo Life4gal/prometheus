@@ -5,7 +5,11 @@
 
 #pragma once
 
-#include <platform/exception.hpp>
-#include <platform/os.hpp>
-#include <platform/cpu.hpp>
-#include <platform/environment.hpp>
+#include <span>
+
+#include <prometheus/macro.hpp>
+
+namespace gal::prometheus::platform
+{
+	[[nodiscard]] auto command_args() noexcept -> std::span<const char* const>;
+}
