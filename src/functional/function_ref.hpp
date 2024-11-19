@@ -85,8 +85,10 @@ namespace gal::prometheus::functional
 			invoker invoker_;
 
 			template<typename FunctionType>
-			constexpr static auto do_invoke_function(data_type data,
-			                                         Args... args) //
+			constexpr static auto do_invoke_function(
+				data_type data,
+				Args... args
+			)
 				noexcept(noexcept(
 					static_cast<result_type>(std::invoke(reinterpret_cast<FunctionType>(data.load<function_pointer>()), static_cast<Args>(args)...))
 				))
@@ -99,8 +101,10 @@ namespace gal::prometheus::functional
 			}
 
 			template<typename Functor>
-			constexpr static auto do_invoke_functor(data_type data,
-			                                        Args... args) //
+			constexpr static auto do_invoke_functor(
+				data_type data,
+				Args... args
+			)
 				noexcept(noexcept(
 						static_cast<result_type>(std::invoke(*static_cast<Functor*>(data.load<functor_pointer>()), static_cast<Args>(args)...)
 						))
