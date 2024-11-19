@@ -3,21 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#include <prometheus/macro.hpp>
-
-export module gal.prometheus:functional.aligned_union;
-
-import std;
-
-import :functional.type_list;
-import :functional.functor;
-
-#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if not GAL_PROMETHEUS_USE_MODULE
-
 #pragma once
 
 #include <type_traits>
@@ -26,16 +11,10 @@ import :functional.functor;
 
 #include <prometheus/macro.hpp>
 
-#include <functional/type_list.ixx>
-#include <functional/functor.ixx>
+#include <functional/type_list.hpp>
+#include <functional/functor.hpp>
 
-#endif
-
-#if GAL_PROMETHEUS_INTELLISENSE_WORKING
-namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: functional
-#else
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
-#endif
+namespace gal::prometheus::functional
 {
 	template<typename... Ts>
 	class AlignedUnion final
@@ -69,7 +48,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 		constexpr auto operator=(const AlignedUnion&) noexcept((std::is_nothrow_copy_assignable_v<Ts> && ...)) -> AlignedUnion& //
 			requires(std::is_copy_assignable_v<Ts> && ...)
 		= default;
-		// constexpr      AlignedUnion(const AlignedUnion&)               = delete;
+		// constexpr AlignedUnion(const AlignedUnion&) = delete;
 		// constexpr auto operator=(const AlignedUnion&) -> AlignedUnion& = delete;
 
 		constexpr AlignedUnion(AlignedUnion&&) noexcept((std::is_nothrow_move_constructible_v<Ts> && ...)) //
@@ -78,7 +57,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 		constexpr auto operator=(AlignedUnion&&) noexcept((std::is_nothrow_move_assignable_v<Ts> && ...)) -> AlignedUnion& //
 			requires(std::is_move_assignable_v<Ts> && ...)
 		= default;
-		// constexpr      AlignedUnion(AlignedUnion&&)               = delete;
+		// constexpr AlignedUnion(AlignedUnion&&) = delete;
 		// constexpr auto operator=(AlignedUnion&&) -> AlignedUnion& = delete;
 
 		constexpr ~AlignedUnion() noexcept = default;
@@ -90,7 +69,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 			std::construct_at(reinterpret_cast<T*>(&data_), std::forward<Args>(args)...);
 		}
 
-		// Note: If the type saved by AlignedUnion has a non-trivial destructor but no destroy is called, leaving AlignedUnion to destruct or calling store (if it already has a value) will be undefined behavior! (maybe memory or resource leak)
+		// Note:
+		// If the type saved by AlignedUnion has a non-trivial destructor but no destroy is called,
+		// leaving AlignedUnion to destruct or calling store (if it already has a value) will be undefined behavior! (maybe memory or resource leak)
 		template<typename T>
 			requires(type_list.template any<T>())
 		constexpr auto destroy() noexcept(std::is_nothrow_destructible_v<T>) -> void { std::destroy_at(reinterpret_cast<T*>(&data_)); }
@@ -100,7 +81,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 		constexpr auto exchange(Args&&... args)
 			noexcept(std::is_nothrow_constructible_v<New, Args...> and std::is_nothrow_move_constructible_v<Old>) -> Old
 		{
-			auto&& old = std::move(this->template load<Old>());
+			auto&& old = std::move(this->load<Old>());
 			this->template store<New>(std::forward<Args>(args)...);
 			return old;
 		}
@@ -109,7 +90,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 			requires(type_list.template any<New>()) and (type_list.template any<Old>()) and std::is_constructible_v<New, Args...>
 		constexpr auto replace(Args&&... args) noexcept(std::is_nothrow_constructible_v<New, Args...> and std::is_nothrow_destructible_v<Old>) -> void
 		{
-			this->template destroy<Old>();
+			this->destroy<Old>();
 			this->template store<New>(std::forward<Args>(args)...);
 		}
 
@@ -143,7 +124,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(functional)
 		template<typename T>
 			requires(type_list.template any<T>())
 		[[nodiscard]] constexpr auto equal(const AlignedUnion& other) const
-			noexcept(noexcept(std::declval<const T&>() == std::declval<const T&>())) -> bool { return load<T>() == other.template load<T>(); }
+			noexcept(noexcept(std::declval<const T&>() == std::declval<const T&>())) -> bool { return load<T>() == other.load<T>(); }
 
 		template<typename T>
 			requires(type_list.template any<T>())

@@ -8,3 +8,4 @@
 #include <functional/type_list.hpp>
 #include <functional/value_list.hpp>
 #include <functional/functor.hpp>
+#include <functional/aligned_union.hpp>
