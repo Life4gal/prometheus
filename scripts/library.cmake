@@ -169,6 +169,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/functional/value_list.hpp
 		${PROJECT_SOURCE_DIR}/src/functional/functor.hpp
 		${PROJECT_SOURCE_DIR}/src/functional/aligned_union.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/function_ref.hpp
 
 		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
 )
