@@ -5,21 +5,8 @@
 
 // A C++ implementation based on [http://prng.di.unimi.it/].
 
-#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#include <prometheus/macro.hpp>
-
-export module gal.prometheus:numeric.random_engine;
-
-import std;
-
-#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if not GAL_PROMETHEUS_USE_MODULE
-
 #pragma once
 
-#include <type_traits>
 #include <cstdint>
 #include <concepts>
 #include <array>
@@ -30,361 +17,363 @@ import std;
 
 #include <prometheus/macro.hpp>
 
-#endif
-
-#if not defined(CHAR_BIT)
-#define CHAR_BIT std::numeric_limits<unsigned char>::digits
-#endif
-
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(numeric)
+namespace gal::prometheus::numeric
 {
-	using bit64_type = std::uint64_t;
-	using bit32_type = std::uint32_t;
-
-	template<std::size_t N, std::size_t Total, std::unsigned_integral T>
-	constexpr auto rotate_left(const T value) noexcept -> T { return (value << N) | (value >> (Total - N)); }
-
-	template<std::size_t N, std::size_t Total, std::unsigned_integral T>
-	constexpr auto rotate_left_to(T& value) noexcept -> void { value = rotate_left<N, Total>(value); }
-
-	template<std::unsigned_integral T, std::size_t StateSize, typename Engine>
-	class RandomEngineBase
+	namespace random_engine_detail
 	{
-		[[nodiscard]] auto rep() noexcept -> Engine& { return static_cast<Engine&>(*this); }
+		using bit64_type = std::uint64_t;
+		using bit32_type = std::uint32_t;
 
-		[[nodiscard]] auto rep() const noexcept -> const Engine& { return static_cast<const Engine&>(*this); }
-
-	public:
-		using result_type = std::conditional_t<sizeof(T) == sizeof(bit32_type), bit32_type, bit64_type>;
-		using state_type = std::array<result_type, StateSize>;
-
-		constexpr static auto bits_of_this = std::numeric_limits<result_type>::digits;
-
-		/**
-		 * Output: 64 bits
-		 * Period: 2 ^ 64
-		 * Footprint: 8 bytes
-		 * Original implementation: http://prng.di.unimi.it/splitmix64.c
-		 */
-		struct state_generator final
+		template<std::size_t N, std::size_t Total, std::unsigned_integral T>
+		constexpr auto rotate_left(const T value) noexcept -> T
 		{
-			result_type seed;
+			return (value << N) | (value >> (Total - N));
+		}
 
-			[[nodiscard]] constexpr auto state() noexcept -> state_type
-			{
-				state_type new_state{};
-				std::ranges::generate(new_state, *this);
-				return new_state;
-			}
-
-			[[nodiscard]] constexpr auto operator()() noexcept -> result_type
-			{
-				seed += static_cast<result_type>(0x9e3779b97f4a7c15ull);
-
-				auto z = seed;
-				z = static_cast<result_type>((z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ull);
-				z = static_cast<result_type>((z ^ (z >> 27)) * 0x94d049bb133111ebull);
-				return z ^ (z >> 31);
-			}
-		};
-
-	protected:
-		state_type state_;
-
-	private:
-		constexpr auto do_jump(const state_type steps) noexcept -> void
+		template<std::size_t N, std::size_t Total, std::unsigned_integral T>
+		constexpr auto rotate_left_to(T& value) noexcept -> void
 		{
-			state_type to{};
+			value = random_engine_detail::rotate_left<N, Total>(value);
+		}
 
-			std::ranges::for_each(
+		template<std::unsigned_integral T, std::size_t StateSize, typename Engine>
+		class RandomEngineBase
+		{
+			[[nodiscard]] auto rep() noexcept -> Engine& { return static_cast<Engine&>(*this); }
+
+			[[nodiscard]] auto rep() const noexcept -> const Engine& { return static_cast<const Engine&>(*this); }
+
+		public:
+			using result_type = std::conditional_t<sizeof(T) == sizeof(bit32_type), bit32_type, bit64_type>;
+			using state_type = std::array<result_type, StateSize>;
+
+			constexpr static auto bits_of_this = std::numeric_limits<result_type>::digits;
+
+			/**
+			 * Output: 64 bits
+			 * Period: 2 ^ 64
+			 * Footprint: 8 bytes
+			 * Original implementation: http://prng.di.unimi.it/splitmix64.c
+			 */
+			struct state_generator final
+			{
+				result_type seed;
+
+				[[nodiscard]] constexpr auto state() noexcept -> state_type
+				{
+					state_type new_state{};
+					std::ranges::generate(new_state, *this);
+					return new_state;
+				}
+
+				[[nodiscard]] constexpr auto operator()() noexcept -> result_type
+				{
+					seed += static_cast<result_type>(0x9e3779b97f4a7c15ull);
+
+					auto z = seed;
+					z = static_cast<result_type>((z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ull);
+					z = static_cast<result_type>((z ^ (z >> 27)) * 0x94d049bb133111ebull);
+					return z ^ (z >> 31);
+				}
+			};
+
+		protected:
+			state_type state_;
+
+		private:
+			constexpr auto do_jump(const state_type steps) noexcept -> void
+			{
+				state_type to{};
+
+				std::ranges::for_each(
 					steps,
 					[this, &to](const auto step) noexcept -> void
 					{
 						std::ranges::for_each(
-								std::views::iota(0, bits_of_this),
-								[this, &to, step](const auto mask) noexcept -> void
+							std::views::iota(0, bits_of_this),
+							[this, &to, step](const auto mask) noexcept -> void
+							{
+								if (step & mask)
 								{
-									if (step & mask) { for (auto& [t, s]: std::views::zip(to, state_)) { t ^= s; } }
-									discard();
-								},
-								[](const auto this_bit) noexcept -> result_type { return result_type{1} << this_bit; });
+									for (auto& [t, s]: std::views::zip(to, state_))
+									{
+										t ^= s;
+									}
+								}
+								discard();
+							},
+							[](const auto this_bit) noexcept -> result_type
+							{
+								return result_type{1} << this_bit;
+							});
 					});
 
-			state_.swap(to);
-		}
+				state_.swap(to);
+			}
 
-	public:
-		constexpr explicit RandomEngineBase(const state_type state) noexcept
-			: state_{state} {}
+		public:
+			constexpr explicit RandomEngineBase(const state_type state) noexcept // NOLINT(bugprone-crtp-constructor-accessibility)
+				: state_{state} {}
 
-		constexpr explicit RandomEngineBase(const result_type seed) noexcept
-			: RandomEngineBase{state_generator{.seed = seed}.state()} {}
+			constexpr explicit RandomEngineBase(const result_type seed) noexcept // NOLINT(bugprone-crtp-constructor-accessibility)
+				: RandomEngineBase{state_generator{.seed = seed}.state()} {}
 
-		constexpr explicit RandomEngineBase() noexcept
-			: RandomEngineBase{state_generator{.seed = static_cast<result_type>(std::random_device{}())}.state()} {}
+			constexpr explicit RandomEngineBase() noexcept // NOLINT(bugprone-crtp-constructor-accessibility)
+				: RandomEngineBase{state_generator{.seed = static_cast<result_type>(std::random_device{}())}.state()} {}
 
-		constexpr RandomEngineBase(const RandomEngineBase&) noexcept = delete;
-		constexpr RandomEngineBase(RandomEngineBase&&) noexcept = default;
-		constexpr auto operator=(const RandomEngineBase&) noexcept -> RandomEngineBase& = delete;
-		constexpr auto operator=(RandomEngineBase&&) noexcept -> RandomEngineBase& = default;
+			constexpr RandomEngineBase(RandomEngineBase&&) noexcept = default; // NOLINT(bugprone-crtp-constructor-accessibility)
+			constexpr auto operator=(RandomEngineBase&&) noexcept -> RandomEngineBase& = default;
 
-		// todo: MSVC ICE here
-		#if not defined(GAL_PROMETHEUS_COMPILER_MSVC)
-		constexpr
-		#endif
-		~RandomEngineBase() noexcept = default;
+			constexpr RandomEngineBase(const RandomEngineBase&) noexcept = delete; // NOLINT(bugprone-crtp-constructor-accessibility)
+			constexpr auto operator=(const RandomEngineBase&) noexcept -> RandomEngineBase& = delete;
 
-		[[nodiscard]] constexpr static auto min() noexcept -> result_type { return std::numeric_limits<result_type>::lowest(); }
+			constexpr ~RandomEngineBase() noexcept = default;
 
-		[[nodiscard]] constexpr static auto max() noexcept -> result_type { return std::numeric_limits<result_type>::max(); }
+			[[nodiscard]] constexpr static auto min() noexcept -> result_type { return std::numeric_limits<result_type>::lowest(); }
 
-		constexpr auto seed(const result_type new_seed) noexcept -> void { *this = RandomEngineBase{new_seed}; }
+			[[nodiscard]] constexpr static auto max() noexcept -> result_type { return std::numeric_limits<result_type>::max(); }
 
-		[[nodiscard]] constexpr auto peek() const noexcept -> result_type { return rep().do_peek(); }
+			constexpr auto seed(const result_type new_seed) noexcept -> void { *this = RandomEngineBase{new_seed}; }
 
-		constexpr auto next() noexcept -> result_type { return rep().do_next(); }
+			[[nodiscard]] constexpr auto peek() const noexcept -> result_type { return rep().do_peek(); }
 
-		constexpr auto discard(const result_type count) noexcept -> void
+			constexpr auto next() noexcept -> result_type { return rep().do_next(); }
+
+			constexpr auto discard(const result_type count) noexcept -> void
+			{
+				// fixme
+				for (result_type i = 0; i < count; ++i) { next(); }
+			}
+
+			[[nodiscard]] constexpr auto operator()() noexcept -> result_type { return next(); }
+
+			constexpr auto jump() noexcept -> void { rep().do_jump(rep().do_jump_state()); }
+
+			constexpr auto long_jump() noexcept -> void { rep().do_jump(rep().do_long_jump_state()); }
+		};
+
+		template<std::unsigned_integral T, std::size_t StateSize, typename Engine>
+		class Jumper;
+
+		template<typename Engine>
+		class Jumper<bit32_type, 4, Engine>
 		{
-			// fixme: How to discard values gracefully?
-			for (result_type i = 0; i < count; ++i) { next(); }
-		}
+		public:
+			using engine_type = RandomEngineBase<bit32_type, 4, Engine>;
 
-		[[nodiscard]] constexpr auto operator()() noexcept -> result_type { return next(); }
+			using result_type = typename engine_type::result_type;
+			using state_type = typename engine_type::state_type;
 
-		constexpr auto jump() noexcept -> void { do_jump(rep().do_jump_state()); }
+			constexpr static auto rotate(state_type& state) noexcept -> void
+			{
+				const result_type t = state[1] << 9;
 
-		constexpr auto long_jump() noexcept -> void { do_jump(rep().do_long_jump_state()); }
-	};
+				state[2] ^= state[0];
+				state[3] ^= state[1];
+				state[1] ^= state[2];
+				state[0] ^= state[3];
 
-	template<std::unsigned_integral T, std::size_t StateSize, typename Engine>
-	class Jumper;
+				state[2] ^= t;
+				random_engine_detail::rotate_left_to<11, engine_type::bits_of_this>(state[3]);
+			}
 
-	template<typename Engine>
-	class Jumper<bit32_type, 4, Engine>
-	{
-	public:
-		using engine_type = RandomEngineBase<bit32_type, 4, Engine>;
+			/**
+			* @brief This is the jump function for the generator. It is equivalent
+			* to 2 ^ 64 calls to operator(); it can be used to generate 2 ^ 64
+			* non-overlapping sub-sequences for parallel computations.
+			* @return generated jump steps
+			*/
+			[[nodiscard]] constexpr static auto jump() noexcept -> state_type
+			{
+				return {
+						static_cast<result_type>(0x8764000bull),
+						static_cast<result_type>(0xf542d2d3ull),
+						static_cast<result_type>(0x6fa035c3ull),
+						static_cast<result_type>(0x77f2db5bull)};
+			}
 
-		using result_type = typename engine_type::result_type;
-		using state_type = typename engine_type::state_type;
+			/**
+			* @brief This is the long-jump function for the generator. It is equivalent to
+			* 2 ^ 96 calls to operator(); it can be used to generate 2 ^ 32 starting points,
+			* from each of which jump() will generate 2 ^ 32 non-overlapping
+			* sub-sequences for parallel distributed computations.
+			* @return generated long jump steps
+			*/
+			[[nodiscard]] constexpr static auto long_jump() noexcept -> state_type
+			{
+				return {
+						static_cast<result_type>(0xb523952eull),
+						static_cast<result_type>(0x0b6f099full),
+						static_cast<result_type>(0xccf5a0efull),
+						static_cast<result_type>(0x1c580662ull)};
+			}
+		};
 
-		constexpr static auto rotate(state_type& state) noexcept -> void
+		template<typename Engine>
+		class Jumper<bit64_type, 2, Engine>
 		{
-			const result_type t = state[1] << 9;
+		public:
+			using engine_type = RandomEngineBase<bit64_type, 2, Engine>;
 
-			state[2] ^= state[0];
-			state[3] ^= state[1];
-			state[1] ^= state[2];
-			state[0] ^= state[3];
+			using result_type = typename engine_type::result_type;
+			using state_type = typename engine_type::state_type;
 
-			state[2] ^= t;
-			rotate_left_to<11, engine_type::bits_of_this>(state[3]);
-		}
+			/**
+			* @brief This is the jump function for the generator. It is equivalent
+			* to 2 ^ 64 calls to next(); it can be used to generate 2 ^ 64
+			* non-overlapping sub-sequences for parallel computations.
+			* @return generated jump steps
+			*/
+			[[nodiscard]] constexpr static auto jump() noexcept -> state_type
+			{
+				return {
+						static_cast<result_type>(0xdf900294d8f554a5ull),
+						static_cast<result_type>(0x170865df4b3201fcull)
+				};
+			}
 
-		/**
-		* @brief This is the jump function for the generator. It is equivalent
-		* to 2 ^ 64 calls to operator(); it can be used to generate 2 ^ 64
-		* non-overlapping sub-sequences for parallel computations.
-		* @return generated jump steps
-		*/
-		[[nodiscard]] constexpr static auto jump() noexcept -> state_type
+			/**
+			* @brief This is the long-jump function for the generator. It is equivalent to
+			* 2 ^ 96 calls to next(); it can be used to generate 2 ^ 32 starting points,
+			* from each of which jump() will generate 2 ^ 32 non-overlapping
+			* sub-sequences for parallel distributed computations.
+			* @return generated long jump steps
+			*/
+			[[nodiscard]] constexpr static auto long_jump() noexcept -> state_type
+			{
+				return {
+						static_cast<result_type>(0xd2a98b26625eee7bull),
+						static_cast<result_type>(0xdddf9b1090aa7ac1ull)
+				};
+			}
+		};
+
+		template<typename Engine>
+		class Jumper<bit64_type, 4, Engine>
 		{
-			return {
-					static_cast<result_type>(0x8764000bull),
-					static_cast<result_type>(0xf542d2d3ull),
-					static_cast<result_type>(0x6fa035c3ull),
-					static_cast<result_type>(0x77f2db5bull)};
-		}
+		public:
+			using engine_type = RandomEngineBase<bit64_type, 4, Engine>;
 
-		/**
-		* @brief This is the long-jump function for the generator. It is equivalent to
-		* 2 ^ 96 calls to operator(); it can be used to generate 2 ^ 32 starting points,
-		* from each of which jump() will generate 2 ^ 32 non-overlapping
-		* sub-sequences for parallel distributed computations.
-		* @return generated long jump steps
-		*/
-		[[nodiscard]] constexpr static auto long_jump() noexcept -> state_type
+			using result_type = typename engine_type::result_type;
+			using state_type = typename engine_type::state_type;
+
+			constexpr static auto rotate(state_type& state) noexcept -> void
+			{
+				const result_type t = state[1] << 17;
+
+				state[2] ^= state[0];
+				state[3] ^= state[1];
+				state[1] ^= state[2];
+				state[0] ^= state[3];
+
+				state[2] ^= t;
+				random_engine_detail::rotate_left_to<45, engine_type::bits_of_this>(state[3]);
+			}
+
+			/**
+			* @brief This is the jump function for the generator. It is equivalent
+			* to 2 ^ 128 calls to operator(); it can be used to generate 2 ^ 128
+			* non-overlapping sub-sequences for parallel computations.
+			* @return generated jump steps
+			*/
+			[[nodiscard]] constexpr static auto jump() noexcept -> state_type
+			{
+				return {
+						static_cast<result_type>(0x180ec6d33cfd0abaull),
+						static_cast<result_type>(0xd5a61266f0c9392cull),
+						static_cast<result_type>(0xa9582618e03fc9aaull),
+						static_cast<result_type>(0x39abdc4529b1661cull)
+				};
+			}
+
+			/**
+			* @brief This is the long-jump function for the generator. It is equivalent to
+			* 2 ^ 192 calls to operator(); it can be used to generate 2 ^ 64 starting points,
+			* from each of which jump() will generate 2 ^ 64 non-overlapping
+			* sub-sequences for parallel distributed computations.
+			* @return generated long jump steps
+			*/
+			[[nodiscard]] constexpr static auto long_jump() noexcept -> state_type
+			{
+				return {
+						static_cast<result_type>(0x76e15d3efefdcbbfull),
+						static_cast<result_type>(0xc5004e441c522fb3ull),
+						static_cast<result_type>(0x77710069854ee241ull),
+						static_cast<result_type>(0x39109bb02acbe635ull)
+				};
+			}
+		};
+
+		template<typename Engine>
+		class Jumper<bit64_type, 8, Engine>
 		{
-			return {
-					static_cast<result_type>(0xb523952eull),
-					static_cast<result_type>(0x0b6f099full),
-					static_cast<result_type>(0xccf5a0efull),
-					static_cast<result_type>(0x1c580662ull)};
-		}
-	};
+		public:
+			using engine_type = RandomEngineBase<bit64_type, 8, Engine>;
 
-	template<typename Engine>
-	class Jumper<bit64_type, 2, Engine>
-	{
-	public:
-		using engine_type = RandomEngineBase<bit64_type, 2, Engine>;
+			using result_type = typename engine_type::result_type;
+			using state_type = typename engine_type::state_type;
 
-		using result_type = typename engine_type::result_type;
-		using state_type = typename engine_type::state_type;
+			constexpr static auto rotate(state_type& state) noexcept -> void
+			{
+				const result_type t = state[1] << 11;
 
-		/**
-		* @brief This is the jump function for the generator. It is equivalent
-		* to 2 ^ 64 calls to next(); it can be used to generate 2 ^ 64
-		* non-overlapping sub-sequences for parallel computations.
-		* @return generated jump steps
-		*/
-		[[nodiscard]] constexpr static auto jump() noexcept -> state_type
-		{
-			return {
-					static_cast<result_type>(0xdf900294d8f554a5ull),
-					static_cast<result_type>(0x170865df4b3201fcull)
-			};
-		}
+				state[2] ^= state[0];
+				state[5] ^= state[1];
+				state[1] ^= state[2];
+				state[7] ^= state[3];
+				state[3] ^= state[4];
+				state[4] ^= state[5];
+				state[0] ^= state[6];
+				state[6] ^= state[7];
 
-		/**
-		* @brief This is the long-jump function for the generator. It is equivalent to
-		* 2 ^ 96 calls to next(); it can be used to generate 2 ^ 32 starting points,
-		* from each of which jump() will generate 2 ^ 32 non-overlapping
-		* sub-sequences for parallel distributed computations.
-		* @return generated long jump steps
-		*/
-		[[nodiscard]] constexpr static auto long_jump() noexcept -> state_type
-		{
-			return {
-					static_cast<result_type>(0xd2a98b26625eee7bull),
-					static_cast<result_type>(0xdddf9b1090aa7ac1ull)
-			};
-		}
-	};
+				state[6] ^= t;
+				random_engine_detail::rotate_left_to<21, engine_type::bits_of_this>(state[7]);
+			}
 
-	template<typename Engine>
-	class Jumper<bit64_type, 4, Engine>
-	{
-	public:
-		using engine_type = RandomEngineBase<bit64_type, 4, Engine>;
+			/**
+			* @brief This is the jump function for the generator. It is equivalent
+			* to 2 ^ 256 calls to operator(); it can be used to generate 2 ^ 256
+			* non-overlapping sub-sequences for parallel computations.
+			* @return generated jump steps
+			*/
+			[[nodiscard]] constexpr static auto jump() noexcept -> state_type
+			{
+				return {
+						static_cast<result_type>(0x33ed89b6e7a353f9ull),
+						static_cast<result_type>(0x760083d7955323beull),
+						static_cast<result_type>(0x2837f2fbb5f22faeull),
+						static_cast<result_type>(0x4b8c5674d309511cull),
+						static_cast<result_type>(0xb11ac47a7ba28c25ull),
+						static_cast<result_type>(0xf1be7667092bcc1cull),
+						static_cast<result_type>(0x53851efdb6df0aafull),
+						static_cast<result_type>(0x1ebbc8b23eaf25dbull)
+				};
+			}
 
-		using result_type = typename engine_type::result_type;
-		using state_type = typename engine_type::state_type;
+			/**
+			* @brief This is the long-jump function for the generator. It is equivalent to
+			* 2 ^ 384 calls to operator(); it can be used to generate 2 ^ 128 starting points,
+			* from each of which jump() will generate 2 ^ 128 non-overlapping
+			* sub-sequences for parallel distributed computations.
+			* @return generated long jump steps
+			*/
+			[[nodiscard]] constexpr static auto long_jump() noexcept -> state_type
+			{
+				return {
+						static_cast<result_type>(0x11467fef8f921d28ull),
+						static_cast<result_type>(0xa2a819f2e79c8ea8ull),
+						static_cast<result_type>(0xa8299fc284b3959aull),
+						static_cast<result_type>(0xb4d347340ca63ee1ull),
+						static_cast<result_type>(0x1cb0940bedbff6ceull),
+						static_cast<result_type>(0xd956c5c4fa1f8e17ull),
+						static_cast<result_type>(0x915e38fd4eda93bcull),
+						static_cast<result_type>(0x5b3ccdfa5d7daca5ull)
+				};
+			}
+		};
+	}
 
-		constexpr static auto rotate(state_type& state) noexcept -> void
-		{
-			const result_type t = state[1] << 17;
-
-			state[2] ^= state[0];
-			state[3] ^= state[1];
-			state[1] ^= state[2];
-			state[0] ^= state[3];
-
-			state[2] ^= t;
-			rotate_left_to<45, engine_type::bits_of_this>(state[3]);
-		}
-
-		/**
-		* @brief This is the jump function for the generator. It is equivalent
-		* to 2 ^ 128 calls to operator(); it can be used to generate 2 ^ 128
-		* non-overlapping sub-sequences for parallel computations.
-		* @return generated jump steps
-		*/
-		[[nodiscard]] constexpr static auto jump() noexcept -> state_type
-		{
-			return {
-					static_cast<result_type>(0x180ec6d33cfd0abaull),
-					static_cast<result_type>(0xd5a61266f0c9392cull),
-					static_cast<result_type>(0xa9582618e03fc9aaull),
-					static_cast<result_type>(0x39abdc4529b1661cull)
-			};
-		}
-
-		/**
-		* @brief This is the long-jump function for the generator. It is equivalent to
-		* 2 ^ 192 calls to operator(); it can be used to generate 2 ^ 64 starting points,
-		* from each of which jump() will generate 2 ^ 64 non-overlapping
-		* sub-sequences for parallel distributed computations.
-		* @return generated long jump steps
-		*/
-		[[nodiscard]] constexpr static auto long_jump() noexcept -> state_type
-		{
-			return {
-					static_cast<result_type>(0x76e15d3efefdcbbfull),
-					static_cast<result_type>(0xc5004e441c522fb3ull),
-					static_cast<result_type>(0x77710069854ee241ull),
-					static_cast<result_type>(0x39109bb02acbe635ull)
-			};
-		}
-	};
-
-	template<typename Engine>
-	class Jumper<bit64_type, 8, Engine>
-	{
-	public:
-		using engine_type = RandomEngineBase<bit64_type, 8, Engine>;
-
-		using result_type = typename engine_type::result_type;
-		using state_type = typename engine_type::state_type;
-
-		constexpr static auto rotate(state_type& state) noexcept -> void
-		{
-			const result_type t = state[1] << 11;
-
-			state[2] ^= state[0];
-			state[5] ^= state[1];
-			state[1] ^= state[2];
-			state[7] ^= state[3];
-			state[3] ^= state[4];
-			state[4] ^= state[5];
-			state[0] ^= state[6];
-			state[6] ^= state[7];
-
-			state[6] ^= t;
-			rotate_left_to<21, engine_type::bits_of_this>(state[7]);
-		}
-
-		/**
-		* @brief This is the jump function for the generator. It is equivalent
-		* to 2 ^ 256 calls to operator(); it can be used to generate 2 ^ 256
-		* non-overlapping sub-sequences for parallel computations.
-		* @return generated jump steps
-		*/
-		[[nodiscard]] constexpr static auto jump() noexcept -> state_type
-		{
-			return {
-					static_cast<result_type>(0x33ed89b6e7a353f9ull),
-					static_cast<result_type>(0x760083d7955323beull),
-					static_cast<result_type>(0x2837f2fbb5f22faeull),
-					static_cast<result_type>(0x4b8c5674d309511cull),
-					static_cast<result_type>(0xb11ac47a7ba28c25ull),
-					static_cast<result_type>(0xf1be7667092bcc1cull),
-					static_cast<result_type>(0x53851efdb6df0aafull),
-					static_cast<result_type>(0x1ebbc8b23eaf25dbull)
-			};
-		}
-
-		/**
-		* @brief This is the long-jump function for the generator. It is equivalent to
-		* 2 ^ 384 calls to operator(); it can be used to generate 2 ^ 128 starting points,
-		* from each of which jump() will generate 2 ^ 128 non-overlapping
-		* sub-sequences for parallel distributed computations.
-		* @return generated long jump steps
-		*/
-		[[nodiscard]] constexpr static auto long_jump() noexcept -> state_type
-		{
-			return {
-					static_cast<result_type>(0x11467fef8f921d28ull),
-					static_cast<result_type>(0xa2a819f2e79c8ea8ull),
-					static_cast<result_type>(0xa8299fc284b3959aull),
-					static_cast<result_type>(0xb4d347340ca63ee1ull),
-					static_cast<result_type>(0x1cb0940bedbff6ceull),
-					static_cast<result_type>(0xd956c5c4fa1f8e17ull),
-					static_cast<result_type>(0x915e38fd4eda93bcull),
-					static_cast<result_type>(0x5b3ccdfa5d7daca5ull)
-			};
-		}
-	};
-}
-
-#if GAL_PROMETHEUS_INTELLISENSE_WORKING
-namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: numeric
-#else
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
-#endif
-{
-	enum class RandomEngineCategory
+	enum class RandomEngineCategory : std::uint8_t
 	{
 		// xor + shift + rotate
 		X_S_R,
@@ -392,14 +381,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		X_R_S_R,
 	};
 
-	enum class RandomEngineTag
+	enum class RandomEngineTag : std::uint8_t
 	{
 		PLUS,
 		PLUS_PLUS,
 		STAR_STAR,
 	};
 
-	enum class RandomEngineBit
+	enum class RandomEngineBit : std::uint8_t
 	{
 		BITS_128,
 		BITS_256,
@@ -425,8 +414,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_128>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit32_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit32_type,
 				4,
 				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_128>
 			>
@@ -434,7 +423,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit32_type, 4, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit32_type, 4, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
@@ -470,8 +459,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_128>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit32_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit32_type,
 				4,
 				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_128>
 			>
@@ -479,14 +468,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit32_type, 4, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit32_type, 4, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
 		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
 		{
-			return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<7, bits_of_this>(state_[0] + state_[3]) + state_[0];
+			return random_engine_detail::rotate_left<7, bits_of_this>(state_[0] + state_[3]) + state_[0];
 		}
 
 		constexpr auto do_next() noexcept -> result_type
@@ -518,8 +507,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit32_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit32_type,
 				4,
 				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>
 			>
@@ -527,14 +516,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit32_type, 4, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit32_type, 4, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
 		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
 		{
-			return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<7, bits_of_this>(state_[1] * 5) * 9;
+			return random_engine_detail::rotate_left<7, bits_of_this>(state_[1] * 5) * 9;
 		}
 
 		constexpr auto do_next() noexcept -> result_type
@@ -571,8 +560,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_128>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit64_type,
 				2,
 				RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_128>
 			>
@@ -580,7 +569,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type, 2, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit64_type, 2, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
@@ -593,8 +582,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 
 			const auto s1 = state_[1] ^ state_[0];
 
-			state_[0] = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<24, bits_of_this>(state_[0]) ^ s1 ^ (s1 << 16);
-			state_[1] = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<37, bits_of_this>(s1);
+			state_[0] = random_engine_detail::rotate_left<24, bits_of_this>(state_[0]) ^ s1 ^ (s1 << 16);
+			state_[1] = random_engine_detail::rotate_left<37, bits_of_this>(s1);
 
 			return result;
 		}
@@ -604,6 +593,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		[[nodiscard]] constexpr static auto do_long_jump_state() noexcept -> state_type { return jumper::long_jump(); }
 	};
 
+	// ReSharper disable once IdentifierTypo
 	using random_engine_xrsr_128_plus = RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_128>;
 
 	static_assert(std::uniform_random_bit_generator<random_engine_xrsr_128_plus>);
@@ -621,8 +611,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_128>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit64_type,
 				2,
 				RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_128>
 			>
@@ -630,14 +620,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type, 2, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit64_type, 2, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
 		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
 		{
-			return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<17, bits_of_this>(state_[0] + state_[1]) + state_[0];
+			return random_engine_detail::rotate_left<17, bits_of_this>(state_[0] + state_[1]) + state_[0];
 		}
 
 		constexpr auto do_next() noexcept -> result_type
@@ -646,8 +636,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 
 			const auto s1 = state_[1] ^ state_[0];
 
-			state_[0] = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<49, bits_of_this>(state_[0]) ^ s1 ^ (s1 << 21);
-			state_[1] = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<28, bits_of_this>(s1);
+			state_[0] = random_engine_detail::rotate_left<49, bits_of_this>(state_[0]) ^ s1 ^ (s1 << 21);
+			state_[1] = random_engine_detail::rotate_left<28, bits_of_this>(s1);
 
 			return result;
 		}
@@ -682,6 +672,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		}
 	};
 
+	// ReSharper disable once IdentifierTypo
 	using random_engine_xrsr_128_plus_plus = RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_128>;
 
 	static_assert(std::uniform_random_bit_generator<random_engine_xrsr_128_plus_plus>);
@@ -699,8 +690,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit64_type,
 				2,
 				RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>
 			>
@@ -708,14 +699,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type, 2, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit64_type, 2, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
 		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
 		{
-			return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<7, bits_of_this>(state_[0] * 5) * 9;
+			return random_engine_detail::rotate_left<7, bits_of_this>(state_[0] * 5) * 9;
 		}
 
 		constexpr auto do_next() noexcept -> result_type
@@ -724,8 +715,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 
 			const auto s1 = state_[1] ^ state_[0];
 
-			state_[0] = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<24, bits_of_this>(state_[0]) ^ s1 ^ (s1 << 16);
-			state_[1] = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<37, bits_of_this>(s1);
+			state_[0] = random_engine_detail::rotate_left<24, bits_of_this>(state_[0]) ^ s1 ^ (s1 << 16);
+			state_[1] = random_engine_detail::rotate_left<37, bits_of_this>(s1);
 
 			return result;
 		}
@@ -735,6 +726,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		[[nodiscard]] constexpr static auto do_long_jump_state() noexcept -> state_type { return jumper::long_jump(); }
 	};
 
+	// ReSharper disable once IdentifierTypo
 	using random_engine_xrsr_128_star_star = RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>;
 
 	static_assert(std::uniform_random_bit_generator<random_engine_xrsr_128_star_star>);
@@ -754,8 +746,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_256>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit64_type,
 				4,
 				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_256>
 			>
@@ -763,7 +755,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type, 4, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit64_type, 4, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
@@ -800,8 +792,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_256>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit64_type,
 				4,
 				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_256>
 			>
@@ -809,14 +801,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type, 4, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit64_type, 4, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
 		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
 		{
-			return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<23, bits_of_this>(state_[0] + state_[3]) + state_[0];
+			return random_engine_detail::rotate_left<23, bits_of_this>(state_[0] + state_[3]) + state_[0];
 		}
 
 		constexpr auto do_next() noexcept -> result_type
@@ -849,8 +841,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_256>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit64_type,
 				4,
 				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_256>
 			>
@@ -858,14 +850,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type, 4, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit64_type, 4, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
 		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
 		{
-			return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<7, bits_of_this>(state_[1] * 5) * 9;
+			return random_engine_detail::rotate_left<7, bits_of_this>(state_[1] * 5) * 9;
 		}
 
 		constexpr auto do_next() noexcept -> result_type
@@ -899,8 +891,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_512>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit64_type,
 				8,
 				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS, RandomEngineBit::BITS_512>
 			>
@@ -908,7 +900,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type, 8, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit64_type, 8, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
@@ -945,8 +937,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_512>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit64_type,
 				8,
 				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::PLUS_PLUS, RandomEngineBit::BITS_512>
 			>
@@ -954,14 +946,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type, 8, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit64_type, 8, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
 		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
 		{
-			return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<17, bits_of_this>(state_[0] + state_[2]) + state_[2];
+			return random_engine_detail::rotate_left<17, bits_of_this>(state_[0] + state_[2]) + state_[2];
 		}
 
 		constexpr auto do_next() noexcept -> result_type
@@ -994,8 +986,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<>
 	class RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_512>
 			: public
-			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::RandomEngineBase<
-				GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type,
+			random_engine_detail::RandomEngineBase<
+				random_engine_detail::bit64_type,
 				8,
 				RandomEngine<RandomEngineCategory::X_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_512>
 			>
@@ -1003,14 +995,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		friend RandomEngineBase;
 
 	public:
-		using jumper = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::Jumper<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::bit64_type, 8, RandomEngine>;
+		using jumper = random_engine_detail::Jumper<random_engine_detail::bit64_type, 8, RandomEngine>;
 
 		using RandomEngineBase::RandomEngineBase;
 
 	private:
 		[[nodiscard]] constexpr auto do_peek() const noexcept -> result_type
 		{
-			return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::rotate_left<7, bits_of_this>(state_[1] * 5) * 9;
+			return random_engine_detail::rotate_left<7, bits_of_this>(state_[1] * 5) * 9;
 		}
 
 		constexpr auto do_next() noexcept -> result_type

@@ -190,6 +190,14 @@ set(
 		${PROJECT_SOURCE_DIR}/src/memory/rw.hpp
 
 		${PROJECT_SOURCE_DIR}/src/memory/memory.hpp
+
+		# =========================
+		# NUMERIC
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/numeric/random_engine.hpp
+
+		${PROJECT_SOURCE_DIR}/src/numeric/numeric.hpp
 )
 
 set(
