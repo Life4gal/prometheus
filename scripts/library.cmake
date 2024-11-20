@@ -172,6 +172,14 @@ set(
 		${PROJECT_SOURCE_DIR}/src/functional/function_ref.hpp
 
 		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
+
+		# =========================
+		# MATH
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/math/cmath.hpp
+
+		${PROJECT_SOURCE_DIR}/src/math/math.hpp
 )
 
 set(
