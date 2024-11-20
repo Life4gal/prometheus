@@ -13,6 +13,8 @@
 
 #include <functional/aligned_union.hpp>
 
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 namespace gal::prometheus::functional
 {
 	template<typename Signature>
