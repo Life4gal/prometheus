@@ -3,24 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#include <prometheus/macro.hpp>
-
-export module gal.prometheus:numeric.random;
-
-import std;
-
-#if GAL_PROMETHEUS_COMPILER_DEBUG
-import :platform;
-#endif
-
-import :numeric.random_engine;
-
-#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if not GAL_PROMETHEUS_USE_MODULE
-
 #pragma once
 
 #include <random>
@@ -29,11 +11,9 @@ import :numeric.random_engine;
 
 #include <prometheus/macro.hpp>
 
+#include <numeric/random_engine.hpp>
+
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
-
-#include <numeric/random_engine.ixx>
-
-#endif
 
 #if __cpp_static_call_operator >= 202207L
 #define RANDOM_WORKAROUND_OPERATOR_STATIC static
@@ -45,54 +25,44 @@ import :numeric.random_engine;
 #define RANDOM_WORKAROUND_OPERATOR_THIS(type) this->template
 #endif
 
-#if GAL_PROMETHEUS_INTELLISENSE_WORKING
-namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: numeric
-#else
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
-#endif
+namespace gal::prometheus::numeric
 {
 	template<typename T>
 	using default_int_distribution = std::uniform_int_distribution<T>;
 	template<typename T>
 	using default_floating_point_distribution = std::uniform_real_distribution<T>;
 	using default_boolean_distribution = std::bernoulli_distribution;
-}
 
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(numeric)
-{
-	struct any {};
-
-	template<template<typename> typename, template<typename> typename>
-	struct is_distribution_alias : std::false_type {};
-
-	template<template<typename> typename Target, template<typename> typename Current>
-		requires (std::is_same_v<Target<any>, Current<any>>)
-	struct is_distribution_alias<Target, Current> : std::true_type {};
-
-	template<template<typename> typename Target, template<typename> typename Current>
-	constexpr auto is_distribution_alias_v = is_distribution_alias<Target, Current>::value;
-
-	template<template<typename> typename Distribution, typename T>
-	struct is_user_defined_distribution : std::true_type
+	namespace random_detail
 	{
-		// We always assume that the target distribution contains static_assert (or concept) to restrict the type of T. If it does not, then we assume that it supports arbitrary types.
-		static_assert(
-			std::is_default_constructible_v<Distribution<T>> or
-			std::is_constructible_v<Distribution<T>, T> or
-			std::is_constructible_v<Distribution<T>, T, T>
-		);
-	};
+		struct any {};
 
-	template<template<typename> typename Distribution, typename T>
-	constexpr auto is_user_defined_distribution_v = is_user_defined_distribution<Distribution, T>::value;
-}
+		template<template<typename> typename, template<typename> typename>
+		struct is_distribution_alias : std::false_type {};
 
-#if GAL_PROMETHEUS_INTELLISENSE_WORKING
-namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: numeric
-#else
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
-#endif
-{
+		template<template<typename> typename Target, template<typename> typename Current>
+			requires (std::is_same_v<Target<any>, Current<any>>)
+		struct is_distribution_alias<Target, Current> : std::true_type {};
+
+		template<template<typename> typename Target, template<typename> typename Current>
+		constexpr auto is_distribution_alias_v = is_distribution_alias<Target, Current>::value;
+
+		template<template<typename> typename Distribution, typename T>
+		struct is_user_defined_distribution : std::true_type
+		{
+			// We always assume that the target distribution contains static_assert (or concept) to restrict the type of T.
+			// If it does not, then we assume that it supports arbitrary types.
+			static_assert(
+				std::is_default_constructible_v<Distribution<T>> or
+				std::is_constructible_v<Distribution<T>, T> or
+				std::is_constructible_v<Distribution<T>, T, T>
+			);
+		};
+
+		template<template<typename> typename Distribution, typename T>
+		constexpr auto is_user_defined_distribution_v = is_user_defined_distribution<Distribution, T>::value;
+	}
+
 	template<template<typename> typename, typename>
 	struct is_distribution_compatible : std::false_type {};
 
@@ -130,52 +100,52 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	struct is_distribution_compatible<default_floating_point_distribution, long double> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, short> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, unsigned short> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, int> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, unsigned int> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, long> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, unsigned long> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, long long> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
+		requires (random_detail::is_distribution_alias_v<default_int_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, unsigned long long> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
+		requires (random_detail::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, float> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
+		requires (random_detail::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, double> : std::true_type {};
 
 	template<template<typename> typename DistributionAlias>
-		requires (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
+		requires (random_detail::is_distribution_alias_v<default_floating_point_distribution, DistributionAlias>)
 	struct is_distribution_compatible<DistributionAlias, long double> : std::true_type {};
 
 	// In fact, this holds true for arbitrary types, but if UserDefinedDistribution does not support type T, it should raise a compile error.
 	template<template<typename> typename UserDefinedDistribution, typename T>
-		requires(GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_user_defined_distribution_v<UserDefinedDistribution, T>)
+		requires(random_detail::is_user_defined_distribution_v<UserDefinedDistribution, T>)
 	struct is_distribution_compatible<UserDefinedDistribution, T> : std::true_type {};
 
 	template<template<typename> typename Distribution, typename T>
@@ -183,7 +153,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	template<template<typename> typename Distribution, typename T>
 	concept distribution_compatible_t = is_distribution_compatible_v<Distribution, T>;
 
-	enum class RandomStateCategory
+	enum class RandomStateCategory : std::uint8_t
 	{
 		SHARED,
 		SHARED_THREAD_ONLY,
@@ -191,8 +161,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	};
 
 	template<
-		RandomStateCategory Category,
-		typename RandomEngine,
+		RandomStateCategory Category = RandomStateCategory::PRIVATE,
+		typename RandomEngine = random_engine_xrsr_128_star_star,
 		template<typename>
 		typename IntegerDistribution = default_int_distribution,
 		template<typename>
@@ -202,7 +172,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 	{
 	public:
 		constexpr static auto category = Category;
-		constexpr static auto is_shared_category = category == RandomStateCategory::SHARED or category == RandomStateCategory::SHARED_THREAD_ONLY;
+		constexpr static bool is_shared_category = category == RandomStateCategory::SHARED or category == RandomStateCategory::SHARED_THREAD_ONLY;
 
 		using engine_type = RandomEngine;
 
@@ -225,7 +195,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 				static engine_type engine{};
 				return engine;
 			}
-			else if (category == RandomStateCategory::SHARED_THREAD_ONLY)
+			else if constexpr (category == RandomStateCategory::SHARED_THREAD_ONLY)
 			{
 				thread_local engine_type engine{};
 				return engine;
@@ -250,8 +220,17 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		template<typename... Args>
 			requires std::is_constructible_v<engine_type, Args...>
 		constexpr explicit Random(Args&&... args) noexcept(noexcept(std::is_nothrow_constructible_v<engine_type, Args...>)) //
-			requires(not is_shared_category) // PRIVATE ONLY
+			requires(not is_shared_category and sizeof...(args) != 0) // PRIVATE ONLY
 			: real_engine_{.engine = engine_type{std::forward<Args>(args)...}} {}
+
+		// sizeof...(args) != 0 + Random() => Random random{};
+		constexpr explicit Random() noexcept(std::is_nothrow_default_constructible_v<engine_type>) //
+			requires(not is_shared_category) // PRIVATE ONLY
+			: real_engine_{} {}
+
+		// It doesn't make sense, but it's allowed :)
+		constexpr explicit Random() noexcept //
+			requires(is_shared_category) = default;
 
 		[[nodiscard]] constexpr static auto min() noexcept -> result_type { return engine_type::min(); }
 
@@ -261,7 +240,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 			const result_type new_seed = static_cast<result_type>(std::chrono::steady_clock::now().time_since_epoch().count()))
 			noexcept(noexcept(
 				engine().seed(new_seed)
-			)) -> void requires(is_shared_category) { engine().seed(new_seed); }
+			)) -> void requires(is_shared_category)
+		{
+			engine().seed(new_seed);
+		}
 
 		constexpr auto seed(const result_type new_seed = static_cast<result_type>(std::chrono::steady_clock::now().time_since_epoch().count()))
 			noexcept(noexcept(
@@ -408,8 +390,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 			)) -> Iterator requires(is_shared_category)
 		{
 			if (const auto diff = std::ranges::distance(from, to);
-				diff == 0) { return to; }
-			else { return std::ranges::next(from, Random::get<typename std::iterator_traits<Iterator>::difference_type>(0, diff - 1)); }
+				diff == 0)
+			{
+				return to;
+			}
+			else
+			{
+				return std::ranges::next(from, Random::get<typename std::iterator_traits<Iterator>::difference_type>(0, diff - 1));
+			}
 		}
 
 		template<typename Iterator>
@@ -439,8 +427,14 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 			)) -> Iterator requires(not is_shared_category)
 		{
 			if (const auto diff = std::ranges::distance(from, to);
-				diff == 0) { return to; }
-			else { return std::ranges::next(from, this->template get<typename std::iterator_traits<Iterator>::difference_type>(0, diff - 1)); }
+				diff == 0)
+			{
+				return to;
+			}
+			else
+			{
+				return std::ranges::next(from, this->template get<typename std::iterator_traits<Iterator>::difference_type>(0, diff - 1));
+			}
 		}
 
 		template<typename Iterator>
@@ -504,9 +498,9 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 				false
 				#else
 				std::ranges::generate_n(
-						std::back_inserter(container),
-						count,
-						[from, to]() noexcept(noexcept(Random::get(from, to))) { return Random::get(from, to); }) //
+					std::back_inserter(container),
+					count,
+					[from, to]() noexcept(noexcept(Random::get(from, to))) { return Random::get(from, to); }) //
 				#endif
 			)) -> void requires(is_shared_category)
 		{
@@ -595,7 +589,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		{
 			Container c{};
 
-			if constexpr (requires { c.reserve(count); }) { c.reserve(count); }
+			if constexpr (requires { c.reserve(count); })
+			{
+				c.reserve(count);
+			}
 
 			Random::get(c, from, to, count);
 			return c;
@@ -624,7 +621,10 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(numeric)
 		{
 			Container c{};
 
-			if constexpr (requires { c.reserve(count); }) { c.reserve(count); }
+			if constexpr (requires { c.reserve(count); })
+			{
+				c.reserve(count);
+			}
 
 			this->get(c, from, to, count);
 			return c;

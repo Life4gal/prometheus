@@ -6,3 +6,4 @@
 #pragma once
 
 #include <numeric/random_engine.hpp>
+#include <numeric/random.hpp>

@@ -196,6 +196,7 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/numeric/random_engine.hpp
+		${PROJECT_SOURCE_DIR}/src/numeric/random.hpp
 
 		${PROJECT_SOURCE_DIR}/src/numeric/numeric.hpp
 )
