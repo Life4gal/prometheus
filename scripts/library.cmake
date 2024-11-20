@@ -199,6 +199,14 @@ set(
 		${PROJECT_SOURCE_DIR}/src/numeric/random.hpp
 
 		${PROJECT_SOURCE_DIR}/src/numeric/numeric.hpp
+
+		# =========================
+		# PRIMITIVE
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/primitive/dimension.hpp
+
+		${PROJECT_SOURCE_DIR}/src/primitive/primitive.hpp
 )
 
 set(
