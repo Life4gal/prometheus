@@ -94,10 +94,177 @@ namespace gal::prometheus::meta
 			return full_name;
 		}
 
+		template<typename EnumType>
+			requires std::is_enum_v<EnumType>
+		[[nodiscard]] constexpr auto default_min_value() noexcept -> std::underlying_type_t<EnumType>
+		{
+			using value_type = std::underlying_type_t<EnumType>;
+
+			if constexpr (std::is_signed_v<value_type>)
+			{
+				return static_cast<value_type>(-128);
+			}
+			else
+			{
+				return static_cast<value_type>(0);
+			}
+		}
+
+		template<typename EnumType>
+			requires std::is_enum_v<EnumType>
+		[[nodiscard]] constexpr auto default_max_value() noexcept -> std::underlying_type_t<EnumType>
+		{
+			using value_type = std::underlying_type_t<EnumType>;
+
+			if constexpr (std::is_signed_v<value_type>)
+			{
+				return static_cast<value_type>(127);
+			}
+			else
+			{
+				return static_cast<value_type>(255);
+			}
+		}
+
+		template<typename>
+		struct has_magic_enum_value : std::false_type {};
+
+		template<typename T>
+			requires requires { T::prometheus_magic_enum_flag; }
+		struct has_magic_enum_value<T> : std::true_type
+		{
+			constexpr static auto magic = T::prometheus_magic_enum_flag;
+		};
+
+		template<typename T>
+			requires requires { T::PrometheusMagicEnumFlag; }
+		struct has_magic_enum_value<T> : std::true_type
+		{
+			constexpr static auto magic = T::PrometheusMagicEnumFlag;
+		};
+
+		template<typename T>
+			requires requires { T::PROMETHEUS_MAGIC_ENUM_FLAG; }
+		struct has_magic_enum_value<T> : std::true_type
+		{
+			constexpr static auto magic = T::PROMETHEUS_MAGIC_ENUM_FLAG;
+		};
+
+		template<typename T>
+		constexpr auto has_magic_enum_value_v = has_magic_enum_value<T>::value;
+
+		template<typename T>
+		concept magic_enum_value_t = has_magic_enum_value_v<T>;
+	}
+
+	enum class EnumNamePolicy : std::uint8_t
+	{
+		// namespace_A::namespace_B::namespace_C::enum_name::Value // scoped enum
+		// namespace_A::namespace_B::namespace_C::Value
+		FULL,
+		// enum_name::Value // scoped enum
+		// Value
+		WITH_SCOPED_NAME,
+		// Value
+		VALUE_ONLY,
+	};
+
+	namespace user_defined
+	{
+		/**
+		 * template<>
+		 * struct enum_name_policy<MyEnum>
+		 * {
+		 *		constexpr static auto value = EnumNamePolicy::VALUE_ONLY;
+		 * };
+		 */
+		template<typename>
+		struct enum_name_policy
+		{
+			constexpr static auto value = EnumNamePolicy::FULL;
+		};
+
+		/**
+		 * template<>
+		 * struct enum_range<MyEnum>
+		 * {
+		 *		constexpr static auto min = 0;
+		 *		constexpr static auto max = 65535;
+		 * };
+		 */
+		template<typename EnumType>
+		struct enum_range
+		{
+			constexpr static auto min = enumeration_detail::default_min_value<EnumType>();
+			constexpr static auto max = enumeration_detail::default_max_value<EnumType>();
+		};
+
+		/**
+		 * template<>
+		 * struct enum_is_flag<MyEnum> : std::true_type
+		 * {
+		 * };
+		 *
+		 * OR
+		 *
+		 * enum MyEnum
+		 * {
+		 *	E1 = 0,
+		 *	E2 = 1,
+		 *	E3 = 2,
+		 *	...
+		 *
+		 *	prometheus_magic_enum_flag
+		 *	// or
+		 *	PrometheusMagicEnumFlag
+		 *	// or
+		 *	PROMETHEUS_MAGIC_ENUM_FLAG
+		 * }
+		 */
+		template<typename>
+		struct enum_is_flag : std::false_type {};
+
+		template<enumeration_detail::magic_enum_value_t EnumType>
+		struct enum_is_flag<EnumType> : std::true_type {};
+
+		/**
+		 * template<>
+		 * struct enum_name<MyEnum>
+		 * {
+		 *		constexpr static std::string_view value{"MY-ENUM"};
+		 * };
+		 */
+		template<typename EnumType>
+			requires std::is_enum_v<EnumType>
+		struct enum_name {};
+
+		/**
+		 * template<>
+		 * struct enum_value_name<MyEnum::VALUE>
+		 * {
+		 *		constexpr static std::string_view value{"MY-ENUM-VALUE"};
+		 * };
+		 */
+		template<auto EnumValue>
+			requires std::is_enum_v<std::decay_t<decltype(EnumValue)>>
+		struct enum_value_name {};
+	}
+
+	namespace enumeration_detail
+	{
 		template<auto EnumValue>
 			requires std::is_enum_v<std::decay_t<decltype(EnumValue)>>
 		[[nodiscard]] constexpr auto is_valid_enum() noexcept -> bool
 		{
+			// skip the `magic`
+			if constexpr (has_magic_enum_value_v<std::decay_t<decltype(EnumValue)>>)
+			{
+				if constexpr (EnumValue == has_magic_enum_value<std::decay_t<decltype(EnumValue)>>::magic)
+				{
+					return false;
+				}
+			}
+
 			#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
 			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
 			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(-Wenum-constexpr-conversion)
@@ -149,38 +316,6 @@ namespace gal::prometheus::meta
 			#endif
 		}
 
-		template<typename EnumType>
-			requires std::is_enum_v<EnumType>
-		[[nodiscard]] constexpr auto default_min_value() noexcept -> std::underlying_type_t<EnumType>
-		{
-			using value_type = std::underlying_type_t<EnumType>;
-
-			if constexpr (std::is_signed_v<value_type>)
-			{
-				return static_cast<value_type>(-128);
-			}
-			else
-			{
-				return static_cast<value_type>(0);
-			}
-		}
-
-		template<typename EnumType>
-			requires std::is_enum_v<EnumType>
-		[[nodiscard]] constexpr auto default_max_value() noexcept -> std::underlying_type_t<EnumType>
-		{
-			using value_type = std::underlying_type_t<EnumType>;
-
-			if constexpr (std::is_signed_v<value_type>)
-			{
-				return static_cast<value_type>(127);
-			}
-			else
-			{
-				return static_cast<value_type>(255);
-			}
-		}
-
 		template<typename EnumType, std::size_t Count, std::size_t Index>
 			requires std::is_enum_v<EnumType>
 		[[nodiscard]] constexpr auto flag_get_bits_combination() noexcept -> std::underlying_type_t<EnumType>
@@ -188,7 +323,7 @@ namespace gal::prometheus::meta
 			using type = std::underlying_type_t<EnumType>;
 
 			constexpr auto index_sequence = std::views::iota(static_cast<type>(0), static_cast<type>(std::numeric_limits<type>::digits));
-			constexpr auto index_chunk = index_sequence | std::views::chunk(Count);
+			constexpr auto index_chunk = index_sequence | std::views::chunk(static_cast<type>(Count));
 
 			constexpr auto indices = index_chunk[Index];
 			constexpr auto bits = std::ranges::fold_left(
@@ -243,99 +378,19 @@ namespace gal::prometheus::meta
 		template<typename EnumType>
 			requires std::is_enum_v<EnumType>
 		struct cached_flag_dynamic_enum_values_size : std::integral_constant<std::size_t, flag_dynamic_enum_values<EnumType>().size()> {};
-	}
 
-	enum class EnumNamePolicy : std::uint8_t
-	{
-		// namespace_A::namespace_B::namespace_C::enum_name::Value // scoped enum
-		// namespace_A::namespace_B::namespace_C::Value
-		FULL,
-		// enum_name::Value // scoped enum
-		// Value
-		WITH_SCOPED_NAME,
-		// Value
-		VALUE_ONLY,
-	};
-
-	namespace user_defined
-	{
-		/**
-		 * template<>
-		 * struct enum_name_policy<MyEnum>
-		 * {
-		 *		constexpr static auto value = EnumNamePolicy::VALUE_ONLY;
-		 * };
-		 */
-		template<typename EnumType>
-			requires std::is_enum_v<EnumType>
-		struct enum_name_policy
-		{
-			constexpr static auto value = EnumNamePolicy::FULL;
-		};
-
-		/**
-		 * template<>
-		 * struct enum_range<MyEnum>
-		 * {
-		 *		constexpr static auto min = 0;
-		 *		constexpr static auto max = 65535;
-		 * };
-		 */
-		template<typename EnumType>
-			requires std::is_enum_v<EnumType>
-		struct enum_range
-		{
-			constexpr static auto min = enumeration_detail::default_min_value<EnumType>();
-			constexpr static auto max = enumeration_detail::default_max_value<EnumType>();
-		};
-
-		/**
-		 * template<>
-		 * struct enum_range<MyEnum> : std::true_type
-		 * {
-		 * };
-		 */
-		template<typename EnumType>
-			requires std::is_enum_v<EnumType>
-		struct enum_is_flag {};
-
-		/**
-		 * template<>
-		 * struct enum_name<MyEnum>
-		 * {
-		 *		constexpr static std::string_view value{"MY-ENUM"};
-		 * };
-		 */
-		template<typename EnumType>
-			requires std::is_enum_v<EnumType>
-		struct enum_name {};
-
-		/**
-		 * template<>
-		 * struct enum_name<MyEnum::VALUE>
-		 * {
-		 *		constexpr static std::string_view value{"MY-ENUM-VALUE"};
-		 * };
-		 */
-		template<auto EnumValue>
-			requires std::is_enum_v<std::decay_t<decltype(EnumValue)>>
-		struct enum_value_name {};
-	}
-
-	namespace enumeration_detail
-	{
 		template<typename EnumType>
 			requires std::is_enum_v<EnumType>
 		[[nodiscard]] constexpr auto is_flag_with_user_defined() noexcept -> bool
 		{
-			if constexpr (requires { user_defined::enum_is_flag<EnumType>::value; })
+			if constexpr (user_defined::enum_is_flag<EnumType>::value)
 			{
-				return user_defined::enum_is_flag<EnumType>::value;
+				return true;
 			}
 			else
 			{
 				// We require at least 6 values (1 << 6 => 64) to be considered for inferring a flag.
-				return cached_flag_dynamic_enum_values_size<EnumType>::value >= 6;
+				return cached_flag_dynamic_enum_values_size<EnumType>::value >= static_cast<typename cached_flag_dynamic_enum_values_size<EnumType>::value_type>(6);
 			}
 		}
 
