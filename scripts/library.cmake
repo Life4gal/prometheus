@@ -182,6 +182,14 @@ set(
 		${PROJECT_SOURCE_DIR}/src/math/cmath.hpp
 
 		${PROJECT_SOURCE_DIR}/src/math/math.hpp
+
+		# =========================
+		# MEMORY
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/memory/rw.hpp
+
+		${PROJECT_SOURCE_DIR}/src/memory/memory.hpp
 )
 
 set(

@@ -3,48 +3,28 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#include <prometheus/macro.hpp>
-
-export module gal.prometheus:memory.read_write;
-
-import std;
-
-import :functional;
-#if GAL_PROMETHEUS_COMPILER_DEBUG
-import :platform;
-#endif
-
-#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if not GAL_PROMETHEUS_USE_MODULE
-
 #pragma once
 
 #include <type_traits>
-#include <memory>
 #include <cstring>
 #include <bit>
 
 #include <prometheus/macro.hpp>
 
-#include <functional/functional.ixx>
+#include <functional/type_list.hpp>
+
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
-#endif
-
-#if GAL_PROMETHEUS_INTELLISENSE_WORKING
-namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: memory
-#else
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(memory)
-#endif
+namespace gal::prometheus::memory
 {
 	template<typename T, typename In>
 		requires std::is_arithmetic_v<T> and
 		         (
 			         functional::type_list<
-				         char, const char, signed char, const signed char, unsigned char, const unsigned char, std::byte, const std::byte //
+				         char, const char,
+				         signed char, const signed char,
+				         unsigned char, const unsigned char,
+				         std::byte, const std::byte //
 			         >.any<In>()
 		         )
 	[[nodiscard]] constexpr auto unaligned_load(const In* source) noexcept -> T
@@ -81,13 +61,19 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(memory)
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	[[nodiscard]] constexpr auto unaligned_load(const void* source) noexcept -> T { return unaligned_load<T>(static_cast<const std::byte*>(source)); }
+	[[nodiscard]] constexpr auto unaligned_load(const void* source) noexcept -> T
+	{
+		return memory::unaligned_load<T>(static_cast<const std::byte*>(source));
+	}
 
 	template<typename T, typename Out>
 		requires std::is_arithmetic_v<T> and
 		         (
 			         functional::type_list<
-				         char, const char, signed char, const signed char, unsigned char, const unsigned char, std::byte, const std::byte //
+				         char, const char,
+				         signed char, const signed char,
+				         unsigned char, const unsigned char,
+				         std::byte, const std::byte //
 			         >.any<Out>()
 		         )
 	constexpr auto unaligned_store(const T value, Out* dest) noexcept -> void
@@ -124,5 +110,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(memory)
 
 	template<typename T>
 		requires std::is_arithmetic_v<T>
-	constexpr auto unaligned_store(const T value, void* dest) noexcept -> void { unaligned_store<T>(value, static_cast<std::byte*>(dest)); }
+	constexpr auto unaligned_store(const T value, void* dest) noexcept -> void
+	{
+		memory::unaligned_store<T>(value, static_cast<std::byte*>(dest));
+	}
 }
