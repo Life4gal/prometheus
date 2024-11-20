@@ -171,6 +171,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/functional/aligned_union.hpp
 		${PROJECT_SOURCE_DIR}/src/functional/function_ref.hpp
 		${PROJECT_SOURCE_DIR}/src/functional/hash.hpp
+		${PROJECT_SOURCE_DIR}/src/functional/enumeration.hpp
 
 		${PROJECT_SOURCE_DIR}/src/functional/functional.hpp
 

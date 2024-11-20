@@ -11,3 +11,4 @@
 #include <functional/aligned_union.hpp>
 #include <functional/function_ref.hpp>
 #include <functional/hash.hpp>
+#include <functional/enumeration.hpp>
