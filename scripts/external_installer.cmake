@@ -3,58 +3,69 @@ set(LOCAL_PATH "${${PROJECT_NAME_PREFIX}ROOT_PATH_CMAKE_SCRIPT}/CPM.cmake")
 function(${PROJECT_NAME_PREFIX}EXTERNAL_INSTALLER_LOAD_CPM)
 	set(GITHUB_URL "https://github.com/cpm-cmake/CPM.cmake")
 
-	find_program(GIT_EXE NAMES git REQUIRED)
-	execute_process(
-			COMMAND
-			${GIT_EXE} ls-remote --tags --sort=-v:refname ${GITHUB_URL}.git
-			OUTPUT_VARIABLE TAG_LIST
-			ERROR_VARIABLE ERROR_MESSAGE
-			RESULT_VARIABLE RESULT
-	)
-	if (RESULT EQUAL 0)
-		string(REGEX MATCH "v[0-9]+\\.[0-9]+\\.[0-9]+" LATEST_VERSION ${TAG_LIST})
+	if (NOT DEFINED ${PROJECT_NAME_PREFIX}CPM_LATEST_VERSION)
+		find_program(GIT_EXE NAMES git REQUIRED)
+		execute_process(
+				COMMAND
+				${GIT_EXE} ls-remote --tags --sort=-v:refname ${GITHUB_URL}.git
+				OUTPUT_VARIABLE TAG_LIST
+				ERROR_VARIABLE ERROR_MESSAGE
+				RESULT_VARIABLE RESULT
+		)
+		if (RESULT EQUAL 0)
+			string(REGEX MATCH "v[0-9]+\\.[0-9]+\\.[0-9]+" LATEST_VERSION ${TAG_LIST})
+			set(
+					${PROJECT_NAME_PREFIX}CPM_LATEST_VERSION
+					${LATEST_VERSION}
+					CACHE
+					STRING
+					"CPM Latest version."
+			)
+		else ()
+			message(WARNING "[PROMETHEUS] [CPM] Cannot get the latest version tag: ${ERROR_MESSAGE}")
+		endif (RESULT EQUAL 0)
 	else ()
-		message(WARNING "[PROMETHEUS] Cannot get the newest version tag: ${ERROR_MESSAGE}")
-	endif ()
+		set(LATEST_VERSION ${${PROJECT_NAME_PREFIX}CPM_LATEST_VERSION})
+	endif (NOT DEFINED ${PROJECT_NAME_PREFIX}CPM_LATEST_VERSION)
 
 	# https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.40.2/CPM.cmake
 	set(GITHUB_DOWNLOAD_URL "${GITHUB_URL}/releases/download/${LATEST_VERSION}/CPM.cmake")
 
 	if (NOT EXISTS ${LOCAL_PATH})
-		message(STATUS "[PROMETHEUS] File `CPM.cmake` does not exist, try to download...")
+		message(STATUS "[PROMETHEUS] [CPM] File `CPM.cmake` does not exist, try to download...")
 		if (NOT DEFINED LATEST_VERSION)
-			message(FATAL_ERROR "[PROMETHEUS] Can't get the latest version tag of CPM, please check your internet connection...")
+			message(FATAL_ERROR "[PROMETHEUS] [CPM] Can't get the latest version tag of CPM, please check your internet connection...")
 		else ()
-			message(STATUS "[PROMETHEUS] Downloading ${GITHUB_DOWNLOAD_URL}...")
+			message(STATUS "[PROMETHEUS] [CPM] Downloading ${GITHUB_DOWNLOAD_URL}...")
 			file(DOWNLOAD ${GITHUB_DOWNLOAD_URL} ${LOCAL_PATH} STATUS DOWNLOAD_STATUS)
 
 			if (NOT DOWNLOAD_STATUS EQUAL 0)
-				message(FATAL_ERROR "[PROMETHEUS] Can't download the latest version tag of CPM, please check your internet connection...")
+				message(FATAL_ERROR "[PROMETHEUS] [CPM] Can't download the latest version tag of CPM, please check your internet connection...")
 			else ()
-				message(STATUS "[PROMETHEUS] The file has been downloaded to `${LOCAL_PATH}`")
+				message(STATUS "[PROMETHEUS] [CPM] The file has been downloaded to `${LOCAL_PATH}`")
 			endif (NOT DOWNLOAD_STATUS EQUAL 0)
 		endif (NOT DEFINED LATEST_VERSION)
 	else ()
 		set(CPM_USE_LOCAL_PACKAGES ON)
 		include(${LOCAL_PATH})
 		if (DEFINED LATEST_VERSION)
-			message(STATUS "[PROMETHEUS] File `CPM.cmake` does exist, compare the version...")
+			message(STATUS "[PROMETHEUS] [CPM] File `CPM.cmake` does exist, compare the version...")
 			if (NOT "v${CURRENT_CPM_VERSION}" STREQUAL "${LATEST_VERSION}")
-				message(STATUS "[PROMETHEUS] Version mismatch(v${CURRENT_CPM_VERSION} => ${LATEST_VERSION})")
-				message(STATUS "[PROMETHEUS] Downloading ${GITHUB_DOWNLOAD_URL}...")
+				message(STATUS "[PROMETHEUS] [CPM] Version mismatch(v${CURRENT_CPM_VERSION} => ${LATEST_VERSION})")
+				message(STATUS "[PROMETHEUS] [CPM] Downloading ${GITHUB_DOWNLOAD_URL}...")
 				file(DOWNLOAD ${GITHUB_DOWNLOAD_URL} ${LOCAL_PATH}.tmp STATUS DOWNLOAD_STATUS)
 
 				if (NOT DOWNLOAD_STATUS EQUAL 0)
-					message(WARNING "[PROMETHEUS] Can't download the latest version tag of CPM, use local version...")
+					message(WARNING "[PROMETHEUS] [CPM] Can't download the latest version tag of CPM, use local version...")
 				else ()
 					file(RENAME ${LOCAL_PATH}.tmp ${LOCAL_PATH})
 
-					message(STATUS "[PROMETHEUS] The file has been downloaded to `${LOCAL_PATH}`")
+					message(STATUS "[PROMETHEUS] [CPM] The file has been downloaded to `${LOCAL_PATH}`")
 					# force regenerate
-					message(FATAL_ERROR "[PROMETHEUS] Updated CPM version, please regenerate cmake cache...")
+					message(FATAL_ERROR "[PROMETHEUS] [CPM] Updated CPM version, please regenerate cmake cache...")
 				endif (NOT DOWNLOAD_STATUS EQUAL 0)
 			else ()
-				message(STATUS "[PROMETHEUS] The CPM current version is the latest version(v${CURRENT_CPM_VERSION}), no need to update...")
+				message(STATUS "[PROMETHEUS] [CPM] The CPM current version is the latest version(v${CURRENT_CPM_VERSION}), no need to update...")
 			endif (NOT "v${CURRENT_CPM_VERSION}" STREQUAL "${LATEST_VERSION}")
 		endif (DEFINED LATEST_VERSION)
 	endif (NOT EXISTS ${LOCAL_PATH})
