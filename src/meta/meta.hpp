@@ -10,3 +10,4 @@
 #include <meta/enumeration.hpp>
 #include <meta/member.hpp>
 #include <meta/to_string.hpp>
+#include <meta/dimension.hpp>
