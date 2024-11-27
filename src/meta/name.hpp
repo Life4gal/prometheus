@@ -21,9 +21,9 @@ namespace gal::prometheus::meta
 		template<typename...>
 		struct unused_type {};
 
-		template<auto...>
-		struct unused_value {};
-	} //
+		// template<auto...>
+		// struct unused_value {};
+	} 
 
 	template<typename... Ts>
 	[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view
@@ -35,7 +35,8 @@ namespace gal::prometheus::meta
 	template<auto... Vs>
 	[[nodiscard]] constexpr auto get_full_function_name() noexcept -> std::string_view
 	{
-		[[maybe_unused]] constexpr name_detail::unused_value<Vs...> _{};
+		// [[maybe_unused]] constexpr name_detail::unused_value<Vs...> _{};
+		((std::ignore = Vs), ...);
 		return std::source_location::current().function_name();
 	}
 
