@@ -102,8 +102,8 @@ namespace gal::prometheus::meta
 
 			out.back() = ']';
 		}
-		// meta::member_gettable
-		else if constexpr (meta::member_gettable_t<type>)
+		// meta::known_member_t
+		else if constexpr (meta::known_member_t<type>)
 		{
 			if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}", meta::name_of<type>()); }
 			out.push_back('{');
