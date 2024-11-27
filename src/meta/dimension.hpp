@@ -44,7 +44,7 @@ namespace gal::prometheus::meta
 		//	`dimension + T{value}` will preferentially try to match `dimension + dimension`,
 		//	and then generate a compilation error (T in member_size<T> does not satisfy the constraints of member_size)
 		template<typename T>
-		concept maybe_dimension_t = requires { member_size<T>(); };
+		concept known_member_size_t = requires { member_size<T>(); };
 
 		template<typename OtherDimension, typename ThisDimension>
 		[[nodiscard]] consteval auto is_compatible_dimension() noexcept -> bool
@@ -59,8 +59,8 @@ namespace gal::prometheus::meta
 				{
 					const auto f = []<std::size_t I>() noexcept -> bool
 					{
-						using this_type = member_type_of_index_t<I, ThisDimension>;
-						using other_type = member_type_of_index_t<I, OtherDimension>;
+						using this_type = member_type_of_index<I, ThisDimension>;
+						using other_type = member_type_of_index<I, OtherDimension>;
 
 						return
 								// implicit
@@ -76,7 +76,7 @@ namespace gal::prometheus::meta
 
 		template<typename OtherDimension, typename ThisDimension>
 		concept compatible_dimension_t =
-				maybe_dimension_t<OtherDimension> and
+				known_member_size_t<OtherDimension> and
 				is_compatible_dimension<OtherDimension, ThisDimension>();
 
 		template<typename DimensionLike, typename Dimension>
@@ -94,7 +94,7 @@ namespace gal::prometheus::meta
 
 		template<typename DimensionLike, typename Dimension>
 		concept compatible_dimension_like_t =
-				maybe_dimension_t<DimensionLike> and
+				known_member_size_t<DimensionLike> and
 				is_compatible_dimension_like<DimensionLike, Dimension>();
 
 		template<typename Dimension, typename ThisDimension>
@@ -109,7 +109,7 @@ namespace gal::prometheus::meta
 			{
 				const auto f = []<std::size_t I>() noexcept -> bool
 				{
-					using this_type = member_type_of_index_t<I, ThisDimension>;
+					using this_type = member_type_of_index<I, ThisDimension>;
 
 					return
 							// implicit
@@ -164,19 +164,11 @@ namespace gal::prometheus::meta
 
 		struct tag_bit_flip {};
 
-		// Logical operations are only supported to return boolean types
-		template<typename Dimension>
-		using logical_operation_result = std::array<bool, member_size<Dimension>()>;
-
 		struct tag_logical_and {};
 
 		struct tag_logical_or {};
 
 		struct tag_logical_not {};
-
-		// Compare operations are only supported to return boolean types
-		template<typename Dimension>
-		using compare_operation_result = std::array<bool, member_size<Dimension>()>;
 
 		struct tag_compare_equal {};
 
@@ -190,1286 +182,255 @@ namespace gal::prometheus::meta
 
 		struct tag_compare_less_equal {};
 
-		// ===========================================================================
-		// operator+= / operator+
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_addition, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs + rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) +
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_addition, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs + rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) +
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_addition_self, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs += rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) +=
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_addition_self, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs += rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) +=
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator-= / operator-
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_subtraction, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs - rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) -
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_subtraction, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs - rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) -
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_subtraction_self, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs -= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) -=
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_subtraction_self, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs -= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) -=
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator*= / operator*
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_multiplication, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs * rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) *
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_multiplication, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs * rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) *
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_multiplication_self, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs *= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) *=
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_multiplication_self, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs *= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) *=
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator/= / operator/
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_division, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs / rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) /
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_division, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs / rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) /
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_division_self, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs /= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) /=
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_division_self, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs /= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) /=
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator%= / operator%
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_modulus, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs % rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) %
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_modulus, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs % rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) %
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_modulus_self, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs %= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) %=
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_modulus_self, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs %= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) %=
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator&= / operator&
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_bit_and, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs & rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) &
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_bit_and, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs & rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) &
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_bit_and_self, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs &= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) &=
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_bit_and_self, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs &= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) &=
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator|= / operator|
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_bit_or, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs | rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) |
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_bit_or, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs | rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) |
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_bit_or_self, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs |= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) |=
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_bit_or_self, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs |= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) |=
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator^= / operator^
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_bit_xor, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs ^ rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) ^
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_bit_xor, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs = lhs ^ rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) ^
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_bit_xor_self, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs ^= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) ^=
-								meta::member_of_index<I>(std::declval<const OtherDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_bit_xor_self, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs ^= rhs
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) ^=
-								std::declval<const T&>();
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator~= / operator~
-
-		template<dimension_t ThisDimension>
-		struct cache<tag_bit_flip, ThisDimension, void> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// ~self
-							return requires
-							{
-								meta::member_of_index<I>(std::declval<ThisDimension&>()) =
-								~meta::member_of_index<I>(std::declval<const ThisDimension&>());
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator and
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_logical_and, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs and rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) and
-									meta::member_of_index<I>(std::declval<const OtherDimension&>())
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_logical_and, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs and rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) and
-									std::declval<const T&>()
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator or
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_logical_or, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs or rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) or
-									meta::member_of_index<I>(std::declval<const OtherDimension&>())
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_logical_or, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs or rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) or
-									std::declval<const T&>()
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator not
-
-		template<dimension_t ThisDimension>
-		struct cache<tag_logical_not, ThisDimension, void> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// not (self)
-							return requires
-							{
-								{
-									not meta::member_of_index<I>(std::declval<const ThisDimension&>())
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator==
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_compare_equal, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs == rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) ==
-									meta::member_of_index<I>(std::declval<const OtherDimension&>())
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_compare_equal, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs == rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) ==
-									std::declval<const T&>()
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator!=
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_compare_not_equal, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs != rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) !=
-									meta::member_of_index<I>(std::declval<const OtherDimension&>())
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_compare_not_equal, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs != rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) !=
-									std::declval<const T&>()
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator>
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_compare_greater_than, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs > rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
-									meta::member_of_index<I>(std::declval<const OtherDimension&>())
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_compare_greater_than, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs > rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
-									std::declval<const T&>()
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator>=
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_compare_greater_equal, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs >= rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) >=
-									meta::member_of_index<I>(std::declval<const OtherDimension&>())
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_compare_greater_equal, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs >= rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) >=
-									std::declval<const T&>()
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator<
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_compare_less_than, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs < rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) <
-									meta::member_of_index<I>(std::declval<const OtherDimension&>())
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_compare_less_than, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs < rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) <
-									std::declval<const T&>()
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		// ===========================================================================
-		// operator<=
-
-		template<dimension_t ThisDimension, compatible_dimension_or_dimension_like_t<ThisDimension> OtherDimension>
-		struct cache<tag_compare_less_equal, ThisDimension, OtherDimension> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs <= rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) <=
-									meta::member_of_index<I>(std::declval<const OtherDimension&>())
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
-		template<dimension_t ThisDimension, compatible_value_type_t<ThisDimension> T>
-		struct cache<tag_compare_less_equal, ThisDimension, T> : std::bool_constant<
-					// manually member_walk
-					[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
-					{
-						constexpr auto f = []<std::size_t I>() noexcept -> bool
-						{
-							// lhs <= rhs
-							return requires
-							{
-								{
-									meta::member_of_index<I>(std::declval<const ThisDimension&>()) <=
-									std::declval<const T&>()
-								} -> std::convertible_to<bool>;
-							};
-						};
-
-						return (f.template operator()<Index>() and ...);
-					}(std::make_index_sequence<member_size<ThisDimension>()>{})
-				> {};
-
 		template<typename T, typename ThisDimension, typename Tag>
 		constexpr auto is_operation_supported_v = cache<Tag, ThisDimension, T>::value;
 
 		template<typename T, typename ThisDimension, typename Tag>
 		concept operation_supported_t = is_operation_supported_v<T, ThisDimension, Tag>;
 
-		template<typename TargetDimension>
-		struct identity_caster
+		template<typename Dimension>
+		using boolean_result_type = std::array<bool, member_size<Dimension>()>;
+
+		// Disguises type T as an N-dimensional structure, but actually returns the same object in all dimensions
+		template<typename T, std::size_t>
+		struct dimension_wrapper
+		{
+			std::reference_wrapper<T> ref;
+
+			template<std::size_t Index>
+			[[nodiscard]] constexpr auto get() const noexcept -> T&
+			{
+				std::ignore = Index;
+				return ref.get();
+			}
+		};
+
+		// Convert current dimension to target dimension/dimension_like/value_type, member types must be convertible (one-to-one)
+		// Generally used to convert a dimension to another compatible type
+		template<typename T>
+		struct dimension_transformer
 		{
 			template<std::size_t Index>
 			[[nodiscard]] constexpr auto operator()(const auto& self) const noexcept -> decltype(auto)
 			{
-				return static_cast<member_type_of_index_t<Index, TargetDimension>>(self);
-			}
-		};
-
-		struct boolean_caster
-		{
-			template<std::size_t Index>
-			[[nodiscard]] constexpr auto operator()(const auto& self) const noexcept -> bool
-			{
-				std::ignore = Index;
-				return static_cast<bool>(self);
-			}
-		};
-
-		struct empty {};
-
-		template<typename T>
-		using walker_value_holder = std::conditional_t<std::is_same_v<T, void>, empty, std::reference_wrapper<T>>;
-
-		template<typename T>
-		using walker_value_parameter = std::conditional_t<std::is_same_v<T, void>, empty, std::add_lvalue_reference_t<T>>;
-
-		template<typename T, typename Tag, typename ThisDimension, Dimensions D>
-		struct walker
-		{
-			walker_value_holder<T> holder;
-
-			constexpr explicit walker() noexcept //
-				requires (std::is_same_v<T, void>)
-				: holder{} {}
-
-			constexpr explicit walker(walker_value_parameter<T> d) noexcept //
-				requires(not std::is_same_v<T, void> and dimension_detail::dimension_t<std::remove_cvref_t<T>>)
-				: holder{d.rep()} {}
-
-			constexpr explicit walker(walker_value_parameter<T> d) noexcept //
-				requires(not std::is_same_v<T, void> and not dimension_detail::dimension_t<std::remove_cvref_t<T>>)
-				: holder{d} {}
-
-		private:
-			template<std::size_t Index>
-			[[nodiscard]] constexpr auto value_of() const noexcept -> decltype(auto)
-			{
-				using type = std::remove_cvref_t<T>;
-				if constexpr (dimension_detail::compatible_dimension_or_dimension_like_t<type, ThisDimension>)
+				if constexpr (known_member_size_t<T>)
 				{
-					return meta::member_of_index<Index>(holder.get());
-				}
-				else if constexpr (dimension_detail::compatible_value_type_t<type, ThisDimension>)
-				{
-					return holder.get();
+					return static_cast<member_type_of_index<Index, T>>(self);
 				}
 				else
 				{
-					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					std::ignore = Index;
+					return static_cast<T>(self);
 				}
 			}
+		};
 
-		public:
+		template<typename Tag, Dimensions D>
+		struct dimension_walker
+		{
 			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
 
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(4244)
 			#endif
 
+			// lhs `op`= rhs
+			// lhs = `op` rhs
 			template<std::size_t Index>
-			constexpr auto operator()(auto& self) const noexcept -> void
+			constexpr auto operator()(auto& lhs, const auto& rhs) const noexcept -> void
 			{
-				if constexpr (std::is_same_v<Tag, tag_addition_self>)
+				// If the index is the specified one,
+				// then the operation will be performed (lhs `op`= rhs or lhs = `op` rhs),
+				// otherwise, the binary operations can be handled uniformly (do nothing),
+				// but not unary operations, which still require assignment (unless they were assigned before walk).
+
+				if constexpr (D != Dimensions::ALL and static_cast<std::size_t>(D) != Index)
 				{
-					self += value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_subtraction_self>)
-				{
-					self -= value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_multiplication_self>)
-				{
-					self *= value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_division_self>)
-				{
-					self /= value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_modulus_self>)
-				{
-					self %= value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_bit_and_self>)
-				{
-					self &= value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_bit_or_self>)
-				{
-					self |= value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_bit_xor_self>)
-				{
-					self ^= value_of<Index>();
+					if constexpr (
+						std::is_same_v<Tag, tag_bit_flip> or
+						std::is_same_v<Tag, tag_logical_not>
+					)
+					{
+						lhs = rhs;
+					}
 				}
 				else
 				{
-					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-				}
-			}
-
-			template<std::size_t Index>
-			constexpr auto operator()(auto& result, const auto& self) const noexcept -> void
-			{
-				if constexpr (std::is_same_v<Tag, tag_transform>)
-				{
-					if constexpr (requires { holder.get()(self); })
+					std::ignore = Index;
+					if constexpr (std::is_same_v<Tag, tag_addition_self>)
 					{
-						result = holder.get()(self);
+						lhs += rhs;
 					}
-					else if constexpr (requires { holder.get().template operator()<Index>(self); })
+					else if constexpr (std::is_same_v<Tag, tag_subtraction_self>)
 					{
-						result = holder.get().template operator()<Index>(self);
+						lhs -= rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_multiplication_self>)
+					{
+						lhs *= rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_division_self>)
+					{
+						lhs /= rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_modulus_self>)
+					{
+						lhs %= rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_bit_and_self>)
+					{
+						lhs &= rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_bit_or_self>)
+					{
+						lhs |= rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_bit_xor_self>)
+					{
+						lhs ^= rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_bit_flip>)
+					{
+						lhs = ~rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_logical_not>)
+					{
+						lhs = not rhs;
 					}
 					else
 					{
 						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 					}
 				}
-				else if constexpr (std::is_same_v<Tag, tag_addition>)
+			}
+
+			// result = lhs `op` rhs
+			template<std::size_t Index>
+			constexpr auto operator()(auto& result, const auto& lhs, const auto& rhs) const noexcept -> void
+			{
+				// If the index is the specified one,
+				// then the operation will be performed (result = lhs `op` rhs or result = lhs(rhs)),
+				// otherwise, the value will be assigned directly (result = lhs).
+
+				if constexpr (D != Dimensions::ALL and static_cast<std::size_t>(D) != Index)
 				{
-					result = self + value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_subtraction>)
-				{
-					result = self - value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_multiplication>)
-				{
-					result = self * value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_division>)
-				{
-					result = self / value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_modulus>)
-				{
-					result = self % value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_bit_and>)
-				{
-					result = self & value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_bit_or>)
-				{
-					result = self | value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_bit_xor>)
-				{
-					result = self ^ value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_bit_flip>)
-				{
-					result = ~self;
-				}
-				else if constexpr (std::is_same_v<Tag, tag_logical_and>)
-				{
-					result = self and value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_logical_or>)
-				{
-					result = self or value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_logical_not>)
-				{
-					result = not self;
-				}
-				else if constexpr (std::is_same_v<Tag, tag_compare_equal>)
-				{
-					result = self == value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_compare_not_equal>)
-				{
-					result = self != value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_compare_greater_than>)
-				{
-					result = self > value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_compare_greater_equal>)
-				{
-					result = self >= value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_compare_less_than>)
-				{
-					result = self < value_of<Index>();
-				}
-				else if constexpr (std::is_same_v<Tag, tag_compare_less_equal>)
-				{
-					result = self <= value_of<Index>();
+					if constexpr (requires { result = lhs; })
+					{
+						result = lhs;
+					}
+					else if constexpr (requires { result = static_cast<std::remove_cvref_t<decltype(result)>>(lhs); })
+					{
+						result = static_cast<std::remove_cvref_t<decltype(result)>>(lhs);
+					}
+					else if constexpr (requires { result = std::remove_cvref_t<decltype(result)>{lhs}; })
+					{
+						result = std::remove_cvref_t<decltype(result)>{lhs};
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
 				}
 				else
 				{
-					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					if constexpr (std::is_same_v<Tag, tag_transform>)
+					{
+						if constexpr (requires { lhs(rhs); })
+						{
+							result = lhs(rhs);
+						}
+						else if constexpr (requires { lhs.template operator()<Index>(rhs); })
+						{
+							result = lhs.template operator()<Index>(rhs);
+						}
+						else
+						{
+							GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+						}
+					}
+					else if constexpr (std::is_same_v<Tag, tag_addition>)
+					{
+						result = lhs + rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_subtraction>)
+					{
+						result = lhs - rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_multiplication>)
+					{
+						result = lhs * rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_division>)
+					{
+						result = lhs / rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_modulus>)
+					{
+						result = lhs % rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_bit_and>)
+					{
+						result = lhs & rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_bit_or>)
+					{
+						result = lhs | rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_bit_xor>)
+					{
+						result = lhs ^ rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_logical_and>)
+					{
+						result = lhs and rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_logical_or>)
+					{
+						result = lhs or rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_compare_equal>)
+					{
+						result = lhs == rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_compare_not_equal>)
+					{
+						result = lhs != rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_compare_greater_than>)
+					{
+						result = lhs > rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_compare_greater_equal>)
+					{
+						result = lhs >= rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_compare_less_than>)
+					{
+						result = lhs < rhs;
+					}
+					else if constexpr (std::is_same_v<Tag, tag_compare_less_equal>)
+					{
+						result = lhs <= rhs;
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
 				}
 			}
 
 			GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
 
-			template<typename... Args>
-			constexpr auto operator()(Args&&... args) const noexcept -> void
+			template<typename Lhs, typename Rhs>
+			constexpr auto walk(Lhs& lhs, const Rhs& rhs) const noexcept -> void
 			{
-				if constexpr (D == Dimensions::ALL)
-				{
-					meta::member_zip_walk(*this, std::forward<Args>(args)...);
-				}
-				else
-				{
-					this->template operator()<static_cast<std::size_t>(D)>(std::forward<Args>(args)...);
-				}
+				meta::member_walk(*this, lhs, rhs);
+			}
+
+			template<typename Result, typename Lhs, typename Rhs>
+			constexpr auto walk(Result& result, const Lhs& lhs, const Rhs& rhs) const noexcept -> void
+			{
+				meta::member_walk(*this, result, lhs, rhs);
 			}
 		};
 	}
@@ -1477,49 +438,37 @@ namespace gal::prometheus::meta
 	template<typename Dimension>
 	struct [[nodiscard]] dimension // NOLINT(bugprone-crtp-constructor-accessibility)
 	{
-		template<typename D>
-		friend struct dimension;
-
 		using dimension_type = Dimension;
 
 	private:
-		template<typename T, typename Tag, Dimensions D>
-		using walker_type = dimension_detail::walker<T, Tag, dimension_type, D>;
-
-		template<typename T, typename Tag, typename ThisDimension, Dimensions D>
-		friend struct dimension_detail::walker;
-
 		[[nodiscard]] constexpr auto rep() noexcept -> dimension_type& { return *static_cast<dimension_type*>(this); }
 		[[nodiscard]] constexpr auto rep() const noexcept -> const dimension_type& { return *static_cast<const dimension_type*>(this); }
 
+		template<typename Tag, Dimensions D>
+		constexpr auto walk(auto& lhs, const auto& rhs) const noexcept -> void
+		{
+			dimension_detail::dimension_walker<Tag, D>{}.walk(lhs, rhs);
+		}
+
+		template<typename Tag, Dimensions D>
+		constexpr auto walk(auto& result, const auto& lhs, const auto& rhs) const noexcept -> void
+		{
+			dimension_detail::dimension_walker<Tag, D>{}.walk(result, lhs, rhs);
+		}
+
 	public:
-		template<std::size_t Index>
-		[[nodiscard]] constexpr auto value() noexcept -> decltype(auto)
-		{
-			return meta::member_of_index<Index>(rep());
-		}
-
-		template<std::size_t Index>
-		[[nodiscard]] constexpr auto value() const noexcept -> decltype(auto)
-		{
-			return meta::member_of_index<Index>(rep());
-		}
-
-		template<std::size_t Index>
-		using type = member_type_of_index_t<Index, dimension_type>;
-
 		// ===========================================================================
 		// transform
 
 		template<
 			dimension_detail::compatible_dimension_or_dimension_like_t<dimension_type> TargetDimension = dimension_type,
-			typename TransformFunction = dimension_detail::identity_caster<TargetDimension>>
+			typename TransformFunction = dimension_detail::dimension_transformer<TargetDimension>>
 		[[nodiscard]] constexpr auto transform(const TransformFunction& transform_function = {}) const noexcept -> TargetDimension
 		{
-			TargetDimension result{};
+			const dimension_detail::dimension_wrapper<const TransformFunction, meta::member_size<dimension_type>()> wrapper{.ref = transform_function};
 
-			walker_type<const TransformFunction, dimension_detail::tag_transform, Dimensions::ALL> w{transform_function};
-			w(result, rep());
+			TargetDimension result{};
+			this->template walk<dimension_detail::tag_transform, Dimensions::ALL>(result, wrapper, rep());
 
 			return result;
 		}
@@ -1529,19 +478,19 @@ namespace gal::prometheus::meta
 
 		[[nodiscard]] constexpr auto all() const noexcept -> bool
 		{
-			const auto result = transform<dimension_detail::compare_operation_result<dimension_type>, dimension_detail::boolean_caster>();
+			const auto result = transform<dimension_detail::boolean_result_type<dimension_type>>();
 			return std::ranges::all_of(result, std::identity{});
 		}
 
 		[[nodiscard]] constexpr auto any() const noexcept -> bool
 		{
-			const auto result = transform<dimension_detail::compare_operation_result<dimension_type>, dimension_detail::boolean_caster>();
+			const auto result = transform<dimension_detail::boolean_result_type<dimension_type>>();
 			return std::ranges::any_of(result, std::identity{});
 		}
 
 		[[nodiscard]] constexpr auto none() const noexcept -> bool
 		{
-			const auto result = transform<dimension_detail::compare_operation_result<dimension_type>, dimension_detail::boolean_caster>();
+			const auto result = transform<dimension_detail::boolean_result_type<dimension_type>>();
 			return std::ranges::none_of(result, std::identity{});
 		}
 
@@ -1558,8 +507,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto add_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			walker_type<const OtherDimension, dimension_detail::tag_addition_self, D> w{other};
-			w(rep());
+			this->template walk<dimension_detail::tag_addition_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -1575,9 +523,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto add(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_addition, D> w{other};
-			w(result, rep());
+			this->template walk<dimension_detail::tag_addition, D>(result, rep(), other);
 
 			return result;
 		}
@@ -1593,8 +539,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto add_equal(const T& value) noexcept -> dimension_type&
 		{
-			walker_type<const T, dimension_detail::tag_addition_self, D> w{value};
-			w(rep());
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+
+			this->template walk<dimension_detail::tag_addition_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -1610,10 +557,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto add(const T& value) const noexcept -> dimension_type
 		{
-			dimension_type result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_addition, D> w{value};
-			w(result, rep());
+			dimension_type result{};
+			this->template walk<dimension_detail::tag_addition, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1631,8 +578,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto subtract_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			walker_type<const OtherDimension, dimension_detail::tag_subtraction_self, D> w{other};
-			w(rep());
+			this->template walk<dimension_detail::tag_subtraction_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -1648,9 +594,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto subtract(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_subtraction, D> w{other};
-			w(result, rep());
+			this->template walk<dimension_detail::tag_subtraction, D>(result, rep(), other);
 
 			return result;
 		}
@@ -1666,8 +610,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto subtract_equal(const T& value) noexcept -> dimension_type&
 		{
-			walker_type<const T, dimension_detail::tag_subtraction_self, D> w{value};
-			w(rep());
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+
+			this->template walk<dimension_detail::tag_subtraction_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -1683,10 +628,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto subtract(const T& value) const noexcept -> dimension_type
 		{
-			dimension_type result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_subtraction, D> w{value};
-			w(result, rep());
+			dimension_type result{};
+			this->template walk<dimension_detail::tag_subtraction, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1704,8 +649,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto multiply_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			walker_type<const OtherDimension, dimension_detail::tag_multiplication_self, D> w{other};
-			w(rep());
+			this->template walk<dimension_detail::tag_multiplication_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -1721,9 +665,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto multiply(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_multiplication, D> w{other};
-			w(result, rep());
+			this->template walk<dimension_detail::tag_multiplication, D>(result, rep(), other);
 
 			return result;
 		}
@@ -1739,8 +681,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto multiply_equal(const T& value) noexcept -> dimension_type&
 		{
-			walker_type<const T, dimension_detail::tag_multiplication_self, D> w{value};
-			w(rep());
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+
+			this->template walk<dimension_detail::tag_multiplication_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -1756,10 +699,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto multiply(const T& value) const noexcept -> dimension_type
 		{
-			dimension_type result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_multiplication, D> w{value};
-			w(result, rep());
+			dimension_type result{};
+			this->template walk<dimension_detail::tag_multiplication, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1777,8 +720,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto divide_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			walker_type<const OtherDimension, dimension_detail::tag_division_self, D> w{other};
-			w(rep());
+			this->template walk<dimension_detail::tag_division_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -1794,9 +736,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto divide(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_division, D> w{other};
-			w(result, rep());
+			this->template walk<dimension_detail::tag_division, D>(result, rep(), other);
 
 			return result;
 		}
@@ -1812,8 +752,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto divide_equal(const T& value) noexcept -> dimension_type&
 		{
-			walker_type<const T, dimension_detail::tag_division_self, D> w{value};
-			w(rep());
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+
+			this->template walk<dimension_detail::tag_division_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -1829,10 +770,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto divide(const T& value) const noexcept -> dimension_type
 		{
-			dimension_type result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_division, D> w{value};
-			w(result, rep());
+			dimension_type result{};
+			this->template walk<dimension_detail::tag_division, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1850,8 +791,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto mod_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			walker_type<const OtherDimension, dimension_detail::tag_modulus_self, D> w{other};
-			w(rep());
+			this->template walk<dimension_detail::tag_modulus_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -1867,9 +807,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto mod(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_modulus, D> w{other};
-			w(result, rep());
+			this->template walk<dimension_detail::tag_modulus, D>(result, rep(), other);
 
 			return result;
 		}
@@ -1885,8 +823,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto mod_equal(const T& value) noexcept -> dimension_type&
 		{
-			walker_type<const T, dimension_detail::tag_modulus_self, D> w{value};
-			w(rep());
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+
+			this->template walk<dimension_detail::tag_modulus_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -1902,10 +841,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto mod(const T& value) const noexcept -> dimension_type
 		{
-			dimension_type result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_modulus, D> w{value};
-			w(result, rep());
+			dimension_type result{};
+			this->template walk<dimension_detail::tag_modulus, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1923,8 +862,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_and_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			walker_type<const OtherDimension, dimension_detail::tag_bit_and_self, D> w{other};
-			w(rep());
+			this->template walk<dimension_detail::tag_bit_and_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -1940,9 +878,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto bit_and(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_bit_and, D> w{other};
-			w(result, rep());
+			this->template walk<dimension_detail::tag_bit_and, D>(result, rep(), other);
 
 			return result;
 		}
@@ -1958,8 +894,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_and_equal(const T& value) noexcept -> dimension_type&
 		{
-			walker_type<const T, dimension_detail::tag_bit_and_self, D> w{value};
-			w(rep());
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+
+			this->template walk<dimension_detail::tag_bit_and_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -1975,10 +912,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto bit_and(const T& value) const noexcept -> dimension_type
 		{
-			dimension_type result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_bit_and, D> w{value};
-			w(result, rep());
+			dimension_type result{};
+			this->template walk<dimension_detail::tag_bit_and, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1996,8 +933,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_or_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			walker_type<const OtherDimension, dimension_detail::tag_bit_or_self, D> w{other};
-			w(rep());
+			this->template walk<dimension_detail::tag_bit_or_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -2013,9 +949,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto bit_or(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_bit_or, D> w{other};
-			w(result, rep());
+			this->template walk<dimension_detail::tag_bit_or, D>(result, rep(), other);
 
 			return result;
 		}
@@ -2031,8 +965,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_or_equal(const T& value) noexcept -> dimension_type&
 		{
-			walker_type<const T, dimension_detail::tag_bit_or_self, D> w{value};
-			w(rep());
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+
+			this->template walk<dimension_detail::tag_bit_or_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -2048,10 +983,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto bit_or(const T& value) const noexcept -> dimension_type
 		{
-			dimension_type result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_bit_or, D> w{value};
-			w(result, rep());
+			dimension_type result{};
+			this->template walk<dimension_detail::tag_bit_or, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -2069,8 +1004,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_xor_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			walker_type<const OtherDimension, dimension_detail::tag_bit_xor_self, D> w{other};
-			w(rep());
+			this->template walk<dimension_detail::tag_bit_xor_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -2086,9 +1020,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto bit_xor(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_bit_xor, D> w{other};
-			w(result, rep());
+			this->template walk<dimension_detail::tag_bit_xor, D>(result, rep(), other);
 
 			return result;
 		}
@@ -2104,8 +1036,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_xor_equal(const T& value) noexcept -> dimension_type&
 		{
-			walker_type<const T, dimension_detail::tag_bit_xor_self, D> w{value};
-			w(rep());
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+
+			this->template walk<dimension_detail::tag_bit_xor_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -2121,10 +1054,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto bit_xor(const T& value) const noexcept -> dimension_type
 		{
-			dimension_type result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_bit_xor, D> w{value};
-			w(result, rep());
+			dimension_type result{};
+			this->template walk<dimension_detail::tag_bit_xor, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -2143,9 +1076,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto bit_flip() const noexcept -> dimension_type
 		{
 			dimension_type result{};
-
-			walker_type<void, dimension_detail::tag_bit_flip, D> w{};
-			w(result, rep());
+			this->template walk<dimension_detail::tag_bit_flip, D>(result, rep());
 
 			return result;
 		}
@@ -2156,37 +1087,31 @@ namespace gal::prometheus::meta
 
 		// dimension and dimension / dimension_like
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_dimension_or_dimension_like_t<dimension_type> OtherDimension = dimension_type>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_logical_and>
 			)
-		[[nodiscard]] constexpr auto logical_and(const OtherDimension& other) const noexcept -> auto // dimension_detail::logical_operation_result<dimension_type>
+		[[nodiscard]] constexpr auto logical_and(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::logical_operation_result<dimension_type> result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_logical_and, D> w{other};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_logical_and, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
 
 		// dimension and value
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_value_type_t<dimension_type> T
 		>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<T, dimension_type, dimension_detail::tag_logical_and>
 			)
-		[[nodiscard]] constexpr auto logical_and(const T& value) const noexcept -> auto // dimension_detail::logical_operation_result<dimension_type>
+		[[nodiscard]] constexpr auto logical_and(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::logical_operation_result<dimension_type> result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_logical_and, D> w{value};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_logical_and, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -2196,37 +1121,31 @@ namespace gal::prometheus::meta
 
 		// dimension or dimension / dimension_like
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_dimension_or_dimension_like_t<dimension_type> OtherDimension = dimension_type>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_logical_or>
 			)
-		[[nodiscard]] constexpr auto logical_or(const OtherDimension& other) const noexcept -> auto // dimension_detail::logical_operation_result<dimension_type>
+		[[nodiscard]] constexpr auto logical_or(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::logical_operation_result<dimension_type> result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_logical_or, D> w{other};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_logical_or, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
 
 		// dimension or value
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_value_type_t<dimension_type> T
 		>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<T, dimension_type, dimension_detail::tag_logical_or>
 			)
-		[[nodiscard]] constexpr auto logical_or(const T& value) const noexcept -> auto // dimension_detail::logical_operation_result<dimension_type>
+		[[nodiscard]] constexpr auto logical_or(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::logical_operation_result<dimension_type> result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_logical_or, D> w{value};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_logical_or, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -2235,19 +1154,13 @@ namespace gal::prometheus::meta
 		// operator not
 
 		// not dimension
-		template<
-			Dimensions D = Dimensions::ALL
-		>
-			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
+		[[nodiscard]] constexpr auto logical_not() const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
+			requires (
 				dimension_detail::operation_supported_t<void, dimension_type, dimension_detail::tag_logical_not>
 			)
-		[[nodiscard]] constexpr auto logical_not() const noexcept -> auto // dimension_detail::logical_operation_result<dimension_type>
 		{
-			dimension_detail::logical_operation_result<dimension_type> result{};
-
-			walker_type<void, dimension_detail::tag_logical_not, D> w{};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_logical_not, Dimensions::ALL>(result, rep());
 
 			return result;
 		}
@@ -2257,37 +1170,31 @@ namespace gal::prometheus::meta
 
 		// dimension == dimension / dimension_like
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_dimension_or_dimension_like_t<dimension_type> OtherDimension = dimension_type>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_compare_equal>
 			)
-		[[nodiscard]] constexpr auto equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		[[nodiscard]] constexpr auto equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_compare_equal, D> w{other};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_equal, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
 
 		// dimension == value
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_value_type_t<dimension_type> T
 		>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<T, dimension_type, dimension_detail::tag_compare_equal>
 			)
-		[[nodiscard]] constexpr auto equal(const T& value) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		[[nodiscard]] constexpr auto equal(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_compare_equal, D> w{value};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_equal, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -2297,37 +1204,31 @@ namespace gal::prometheus::meta
 
 		// dimension != dimension / dimension_like
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_dimension_or_dimension_like_t<dimension_type> OtherDimension = dimension_type>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_compare_not_equal>
 			)
-		constexpr auto not_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		constexpr auto not_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_compare_not_equal, D> w{other};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_not_equal, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
 
 		// dimension != value
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_value_type_t<dimension_type> T
 		>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<T, dimension_type, dimension_detail::tag_compare_not_equal>
 			)
-		[[nodiscard]] constexpr auto not_equal(const T& value) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		[[nodiscard]] constexpr auto not_equal(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_compare_not_equal, D> w{value};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_not_equal, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -2337,37 +1238,31 @@ namespace gal::prometheus::meta
 
 		// dimension > dimension / dimension_like
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_dimension_or_dimension_like_t<dimension_type> OtherDimension = dimension_type>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_compare_greater_than>
 			)
-		constexpr auto greater_than(const OtherDimension& other) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		constexpr auto greater_than(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_compare_greater_than, D> w{other};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_greater_than, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
 
 		// dimension > value
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_value_type_t<dimension_type> T
 		>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<T, dimension_type, dimension_detail::tag_compare_greater_than>
 			)
-		[[nodiscard]] constexpr auto greater_than(const T& value) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		[[nodiscard]] constexpr auto greater_than(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_compare_greater_than, D> w{value};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_greater_than, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -2377,37 +1272,31 @@ namespace gal::prometheus::meta
 
 		// dimension >= dimension / dimension_like
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_dimension_or_dimension_like_t<dimension_type> OtherDimension = dimension_type>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_compare_greater_equal>
 			)
-		constexpr auto greater_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		constexpr auto greater_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_compare_greater_equal, D> w{other};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_greater_equal, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
 
 		// dimension >= value
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_value_type_t<dimension_type> T
 		>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<T, dimension_type, dimension_detail::tag_compare_greater_equal>
 			)
-		[[nodiscard]] constexpr auto greater_equal(const T& value) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		[[nodiscard]] constexpr auto greater_equal(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_compare_greater_equal, D> w{value};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_greater_equal, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -2417,37 +1306,31 @@ namespace gal::prometheus::meta
 
 		// dimension < dimension / dimension_like
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_dimension_or_dimension_like_t<dimension_type> OtherDimension = dimension_type>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_compare_less_than>
 			)
-		constexpr auto less_than(const OtherDimension& other) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		constexpr auto less_than(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_compare_less_than, D> w{other};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_less_than, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
 
 		// dimension < value
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_value_type_t<dimension_type> T
 		>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<T, dimension_type, dimension_detail::tag_compare_less_than>
 			)
-		[[nodiscard]] constexpr auto less_than(const T& value) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		[[nodiscard]] constexpr auto less_than(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_compare_less_than, D> w{value};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_less_than, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -2457,37 +1340,31 @@ namespace gal::prometheus::meta
 
 		// dimension <= dimension / dimension_like
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_dimension_or_dimension_like_t<dimension_type> OtherDimension = dimension_type>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_compare_less_equal>
 			)
-		constexpr auto less_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		constexpr auto less_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
-
-			walker_type<const OtherDimension, dimension_detail::tag_compare_less_equal, D> w{other};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_less_equal, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
 
 		// dimension <= value
 		template<
-			Dimensions D = Dimensions::ALL,
 			dimension_detail::compatible_value_type_t<dimension_type> T
 		>
 			requires(
-				(D == Dimensions::ALL or static_cast<std::size_t>(D) < meta::member_size<dimension_type>()) and
 				dimension_detail::operation_supported_t<T, dimension_type, dimension_detail::tag_compare_less_equal>
 			)
-		[[nodiscard]] constexpr auto less_equal(const T& value) const noexcept -> auto // dimension_detail::compare_operation_result<dimension_type>
+		[[nodiscard]] constexpr auto less_equal(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			dimension_detail::compare_operation_result<dimension_type> result{};
+			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
 
-			walker_type<const T, dimension_detail::tag_compare_less_equal, D> w{value};
-			w(result, rep());
+			dimension_detail::boolean_result_type<dimension_type> result{};
+			this->template walk<dimension_detail::tag_compare_less_equal, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -3187,3 +2064,17 @@ namespace gal::prometheus::meta
 
 	// fixme(OPT): std::totally_ordered_with => [dimension_like `op` dimension] / [value `op` dimension]
 }
+
+namespace std
+{
+	template<std::size_t Index, typename T, std::size_t N>
+	struct tuple_element<Index, gal::prometheus::meta::dimension_detail::dimension_wrapper<T, N>>
+	{
+		using type = T;
+	};
+
+	template<typename T, std::size_t N>
+	struct tuple_size<gal::prometheus::meta::dimension_detail::dimension_wrapper<T, N>> : std::integral_constant<std::size_t, N> {};
+}
+
+#include <meta/dimension.cache.inl>
