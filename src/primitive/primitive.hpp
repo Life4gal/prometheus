@@ -5,4 +5,4 @@
 
 #pragma once
 
-#include <primitive/dimension.hpp>
+#include <primitive/point.hpp>

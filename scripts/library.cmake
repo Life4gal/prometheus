@@ -147,6 +147,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/meta/enumeration.hpp
 		${PROJECT_SOURCE_DIR}/src/meta/member.hpp
 		${PROJECT_SOURCE_DIR}/src/meta/to_string.hpp
+		${PROJECT_SOURCE_DIR}/src/meta/dimension.hpp
 
 		${PROJECT_SOURCE_DIR}/src/meta/meta.hpp
 
@@ -204,7 +205,7 @@ set(
 		# PRIMITIVE
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/primitive/dimension.hpp
+		${PROJECT_SOURCE_DIR}/src/primitive/point.hpp
 
 		${PROJECT_SOURCE_DIR}/src/primitive/primitive.hpp
 )
