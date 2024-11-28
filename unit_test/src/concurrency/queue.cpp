@@ -1,16 +1,12 @@
-#include <prometheus/macro.hpp>
-
-#if GAL_PROMETHEUS_USE_MODULE
-import gal.prometheus;
-#else
-#include <prometheus.ixx>
-#endif
-
 #include <limits>
 #include <string>
 #include <thread>
 #include <span>
 #include <algorithm>
+
+#include <unit_test/unit_test.hpp>
+// concurrency::queue
+#include <concurrency/concurrency.hpp>
 
 using namespace gal::prometheus;
 
