@@ -3,21 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#include <prometheus/macro.hpp>
-
-export module gal.prometheus:primitive.vertex;
-
-import std;
-
-import :primitive.point;
-import :primitive.color;
-
-#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if not GAL_PROMETHEUS_USE_MODULE
-
 #pragma once
 
 #include <tuple>
@@ -26,46 +11,13 @@ import :primitive.color;
 
 #include <prometheus/macro.hpp>
 
-#include <primitive/point.ixx>
-#include <primitive/color.ixx>
+#include <primitive/point.hpp>
+#include <primitive/color.hpp>
 
-#endif
-
-#if GAL_PROMETHEUS_INTELLISENSE_WORKING
-namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: primitive
-#else
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
-#endif
+namespace gal::prometheus::primitive
 {
-	template<
-		typename, // point type
-		typename, // uv type
-		typename // color type
-	>
-	struct basic_vertex;
-
-	template<typename>
-	struct is_basic_vertex : std::false_type {};
-
-	template<
-		typename PositionType,
-		typename UvType,
-		typename ColorType
-	>
-	struct is_basic_vertex<basic_vertex<PositionType, UvType, ColorType>> : std::true_type {};
-
-	template<typename T>
-	constexpr auto is_basic_vertex_v = is_basic_vertex<T>::value;
-
-	template<typename T>
-	concept basic_vertex_t = is_basic_vertex_v<T>;
-
-	template<
-		basic_point_t PositionType,
-		basic_point_t UvType,
-		basic_color_t ColorType
-	>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_vertex<PositionType, UvType, ColorType> final
+	template<typename PositionType, typename UvType, typename ColorType>
+	struct basic_vertex final
 	{
 		using position_type = PositionType;
 		using uv_type = UvType;
@@ -75,29 +27,16 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 		using uv_value_type = typename uv_type::value_type;
 		using color_value_type = typename color_type::value_type;
 
-		constexpr static std::size_t element_size{3};
 		template<std::size_t Index>
-			requires(Index < element_size)
 		using element_type = std::conditional_t<Index == 0, position_type, std::conditional_t<Index == 1, uv_type, color_type>>;
 
 		position_type position;
 		uv_type uv;
 		color_type color;
 
-		constexpr basic_vertex(const position_type position, const uv_type uv, const color_type color) noexcept
-			: position{position},
-			  uv{uv},
-			  color{color} {}
-
-		constexpr basic_vertex(const position_type position, const color_type color) noexcept
-			: basic_vertex{position, {}, color} {}
-
-		constexpr basic_vertex() noexcept
-			: basic_vertex{{}, {}, {}} {}
-
 		template<std::size_t Index>
-			requires(Index < element_size)
-		[[nodiscard]] constexpr auto get() const noexcept -> std::add_lvalue_reference_t<std::add_const_t<element_type<Index>>>
+			requires(Index < 3)
+		[[nodiscard]] constexpr auto get() const noexcept -> const element_type<Index>&
 		{
 			if constexpr (Index == 0) { return position; }
 			else if constexpr (Index == 1) { return uv; }
@@ -106,8 +45,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 		}
 
 		template<std::size_t Index>
-			requires(Index < element_size)
-		[[nodiscard]] constexpr auto get() noexcept -> std::add_lvalue_reference_t<element_type<Index>>
+			requires(Index < 3)
+		[[nodiscard]] constexpr auto get() noexcept -> element_type<Index>&
 		{
 			if constexpr (Index == 0) { return position; }
 			else if constexpr (Index == 1) { return uv; }
@@ -116,11 +55,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 		}
 	};
 
-	template<
-		basic_point_t PositionType,
-		basic_color_t ColorType
-	>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_vertex<PositionType, void, ColorType> final
+	template<typename PositionType, typename ColorType>
+	struct basic_vertex<PositionType, void, ColorType> final
 	{
 		using position_type = PositionType;
 		using color_type = ColorType;
@@ -128,22 +64,15 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 		using position_value_type = typename position_type::value_type;
 		using color_value_type = typename color_type::value_type;
 
-		constexpr static std::size_t element_size{2};
+		template<std::size_t Index>
+		using element_type = std::conditional_t<Index == 0, position_type, color_type>;
 
 		position_type position;
 		color_type color;
 
-		constexpr basic_vertex(const position_type position, const color_type color) noexcept
-			: position{position},
-			  color{color} {}
-
 		template<std::size_t Index>
-			requires(Index < element_size)
-		[[nodiscard]] constexpr auto get() const noexcept
-			-> std::conditional_t<
-				Index == 0,
-				const position_type&,
-				const color_type&>
+			requires(Index < 2)
+		[[nodiscard]] constexpr auto get() const noexcept -> const element_type<Index>&
 		{
 			if constexpr (Index == 0) { return position; }
 			else if constexpr (Index == 1) { return color; }
@@ -151,12 +80,8 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 		}
 
 		template<std::size_t Index>
-			requires(Index < element_size)
-		[[nodiscard]] constexpr auto get() noexcept
-			-> std::conditional_t<
-				Index == 0,
-				position_type&,
-				color_type&>
+			requires(Index < 2)
+		[[nodiscard]] constexpr auto get() noexcept -> element_type<Index>&
 		{
 			if constexpr (Index == 0) { return position; }
 			else if constexpr (Index == 1) { return color; }
@@ -165,7 +90,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 	};
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
+namespace std
 {
 	template<std::size_t Index, typename PositionType, typename UvType, typename ColorType>
 	struct
@@ -179,7 +104,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
 
 	template<typename PositionType, typename UvType, typename ColorType>
 	struct tuple_size<gal::prometheus::primitive::basic_vertex<PositionType, UvType, ColorType>> // NOLINT(cert-dcl58-cpp)
-			: std::integral_constant<std::size_t, gal::prometheus::primitive::basic_vertex<PositionType, UvType, ColorType>::element_size> {};
+			: std::integral_constant<std::size_t, 2 + std::is_same_v<UvType, void> ? 0 : 1> {};
 
 	template<typename PositionType, typename UvType, typename ColorType>
 	struct formatter<gal::prometheus::primitive::basic_vertex<PositionType, UvType, ColorType>> // NOLINT(cert-dcl58-cpp)
@@ -197,11 +122,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
 			FormatContext& context
 		) const noexcept -> auto
 		{
-			if constexpr (gal::prometheus::primitive::basic_vertex<PositionType, UvType, ColorType>::element_size == 2)
+			using vertex_type = gal::prometheus::primitive::basic_vertex<PositionType, UvType, ColorType>;
+
+			if constexpr (std::tuple_size_v<vertex_type> == 2)
 			{
 				return std::format_to(context.out(), "[pos{}color{}]", vertex.position, vertex.color);
 			}
-			else if constexpr (gal::prometheus::primitive::basic_vertex<PositionType, UvType, ColorType>::element_size == 3)
+			else if constexpr (std::tuple_size_v<vertex_type> == 3)
 			{
 				return std::format_to(context.out(), "[pos{}uv{}color{}]", vertex.position, vertex.uv, vertex.color);
 			}
