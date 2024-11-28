@@ -234,6 +234,14 @@ set(
 		${PROJECT_SOURCE_DIR}/src/coroutine/coroutine.hpp
 
 		# =========================
+		# STRING
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/string/charconv.hpp
+
+		${PROJECT_SOURCE_DIR}/src/string/string.hpp
+
+		# =========================
 		# UNIT_TEST
 		# =========================
 
