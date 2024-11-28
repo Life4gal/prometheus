@@ -214,6 +214,14 @@ set(
 		${PROJECT_SOURCE_DIR}/src/primitive/vertex.hpp
 
 		${PROJECT_SOURCE_DIR}/src/primitive/primitive.hpp
+
+		# =========================
+		# CONCURRENCY
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/concurrency/thread.hpp
+
+		${PROJECT_SOURCE_DIR}/src/concurrency/concurrency.hpp
 )
 
 set(
@@ -227,6 +235,12 @@ set(
 		${PROJECT_SOURCE_DIR}/src/platform/os.cpp
 		${PROJECT_SOURCE_DIR}/src/platform/cpu.cpp
 		${PROJECT_SOURCE_DIR}/src/platform/environment.cpp
+
+		# =========================
+		# CONCURRENCY
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/concurrency/thread.cpp
 )
 
 if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
