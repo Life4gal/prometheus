@@ -18,7 +18,7 @@
 namespace gal::prometheus::primitive
 {
 	template<std::size_t, typename>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent;
+	struct basic_extent;
 
 	template<typename T>
 		requires(std::is_arithmetic_v<T>)

@@ -7,3 +7,8 @@
 
 #include <primitive/point.hpp>
 #include <primitive/extent.hpp>
+#include <primitive/rect.hpp>
+#include <primitive/circle.hpp>
+#include <primitive/ellipse.hpp>
+#include <primitive/color.hpp>
+#include <primitive/vertex.hpp>

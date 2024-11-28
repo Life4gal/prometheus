@@ -21,11 +21,11 @@ namespace gal::prometheus::primitive
 {
 	template<std::size_t N, typename PointValueType, typename ExtentValueType>
 
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_rect;
+	struct basic_rect;
 
 	template<typename PointValueType, typename ExtentValueType>
 		requires (std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<ExtentValueType>)
-	struct basic_rect<2, PointValueType, ExtentValueType> final : meta::dimension<basic_rect<2, PointValueType, ExtentValueType>>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_rect<2, PointValueType, ExtentValueType> final : meta::dimension<basic_rect<2, PointValueType, ExtentValueType>>
 	{
 		using point_value_type = PointValueType;
 		using extent_value_type = ExtentValueType;
@@ -172,7 +172,7 @@ namespace gal::prometheus::primitive
 
 	template<typename PointValueType, typename ExtentValueType>
 		requires (std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<ExtentValueType>)
-	struct basic_rect<3, PointValueType, ExtentValueType> final : meta::dimension<basic_rect<3, PointValueType, ExtentValueType>>
+	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_rect<3, PointValueType, ExtentValueType> final : meta::dimension<basic_rect<3, PointValueType, ExtentValueType>>
 	{
 		using point_value_type = PointValueType;
 		using extent_value_type = ExtentValueType;
