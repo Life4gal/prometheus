@@ -1,13 +1,9 @@
-#include <prometheus/macro.hpp>
-
-#if GAL_PROMETHEUS_USE_MODULE
-import gal.prometheus;
-#else
-#include <prometheus.ixx>
-#endif
-
 #include <utility>
 #include <coroutine>
+
+#include <unit_test/unit_test.hpp>
+// coroutine::generator
+#include <coroutine/coroutine.hpp>
 
 using namespace gal::prometheus;
 
