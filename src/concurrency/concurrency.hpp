@@ -6,3 +6,4 @@
 #pragma once
 
 #include <concurrency/thread.hpp>
+#include <concurrency/queue.hpp>

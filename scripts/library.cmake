@@ -220,8 +220,15 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/concurrency/thread.hpp
+		${PROJECT_SOURCE_DIR}/src/concurrency/queue.hpp
 
 		${PROJECT_SOURCE_DIR}/src/concurrency/concurrency.hpp
+
+		# =========================
+		# UNIT_TEST
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/unit_test/unit_test.hpp
 )
 
 set(
