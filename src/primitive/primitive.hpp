@@ -6,3 +6,4 @@
 #pragma once
 
 #include <primitive/point.hpp>
+#include <primitive/extent.hpp>
