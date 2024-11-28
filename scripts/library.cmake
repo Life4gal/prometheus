@@ -225,6 +225,14 @@ set(
 		${PROJECT_SOURCE_DIR}/src/concurrency/concurrency.hpp
 
 		# =========================
+		# COROUTINE
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/coroutine/task.hpp
+
+		${PROJECT_SOURCE_DIR}/src/coroutine/coroutine.hpp
+
+		# =========================
 		# UNIT_TEST
 		# =========================
 
