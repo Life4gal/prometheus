@@ -6,3 +6,4 @@
 #pragma once
 
 #include <coroutine/task.hpp>
+#include <coroutine/generator.hpp>

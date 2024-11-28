@@ -229,6 +229,7 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/coroutine/task.hpp
+		${PROJECT_SOURCE_DIR}/src/coroutine/generator.hpp
 
 		${PROJECT_SOURCE_DIR}/src/coroutine/coroutine.hpp
 
