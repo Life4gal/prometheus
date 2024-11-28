@@ -5,7 +5,36 @@ using namespace gal::prometheus;
 
 namespace
 {
-	namespace transform
+	namespace from
+	{
+		struct point_float
+		{
+			float x;
+			float y;
+		};
+
+		struct point_int : meta::dimension<point_int>
+		{
+			int x;
+			int y;
+		};
+
+		static_assert(sizeof(point_float) == sizeof(float) * 2);
+		static_assert(sizeof(point_float) == sizeof(point_int));
+		static_assert(std::is_trivially_constructible_v<point_float>);
+		static_assert(std::is_trivially_constructible_v<point_int>);
+
+		constexpr point_float pf_1{.x = 42.12345f, .y = 1337.12345f};
+
+		constexpr point_int pi_1{.x = 42, .y = 1337};
+		constexpr point_int pi_2{.x = 42, .y = 42};
+
+		static_assert(std::ranges::all_of(point_int::from(pf_1) == pi_1, std::identity{}));
+		static_assert(std::ranges::all_of(point_int::from(pf_1.x) == pi_2, std::identity{}));
+		static_assert(std::ranges::all_of(point_int::from(pi_1.x) == pi_2, std::identity{}));
+	}
+
+	namespace to
 	{
 		struct point_float : meta::dimension<point_float>
 		{
@@ -32,11 +61,11 @@ namespace
 		constexpr point_float pf_1{.x = 42.12345f, .y = 1337.12345f};
 		constexpr point_int pi_1{.x = 42, .y = 1337};
 
-		constexpr auto t1 = pf_1.transform();
+		constexpr auto t1 = pf_1.to();
 		static_assert(t1.x == pf_1.x); // NOLINT(clang-diagnostic-float-equal)
 		static_assert(t1.y == pf_1.y); // NOLINT(clang-diagnostic-float-equal)
 
-		constexpr auto t2 = pf_1.transform<point_int>();
+		constexpr auto t2 = pf_1.to<point_int>();
 		static_assert(t2.x == pi_1.x);
 		static_assert(t2.y == pi_1.y);
 
@@ -45,7 +74,7 @@ namespace
 			return static_cast<int>(value) + 123;
 		};
 
-		constexpr auto t3 = pf_1.transform<point_int>(to_int_1);
+		constexpr auto t3 = pf_1.to<point_int>(to_int_1);
 		static_assert(t3.x == pi_1.x + 123);
 		static_assert(t3.y == pi_1.y + 123);
 
@@ -54,7 +83,7 @@ namespace
 			return static_cast<int>(value) + 123 * Index;
 		};
 
-		constexpr auto t4 = pf_1.transform<point_int>(to_int_2);
+		constexpr auto t4 = pf_1.to<point_int>(to_int_2);
 		static_assert(t4.x == pi_1.x + 123 * 0);
 		static_assert(t4.y == pi_1.y + 123 * 1);
 
@@ -74,7 +103,7 @@ namespace
 			}
 		};
 
-		constexpr auto t5 = pf_1.transform<point_int>(to_int_3{});
+		constexpr auto t5 = pf_1.to<point_int>(to_int_3{});
 		static_assert(t5.x == pi_1.x + 123);
 		static_assert(t5.y == pi_1.y + 123 * 1);
 	}
@@ -181,7 +210,7 @@ namespace
 
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t += rhs;
 			return t;
 		}
@@ -189,7 +218,7 @@ namespace
 		template<std::size_t Index>
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t.template add_equal<static_cast<meta::Dimensions>(Index)>(rhs);
 			return t;
 		}
@@ -322,7 +351,7 @@ namespace
 
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t -= rhs;
 			return t;
 		}
@@ -330,7 +359,7 @@ namespace
 		template<std::size_t Index>
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t.template subtract_equal<static_cast<meta::Dimensions>(Index)>(rhs);
 			return t;
 		}
@@ -463,7 +492,7 @@ namespace
 
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t *= rhs;
 			return t;
 		}
@@ -471,7 +500,7 @@ namespace
 		template<std::size_t Index>
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t.template multiply_equal<static_cast<meta::Dimensions>(Index)>(rhs);
 			return t;
 		}
@@ -604,7 +633,7 @@ namespace
 
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t /= rhs;
 			return t;
 		}
@@ -612,7 +641,7 @@ namespace
 		template<std::size_t Index>
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t.template divide_equal<static_cast<meta::Dimensions>(Index)>(rhs);
 			return t;
 		}
@@ -745,7 +774,7 @@ namespace
 
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t %= rhs;
 			return t;
 		}
@@ -753,7 +782,7 @@ namespace
 		template<std::size_t Index>
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t.template mod_equal<static_cast<meta::Dimensions>(Index)>(rhs);
 			return t;
 		}
@@ -886,7 +915,7 @@ namespace
 
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t &= rhs;
 			return t;
 		}
@@ -894,7 +923,7 @@ namespace
 		template<std::size_t Index>
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t.template bit_and_equal<static_cast<meta::Dimensions>(Index)>(rhs);
 			return t;
 		}
@@ -1027,7 +1056,7 @@ namespace
 
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t |= rhs;
 			return t;
 		}
@@ -1035,7 +1064,7 @@ namespace
 		template<std::size_t Index>
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t.template bit_or_equal<static_cast<meta::Dimensions>(Index)>(rhs);
 			return t;
 		}
@@ -1168,7 +1197,7 @@ namespace
 
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t ^= rhs;
 			return t;
 		}
@@ -1176,7 +1205,7 @@ namespace
 		template<std::size_t Index>
 		[[nodiscard]] constexpr auto do_x_equal(const auto& lhs, const auto& rhs) noexcept -> auto
 		{
-			auto t = lhs.transform();
+			auto t = lhs.copy();
 			t.template bit_xor_equal<static_cast<meta::Dimensions>(Index)>(rhs);
 			return t;
 		}

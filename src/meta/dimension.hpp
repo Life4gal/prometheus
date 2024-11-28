@@ -445,32 +445,69 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto rep() const noexcept -> const dimension_type& { return *static_cast<const dimension_type*>(this); }
 
 		template<typename Tag, Dimensions D>
-		constexpr auto walk(auto& lhs, const auto& rhs) const noexcept -> void
+		constexpr static auto walk(auto& lhs, const auto& rhs) noexcept -> void
 		{
 			dimension_detail::dimension_walker<Tag, D>{}.walk(lhs, rhs);
 		}
 
 		template<typename Tag, Dimensions D>
-		constexpr auto walk(auto& result, const auto& lhs, const auto& rhs) const noexcept -> void
+		constexpr static auto walk(auto& result, const auto& lhs, const auto& rhs) noexcept -> void
 		{
 			dimension_detail::dimension_walker<Tag, D>{}.walk(result, lhs, rhs);
 		}
 
 	public:
 		// ===========================================================================
-		// transform
+		// from
+
+		template<
+			dimension_detail::compatible_dimension_or_dimension_like_t<dimension_type> FromDimension
+		>
+		[[nodiscard]] constexpr static auto from(const FromDimension& from) noexcept -> dimension_type
+		{
+			const auto transformer = dimension_detail::dimension_transformer<dimension_type>{};
+			const auto wrapper = dimension_detail::dimension_wrapper<const dimension_detail::dimension_transformer<dimension_type>, meta::member_size<dimension_type>()>{.ref = transformer};
+
+			dimension_type result{};
+			dimension::walk<dimension_detail::tag_transform, Dimensions::ALL>(result, wrapper, from);
+
+			return result;
+		}
+
+		template<
+			dimension_detail::compatible_value_type_t<dimension_type> T
+		>
+		[[nodiscard]] constexpr static auto from(const T& value) noexcept -> dimension_type
+		{
+			const auto transformer = dimension_detail::dimension_transformer<dimension_type>{};
+			const auto wrapper = dimension_detail::dimension_wrapper<const dimension_detail::dimension_transformer<dimension_type>, meta::member_size<dimension_type>()>{.ref = transformer};
+			const auto value_wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
+
+			dimension_type result{};
+			dimension::walk<dimension_detail::tag_transform, Dimensions::ALL>(result, wrapper, value_wrapper);
+
+			return result;
+		}
+
+		// ===========================================================================
+		// to
 
 		template<
 			dimension_detail::compatible_dimension_or_dimension_like_t<dimension_type> TargetDimension = dimension_type,
 			typename TransformFunction = dimension_detail::dimension_transformer<TargetDimension>>
-		[[nodiscard]] constexpr auto transform(const TransformFunction& transform_function = {}) const noexcept -> TargetDimension
+		[[nodiscard]] constexpr auto to(const TransformFunction& transform_function = {}) const noexcept -> TargetDimension
 		{
 			const dimension_detail::dimension_wrapper<const TransformFunction, meta::member_size<dimension_type>()> wrapper{.ref = transform_function};
 
 			TargetDimension result{};
-			this->template walk<dimension_detail::tag_transform, Dimensions::ALL>(result, wrapper, rep());
+			dimension::walk<dimension_detail::tag_transform, Dimensions::ALL>(result, wrapper, rep());
 
 			return result;
+		}
+
+		[[nodiscard]] constexpr auto copy() const noexcept -> dimension_type
+		{
+			return to();
 		}
 
 		// ===========================================================================
@@ -478,19 +515,19 @@ namespace gal::prometheus::meta
 
 		[[nodiscard]] constexpr auto all() const noexcept -> bool
 		{
-			const auto result = transform<dimension_detail::boolean_result_type<dimension_type>>();
+			const auto result = to<dimension_detail::boolean_result_type<dimension_type>>();
 			return std::ranges::all_of(result, std::identity{});
 		}
 
 		[[nodiscard]] constexpr auto any() const noexcept -> bool
 		{
-			const auto result = transform<dimension_detail::boolean_result_type<dimension_type>>();
+			const auto result = to<dimension_detail::boolean_result_type<dimension_type>>();
 			return std::ranges::any_of(result, std::identity{});
 		}
 
 		[[nodiscard]] constexpr auto none() const noexcept -> bool
 		{
-			const auto result = transform<dimension_detail::boolean_result_type<dimension_type>>();
+			const auto result = to<dimension_detail::boolean_result_type<dimension_type>>();
 			return std::ranges::none_of(result, std::identity{});
 		}
 
@@ -507,7 +544,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto add_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			this->template walk<dimension_detail::tag_addition_self, D>(rep(), other);
+			dimension::walk<dimension_detail::tag_addition_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -523,7 +560,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto add(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_addition, D>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_addition, D>(result, rep(), other);
 
 			return result;
 		}
@@ -539,9 +576,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto add_equal(const T& value) noexcept -> dimension_type&
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
-			this->template walk<dimension_detail::tag_addition_self, D>(rep(), wrapper);
+			dimension::walk<dimension_detail::tag_addition_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -557,10 +594,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto add(const T& value) const noexcept -> dimension_type
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_addition, D>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_addition, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -578,7 +615,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto subtract_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			this->template walk<dimension_detail::tag_subtraction_self, D>(rep(), other);
+			dimension::walk<dimension_detail::tag_subtraction_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -594,7 +631,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto subtract(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_subtraction, D>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_subtraction, D>(result, rep(), other);
 
 			return result;
 		}
@@ -610,9 +647,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto subtract_equal(const T& value) noexcept -> dimension_type&
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
-			this->template walk<dimension_detail::tag_subtraction_self, D>(rep(), wrapper);
+			dimension::walk<dimension_detail::tag_subtraction_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -628,10 +665,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto subtract(const T& value) const noexcept -> dimension_type
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_subtraction, D>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_subtraction, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -649,7 +686,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto multiply_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			this->template walk<dimension_detail::tag_multiplication_self, D>(rep(), other);
+			dimension::walk<dimension_detail::tag_multiplication_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -665,7 +702,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto multiply(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_multiplication, D>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_multiplication, D>(result, rep(), other);
 
 			return result;
 		}
@@ -681,9 +718,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto multiply_equal(const T& value) noexcept -> dimension_type&
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
-			this->template walk<dimension_detail::tag_multiplication_self, D>(rep(), wrapper);
+			dimension::walk<dimension_detail::tag_multiplication_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -699,10 +736,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto multiply(const T& value) const noexcept -> dimension_type
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_multiplication, D>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_multiplication, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -720,7 +757,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto divide_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			this->template walk<dimension_detail::tag_division_self, D>(rep(), other);
+			dimension::walk<dimension_detail::tag_division_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -736,7 +773,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto divide(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_division, D>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_division, D>(result, rep(), other);
 
 			return result;
 		}
@@ -752,9 +789,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto divide_equal(const T& value) noexcept -> dimension_type&
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
-			this->template walk<dimension_detail::tag_division_self, D>(rep(), wrapper);
+			dimension::walk<dimension_detail::tag_division_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -770,10 +807,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto divide(const T& value) const noexcept -> dimension_type
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_division, D>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_division, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -791,7 +828,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto mod_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			this->template walk<dimension_detail::tag_modulus_self, D>(rep(), other);
+			dimension::walk<dimension_detail::tag_modulus_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -807,7 +844,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto mod(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_modulus, D>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_modulus, D>(result, rep(), other);
 
 			return result;
 		}
@@ -823,9 +860,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto mod_equal(const T& value) noexcept -> dimension_type&
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
-			this->template walk<dimension_detail::tag_modulus_self, D>(rep(), wrapper);
+			dimension::walk<dimension_detail::tag_modulus_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -841,10 +878,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto mod(const T& value) const noexcept -> dimension_type
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_modulus, D>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_modulus, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -862,7 +899,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_and_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			this->template walk<dimension_detail::tag_bit_and_self, D>(rep(), other);
+			dimension::walk<dimension_detail::tag_bit_and_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -878,7 +915,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto bit_and(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_bit_and, D>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_bit_and, D>(result, rep(), other);
 
 			return result;
 		}
@@ -894,9 +931,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_and_equal(const T& value) noexcept -> dimension_type&
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
-			this->template walk<dimension_detail::tag_bit_and_self, D>(rep(), wrapper);
+			dimension::walk<dimension_detail::tag_bit_and_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -912,10 +949,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto bit_and(const T& value) const noexcept -> dimension_type
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_bit_and, D>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_bit_and, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -933,7 +970,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_or_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			this->template walk<dimension_detail::tag_bit_or_self, D>(rep(), other);
+			dimension::walk<dimension_detail::tag_bit_or_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -949,7 +986,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto bit_or(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_bit_or, D>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_bit_or, D>(result, rep(), other);
 
 			return result;
 		}
@@ -965,9 +1002,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_or_equal(const T& value) noexcept -> dimension_type&
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
-			this->template walk<dimension_detail::tag_bit_or_self, D>(rep(), wrapper);
+			dimension::walk<dimension_detail::tag_bit_or_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -983,10 +1020,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto bit_or(const T& value) const noexcept -> dimension_type
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_bit_or, D>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_bit_or, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1004,7 +1041,7 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_xor_equal(const OtherDimension& other) noexcept -> dimension_type&
 		{
-			this->template walk<dimension_detail::tag_bit_xor_self, D>(rep(), other);
+			dimension::walk<dimension_detail::tag_bit_xor_self, D>(rep(), other);
 
 			return rep();
 		}
@@ -1020,7 +1057,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto bit_xor(const OtherDimension& other) const noexcept -> dimension_type
 		{
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_bit_xor, D>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_bit_xor, D>(result, rep(), other);
 
 			return result;
 		}
@@ -1036,9 +1073,9 @@ namespace gal::prometheus::meta
 			)
 		constexpr auto bit_xor_equal(const T& value) noexcept -> dimension_type&
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
-			this->template walk<dimension_detail::tag_bit_xor_self, D>(rep(), wrapper);
+			dimension::walk<dimension_detail::tag_bit_xor_self, D>(rep(), wrapper);
 
 			return rep();
 		}
@@ -1054,10 +1091,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto bit_xor(const T& value) const noexcept -> dimension_type
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_bit_xor, D>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_bit_xor, D>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1076,7 +1113,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto bit_flip() const noexcept -> dimension_type
 		{
 			dimension_type result{};
-			this->template walk<dimension_detail::tag_bit_flip, D>(result, rep());
+			dimension::walk<dimension_detail::tag_bit_flip, D>(result, rep());
 
 			return result;
 		}
@@ -1094,7 +1131,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto logical_and(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_logical_and, Dimensions::ALL>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_logical_and, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
@@ -1108,10 +1145,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto logical_and(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_logical_and, Dimensions::ALL>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_logical_and, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1128,7 +1165,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto logical_or(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_logical_or, Dimensions::ALL>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_logical_or, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
@@ -1142,10 +1179,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto logical_or(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_logical_or, Dimensions::ALL>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_logical_or, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1160,7 +1197,7 @@ namespace gal::prometheus::meta
 			)
 		{
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_logical_not, Dimensions::ALL>(result, rep());
+			dimension::walk<dimension_detail::tag_logical_not, Dimensions::ALL>(result, rep());
 
 			return result;
 		}
@@ -1177,7 +1214,7 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_equal, Dimensions::ALL>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_compare_equal, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
@@ -1191,10 +1228,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto equal(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_equal, Dimensions::ALL>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_compare_equal, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1208,10 +1245,10 @@ namespace gal::prometheus::meta
 			requires(
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_compare_not_equal>
 			)
-		constexpr auto not_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
+		[[nodiscard]] constexpr auto not_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_not_equal, Dimensions::ALL>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_compare_not_equal, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
@@ -1225,10 +1262,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto not_equal(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_not_equal, Dimensions::ALL>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_compare_not_equal, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1242,10 +1279,10 @@ namespace gal::prometheus::meta
 			requires(
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_compare_greater_than>
 			)
-		constexpr auto greater_than(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
+		[[nodiscard]] constexpr auto greater_than(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_greater_than, Dimensions::ALL>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_compare_greater_than, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
@@ -1259,10 +1296,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto greater_than(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_greater_than, Dimensions::ALL>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_compare_greater_than, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1276,10 +1313,10 @@ namespace gal::prometheus::meta
 			requires(
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_compare_greater_equal>
 			)
-		constexpr auto greater_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
+		[[nodiscard]] constexpr auto greater_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_greater_equal, Dimensions::ALL>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_compare_greater_equal, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
@@ -1293,10 +1330,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto greater_equal(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_greater_equal, Dimensions::ALL>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_compare_greater_equal, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1310,10 +1347,10 @@ namespace gal::prometheus::meta
 			requires(
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_compare_less_than>
 			)
-		constexpr auto less_than(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
+		[[nodiscard]] constexpr auto less_than(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_less_than, Dimensions::ALL>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_compare_less_than, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
@@ -1327,10 +1364,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto less_than(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_less_than, Dimensions::ALL>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_compare_less_than, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -1344,10 +1381,10 @@ namespace gal::prometheus::meta
 			requires(
 				dimension_detail::operation_supported_t<OtherDimension, dimension_type, dimension_detail::tag_compare_less_equal>
 			)
-		constexpr auto less_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
+		[[nodiscard]] constexpr auto less_equal(const OtherDimension& other) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_less_equal, Dimensions::ALL>(result, rep(), other);
+			dimension::walk<dimension_detail::tag_compare_less_equal, Dimensions::ALL>(result, rep(), other);
 
 			return result;
 		}
@@ -1361,10 +1398,10 @@ namespace gal::prometheus::meta
 			)
 		[[nodiscard]] constexpr auto less_equal(const T& value) const noexcept -> auto // dimension_detail::boolean_result_type<dimension_type>
 		{
-			const dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()> wrapper{.ref = value};
+			const auto wrapper = dimension_detail::dimension_wrapper<const T, meta::member_size<dimension_type>()>{.ref = value};
 
 			dimension_detail::boolean_result_type<dimension_type> result{};
-			this->template walk<dimension_detail::tag_compare_less_equal, Dimensions::ALL>(result, rep(), wrapper);
+			dimension::walk<dimension_detail::tag_compare_less_equal, Dimensions::ALL>(result, rep(), wrapper);
 
 			return result;
 		}
@@ -2068,13 +2105,13 @@ namespace gal::prometheus::meta
 namespace std
 {
 	template<std::size_t Index, typename T, std::size_t N>
-	struct tuple_element<Index, gal::prometheus::meta::dimension_detail::dimension_wrapper<T, N>>
+	struct tuple_element<Index, gal::prometheus::meta::dimension_detail::dimension_wrapper<T, N>> // NOLINT(cert-dcl58-cpp)
 	{
 		using type = T;
 	};
 
 	template<typename T, std::size_t N>
-	struct tuple_size<gal::prometheus::meta::dimension_detail::dimension_wrapper<T, N>> : std::integral_constant<std::size_t, N> {};
+	struct tuple_size<gal::prometheus::meta::dimension_detail::dimension_wrapper<T, N>> : std::integral_constant<std::size_t, N> {}; // NOLINT(cert-dcl58-cpp)
 }
 
 #include <meta/dimension.cache.inl>
