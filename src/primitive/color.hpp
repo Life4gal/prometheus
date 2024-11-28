@@ -3,20 +3,6 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#include <prometheus/macro.hpp>
-
-export module gal.prometheus:primitive.color;
-
-import std;
-
-import :primitive.multidimensional;
-
-#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
-
-#if not GAL_PROMETHEUS_USE_MODULE
-
 #pragma once
 
 #include <type_traits>
@@ -25,19 +11,9 @@ import :primitive.multidimensional;
 
 #include <prometheus/macro.hpp>
 
-#include <primitive/multidimensional.ixx>
-
-#endif
-
-#if GAL_PROMETHEUS_INTELLISENSE_WORKING
-namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: primitive
-#else
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
-#endif
+namespace gal::prometheus::primitive
 {
-	using universal_32_bit_color_type = std::uint32_t;
-
-	enum class ColorFormat
+	enum class ColorFormat : std::uint8_t
 	{
 		// red + green + blue
 		R_G_B,
@@ -53,249 +29,182 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 		A_B_G_R,
 	};
 
-	template<ColorFormat>
-	struct color_format_type {};
+	namespace color_detail
+	{
+		template<ColorFormat>
+		struct color_format_type {};
+	}
 
 	template<ColorFormat Format>
-	constexpr auto color_format = color_format_type<Format>{};
+	constexpr auto color_format = color_detail::color_format_type<Format>{};
 
-	template<typename T>
-		requires std::is_arithmetic_v<T>
-	struct basic_color;
+	using universal_32_bit_color_type = std::uint32_t;
 
-	template<typename>
-	struct is_basic_color : std::false_type {};
-
-	template<typename T>
-	struct is_basic_color<basic_color<T>> : std::true_type {};
-
-	template<typename T>
-	constexpr auto is_basic_color_v = is_basic_color<T>::value;
-
-	template<typename T>
-	concept basic_color_t = is_basic_color_v<T>;
-
-	template<typename T>
-		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_color final : multidimensional<basic_color<T>>
+	struct [[nodiscard]] basic_color final
 	{
-		using value_type = T;
-		constexpr static auto is_integral_value = std::is_integral_v<value_type>;
+		using value_type = std::uint8_t;
 
 		value_type red;
 		value_type green;
 		value_type blue;
 		value_type alpha;
 
-		constexpr explicit(false) basic_color(const value_type value = value_type{0}) noexcept
-			: red{value},
-			  green{value},
-			  blue{value},
-			  alpha{0} {}
-
-		constexpr basic_color(const value_type red, const value_type green, const value_type blue, const value_type alpha) noexcept
-			: red{red},
-			  green{green},
-			  blue{blue},
-			  alpha{alpha} {}
-
-		template<ColorFormat Format>
-		constexpr basic_color(const universal_32_bit_color_type color, const color_format_type<Format>) noexcept
-			: basic_color{}
+		template<ColorFormat Format = ColorFormat::R_G_B_A>
+		constexpr static auto from(const universal_32_bit_color_type color, const color_detail::color_format_type<Format>  = {}) noexcept -> basic_color
 		{
-			*this = [color]() noexcept -> basic_color
+			const auto to_value = [](const auto value) noexcept -> value_type
 			{
-				constexpr auto to_value = [](const auto v) noexcept
-				{
-					if constexpr (is_integral_value)
-					{
-						return static_cast<value_type>(v);
-					}
-					else
-					{
-						return static_cast<value_type>(v) / static_cast<value_type>(255);
-					}
-				};
-
-				if constexpr (Format == ColorFormat::R_G_B)
-				{
-					return
-					{
-							// red
-							to_value((color >> 16) & 0xff),
-							// green
-							to_value((color >> 8) & 0xff),
-							// blue
-							to_value((color >> 0) & 0xff),
-							// alpha
-							to_value(0xff)
-					};
-				}
-				else if constexpr (Format == ColorFormat::R_G_B_A)
-				{
-					return
-					{
-							// red
-							to_value((color >> 24) & 0xff),
-							// green
-							to_value((color >> 16) & 0xff),
-							// blue
-							to_value((color >> 8) & 0xff),
-							// alpha
-							to_value((color >> 0) & 0xff)
-					};
-				}
-				else if constexpr (Format == ColorFormat::A_R_G_B)
-				{
-					return
-					{
-							// red
-							to_value((color >> 16) & 0xff),
-							// green
-							to_value((color >> 8) & 0xff),
-							// blue
-							to_value((color >> 0) & 0xff),
-							// alpha
-							to_value((color >> 24) & 0xff)
-					};
-				}
-				else if constexpr (Format == ColorFormat::B_G_R)
-				{
-					return
-					{
-							// red
-							to_value((color >> 0) & 0xff),
-							// green
-							to_value((color >> 8) & 0xff),
-							// blue
-							to_value((color >> 16) & 0xff),
-							// alpha
-							to_value(0xff)
-					};
-				}
-				else if constexpr (Format == ColorFormat::B_G_R_A)
-				{
-					return
-					{
-							// red
-							to_value((color >> 8) & 0xff),
-							// green
-							to_value((color >> 16) & 0xff),
-							// blue
-							to_value((color >> 24) & 0xff),
-							// alpha
-							to_value((color >> 0) & 0xff)
-					};
-				}
-				else if constexpr (Format == ColorFormat::A_B_G_R)
-				{
-					return
-					{
-							// red
-							to_value((color >> 0) & 0xff),
-							// green
-							to_value((color >> 8) & 0xff),
-							// blue
-							to_value((color >> 16) & 0xff),
-							// alpha
-							to_value((color >> 24) & 0xff)
-					};
-				}
-				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-			}();
-		}
-
-		[[nodiscard]] constexpr auto transparent() const noexcept -> basic_color
-		{
-			return {
-					// red
-					red,
-					// green
-					green,
-					// blue
-					blue,
-					// alpha
-					0
-			};
-		}
-
-		template<ColorFormat Format>
-		[[nodiscard]] constexpr auto to() const noexcept -> universal_32_bit_color_type
-		{
-			constexpr auto to_value = [](const auto v) noexcept
-			{
-				if constexpr (is_integral_value)
-				{
-					return static_cast<universal_32_bit_color_type>(v);
-				}
-				else
-				{
-					return static_cast<universal_32_bit_color_type>(v * 255);
-				}
+				return static_cast<value_type>(value & 0xff);
 			};
 
 			if constexpr (Format == ColorFormat::R_G_B)
 			{
 				return
-						((to_value(red) & 0xff) << 16) |
-						((to_value(green) & 0xff) << 8) |
-						((to_value(blue) & 0xff) << 0);
+				{
+						.red = to_value(color >> 16),
+						.green = to_value(color >> 8),
+						.blue = to_value(color >> 0),
+						.alpha = to_value(0xff)
+				};
 			}
 			else if constexpr (Format == ColorFormat::R_G_B_A)
 			{
 				return
-						((to_value(red) & 0xff) << 24) |
-						((to_value(green) & 0xff) << 16) |
-						((to_value(blue) & 0xff) << 8) |
-						((to_value(alpha) & 0xff) << 0);
+				{
+						.red = to_value(color >> 24),
+						.green = to_value(color >> 16),
+						.blue = to_value(color >> 8),
+						.alpha = to_value(color >> 0)
+				};
 			}
 			else if constexpr (Format == ColorFormat::A_R_G_B)
 			{
 				return
-						((to_value(red) & 0xff) << 16) |
-						((to_value(green) & 0xff) << 8) |
-						((to_value(blue) & 0xff) << 0) |
-						((to_value(alpha) & 0xff) << 24);
+				{
+						.red = to_value(color >> 16),
+						.green = to_value(color >> 8),
+						.blue = to_value(color >> 0),
+						.alpha = to_value(color >> 24)
+				};
 			}
 			else if constexpr (Format == ColorFormat::B_G_R)
 			{
 				return
-						((to_value(red) & 0xff) << 0) |
-						((to_value(green) & 0xff) << 8) |
-						((to_value(blue) & 0xff) << 16);
+				{
+						.red = to_value(color >> 0),
+						.green = to_value(color >> 8),
+						.blue = to_value(color >> 16),
+						.alpha = to_value(0xff)
+				};
 			}
 			else if constexpr (Format == ColorFormat::B_G_R_A)
 			{
 				return
-						((to_value(red) & 0xff) << 8) |
-						((to_value(green) & 0xff) << 16) |
-						((to_value(blue) & 0xff) << 24) |
-						((to_value(alpha) & 0xff) << 0);
+				{
+						.red = to_value(color >> 8),
+						.green = to_value(color >> 16),
+						.blue = to_value(color >> 24),
+						.alpha = to_value(color >> 0)
+				};
 			}
 			else if constexpr (Format == ColorFormat::A_B_G_R)
 			{
 				return
-						((to_value(red) & 0xff) << 0) |
-						((to_value(green) & 0xff) << 8) |
-						((to_value(blue) & 0xff) << 16) |
-						((to_value(alpha) & 0xff) << 24);
+				{
+						.red = to_value(color >> 0),
+						.green = to_value(color >> 8),
+						.blue = to_value(color >> 16),
+						.alpha = to_value(color >> 24)
+				};
 			}
-			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			else
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+			}
 		}
 
-		template<ColorFormat Format>
-		[[nodiscard]] constexpr auto to(const color_format_type<Format>) const noexcept -> universal_32_bit_color_type //
+		[[nodiscard]] constexpr auto transparent() const noexcept -> basic_color
 		{
-			return this->to<Format>();
+			return
+			{
+					.red = red,
+					.green = green,
+					.blue = blue,
+					.alpha = 0
+			};
+		}
+
+		template<ColorFormat Format = ColorFormat::R_G_B_A>
+		[[nodiscard]] constexpr auto to(const color_detail::color_format_type<Format>  = {}) const noexcept -> universal_32_bit_color_type
+		{
+			const auto to_value = [](const auto value) noexcept -> universal_32_bit_color_type
+			{
+				return static_cast<universal_32_bit_color_type>(value);
+			};
+
+			if constexpr (Format == ColorFormat::R_G_B)
+			{
+				return
+						to_value(red << 16) |
+						to_value(green << 8) |
+						to_value(blue << 0);
+			}
+			else if constexpr (Format == ColorFormat::R_G_B_A)
+			{
+				return
+						to_value(red << 24) |
+						to_value(green << 16) |
+						to_value(blue << 8) |
+						to_value(alpha << 0);
+			}
+			else if constexpr (Format == ColorFormat::A_R_G_B)
+			{
+				return
+						to_value(red << 16) |
+						to_value(green << 8) |
+						to_value(blue << 0) |
+						to_value(alpha << 24);
+			}
+			else if constexpr (Format == ColorFormat::B_G_R)
+			{
+				return
+						to_value(red << 0) |
+						to_value(green << 8) |
+						to_value(blue << 16);
+			}
+			else if constexpr (Format == ColorFormat::B_G_R_A)
+			{
+				return
+						to_value(red << 8) |
+						to_value(green << 16) |
+						to_value(blue << 24) |
+						to_value(alpha << 0);
+			}
+			else if constexpr (Format == ColorFormat::A_B_G_R)
+			{
+				return
+						to_value(red << 0) |
+						to_value(green << 8) |
+						to_value(blue << 16) |
+						to_value(alpha << 24);
+			}
+			else
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+			}
 		}
 	};
 
+	static_assert(sizeof(basic_color) == sizeof(universal_32_bit_color_type));
+
 	namespace colors
 	{
-		using color_type = basic_color<std::uint8_t>;
-		constexpr auto build_color = [](const std::uint8_t red, const std::uint8_t green, const std::uint8_t blue) noexcept -> color_type
+		using color_type = basic_color;
+		using value_type = color_type::value_type;
+
+		constexpr auto build_color = [](const value_type red, const value_type green, const value_type blue) noexcept -> basic_color
 		{
-			return {red, green, blue, 0xff};
+			return {.red = red, .green = green, .blue = blue, .alpha = 0xff};
 		};
 
 		constexpr color_type alice_blue = build_color(240, 248, 255);
@@ -430,132 +339,27 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(primitive)
 		constexpr color_type white_smoke = build_color(245, 245, 245);
 		constexpr color_type yellow = build_color(255, 255, 0);
 		constexpr color_type yellow_green = build_color(50, 216, 56);
-
-		constexpr color_type gray[] =
-		{
-				build_color(0, 0, 0),
-				build_color(3, 3, 3),
-				build_color(5, 5, 5),
-				build_color(8, 8, 8),
-				build_color(10, 10, 10),
-				build_color(13, 13, 13),
-				build_color(15, 15, 15),
-				build_color(18, 18, 18),
-				build_color(20, 20, 20),
-				build_color(23, 23, 23),
-				build_color(26, 26, 26),
-				build_color(28, 28, 28),
-				build_color(31, 31, 31),
-				build_color(33, 33, 33),
-				build_color(36, 36, 36),
-				build_color(38, 38, 38),
-				build_color(41, 41, 41),
-				build_color(43, 43, 43),
-				build_color(46, 46, 46),
-				build_color(48, 48, 48),
-				build_color(51, 51, 51),
-				build_color(54, 54, 54),
-				build_color(56, 56, 56),
-				build_color(59, 59, 59),
-				build_color(61, 61, 61),
-				build_color(64, 64, 64),
-				build_color(66, 66, 66),
-				build_color(69, 69, 69),
-				build_color(71, 71, 71),
-				build_color(74, 74, 74),
-				build_color(77, 77, 77),
-				build_color(79, 79, 79),
-				build_color(82, 82, 82),
-				build_color(84, 84, 84),
-				build_color(87, 87, 87),
-				build_color(89, 89, 89),
-				build_color(92, 92, 92),
-				build_color(94, 94, 94),
-				build_color(97, 97, 97),
-				build_color(99, 99, 99),
-				build_color(102, 102, 102),
-				build_color(105, 105, 105),
-				build_color(107, 107, 107),
-				build_color(110, 110, 110),
-				build_color(112, 112, 112),
-				build_color(115, 115, 115),
-				build_color(117, 117, 117),
-				build_color(120, 120, 120),
-				build_color(122, 122, 122),
-				build_color(125, 125, 125),
-				build_color(127, 127, 127),
-				build_color(130, 130, 130),
-				build_color(133, 133, 133),
-				build_color(135, 135, 135),
-				build_color(138, 138, 138),
-				build_color(140, 140, 140),
-				build_color(143, 143, 143),
-				build_color(145, 145, 145),
-				build_color(148, 148, 148),
-				build_color(150, 150, 150),
-				build_color(153, 153, 153),
-				build_color(156, 156, 156),
-				build_color(158, 158, 158),
-				build_color(161, 161, 161),
-				build_color(163, 163, 163),
-				build_color(166, 166, 166),
-				build_color(168, 168, 168),
-				build_color(171, 171, 171),
-				build_color(173, 173, 173),
-				build_color(176, 176, 176),
-				build_color(179, 179, 179),
-				build_color(181, 181, 181),
-				build_color(184, 184, 184),
-				build_color(186, 186, 186),
-				build_color(189, 189, 189),
-				build_color(191, 191, 191),
-				build_color(194, 194, 194),
-				build_color(196, 196, 196),
-				build_color(199, 199, 199),
-				build_color(201, 201, 201),
-				build_color(204, 204, 204),
-				build_color(207, 207, 207),
-				build_color(209, 209, 209),
-				build_color(212, 212, 212),
-				build_color(214, 214, 214),
-				build_color(217, 217, 217),
-				build_color(219, 219, 219),
-				build_color(222, 222, 222),
-				build_color(224, 224, 224),
-				build_color(227, 227, 227),
-				build_color(229, 229, 229),
-				build_color(232, 232, 232),
-				build_color(235, 235, 235),
-				build_color(237, 237, 237),
-				build_color(240, 240, 240),
-				build_color(242, 242, 242),
-				build_color(245, 245, 245),
-				build_color(247, 247, 247),
-				build_color(250, 250, 250),
-				build_color(252, 252, 252),
-				build_color(255, 255, 255),
-		};
 	}
 }
 
-GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
+namespace std
 {
-	template<std::size_t Index, typename T>
+	template<std::size_t Index>
 	struct
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 			[[msvc::known_semantics]]
 			#endif
-			tuple_element<Index, gal::prometheus::primitive::basic_color<T>> // NOLINT(cert-dcl58-cpp)
+			tuple_element<Index, gal::prometheus::primitive::basic_color> // NOLINT(cert-dcl58-cpp)
 	{
-		using type = T;
+		using type = gal::prometheus::primitive::basic_color::value_type;
 	};
 
-	template<typename T>
-	struct tuple_size<gal::prometheus::primitive::basic_color<T>> // NOLINT(cert-dcl58-cpp)
+	template<>
+	struct tuple_size<gal::prometheus::primitive::basic_color> // NOLINT(cert-dcl58-cpp)
 			: std::integral_constant<std::size_t, 4> {};
 
-	template<typename T>
-	struct formatter<gal::prometheus::primitive::basic_color<T>> // NOLINT(cert-dcl58-cpp)
+	template<>
+	struct formatter<gal::prometheus::primitive::basic_color> // NOLINT(cert-dcl58-cpp)
 	{
 		template<typename ParseContext>
 		constexpr auto parse(ParseContext& context) const noexcept -> auto
@@ -565,13 +369,13 @@ GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
 		}
 
 		template<typename FormatContext>
-		auto format(const gal::prometheus::primitive::basic_color<T>& color, FormatContext& context) const noexcept -> auto
+		auto format(const gal::prometheus::primitive::basic_color& color, FormatContext& context) const noexcept -> auto
 		{
 			return std::format_to(
 				context.out(),
 				"#{:x}",
-				color.template to<gal::prometheus::primitive::ColorFormat::A_R_G_B>()
+				color.to<gal::prometheus::primitive::ColorFormat::A_R_G_B>()
 			);
 		}
 	};
-}
+};

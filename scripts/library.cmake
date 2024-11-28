@@ -210,6 +210,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/primitive/rect.hpp
 		${PROJECT_SOURCE_DIR}/src/primitive/circle.hpp
 		${PROJECT_SOURCE_DIR}/src/primitive/ellipse.hpp
+		${PROJECT_SOURCE_DIR}/src/primitive/color.hpp
 
 		${PROJECT_SOURCE_DIR}/src/primitive/primitive.hpp
 )
