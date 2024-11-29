@@ -6,3 +6,4 @@
 #pragma once
 
 #include <string/charconv.hpp>
+#include <string/string_pool.hpp>

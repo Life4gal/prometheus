@@ -238,6 +238,7 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/string/charconv.hpp
+		${PROJECT_SOURCE_DIR}/src/string/string_pool.hpp
 
 		${PROJECT_SOURCE_DIR}/src/string/string.hpp
 
