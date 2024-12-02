@@ -1,19 +1,15 @@
-#include <prometheus/macro.hpp>
-
-#if GAL_PROMETHEUS_USE_MODULE
-import gal.prometheus;
-#else
-#include <prometheus.ixx>
-#endif
-
 #include <string>
 #include <array>
+
+#include <unit_test/unit_test.hpp>
+// functional::aligned_union
+#include <functional/functional.hpp>
 
 using namespace gal::prometheus;
 
 namespace
 {
-	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"utility.aligned_union"> _ = []
+	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"functional.aligned_union"> _ = []
 	{
 		using namespace unit_test;
 		using namespace functional;
