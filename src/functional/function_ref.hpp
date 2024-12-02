@@ -198,4 +198,48 @@ namespace gal::prometheus::functional
 	{
 		return function_reference_wrapper<Return(Args...)>{std::forward<T>(object)};
 	}
+
+	namespace function_ref_detail
+	{
+		template<typename Return, typename... Args>
+		struct signature
+		{
+			template<typename Object>
+			[[nodiscard]] constexpr auto operator+(Object&& object) const
+				noexcept(std::is_nothrow_constructible_v<function_reference_wrapper<Return(Args...)>, Object>)
+				-> function_reference_wrapper<Return(Args...)>
+			{
+				return function_reference_wrapper<Return(Args...)>{std::forward<Object>(object)};
+			}
+		};
+
+		template<typename Return>
+		struct to;
+
+		template<typename... Args>
+		struct take
+		{
+			template<typename Return>
+			[[nodiscard]] constexpr auto operator+(const to<Return>) const noexcept -> signature<Return, Args...>
+			{
+				return {};
+			}
+		};
+
+		template<typename Return>
+		struct to
+		{
+			template<typename... Args>
+			[[nodiscard]] constexpr auto operator+(const take<Args...>) const noexcept -> signature<Return, Args...>
+			{
+				return {};
+			}
+		};
+	}
+
+	template<typename Return>
+	constexpr auto to = function_ref_detail::to<Return>{};
+
+	template<typename... Args>
+	constexpr auto take = function_ref_detail::take<Args...>{};
 }
