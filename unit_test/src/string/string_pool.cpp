@@ -44,7 +44,7 @@ namespace
 	{
 		using namespace unit_test;
 
-		// const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
+		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
 
 		const auto test_pool = []<typename CharType, bool IsNullTerminate>() noexcept -> void
 		{
@@ -235,6 +235,6 @@ namespace
 			test_block_size.operator()<wchar_t, true>();
 		};
 
-		// config().output_level = old_level;
+		config().output_level = old_level;
 	};
 }
