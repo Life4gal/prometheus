@@ -15,6 +15,9 @@ namespace
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"concurrency.queue"> _ = []
 	{
 		using namespace unit_test;
+		using namespace concurrency;
+
+		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
 
 		constexpr static std::size_t producers_count = 1;
 		constexpr static std::size_t consumers_count = 2;
@@ -106,10 +109,13 @@ namespace
 				const auto total = std::ranges::fold_left(
 					sums,
 					std::uint64_t{0},
-					[](const auto t, const auto c) noexcept -> std::uint64_t { return t + c; }
+					[](const auto t, const auto c) noexcept -> std::uint64_t
+					{
+						return t + c;
+					}
 				);
 
-				expect(total == unit_test::value(expected_total_production));
+				expect(total == value(expected_total_production));
 			};
 
 			"fixed_atomic_queue"_test = [
@@ -118,7 +124,7 @@ namespace
 				do_start_and_check
 			]
 			{
-				using queue_type = concurrency::FixedAtomicQueue<production_type, queue_capacity, nil_value>;
+				using queue_type = FixedAtomicQueue<production_type, queue_capacity, nil_value>;
 				queue_type queue{};
 
 				std::uint64_t sums[consumers_count];
@@ -136,7 +142,7 @@ namespace
 				do_start_and_check
 			]
 			{
-				using queue_type = concurrency::DynamicAtomicQueue<production_type, nil_value>;
+				using queue_type = DynamicAtomicQueue<production_type, nil_value>;
 				queue_type queue{queue_capacity};
 
 				std::uint64_t sums[consumers_count];
@@ -244,10 +250,13 @@ namespace
 				const auto total = std::ranges::fold_left(
 					sums,
 					std::uint64_t{0},
-					[](const auto t, const auto c) noexcept -> std::uint64_t { return t + c; }
+					[](const auto t, const auto c) noexcept -> std::uint64_t
+					{
+						return t + c;
+					}
 				);
 
-				expect(total == unit_test::value(expected_total_production));
+				expect(total == value(expected_total_production));
 			};
 
 			"fixed_queue"_test = [
@@ -256,7 +265,7 @@ namespace
 				do_start_and_check
 			]
 			{
-				using queue_type = concurrency::FixedQueue<production_type, queue_capacity>;
+				using queue_type = FixedQueue<production_type, queue_capacity>;
 				queue_type queue{};
 
 				std::uint64_t sums[consumers_count];
@@ -274,7 +283,7 @@ namespace
 				do_start_and_check
 			]
 			{
-				using queue_type = concurrency::DynamicQueue<production_type>;
+				using queue_type = DynamicQueue<production_type>;
 				queue_type queue{queue_capacity};
 
 				std::uint64_t sums[consumers_count];
@@ -286,5 +295,7 @@ namespace
 				do_start_and_check(queue, sums, consumers, producers);
 			};
 		};
+
+		config().output_level = old_level;
 	};
 }
