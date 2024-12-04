@@ -22,6 +22,7 @@
 
 #include <meta/to_string.hpp>
 #include <math/cmath.hpp>
+#include <functional/enumeration.hpp>
 #include <functional/value_list.hpp>
 #include <functional/functor.hpp>
 
@@ -122,13 +123,22 @@ namespace gal::prometheus::unit_test
 
 	enum class OutputLevel : std::uint8_t
 	{
-		NONE = 0,
-		// Only the results of each suite execution are output.
-		RESULT_ONLY = 1,
-		// RESULT_ONLY + the expression of each test.
-		INCLUDE_EXPRESSION = 2,
-		// INCLUDE_EXPRESSION + the source location of each expression.
-		INCLUDE_EXPRESSION_LOCATION = 3,
+		// for functional::enumeration
+		PROMETHEUS_MAGIC_ENUM_FLAG = 0b0000'0000,
+
+		FATAL = 0b0000'0001,
+		FAILURE = 0b0000'0010,
+		PASS = 0b0000'0100,
+		NONE = 0b0000'1000,
+
+		FATAL_AND_FAILURE = FATAL | FAILURE,
+		ALL = FATAL | FAILURE | PASS,
+
+		EXPRESSION_ONLY = 0b0001'0000,
+		EXPRESSION_AND_LOCATION = 0b0010'0000,
+
+		DEFAULT = FATAL_AND_FAILURE | EXPRESSION_AND_LOCATION,
+		FULL = ALL | EXPRESSION_AND_LOCATION,
 	};
 
 	struct config_type
@@ -146,7 +156,7 @@ namespace gal::prometheus::unit_test
 		//	terminate the program immediately if the assertion fails
 		std::size_t abort_after_n_failures = std::numeric_limits<std::size_t>::max();
 
-		OutputLevel output_level = OutputLevel::INCLUDE_EXPRESSION_LOCATION;
+		OutputLevel output_level = OutputLevel::DEFAULT;
 		bool dry_run = false;
 
 		// how to terminate the program
@@ -1341,6 +1351,8 @@ namespace gal::prometheus::unit_test
 				struct internal_tag {};
 
 			public:
+				using suites_type = std::vector<events::EventSuite>;
+
 				// not nullable
 				using suite_results_iterator_type = suite_results_type::iterator;
 				// nullable
@@ -1348,6 +1360,8 @@ namespace gal::prometheus::unit_test
 
 			private:
 				std::shared_ptr<config_type> config_;
+
+				suites_type suites_;
 
 				suite_results_type suite_results_;
 
@@ -1453,6 +1467,21 @@ namespace gal::prometheus::unit_test
 				// SUITE
 				// =========================================
 
+				auto on(const events::EventSuite& suite, internal_tag) noexcept -> void
+				{
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+
+					if (config_->is_suite_execute_required(suite.name))
+					{
+						on(suite.begin());
+
+						// throwable
+						std::invoke(suite);
+
+						on(suite.end());
+					}
+				}
+
 				auto on(const events::EventSuiteBegin& suite_begin) noexcept -> void
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
@@ -1523,17 +1552,15 @@ namespace gal::prometheus::unit_test
 						auto& this_test = current_test_result_->children.emplace_back(std::move(t));
 						current_test_result_ = std::addressof(this_test);
 
-						if (std::to_underlying(config_->output_level) > std::to_underlying(OutputLevel::NONE))
-						{
-							std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}Running nested test {}{}{}...\n",
-								" ",
-								ident_size_of_current_test<IdentType::TEST>(),
-								config_->color.test,
-								fullname_of_current_test(),
-								config_->color.none);
-						}
+						std::format_to(
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}Running nested test {}{}{}...\n",
+							" ",
+							ident_size_of_current_test<IdentType::TEST>(),
+							config_->color.test,
+							fullname_of_current_test(),
+							config_->color.none
+						);
 					}
 					else
 					{
@@ -1541,17 +1568,15 @@ namespace gal::prometheus::unit_test
 						auto& this_test = current_suite_result_->test_results.emplace_back(std::move(t));
 						current_test_result_ = std::addressof(this_test);
 
-						if (std::to_underlying(config_->output_level) > std::to_underlying(OutputLevel::NONE))
-						{
-							std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}Running test {}{}{}...\n",
-								" ",
-								ident_size_of_current_test<IdentType::TEST>(),
-								config_->color.test,
-								fullname_of_current_test(),
-								config_->color.none);
-						}
+						std::format_to(
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}Running test {}{}{}...\n",
+							" ",
+							ident_size_of_current_test<IdentType::TEST>(),
+							config_->color.test,
+							fullname_of_current_test(),
+							config_->color.none
+						);
 					}
 				}
 
@@ -1613,49 +1638,46 @@ namespace gal::prometheus::unit_test
 
 					total_fails_exclude_current_test_ += current_test_result_->total_assertions_failed;
 
-					if (std::to_underlying(config_->output_level) > std::to_underlying(OutputLevel::NONE))
+					if (const auto status = current_test_result_->status;
+						status == test_result_type::Status::PASSED or status == test_result_type::Status::FAILED)
+					[[likely]]
 					{
-						if (const auto status = current_test_result_->status;
-							status == test_result_type::Status::PASSED or status == test_result_type::Status::FAILED)
-						[[likely]]
-						{
-							std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}{}{}{} after {} milliseconds.\n",
-								"",
-								ident_size_of_current_test<IdentType::TEST>(),
-								status == test_result_type::Status::PASSED ? config_->color.pass : config_->color.fail,
-								status == test_result_type::Status::PASSED ? "PASSED" : "FAILED",
-								config_->color.none,
-								ms_duration_of_current_test()
-							);
-						}
-						else if (status == test_result_type::Status::SKIPPED)
-						[[unlikely]]
-						{
-							std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}{}SKIPPED{} --- [No Assertion(s) Found] \n",
-								"",
-								ident_size_of_current_test<IdentType::TEST>(),
-								config_->color.skip,
-								config_->color.none
-							);
-						}
-						else if (status == test_result_type::Status::FATAL)
-						[[unlikely]]
-						{
-							std::format_to(
-								std::back_inserter(current_suite_result_->report_string),
-								"{:{}}{}INTERRUPTED{}\n",
-								"",
-								ident_size_of_current_test<IdentType::TEST>(),
-								config_->color.skip,
-								config_->color.none
-							);
-						}
-						else { std::unreachable(); }
+						std::format_to(
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}{}{}{} after {} milliseconds.\n",
+							"",
+							ident_size_of_current_test<IdentType::TEST>(),
+							status == test_result_type::Status::PASSED ? config_->color.pass : config_->color.fail,
+							status == test_result_type::Status::PASSED ? "PASSED" : "FAILED",
+							config_->color.none,
+							ms_duration_of_current_test()
+						);
 					}
+					else if (status == test_result_type::Status::SKIPPED)
+					[[unlikely]]
+					{
+						std::format_to(
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}{}SKIPPED{} --- [No Assertion(s) Found] \n",
+							"",
+							ident_size_of_current_test<IdentType::TEST>(),
+							config_->color.skip,
+							config_->color.none
+						);
+					}
+					else if (status == test_result_type::Status::FATAL)
+					[[unlikely]]
+					{
+						std::format_to(
+							std::back_inserter(current_suite_result_->report_string),
+							"{:{}}{}INTERRUPTED{}\n",
+							"",
+							ident_size_of_current_test<IdentType::TEST>(),
+							config_->color.skip,
+							config_->color.none
+						);
+					}
+					else { std::unreachable(); }
 
 					current_test_result_ = current_test_result_->parent;
 				}
@@ -1672,12 +1694,12 @@ namespace gal::prometheus::unit_test
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 					if (const auto level = std::to_underlying(config_->output_level);
-						level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION))
+						level & OutputLevel::PASS)
 					{
 						// @see: Operand::prefer_no_type_name
 						constexpr auto prefer_no_type_name = requires { typename Expression::prefer_no_type_name; };
 
-						if (level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION_LOCATION))
+						if (level & OutputLevel::EXPRESSION_AND_LOCATION)
 						{
 							std::format_to(
 								std::back_inserter(current_suite_result_->report_string),
@@ -1690,7 +1712,8 @@ namespace gal::prometheus::unit_test
 								meta::to_string<std::string, not prefer_no_type_name>(assertion_pass.expression),
 								config_->color.none,
 								config_->color.pass,
-								config_->color.none);
+								config_->color.none
+							);
 						}
 						else
 						{
@@ -1703,7 +1726,8 @@ namespace gal::prometheus::unit_test
 								meta::to_string<std::string, not prefer_no_type_name>(assertion_pass.expression),
 								config_->color.none,
 								config_->color.pass,
-								config_->color.none);
+								config_->color.none
+							);
 						}
 					}
 
@@ -1718,12 +1742,12 @@ namespace gal::prometheus::unit_test
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 					if (const auto level = std::to_underlying(config_->output_level);
-						level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION))
+						level & OutputLevel::FAILURE)
 					{
 						// @see: Operand::prefer_no_type_name
 						constexpr auto prefer_no_type_name = requires { typename Expression::prefer_no_type_name; };
 
-						if (level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION_LOCATION))
+						if (level & OutputLevel::EXPRESSION_AND_LOCATION)
 						{
 							std::format_to(
 								std::back_inserter(current_suite_result_->report_string),
@@ -1736,7 +1760,8 @@ namespace gal::prometheus::unit_test
 								meta::to_string<std::string, not prefer_no_type_name>(assertion_fail.expression),
 								config_->color.none,
 								config_->color.fail,
-								config_->color.none);
+								config_->color.none
+							);
 						}
 						else
 						{
@@ -1749,7 +1774,8 @@ namespace gal::prometheus::unit_test
 								meta::to_string<std::string, not prefer_no_type_name>(assertion_fail.expression),
 								config_->color.none,
 								config_->color.pass,
-								config_->color.none);
+								config_->color.none
+							);
 						}
 					}
 
@@ -1765,7 +1791,7 @@ namespace gal::prometheus::unit_test
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 					if (const auto level = std::to_underlying(config_->output_level);
-						level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION))
+						level & OutputLevel::FATAL)
 					{
 						std::format_to(
 							std::back_inserter(current_suite_result_->report_string),
@@ -1809,12 +1835,12 @@ namespace gal::prometheus::unit_test
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 					if (const auto level = std::to_underlying(config_->output_level);
-						level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION))
+						level & OutputLevel::FATAL)
 					{
 						// @see: Operand::prefer_no_type_name
 						constexpr auto prefer_no_type_name = requires { typename Expression::prefer_no_type_name; };
 
-						if (level >= std::to_underlying(OutputLevel::INCLUDE_EXPRESSION_LOCATION))
+						if (level & OutputLevel::EXPRESSION_AND_LOCATION)
 						{
 							std::format_to(
 								std::back_inserter(current_suite_result_->report_string),
@@ -1827,7 +1853,8 @@ namespace gal::prometheus::unit_test
 								meta::to_string<std::string, not prefer_no_type_name>(assertion_fatal_skip.expression),
 								config_->color.none,
 								config_->color.fatal,
-								config_->color.none);
+								config_->color.none
+							);
 						}
 						else
 						{
@@ -1840,7 +1867,8 @@ namespace gal::prometheus::unit_test
 								meta::to_string<std::string, not prefer_no_type_name>(assertion_fatal_skip.expression),
 								config_->color.none,
 								config_->color.fatal,
-								config_->color.none);
+								config_->color.none
+							);
 						}
 					}
 
@@ -1925,177 +1953,174 @@ namespace gal::prometheus::unit_test
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 
-					if (const auto level = std::to_underlying(config_->output_level);
-						level >= std::to_underlying(OutputLevel::NONE))
+					struct total_result
 					{
-						struct total_result
+						std::size_t test_passed;
+						std::size_t test_failed;
+						std::size_t test_skipped;
+
+						std::size_t assertion_passed;
+						std::size_t assertion_failed;
+
+						constexpr auto operator+(const total_result& other) const noexcept -> total_result
 						{
-							std::size_t test_passed;
-							std::size_t test_failed;
-							std::size_t test_skipped;
+							total_result new_one{*this};
 
-							std::size_t assertion_passed;
-							std::size_t assertion_failed;
+							new_one.test_passed += other.test_passed;
+							new_one.test_failed += other.test_failed;
+							new_one.test_skipped += other.test_skipped;
 
-							constexpr auto operator+(const total_result& other) const noexcept -> total_result
+							new_one.assertion_passed += other.assertion_passed;
+							new_one.assertion_failed += other.assertion_failed;
+
+							return new_one;
+						}
+					};
+
+					constexpr auto calc_result_of_test = functional::y_combinator{
+							[](auto&& self, const test_result_type& test_result) noexcept -> total_result
 							{
-								total_result new_one{*this};
+								return std::ranges::fold_left(
+									test_result.children,
+									total_result{
+											.test_passed = (test_result.status == test_result_type::Status::PASSED) ? 1ull : 0,
+											.test_failed = (test_result.status == test_result_type::Status::FAILED or test_result.status == test_result_type::Status::FATAL) ? 1ull : 0,
+											.test_skipped = (test_result.status == test_result_type::Status::SKIPPED) ? 1ull : 0,
+											.assertion_passed = test_result.total_assertions_passed,
+											.assertion_failed = test_result.total_assertions_failed
+									},
+									[self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result
+									{
+										return total + self(nested_test_result);
+									}
+								);
+							}};
 
-								new_one.test_passed += other.test_passed;
-								new_one.test_failed += other.test_failed;
-								new_one.test_skipped += other.test_skipped;
+					constexpr auto calc_result_of_suite = [calc_result_of_test](const suite_result_type& suite_result) noexcept -> total_result
+					{
+						return std::ranges::fold_left(
+							suite_result.test_results,
+							total_result{
+									.test_passed = 0,
+									.test_failed = 0,
+									.test_skipped = 0,
+									.assertion_passed = 0,
+									.assertion_failed = 0
+							},
+							[calc_result_of_test](const total_result& total, const test_result_type& test_result) noexcept -> total_result
+							{
+								// todo: 
+								//   \src\infrastructure\unit_test.ixx(1624,26): error : function 'operator()<const gal::prometheus::unit_test::test_result_type &>' with deduced return type cannot be used before it is defined
+								//    1624 |                                                                                 return total + self(nested_test_result);
+								//         |                                                                                                ^
+								//   \src\infrastructure\unit_test.ixx(1622,10): note: while substituting into a lambda expression here
+								//    1622 |                                                                      [self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result
+								//         |                                                                         ^
+								//   C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\MSVC\14.41.33923\include\type_traits(1701,16): note: in instantiation of function template specialization 'gal::prometheus::unit_test::executor::Executor::on(const events::EventSummary &)::(anonymous class)::operator()<gal::prometheus::functional::y_combinator<(lambda at \src\infrastructure\unit_test.ixx:1607:8)>>' requested here
+								//    1701 |         return static_cast<_Callable&&>(_Obj)(static_cast<_Ty1&&>(_Arg1), static_cast<_Types2&&>(_Args2)...);
+								//         |                       ^
+								//   \src\functional\functor.ixx(99,16): note: in instantiation of function template specialization 'std::invoke<const (lambda at \src\infrastructure\unit_test.ixx:1607:8) &, const gal::prometheus::functional::y_combinator<(lambda at \src\infrastructure\unit_test.ixx:1607:8)> &, const gal::prometheus::unit_test::test_result_type &>' requested here
+								//      99 |                         return std::invoke(function, *this, std::forward<Args>(args)...);
+								//         |                                           ^
+								//   \src\infrastructure\unit_test.ixx(1643,43): note: in instantiation of function template specialization 'gal::prometheus::functional::y_combinator<(lambda at \src\infrastructure\unit_test.ixx:1607:8)>::operator()<const gal::prometheus::unit_test::test_result_type &>' requested here
+								//    1643 |                                                                 return total + calc_result_of_test(test_result);
+								//         |                                                                                                                        ^
+								// clang 17.0.1: OK
+								// clang 17.0.3: ERROR
+								// clang trunk: ERROR
+								return total + calc_result_of_test(test_result);
+							});
+					};
 
-								new_one.assertion_passed += other.assertion_passed;
-								new_one.assertion_failed += other.assertion_failed;
-
-								return new_one;
-							}
-						};
-
-						constexpr auto calc_result_of_test = functional::y_combinator{
-								[](auto&& self, const test_result_type& test_result) noexcept -> total_result
-								{
-									return std::ranges::fold_left(
-										test_result.children,
-										total_result{
-												.test_passed = (test_result.status == test_result_type::Status::PASSED) ? 1ull : 0,
-												.test_failed = (test_result.status == test_result_type::Status::FAILED or test_result.status == test_result_type::Status::FATAL) ? 1ull : 0,
-												.test_skipped = (test_result.status == test_result_type::Status::SKIPPED) ? 1ull : 0,
-												.assertion_passed = test_result.total_assertions_passed,
-												.assertion_failed = test_result.total_assertions_failed
-										},
-										[self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result
-										{
-											return total + self(nested_test_result);
-										}
-									);
-								}};
-
-						constexpr auto calc_result_of_suite = [calc_result_of_test](const suite_result_type& suite_result) noexcept -> total_result
+					std::ranges::for_each(
+						suite_results_,
+						[&color = config_->color, c = config_, calc_result_of_suite](suite_result_type& suite_result) noexcept -> void
 						{
-							return std::ranges::fold_left(
-								suite_result.test_results,
-								total_result{
-										.test_passed = 0,
-										.test_failed = 0,
-										.test_skipped = 0,
-										.assertion_passed = 0,
-										.assertion_failed = 0
-								},
-								[calc_result_of_test](const total_result& total, const test_result_type& test_result) noexcept -> total_result
-								{
-									// todo: 
-									//   \src\infrastructure\unit_test.ixx(1624,26): error : function 'operator()<const gal::prometheus::unit_test::test_result_type &>' with deduced return type cannot be used before it is defined
-									//    1624 |                                                                                 return total + self(nested_test_result);
-									//         |                                                                                                ^
-									//   \src\infrastructure\unit_test.ixx(1622,10): note: while substituting into a lambda expression here
-									//    1622 |                                                                      [self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result
-									//         |                                                                         ^
-									//   C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\MSVC\14.41.33923\include\type_traits(1701,16): note: in instantiation of function template specialization 'gal::prometheus::unit_test::executor::Executor::on(const events::EventSummary &)::(anonymous class)::operator()<gal::prometheus::functional::y_combinator<(lambda at \src\infrastructure\unit_test.ixx:1607:8)>>' requested here
-									//    1701 |         return static_cast<_Callable&&>(_Obj)(static_cast<_Ty1&&>(_Arg1), static_cast<_Types2&&>(_Args2)...);
-									//         |                       ^
-									//   \src\functional\functor.ixx(99,16): note: in instantiation of function template specialization 'std::invoke<const (lambda at \src\infrastructure\unit_test.ixx:1607:8) &, const gal::prometheus::functional::y_combinator<(lambda at \src\infrastructure\unit_test.ixx:1607:8)> &, const gal::prometheus::unit_test::test_result_type &>' requested here
-									//      99 |                         return std::invoke(function, *this, std::forward<Args>(args)...);
-									//         |                                           ^
-									//   \src\infrastructure\unit_test.ixx(1643,43): note: in instantiation of function template specialization 'gal::prometheus::functional::y_combinator<(lambda at \src\infrastructure\unit_test.ixx:1607:8)>::operator()<const gal::prometheus::unit_test::test_result_type &>' requested here
-									//    1643 |                                                                 return total + calc_result_of_test(test_result);
-									//         |                                                                                                                        ^
-									// clang 17.0.1: OK
-									// clang 17.0.3: ERROR
-									// clang trunk: ERROR
-									return total + calc_result_of_test(test_result);
-								});
-						};
-
-						std::ranges::for_each(
-							suite_results_,
-							[&color = config_->color, c = config_, calc_result_of_suite](suite_result_type& suite_result) noexcept -> void
+							// ReSharper disable once CppUseStructuredBinding
+							if (const auto result = calc_result_of_suite(suite_result);
+								result.assertion_failed == 0)
+							[[likely]]
 							{
-								// ReSharper disable once CppUseStructuredBinding
-								if (const auto result = calc_result_of_suite(suite_result);
-									result.assertion_failed == 0)
-								[[likely]]
+								if (result.assertion_passed == 0)
 								{
-									if (result.assertion_passed == 0)
-									{
-										// skip empty suite report
-									}
-									else
-									{
-										std::format_to(
-											std::back_inserter(suite_result.report_string),
-											"\n==========================================\n"
-											"Suite {}{}{} -> {}all tests passed{}({} assertions in {} tests), {} tests skipped."
-											"\n==========================================\n",
-											color.suite,
-											suite_result.name,
-											color.none,
-											color.pass,
-											color.none,
-											result.assertion_passed,
-											result.test_passed,
-											result.test_skipped
-										);
-									}
+									// skip empty suite report
 								}
 								else
-								[[unlikely]]
 								{
 									std::format_to(
 										std::back_inserter(suite_result.report_string),
 										"\n==========================================\n"
-										"Suite {}{}{}\n"
-										"tests {} | {} {}passed({:.6g}%){} | {} {}failed({:.6g}%){} | {} {}skipped({:.6g}%){}\n"
-										"assertions {} | {} {}passed({:.6g}%){} | {} {}failed({:.6g}%){}"
+										"Suite {}{}{} -> {}all tests passed{}({} assertions in {} tests), {} tests skipped."
 										"\n==========================================\n",
 										color.suite,
 										suite_result.name,
 										color.none,
-										// test
-										result.test_passed + result.test_failed + result.test_skipped,
-										// passed
-										result.test_passed,
 										color.pass,
-										static_cast<double>(result.test_passed) /
-										static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
-										* 100.0,
 										color.none,
-										// failed
-										result.test_failed,
-										color.fail,
-										static_cast<double>(result.test_failed) /
-										static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
-										* 100.0,
-										color.none,
-										// skipped
-										result.test_skipped,
-										color.skip,
-										static_cast<double>(result.test_skipped) /
-										static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
-										* 100.0,
-										color.none,
-										// assertion
-										result.assertion_passed + result.assertion_failed,
-										// passed
 										result.assertion_passed,
-										color.pass,
-										static_cast<double>(result.assertion_passed) /
-										static_cast<double>(result.assertion_passed + result.assertion_failed)
-										* 100.0,
-										color.none,
-										// failed
-										result.assertion_failed,
-										color.fail,
-										static_cast<double>(result.assertion_failed) /
-										static_cast<double>(result.assertion_passed + result.assertion_failed)
-										* 100.0,
-										color.none
+										result.test_passed,
+										result.test_skipped
 									);
 								}
+							}
+							else
+							[[unlikely]]
+							{
+								std::format_to(
+									std::back_inserter(suite_result.report_string),
+									"\n==========================================\n"
+									"Suite {}{}{}\n"
+									"tests {} | {} {}passed({:.6g}%){} | {} {}failed({:.6g}%){} | {} {}skipped({:.6g}%){}\n"
+									"assertions {} | {} {}passed({:.6g}%){} | {} {}failed({:.6g}%){}"
+									"\n==========================================\n",
+									color.suite,
+									suite_result.name,
+									color.none,
+									// test
+									result.test_passed + result.test_failed + result.test_skipped,
+									// passed
+									result.test_passed,
+									color.pass,
+									static_cast<double>(result.test_passed) /
+									static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
+									* 100.0,
+									color.none,
+									// failed
+									result.test_failed,
+									color.fail,
+									static_cast<double>(result.test_failed) /
+									static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
+									* 100.0,
+									color.none,
+									// skipped
+									result.test_skipped,
+									color.skip,
+									static_cast<double>(result.test_skipped) /
+									static_cast<double>(result.test_passed + result.test_failed + result.test_skipped)
+									* 100.0,
+									color.none,
+									// assertion
+									result.assertion_passed + result.assertion_failed,
+									// passed
+									result.assertion_passed,
+									color.pass,
+									static_cast<double>(result.assertion_passed) /
+									static_cast<double>(result.assertion_passed + result.assertion_failed)
+									* 100.0,
+									color.none,
+									// failed
+									result.assertion_failed,
+									color.fail,
+									static_cast<double>(result.assertion_failed) /
+									static_cast<double>(result.assertion_passed + result.assertion_failed)
+									* 100.0,
+									color.none
+								);
+							}
 
-								c->report_message(suite_result.report_string);
-							});
-					}
+							c->report_message(suite_result.report_string);
+						}
+					);
 				}
 
 			public:
@@ -2124,7 +2149,26 @@ namespace gal::prometheus::unit_test
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 
-					if (not config_->dry_run) { on(events::EventSummary{}); }
+					if (not config_->dry_run)
+					{
+						// fixme: multi-thread invoke
+						std::ranges::for_each(
+							suites_,
+							[this](const auto& suite) noexcept -> void
+							{
+								try
+								{
+									this->on(suite, internal_tag{});
+								}
+								catch (...)
+								{
+									std::println("Warning: unhandled exception thrown from suite `{}`", suite.name);
+								}
+							}
+						);
+
+						on(events::EventSummary{});
+					}
 				}
 
 				[[nodiscard]] auto config() const noexcept -> config_type&
@@ -2140,17 +2184,7 @@ namespace gal::prometheus::unit_test
 
 				auto on(const events::EventSuite& suite) noexcept -> void
 				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
-
-					if (config_->is_suite_execute_required(suite.name))
-					{
-						on(suite.begin());
-
-						// throwable
-						std::invoke(suite);
-
-						on(suite.end());
-					}
+					suites_.emplace_back(suite);
 				}
 
 				// =========================================
@@ -2175,7 +2209,10 @@ namespace gal::prometheus::unit_test
 
 						this->on(test.end());
 					}
-					else { this->on(test.skip()); }
+					else
+					{
+						this->on(test.skip());
+					}
 				}
 
 				// =========================================
