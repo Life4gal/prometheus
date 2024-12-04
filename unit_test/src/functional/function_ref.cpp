@@ -13,6 +13,8 @@ namespace
 		using namespace unit_test;
 		using namespace functional;
 
+		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
+
 		"functor"_test = []
 		{
 			struct functor
@@ -114,5 +116,7 @@ namespace
 			const auto b = ref<int, Foo&, int, int>(function_pointer);
 			expect(b(foo, 42, 1337) == value(42 + 1337)) << fatal;
 		};
+
+		config().output_level = old_level;
 	};
 }
