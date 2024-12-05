@@ -159,12 +159,6 @@ namespace gal::prometheus::unit_test
 		OutputLevel output_level = OutputLevel::DEFAULT;
 		bool dry_run = false;
 
-		// how to terminate the program
-		std::function<void()> terminator = []() -> void
-		{
-			std::exit(-1); // NOLINT(concurrency-mt-unsafe)
-		};
-
 		std::function<void(std::string_view)> message_reporter = [](const std::string_view report_message) -> void
 		{
 			std::cout << report_message;
@@ -185,14 +179,6 @@ namespace gal::prometheus::unit_test
 
 			return true;
 		};
-
-		[[noreturn]] auto terminate() const noexcept -> void
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(terminator);
-
-			terminator();
-			std::exit(-1); // NOLINT(concurrency-mt-unsafe)
-		}
 
 		auto report_message(const std::string_view message) const noexcept -> void
 		{
@@ -1370,6 +1356,8 @@ namespace gal::prometheus::unit_test
 
 				std::size_t total_fails_exclude_current_test_;
 
+				bool is_fatal_error_;
+
 				enum class IdentType : std::uint8_t
 				{
 					TEST,
@@ -1388,11 +1376,17 @@ namespace gal::prometheus::unit_test
 					else
 					{
 						// top level
-						if (current_test_result_ == nullptr) { return 1; }
+						if (current_test_result_ == nullptr)
+						{
+							return 1;
+						}
 					}
 
 					std::size_t result = 0;
-					for (const auto* p = current_test_result_; p != nullptr; p = p->parent) { result += 1; }
+					for (const auto* p = current_test_result_; p != nullptr; p = p->parent)
+					{
+						result += 1;
+					}
 
 					return result + (Type == IdentType::ASSERTION);
 				}
@@ -1431,6 +1425,19 @@ namespace gal::prometheus::unit_test
 					return std::chrono::duration_cast<time_difference_type>(current_test_result_->time_end - current_test_result_->time_start).count();
 				}
 
+				// The causes of fatal errors are:
+				// 1. fatal assertions
+				// 2. uncaught exceptions
+				auto make_fatal_error() noexcept -> void
+				{
+					is_fatal_error_ = true;
+				}
+
+				[[nodiscard]] auto is_fatal_error() const noexcept -> bool
+				{
+					return is_fatal_error_;
+				}
+
 				auto check_fails_may_terminate() noexcept -> void
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
@@ -1459,7 +1466,7 @@ namespace gal::prometheus::unit_test
 							config_->color.none
 						);
 
-						config_->terminate();
+						make_fatal_error();
 					}
 				}
 
@@ -1475,10 +1482,13 @@ namespace gal::prometheus::unit_test
 					{
 						on(suite.begin());
 
-						// throwable
+						// May generate fatal errors
 						std::invoke(suite);
 
-						on(suite.end());
+						if (not is_fatal_error())
+						{
+							on(suite.end());
+						}
 					}
 				}
 
@@ -1494,7 +1504,8 @@ namespace gal::prometheus::unit_test
 						"Executing suite {}{}{} vvv\n",
 						config_->color.suite,
 						name,
-						config_->color.none);
+						config_->color.none
+					);
 				}
 
 				auto on(const events::EventSuiteEnd& suite_end) -> void
@@ -1506,11 +1517,14 @@ namespace gal::prometheus::unit_test
 					if (current_suite_result_->name != suite_end.name)
 					[[unlikely]]
 					{
-						throw std::logic_error{
+						throw std::logic_error
+						{
 								std::format(
 									"can not pop suite because `{}` differs from `{}`",
 									current_suite_result_->name,
-									suite_end.name)};
+									suite_end.name
+								)
+						};
 					}
 
 					auto& [name, report_string, test_results] = *current_suite_result_;
@@ -1520,7 +1534,8 @@ namespace gal::prometheus::unit_test
 						"^^^ End of suite {}{}{} execution\n",
 						config_->color.suite,
 						name,
-						config_->color.none);
+						config_->color.none
+					);
 
 					// reset to anonymous suite
 					current_suite_result_ = suite_results_.begin();
@@ -1604,7 +1619,8 @@ namespace gal::prometheus::unit_test
 								std::format(
 									"can not pop test because `{}` differs from `{}`",
 									current_test_result_->name,
-									test_end.name)
+									test_end.name
+								)
 						};
 					}
 
@@ -1616,13 +1632,19 @@ namespace gal::prometheus::unit_test
 						// the current test is considered SKIPPED only if it does not have any assertions and has no children.
 						if (current_test_result_->total_assertions_failed == 0 and current_test_result_->total_assertions_passed == 0)
 						{
-							if (current_test_result_->children.empty()) { current_test_result_->status = test_result_type::Status::SKIPPED; }
+							if (current_test_result_->children.empty())
+							{
+								current_test_result_->status = test_result_type::Status::SKIPPED;
+							}
 							else
 							{
 								current_test_result_->status =
 										std::ranges::all_of(
 											current_test_result_->children,
-											[](const auto& child_test) noexcept { return child_test.total_assertions_failed == 0; }
+											[](const auto& child_test) noexcept
+											{
+												return child_test.total_assertions_failed == 0;
+											}
 										)
 											? test_result_type::Status::PASSED
 											: test_result_type::Status::FAILED;
@@ -1819,7 +1841,8 @@ namespace gal::prometheus::unit_test
 							// "] ["
 							3,
 							config_->color.fatal,
-							config_->color.none);
+							config_->color.none
+						);
 					}
 
 					current_test_result_->status = test_result_type::Status::FATAL;
@@ -1898,11 +1921,16 @@ namespace gal::prometheus::unit_test
 						"{}Abort test because unexpected exception with message: {}.{}\n",
 						config_->color.fail,
 						exception.what(),
-						config_->color.none);
+						config_->color.none
+					);
 
 					std::ranges::for_each(
 						suite_results_,
-						[this](const auto& suite_result) noexcept { config_->report_message(suite_result.report_string); });
+						[this](const auto& suite_result) noexcept
+						{
+							config_->report_message(suite_result.report_string);
+						}
+					);
 
 					config_->report_message(
 						std::format(
@@ -1910,9 +1938,11 @@ namespace gal::prometheus::unit_test
 							config_->color.test,
 							test_name,
 							config_->color.none,
-							total_fails_exclude_current_test_));
+							total_fails_exclude_current_test_
+						)
+					);
 
-					config_->terminate();
+					make_fatal_error();
 				}
 
 				// =========================================
@@ -1936,7 +1966,7 @@ namespace gal::prometheus::unit_test
 					#if __cpp_lib_containers_ranges >= 202202L
 					current_suite_result_->report_string.append_range(log.message);
 					#else
-				current_suite_result_->report_string.insert(current_suite_result_->report_string.end(), std::ranges::begin(log.message), std::ranges::end(log.message));
+					current_suite_result_->report_string.insert(current_suite_result_->report_string.end(), std::ranges::begin(log.message), std::ranges::end(log.message));
 					#endif
 					current_suite_result_->report_string.append(config_->color.none);
 
@@ -1994,7 +2024,8 @@ namespace gal::prometheus::unit_test
 										return total + self(nested_test_result);
 									}
 								);
-							}};
+							}
+					};
 
 					constexpr auto calc_result_of_suite = [calc_result_of_test](const suite_result_type& suite_result) noexcept -> total_result
 					{
@@ -2029,7 +2060,8 @@ namespace gal::prometheus::unit_test
 								// clang 17.0.3: ERROR
 								// clang trunk: ERROR
 								return total + calc_result_of_test(test_result);
-							});
+							}
+						);
 					};
 
 					std::ranges::for_each(
@@ -2133,13 +2165,16 @@ namespace gal::prometheus::unit_test
 					: config_{std::make_shared<config_type>()},
 					  current_suite_result_{suite_results_.end()},
 					  current_test_result_{nullptr},
-					  total_fails_exclude_current_test_{0}
+					  total_fails_exclude_current_test_{0},
+					  is_fatal_error_{false}
 				{
 					// we chose to construct a temporary object here to avoid possible errors, and trust that the optimizer will forgive us ;)
-					auto t = suite_result_type{
+					auto t = suite_result_type
+					{
 							.name = std::string{anonymous_suite_name},
 							.report_string = {},
-							.test_results = {}};
+							.test_results = {}
+					};
 
 					suite_results_.emplace_back(std::move(t));
 					current_suite_result_ = suite_results_.begin();
@@ -2152,20 +2187,19 @@ namespace gal::prometheus::unit_test
 					if (not config_->dry_run)
 					{
 						// fixme: multi-thread invoke
-						std::ranges::for_each(
-							suites_,
-							[this](const auto& suite) noexcept -> void
+						auto it = suites_.begin();
+						do
+						{
+							try
 							{
-								try
-								{
-									this->on(suite, internal_tag{});
-								}
-								catch (...)
-								{
-									std::println("Warning: unhandled exception thrown from suite `{}`", suite.name);
-								}
+								this->on(*it, internal_tag{});
 							}
-						);
+							catch (...)
+							{
+								std::println("Warning: unhandled exception thrown from suite `{}`", it->name);
+							}
+							++it;
+						} while (not is_fatal_error() and it != suites_.end());
 
 						on(events::EventSummary{});
 					}
@@ -2196,18 +2230,34 @@ namespace gal::prometheus::unit_test
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 
+					if (is_fatal_error())
+					{
+						// skip
+						return;
+					}
+
 					if (config_->is_test_execute_required(test.name, test.categories))
 					{
 						this->on(test.begin());
 
-						try //
+						try
 						{
+							// May throw exceptions, may generate fatal errors
 							std::invoke(test);
 						}
-						catch (const std::exception& exception) { on(events::EventException{.message = exception.what()}); }
-						catch (...) { on(events::EventException{.message = "unhandled exception, not derived from std::exception"}); }
+						catch (const std::exception& exception)
+						{
+							on(events::EventException{.message = exception.what()});
+						}
+						catch (...)
+						{
+							on(events::EventException{.message = "unhandled exception, not derived from std::exception"});
+						}
 
-						this->on(test.end());
+						if (not is_fatal_error())
+						{
+							this->on(test.end());
+						}
 					}
 					else
 					{
@@ -2223,6 +2273,14 @@ namespace gal::prometheus::unit_test
 				auto on(const events::EventAssertion<Expression>& assertion) noexcept -> bool
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
+
+					if (is_fatal_error())
+					{
+						// skip
+						return true;
+					}
+
+					// If the test terminates early(should_terminate_ == true), current_test_result_ has been set to nullptr
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 					if (config_->dry_run)
@@ -2235,7 +2293,7 @@ namespace gal::prometheus::unit_test
 					[[unlikely]]
 					{
 						this->on(assertion.fatal_skip());
-						// Consider the test case execution successful and avoid undesired log output.
+						// Consider the test case execution successful and avoid undesired log output
 						return true;
 					}
 
