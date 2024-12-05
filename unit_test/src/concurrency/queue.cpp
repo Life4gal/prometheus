@@ -17,8 +17,6 @@ namespace
 		using namespace unit_test;
 		using namespace concurrency;
 
-		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
-
 		constexpr static std::size_t producers_count = 1;
 		constexpr static std::size_t consumers_count = 2;
 		constexpr static std::size_t queue_capacity = 1024;
@@ -295,7 +293,5 @@ namespace
 				do_start_and_check(queue, sums, consumers, producers);
 			};
 		};
-
-		config().output_level = old_level;
 	};
 }

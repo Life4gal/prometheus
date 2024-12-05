@@ -5,19 +5,17 @@
 // coroutine::task
 #include <coroutine/coroutine.hpp>
 
+using namespace gal::prometheus;
+
 namespace
 {
-	using namespace gal::prometheus;
-	using namespace coroutine;
-
 	// It's a good idea to read what's in the link before reading the code below.
 	// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-capture
 
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"coroutine.task"> _ = []
 	{
 		using namespace unit_test;
-
-		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
+		using namespace coroutine;
 
 		"void"_test = []
 		{
@@ -163,7 +161,5 @@ namespace
 			expect(task_1.promise().result() == 42_auto) << fatal;
 			expect(task_2.promise().result() == "42"_s) << fatal;
 		};
-
-		config().output_level = old_level;
 	};
 } // namespace

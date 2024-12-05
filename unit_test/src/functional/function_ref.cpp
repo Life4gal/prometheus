@@ -6,14 +6,10 @@ using namespace gal::prometheus;
 
 namespace
 {
-	using namespace gal::prometheus;
-
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"utility.function_ref"> _ = []
 	{
 		using namespace unit_test;
 		using namespace functional;
-
-		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
 
 		"functor"_test = []
 		{
@@ -116,7 +112,5 @@ namespace
 			const auto b = ref<int, Foo&, int, int>(function_pointer);
 			expect(b(foo, 42, 1337) == value(42 + 1337)) << fatal;
 		};
-
-		config().output_level = old_level;
 	};
 }

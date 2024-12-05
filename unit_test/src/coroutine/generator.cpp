@@ -9,14 +9,10 @@ using namespace gal::prometheus;
 
 namespace
 {
-	using namespace gal::prometheus;
-	using namespace coroutine;
-
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"coroutine.generator"> _ = []
 	{
 		using namespace unit_test;
-
-		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
+		using namespace coroutine;
 
 		"0~10"_test = []
 		{
@@ -103,7 +99,5 @@ namespace
 					i > max) { break; }
 			}
 		};
-
-		config().output_level = old_level;
 	};
 } // namespace

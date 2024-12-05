@@ -14,8 +14,6 @@ namespace
 		using namespace unit_test;
 		using namespace functional;
 
-		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
-
 		"arithmethic"_test = []
 		{
 			using union_type = AlignedUnion<int, unsigned, float>;
@@ -113,7 +111,5 @@ namespace
 				expect(data[3] == 4_i) << fatal;
 			}
 		};
-
-		config().output_level = old_level;
 	};
 }

@@ -37,14 +37,10 @@ namespace
 		return result;
 	}
 
-	using namespace gal::prometheus;
-	using namespace string;
-
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"string.string_pool"> _ = []
 	{
 		using namespace unit_test;
-
-		const auto old_level = std::exchange(config().output_level, OutputLevel::NONE);
+		using namespace string;
 
 		const auto test_pool = []<typename CharType, bool IsNullTerminate>() noexcept -> void
 		{
@@ -234,7 +230,5 @@ namespace
 			test_block_size.operator()<char32_t, true>();
 			test_block_size.operator()<wchar_t, true>();
 		};
-
-		config().output_level = old_level;
 	};
 }
