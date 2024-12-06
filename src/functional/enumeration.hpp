@@ -46,7 +46,7 @@ template<typename EnumType>
 // flag |= value => flag
 template<typename EnumType, std::integral ValueType>
 	requires std::is_scoped_enum_v<EnumType> and gal::prometheus::meta::user_defined::enum_is_flag<EnumType>::value
-[[nodiscard]] constexpr auto operator|=(EnumType& lhs, const ValueType rhs) noexcept -> EnumType& //
+constexpr auto operator|=(EnumType& lhs, const ValueType rhs) noexcept -> EnumType& //
 	requires requires { lhs | rhs; }
 {
 	lhs = lhs | rhs;
@@ -56,7 +56,7 @@ template<typename EnumType, std::integral ValueType>
 // value |= flag => value
 template<typename EnumType, std::integral ValueType>
 	requires std::is_scoped_enum_v<EnumType> and gal::prometheus::meta::user_defined::enum_is_flag<EnumType>::value
-[[nodiscard]] constexpr auto operator|=(ValueType& lhs, const EnumType rhs) noexcept -> ValueType& //
+constexpr auto operator|=(ValueType& lhs, const EnumType rhs) noexcept -> ValueType& //
 	requires requires { lhs | rhs; }
 {
 	lhs = lhs | rhs;
@@ -66,7 +66,7 @@ template<typename EnumType, std::integral ValueType>
 // flag |= flag => flag
 template<typename EnumType>
 	requires std::is_scoped_enum_v<EnumType> and gal::prometheus::meta::user_defined::enum_is_flag<EnumType>::value
-[[nodiscard]] constexpr auto operator|=(EnumType& lhs, const EnumType rhs) noexcept -> EnumType& //
+constexpr auto operator|=(EnumType& lhs, const EnumType rhs) noexcept -> EnumType& //
 	requires requires { lhs | rhs; }
 {
 	lhs = lhs | rhs;
@@ -106,7 +106,7 @@ template<typename EnumType>
 // flag &= value => flag
 template<typename EnumType, std::integral ValueType>
 	requires std::is_scoped_enum_v<EnumType> and gal::prometheus::meta::user_defined::enum_is_flag<EnumType>::value
-[[nodiscard]] constexpr auto operator&=(EnumType& lhs, const ValueType rhs) noexcept -> EnumType& //
+constexpr auto operator&=(EnumType& lhs, const ValueType rhs) noexcept -> EnumType& //
 	requires requires { lhs & rhs; }
 {
 	lhs = lhs & rhs;
@@ -116,7 +116,7 @@ template<typename EnumType, std::integral ValueType>
 // value &= flag => value
 template<typename EnumType, std::integral ValueType>
 	requires std::is_scoped_enum_v<EnumType> and gal::prometheus::meta::user_defined::enum_is_flag<EnumType>::value
-[[nodiscard]] constexpr auto operator&=(ValueType& lhs, const EnumType rhs) noexcept -> ValueType& //
+constexpr auto operator&=(ValueType& lhs, const EnumType rhs) noexcept -> ValueType& //
 	requires requires { lhs & rhs; }
 {
 	lhs = lhs & rhs;
@@ -126,7 +126,7 @@ template<typename EnumType, std::integral ValueType>
 // flag &= flag => flag
 template<typename EnumType>
 	requires std::is_scoped_enum_v<EnumType> and gal::prometheus::meta::user_defined::enum_is_flag<EnumType>::value
-[[nodiscard]] constexpr auto operator&=(EnumType& lhs, const EnumType rhs) noexcept -> EnumType& //
+constexpr auto operator&=(EnumType& lhs, const EnumType rhs) noexcept -> EnumType& //
 	requires requires { lhs & rhs; }
 {
 	lhs = lhs & rhs;
@@ -166,7 +166,7 @@ template<typename EnumType>
 // flag ^= value => flag
 template<typename EnumType, std::integral ValueType>
 	requires std::is_scoped_enum_v<EnumType> and gal::prometheus::meta::user_defined::enum_is_flag<EnumType>::value
-[[nodiscard]] constexpr auto operator^=(EnumType& lhs, const ValueType rhs) noexcept -> EnumType& //
+constexpr auto operator^=(EnumType& lhs, const ValueType rhs) noexcept -> EnumType& //
 	requires requires { lhs ^ rhs; }
 {
 	lhs = lhs ^ rhs;
@@ -176,7 +176,7 @@ template<typename EnumType, std::integral ValueType>
 // value ^= flag => value
 template<typename EnumType, std::integral ValueType>
 	requires std::is_scoped_enum_v<EnumType> and gal::prometheus::meta::user_defined::enum_is_flag<EnumType>::value
-[[nodiscard]] constexpr auto operator^=(ValueType& lhs, const EnumType rhs) noexcept -> ValueType& //
+constexpr auto operator^=(ValueType& lhs, const EnumType rhs) noexcept -> ValueType& //
 	requires requires { lhs ^ rhs; }
 {
 	lhs = lhs ^ rhs;
@@ -186,7 +186,7 @@ template<typename EnumType, std::integral ValueType>
 // flag ^= flag => flag
 template<typename EnumType>
 	requires std::is_scoped_enum_v<EnumType> and gal::prometheus::meta::user_defined::enum_is_flag<EnumType>::value
-[[nodiscard]] constexpr auto operator^=(EnumType& lhs, const EnumType rhs) noexcept -> EnumType& //
+constexpr auto operator^=(EnumType& lhs, const EnumType rhs) noexcept -> EnumType& //
 	requires requires { lhs ^ rhs; }
 {
 	lhs = lhs ^ rhs;
