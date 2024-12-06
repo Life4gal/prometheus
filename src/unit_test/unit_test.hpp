@@ -25,8 +25,7 @@
 #include <functional/enumeration.hpp>
 #include <functional/value_list.hpp>
 #include <functional/functor.hpp>
-
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+#include <platform/os.hpp>
 
 namespace gal::prometheus::unit_test
 {
@@ -157,7 +156,12 @@ namespace gal::prometheus::unit_test
 		std::size_t abort_after_n_failures = std::numeric_limits<std::size_t>::max();
 
 		OutputLevel output_level = OutputLevel::DEFAULT;
+
 		bool dry_run = false;
+
+		bool call_debugger_if_fail = false;
+		bool call_debugger_if_fatal = false;
+		bool call_debugger_if_exception = false;
 
 		std::function<void(std::string_view)> message_reporter = [](const std::string_view report_message) -> void
 		{
@@ -1763,6 +1767,8 @@ namespace gal::prometheus::unit_test
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
+					GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(config_->call_debugger_if_fail, "EventAssertionFail");
+
 					if (const auto level = std::to_underlying(config_->output_level);
 						level & OutputLevel::FAILURE)
 					{
@@ -1811,6 +1817,8 @@ namespace gal::prometheus::unit_test
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
+
+					GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(config_->call_debugger_if_fatal, "EventAssertionFatal");
 
 					if (const auto level = std::to_underlying(config_->output_level);
 						level & OutputLevel::FATAL)
@@ -1909,6 +1917,8 @@ namespace gal::prometheus::unit_test
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
+
+					GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(config_->call_debugger_if_exception, "EventException");
 
 					auto& [suite_name, report_string, _] = *current_suite_result_;
 					const auto& test_name = current_test_result_->name;
