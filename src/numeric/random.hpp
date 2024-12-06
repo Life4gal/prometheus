@@ -666,6 +666,21 @@ namespace gal::prometheus::numeric
 			)) -> typename Distribution::result_type //
 			requires(not is_shared_category) { return this->template get<Distribution, Args...>(std::forward<Args>(args)...); }
 	};
+
+	// clang / clang-cl
+	// error: ambiguous deduction for template arguments of 'Random'
+	// numeric::Random random{};
+	//               ^
+	// note: candidate function [with Category = gal::prometheus::numeric::RandomStateCategory::PRIVATE, RandomEngine = gal::prometheus::numeric::RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>, IntegerDistribution = gal::prometheus::numeric::default_int_distribution, FloatingPointDistribution = gal::prometheus::numeric::default_floating_point_distribution, BooleanDistribution = std::bernoulli_distribution]
+	// constexpr explicit Random() noexcept(std::is_nothrow_default_constructible_v<engine_type>) //
+	//                              ^
+	// note: candidate function [with Category = gal::prometheus::numeric::RandomStateCategory::PRIVATE, RandomEngine = gal::prometheus::numeric::RandomEngine<RandomEngineCategory::X_R_S_R, RandomEngineTag::STAR_STAR, RandomEngineBit::BITS_128>, IntegerDistribution = gal::prometheus::numeric::default_int_distribution, FloatingPointDistribution = gal::prometheus::numeric::default_floating_point_distribution, BooleanDistribution = std::bernoulli_distribution]
+	// constexpr explicit Random() noexcept //
+	//                              ^
+	// fix 1:
+	// numeric::Random<> random{};
+	// fix 2:
+	Random() -> Random<>;
 }
 
 #undef RANDOM_WORKAROUND_OPERATOR_STATIC
