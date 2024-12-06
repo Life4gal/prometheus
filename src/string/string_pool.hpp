@@ -10,11 +10,9 @@
 #include <memory>
 #include <algorithm>
 #include <ranges>
+#include <type_traits>
 
 #include <prometheus/macro.hpp>
-
-// functional::overloaded
-#include <functional/functor.hpp>
 
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
@@ -254,19 +252,19 @@ namespace gal::prometheus::string
 
 			const auto f = [this]<typename Pool>(Pool&& pool) noexcept -> void
 			{
+				// silence warning
+				auto&& p = std::forward<Pool>(pool);
+
 				const auto size = pool_.size();
-				functional::overloaded
+				if constexpr (std::is_rvalue_reference_v<Pool&&>)
 				{
-						[this](const StringPool& p) noexcept -> void
-						{
-							pool_.insert_range(pool_.end(), p.pool_);
-						},
-						[this](StringPool&& p) noexcept -> void // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
-						{
-							pool_.insert(pool_.end(), std::make_move_iterator(p.pool_.begin()), std::make_move_iterator(p.pool_.end()));
-							p.pool_.clear();
-						}
-				}(std::forward<Pool>(pool));
+					pool_.insert(pool_.end(), std::make_move_iterator(p.pool_.begin()), std::make_move_iterator(p.pool_.end()));
+					p.pool_.clear();
+				}
+				else
+				{
+					pool_.insert_range(pool_.end(), p.pool_);
+				}
 
 				std::ranges::inplace_merge(
 					pool_,
