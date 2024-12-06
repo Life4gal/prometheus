@@ -8,7 +8,6 @@
 #include <string>
 #include <source_location>
 #include <stacktrace>
-#include <utility>
 
 #include <prometheus/macro.hpp>
 
@@ -32,5 +31,9 @@ namespace gal::prometheus::platform
 		}
 	};
 
-	auto breakpoint(const char* reason) noexcept -> void;
+	[[nodiscard]] auto is_debugger_present() noexcept -> bool;
+
+	auto breakpoint_if_debugging(const char* message) noexcept -> void;
+
+	auto breakpoint_or_terminate(const char* message) noexcept -> void;
 }

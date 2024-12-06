@@ -13,100 +13,20 @@
 
 #include <platform/os.hpp>
 
+#if not defined(HAS_STD_DEBUGGING)
 #if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
 #include <Windows.h>
+#elif defined(GAL_PROMETHEUS_PLATFORM_LINUX)
+#include <fstream>
+#include <string/charconv.hpp>
+#elif defined(GAL_PROMETHEUS_PLATFORM_DARWIN)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <unistd.h>
 #else
-#include <cerrno>
+#error "fixme"
 #endif
-
-namespace
-{
-	thread_local std::atomic<const char*> breakpoint_reason;
-
-	auto call_debugger() noexcept -> bool
-	{
-		#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
-		if (IsDebuggerPresent())
-		{
-			// When running under the debugger, __debugbreak() after returning.
-			return true;
-		}
-
-		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
-		__try // NOLINT(clang-diagnostic-language-extension-token)
-		{
-			__try // NOLINT(clang-diagnostic-language-extension-token)
-			{
-				// Attempt to break, causing an exception.
-				DebugBreak();
-
-				// The UnhandledExceptionFilter() will be called to attempt to attach a debugger.
-				//  * If the jit-debugger is not configured the user gets an error dialogue-box that
-				//    with "Abort", "Retry (Debug)", "Ignore". The "Retry" option will only work
-				//    when the application is already being debugged.
-				//  * When the jit-debugger is configured the user gets a dialogue window which allows
-				//    a selection of debuggers and an "OK (Debug)", "Cancel (aborts application)".
-			}
-			__except (UnhandledExceptionFilter(GetExceptionInformation()))
-			{
-				// The jit-debugger is not configured and the user pressed any of the buttons.
-				return false;
-			}
-		}
-		__except (EXCEPTION_EXECUTE_HANDLER)
-		{
-			// User pressed "OK", debugger has been attached, __debugbreak() after return.
-			return true;
-		}
-
-		// The jit-debugger was configured, but the user pressed Cancel.
-		return false;
-		#else
-		EXCEPTION_RECORD ExceptionRecord;
-		ZeroMemory(&ExceptionRecord, sizeof(ExceptionRecord));
-		ExceptionRecord.ExceptionCode = EXCEPTION_BREAKPOINT;
-
-		CONTEXT Context;
-		ZeroMemory(&Context, sizeof(Context));
-		Context.ContextFlags = CONTEXT_FULL;
-		RtlCaptureContext(&Context);
-
-		EXCEPTION_POINTERS ExceptionPointers;
-		ExceptionPointers.ExceptionRecord = &ExceptionRecord;
-		ExceptionPointers.ContextRecord = &Context;
-
-		if (UnhandledExceptionFilter(&ExceptionPointers) == EXCEPTION_CONTINUE_EXECUTION)
-		{
-			return true;
-		}
-
-		return false;
-		#endif
-
-		#else
-		// Check if we're running under a debugger by checking the process status.
-		static bool debugger_present = false;
-		static bool checked = false;
-
-		if (not checked) {
-			debugger_present = (isatty(STDERR_FILENO) != 0);
-			checked = true;
-		}
-
-		if (debugger_present) {
-			return true;
-		}
-
-		// Raise a SIGTRAP signal to invoke the debugger.
-		raise(SIGTRAP);
-
-		// After raising SIGTRAP, if a debugger is attached, the execution will stop.
-		// If no debugger is attached, the signal might be ignored, or the program may terminate.
-		// For simplicity, we assume that if we reach here without terminating, no debugger was attached.
-		return false;
-		#endif
-	}
-}
+#endif
 
 namespace gal::prometheus::platform
 {
@@ -121,43 +41,98 @@ namespace gal::prometheus::platform
 		);
 	}
 
-	auto breakpoint(const char* reason) noexcept -> void
+	auto is_debugger_present() noexcept -> bool
 	{
-		breakpoint_reason.store(reason, std::memory_order::relaxed);
+		#if defined(HAS_STD_DEBUGGING)
+		return std::is_debugger_present();
+		#else
 
-		auto fallback = [reason]
+		#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
+
+		if (IsDebuggerPresent())
 		{
-			std::println(
-				stderr,
-				"Unexpected behavior occurred but did not run under the debugger, terminate the program. \nReason. {}\n",
-				reason
-			);
-			std::terminate();
-		};
+			return true;
+		}
+
+		BOOL present = FALSE;
+		if (CheckRemoteDebuggerPresent(GetCurrentProcess(), &present))
+		{
+			return present == TRUE;
+		}
+
+		return false;
+
+		#elif defined(GAL_PROMETHEUS_PLATFORM_LINUX)
+
+		// TracerPid:       0
+		std::ifstream status_file("/proc/self/status");
+		std::string line;
+		while (std::getline(status_file, line))
+		{
+			if (line.starts_with("TracerPid"))
+			{
+				const std::string_view sub{line.begin() + sizeof("TracerPid:") - 1, line.end()};
+
+				if (const auto pid = string::from_string<int>(sub);
+					pid.has_value() && *pid != 0)
+				{
+					return true;
+				}
+				return false;
+			}
+		}
+
+		#elif defined(GAL_PROMETHEUS_PLATFORM_DARWIN)
+
+		int mib[4];
+	    struct kinfo_proc info;
+	    size_t size = sizeof(info);
+
+	    mib[0] = CTL_KERN;
+	    mib[1] = KERN_PROC;
+	    mib[2] = KERN_PROC_PID;
+	    mib[3] = getpid();
+
+	    if (sysctl(mib, 4, &info, &size, NULL, 0) == -1) {
+	        return false;
+	    }
+
+	    return (info.kp_proc.p_flag & P_TRACED) != 0;
+
+		#else
+		#error "fixme"
+		#endif
+
+		#endif
+	}
+
+	auto breakpoint_if_debugging(const char* message) noexcept -> void
+	{
+		std::println(stderr, "BREAKPOINT: {}", message);
 
 		#if defined(HAS_STD_DEBUGGING)
-		#if __cpp_lib_debugging >= 202601L
-		std::breakpoint_if_debugging();
-		#elif __cpp_lib_debugging >= 202403L
-		if (std::is_debugger_present())
-		{
-			std::breakpoint();
-			return;
-		}
-		else
-		{
-			fallback();
-		}
-		#endif
-		#endif
+		return std::breakpoint_if_debugging();
+		#else
 
-		if (call_debugger())
+		if (is_debugger_present())
+		{
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+		}
+
+		#endif
+	}
+
+	auto breakpoint_or_terminate(const char* message) noexcept -> void
+	{
+		std::println(stderr, "BREAKPOINT: {}", message);
+
+		if (is_debugger_present())
 		{
 			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
 		}
 		else
 		{
-			fallback();
+			std::terminate();
 		}
 	}
 }
