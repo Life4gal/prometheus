@@ -32,6 +32,7 @@
 
 #include <platform/exception.hpp>
 #include <platform/environment.hpp>
+#include <string/string_pool.hpp>
 
 namespace gal::prometheus::clp
 {
@@ -132,6 +133,16 @@ namespace gal::prometheus::clp
 
 	namespace clp_detail
 	{
+		#if not defined(CLP_IDENTIFIER)
+		#define CLP_IDENTIFIER "[[:alnum:]][-_[:alnum:]\\.]*"
+		#endif
+
+		#if not defined(CLP_LIST_SEPARATOR)
+		#define CLP_LIST_SEPARATOR ","
+		#endif
+
+		#define CLP_LIST_SEPARATOR_IGNORE_WS CLP_LIST_SEPARATOR "\\s*"
+
 		using regex_char_type = char;
 
 		template<typename Range>
@@ -146,9 +157,12 @@ namespace gal::prometheus::clp
 		using regex_token_iterator = std::regex_token_iterator<typename Range::const_iterator>;
 
 		template<regex_string_type Range>
-		[[nodiscard]] constexpr auto make_regex(const Range& range) -> regex_type
+		[[nodiscard]] constexpr auto make_regex(
+			const Range& range,
+			const regex_type::flag_type flag = regex_type::ECMAScript | regex_type::optimize
+		) -> regex_type
 		{
-			return regex_type{std::ranges::data(range), std::ranges::size(range)};
+			return regex_type{std::ranges::data(range), std::ranges::size(range), flag};
 		}
 
 		template<regex_string_type Range>
@@ -158,32 +172,97 @@ namespace gal::prometheus::clp
 		}
 
 		// ReSharper disable StringLiteralTypo
+		// ReSharper disable CommentTypo
 		// ReSharper disable CppTemplateArgumentsCanBeDeduced
+		// ReSharper disable GrammarMistakeInComment
 
-		#if not defined(CLP_LIST_SEPARATOR)
-		#define CLP_LIST_SEPARATOR ","
-		#endif
+		constexpr std::basic_string_view<regex_char_type> pattern_integer
+		{
+				// // result[0] -> [-/+] 0b1010101 / 0x123456789abcdef / 01234567 / 123456789
+				// // result[1] -> "-" / "+" / ""
+				// "([-+]?)"
+				// "(?:"
+				// // B
+				// // result[2] -> "0b" / ""
+				// // result[3] -> "1010101" / ""
+				// "(0b)([01]+)"
+				// "|" // or
+				// // H
+				// // result[4] -> "0x" / ""
+				// // result[5] -> "123456789abcdef" / ""
+				// "(0x)([0-9a-fA-F]+)"
+				// "|"
+				// // O
+				// // result[6] -> "0" / ""
+				// // result[7] -> "1234567" / ""
+				// "(0)([0-7]+)"
+				// "|" // or
+				// // D
+				// // result[8] -> "123456789" / ""
+				// "([1-9][0-9]*"
+				// "|" // or
+				// // D
+				// // result[8] -> "0" / ""
+				// "0)"
+				// ")"
 
-		constexpr std::basic_string_view<regex_char_type> list_separator_chars{CLP_LIST_SEPARATOR};
+				// result[0] -> [-/+] 0b1010101 / 0x123456789abcdef / 01234567 / 123456789
+				// result[1] -> "-" / "+" / ""
+				"([-+]?)"
+				// result[2] -> "0b1010101" / "0x123456789abcdef" / "01234567" / "123456789"
+				"("
+				// B
+				"0b[01]+"
+				"|" // or
+				// H
+				"0x[0-9a-fA-F]+"
+				"|" // or
+				// O
+				"0[0-7]*"
+				"|" // or
+				// D
+				"[1-9][0-9]*"
+				")"
+		};
 
-		constexpr std::basic_string_view<regex_char_type> pattern_boolean_true{"(t|T)(rue)?|1"};
-		constexpr std::basic_string_view<regex_char_type> pattern_boolean_false{"(f|F)(alse)?|0"};
-		// result[1] -> sign[-/+/]
-		// result[2] -> 0b1010101 / 01234567 / 123456789 / 0x123456789abcdef
-		constexpr std::basic_string_view<regex_char_type> pattern_integer{"([+-]?)(0b[01]+|0x[0-9a-fA-F]+|0[0-7]*|[1-9][0-9]*)"};
-		// --option-name / --option_name / --option.name [= args]
-		// result[1] -> option-name / option_name / option.name
-		// result[2] -> =args
-		// result[3] -> args
-		// -option-name / -option_name / -option.name
-		// result[4] -> option-name / option_name / option.name
-		constexpr std::basic_string_view<regex_char_type> pattern_option{"--([[:alnum:]][-_[:alnum:]\\.]+)(=(.*))?|-([[:alnum:]].*)"};
+		constexpr std::basic_string_view<regex_char_type> pattern_option
+		{
+				// --option-name / --option_name / --option.name 
+				"--(" CLP_IDENTIFIER ")"
+				// [= args]
+				"(?:=(.*))?"
+				// result[0] -> --option-name / --option_name / --option.name [= args]
+				// result[1] -> option-name / option_name / option.name
+				// result[2] -> args
+				// result[3] -> ""
+				"|" // or
+				// -option-name / -option_name / -option.name
+				"^-(?!-)(" CLP_IDENTIFIER ")$"
+				// result[0] -> -option-name / -option_name / -option.name
+				// result[1] -> ""
+				// result[2] -> ""
+				// result[3] -> option-name / option_name / option.name
+		};
+
 		// arg1,arg2, arg3,  arg4,   arg5,    arg6,     arg7
 		// result[0] -> [arg1,arg2, arg3,  arg4,   arg5,    arg6,     arg7]
-		constexpr std::basic_string_view<regex_char_type> pattern_list{"[[:alnum:]][-_[:alnum:]\\.]*(?:" CLP_LIST_SEPARATOR "\s*[[:alnum:]][-_[:alnum:]\\.]*)*"};
-		constexpr std::basic_string_view<regex_char_type> pattern_list_separator{CLP_LIST_SEPARATOR "\\s*"};
+		constexpr std::basic_string_view<regex_char_type> pattern_list
+		{
+				// arg1
+				CLP_IDENTIFIER
+				// [,arg2, arg3,  arg4,   arg5,    arg6,     arg7]
+				"(?:" CLP_LIST_SEPARATOR_IGNORE_WS CLP_IDENTIFIER ")*"
+		};
+		// arg1,arg2, arg3,  arg4,   arg5,    arg6,     arg7
+		// [arg1, arg2, arg3, arg4, arg5, arg6, arg7]
+		constexpr std::basic_string_view<regex_char_type> pattern_list_separator
+		{
+				CLP_LIST_SEPARATOR_IGNORE_WS
+		};
 
+		// ReSharper restore GrammarMistakeInComment
 		// ReSharper restore CppTemplateArgumentsCanBeDeduced
+		// ReSharper restore CommentTypo
 		// ReSharper restore StringLiteralTypo
 
 		using descriptor_boolean = bool;
@@ -231,26 +310,36 @@ namespace gal::prometheus::clp
 		template<bool True, regex_string_type Range>
 		[[nodiscard]] auto parse_boolean(const Range& range) -> descriptor_boolean
 		{
-			const static auto regex_true = make_regex(pattern_boolean_true);
-			const static auto regex_false = make_regex(pattern_boolean_false);
-
-			regex_match_result_type<Range> result;
 			if constexpr (True)
 			{
-				if (not clp_detail::regex_match(range, result, regex_true))
+				constexpr static std::basic_string_view<regex_char_type> candidates[]
 				{
-					return false;
-				}
+						"Y", "y",
+						"YES", "Yes", "yes",
+						"ON", "On", "on",
+						"TRUE", "True", "true",
+						"1"
+				};
+
+				return std::ranges::contains(candidates, range);
 			}
 			else
 			{
-				if (not clp_detail::regex_match(range, result, regex_false))
+				constexpr static std::basic_string_view<regex_char_type> candidates[]
 				{
-					return false;
-				}
-			}
+						"N", "n",
+						"NO", "No", "no",
+						"OFF", "Off", "off",
+						"FALSE", "False", "false",
+						"0"
+				};
 
-			return not result.empty();
+				if (std::ranges::empty(range))
+				{
+					return true;
+				}
+				return std::ranges::contains(candidates, range);
+			}
 		}
 
 		template<regex_string_type Range>
@@ -278,7 +367,7 @@ namespace gal::prometheus::clp
 			const auto is_negative = result[1] == '-';
 
 			const auto& sub = result[2];
-			const std::basic_string_view sub_string{sub.first, sub.second};
+			const auto sub_string = clp_detail::sub_match_to_string_view<Range>(sub);
 
 			if (sub_string.starts_with("0b"))
 			{
@@ -300,7 +389,7 @@ namespace gal::prometheus::clp
 				};
 			}
 
-			if (sub_string.starts_with('0'))
+			if (sub_string.starts_with('0') and sub_string.size() > 1)
 			{
 				return descriptor_integer
 				{
@@ -331,7 +420,7 @@ namespace gal::prometheus::clp
 			regex_match_result_type<Range> result;
 			const auto match_result = clp_detail::regex_match(range, result, regex);
 
-			if (not match_result or result.size() != 5)
+			if (not match_result or (not result[1].matched and not result[3].matched))
 			{
 				#if CLP_USE_EXPECTED
 				return std::unexpected{std::format("Cannot parse `{}` as `{}`.", range, meta::name_of<descriptor_option>())};
@@ -340,19 +429,19 @@ namespace gal::prometheus::clp
 				#endif
 			}
 
-			if (result.length(4) > 0)
+			if (result[1].matched)
 			{
 				return descriptor_option
 				{
-						.name = {result[4].first, result[4].second},
-						.value = ""
+						.name = clp_detail::sub_match_to_string_view<Range>(result[1]),
+						.value = clp_detail::sub_match_to_string_view<Range>(result[2])
 				};
 			}
 
 			return descriptor_option
 			{
-					.name = {result[1].first, result[1].second},
-					.value = {result[3].first, result[3].second}
+					.name = clp_detail::sub_match_to_string_view<Range>(result[3]),
+					.value = ""
 			};
 		}
 
@@ -450,7 +539,8 @@ namespace gal::prometheus::clp
 								}
 
 								return result;
-							});
+							}
+						);
 				#else
 				if (const auto descriptor = clp_detail::parse_integer(range);
 					descriptor.has_value())
@@ -466,9 +556,14 @@ namespace gal::prometheus::clp
 
 					if (is_negative)
 					{
-						if constexpr (not std::numeric_limits<T>::is_signed) { return std::nullopt; }
-
-						return static_cast<T>(-static_cast<T>(result - 1) - 1);
+						if constexpr (not std::numeric_limits<T>::is_signed)
+						{
+							return std::nullopt;
+						}
+						else
+						{
+							return static_cast<T>(-static_cast<T>(result - 1) - 1);
+						}
 					}
 
 					return result;
@@ -910,7 +1005,7 @@ namespace gal::prometheus::clp
 				CommandLineOptionNameFormatError::panic(alias_name);
 			}
 
-			const auto option_view = *option_names;
+			const auto& option_view = *option_names;
 			const auto option_size = std::ranges::distance(option_view);
 
 			if (option_size != 1 and option_size != 2)
