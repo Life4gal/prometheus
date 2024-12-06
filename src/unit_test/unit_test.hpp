@@ -120,24 +120,41 @@ namespace gal::prometheus::unit_test
 	// assume suite_results.front() == anonymous_suite
 	using suite_results_type = std::vector<suite_result_type>;
 
-	enum class OutputLevel : std::uint8_t
+	enum class OutputLevel : std::uint16_t
+	{
+		// for functional::enumeration
+		PROMETHEUS_MAGIC_ENUM_FLAG = 0b0000'0000'0000'0000,
+
+		FATAL = 0b0000'0000'0000'0001,
+		REQUIRED = 0b0000'0000'0000'0010,
+		FAILURE = 0b0000'0000'0000'0100,
+		SKIP = 0b0000'0000'0000'1000,
+		PASS = 0b0000'0000'0001'0000,
+
+		NONE = 0b0000'0000'1000'0000,
+
+		ERROR_ONLY = FATAL | REQUIRED | FAILURE,
+		EXCLUDE_PASS = ERROR_ONLY | SKIP,
+		ALL = EXCLUDE_PASS | PASS,
+
+		EXPRESSION_ONLY = 0b0000'0001'0000'0000,
+		EXPRESSION_AND_LOCATION = 0b0000'0010'0000'0000,
+
+		DEFAULT = ERROR_ONLY | EXPRESSION_AND_LOCATION,
+		FULL = ALL | EXPRESSION_AND_LOCATION,
+	};
+
+	enum class DebugBreakPoint : std::uint8_t
 	{
 		// for functional::enumeration
 		PROMETHEUS_MAGIC_ENUM_FLAG = 0b0000'0000,
 
-		FATAL = 0b0000'0001,
-		FAILURE = 0b0000'0010,
-		PASS = 0b0000'0100,
-		NONE = 0b0000'1000,
+		EXCEPTION = 0b0000'0001,
+		FATAL = 0b0000'0010,
+		REQUIRED = 0b0000'0100,
+		FAIL = 0b0000'1000,
 
-		FATAL_AND_FAILURE = FATAL | FAILURE,
-		ALL = FATAL | FAILURE | PASS,
-
-		EXPRESSION_ONLY = 0b0001'0000,
-		EXPRESSION_AND_LOCATION = 0b0010'0000,
-
-		DEFAULT = FATAL_AND_FAILURE | EXPRESSION_AND_LOCATION,
-		FULL = ALL | EXPRESSION_AND_LOCATION,
+		NONE = 0b0001'0000,
 	};
 
 	struct config_type
@@ -159,9 +176,7 @@ namespace gal::prometheus::unit_test
 
 		bool dry_run = false;
 
-		bool call_debugger_if_fail = false;
-		bool call_debugger_if_fatal = false;
-		bool call_debugger_if_exception = false;
+		DebugBreakPoint debug_break_point = DebugBreakPoint::NONE;
 
 		std::function<void(std::string_view)> message_reporter = [](const std::string_view report_message) -> void
 		{
@@ -183,6 +198,11 @@ namespace gal::prometheus::unit_test
 
 			return true;
 		};
+
+		[[nodiscard]] auto debug_break_point_required(const DebugBreakPoint point) const noexcept -> bool
+		{
+			return static_cast<bool>(debug_break_point & point);
+		}
 
 		auto report_message(const std::string_view message) const noexcept -> void
 		{
@@ -370,6 +390,12 @@ namespace gal::prometheus::unit_test
 				std::source_location location;
 			};
 
+			class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventAssertionRequired final : public Event
+			{
+			public:
+				std::source_location location;
+			};
+
 			class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventAssertionFatal final : public Event
 			{
 			public:
@@ -377,7 +403,7 @@ namespace gal::prometheus::unit_test
 			};
 
 			template<expression_t Expression>
-			class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventAssertionFatalSkip final : public Event
+			class GAL_PROMETHEUS_COMPILER_EMPTY_BASE EventAssertionSkip final : public Event
 			{
 			public:
 				using expression_type = Expression;
@@ -406,9 +432,17 @@ namespace gal::prometheus::unit_test
 					return {.expression = expression, .location = location};
 				}
 
-				[[nodiscard]] constexpr explicit operator EventAssertionFatal() const noexcept { return {.location = location}; }
+				[[nodiscard]] constexpr explicit operator EventAssertionRequired() const noexcept
+				{
+					return {.location = location};
+				}
 
-				[[nodiscard]] constexpr explicit operator EventAssertionFatalSkip<expression_type>() const noexcept
+				[[nodiscard]] constexpr explicit operator EventAssertionFatal() const noexcept
+				{
+					return {.location = location};
+				}
+
+				[[nodiscard]] constexpr explicit operator EventAssertionSkip<expression_type>() const noexcept
 				{
 					return {.expression = expression, .location = location};
 				}
@@ -428,6 +462,13 @@ namespace gal::prometheus::unit_test
 					return operator EventAssertionFail<expression_type>();
 				}
 
+				[[nodiscard]] constexpr auto required() const noexcept -> EventAssertionRequired
+				{
+					// fixme: Compiler Error: C2273
+					// return this->operator EventAssertionRequired();
+					return operator EventAssertionRequired();
+				}
+
 				[[nodiscard]] constexpr auto fatal() const noexcept -> EventAssertionFatal
 				{
 					// fixme: Compiler Error: C2273
@@ -435,11 +476,11 @@ namespace gal::prometheus::unit_test
 					return operator EventAssertionFatal();
 				}
 
-				[[nodiscard]] constexpr auto fatal_skip() const noexcept -> EventAssertionFatalSkip<expression_type>
+				[[nodiscard]] constexpr auto skip() const noexcept -> EventAssertionSkip<expression_type>
 				{
 					// fixme: Compiler Error: C2273
-					// return this->operator EventAssertionFatalSkip<expression_type>();
-					return operator EventAssertionFatalSkip<expression_type>();
+					// return this->operator EventAssertionSkip<expression_type>();
+					return operator EventAssertionSkip<expression_type>();
 				}
 			};
 
@@ -1360,6 +1401,7 @@ namespace gal::prometheus::unit_test
 
 				std::size_t total_fails_exclude_current_test_;
 
+				bool is_required_error_;
 				bool is_fatal_error_;
 
 				enum class IdentType : std::uint8_t
@@ -1430,9 +1472,26 @@ namespace gal::prometheus::unit_test
 				}
 
 				// The causes of fatal errors are:
+				// 1. required assertions
+				auto mark_required_error() noexcept -> void
+				{
+					is_required_error_ = true;
+				}
+
+				auto reset_required_error() noexcept -> void
+				{
+					is_required_error_ = false;
+				}
+
+				[[nodiscard]] auto is_required_error() const noexcept -> bool
+				{
+					return is_required_error_;
+				}
+
+				// The causes of fatal errors are:
 				// 1. fatal assertions
 				// 2. uncaught exceptions
-				auto make_fatal_error() noexcept -> void
+				auto mark_fatal_error() noexcept -> void
 				{
 					is_fatal_error_ = true;
 				}
@@ -1442,16 +1501,31 @@ namespace gal::prometheus::unit_test
 					return is_fatal_error_;
 				}
 
+				template<bool Fatal>
 				auto check_fails_may_terminate() noexcept -> void
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
-					if (current_test_result_->status == test_result_type::Status::FATAL or
-					    total_fails_exclude_current_test_ + current_test_result_->total_assertions_failed > config_->abort_after_n_failures)
+					if (
+						[this]() noexcept -> bool
+						{
+							if constexpr (Fatal)
+							{
+								std::ignore = this;
+								return true;
+							}
+							else
+							{
+								return total_fails_exclude_current_test_ + current_test_result_->total_assertions_failed >= config_->abort_after_n_failures;
+							}
+						}()
+					)
 					[[unlikely]]
 					{
+						current_test_result_->status = test_result_type::Status::FATAL;
+
 						const auto old_suite_result = current_suite_result_;
 						const auto old_test_result = current_test_result_;
 						const auto old_test_name = fullname_of_current_test();
@@ -1470,7 +1544,7 @@ namespace gal::prometheus::unit_test
 							config_->color.none
 						);
 
-						make_fatal_error();
+						mark_fatal_error();
 					}
 				}
 
@@ -1767,7 +1841,7 @@ namespace gal::prometheus::unit_test
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
-					GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(config_->call_debugger_if_fail, "EventAssertionFail");
+					GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(config_->debug_break_point_required(DebugBreakPoint::FAIL), "EventAssertionFail");
 
 					if (const auto level = std::to_underlying(config_->output_level);
 						level & OutputLevel::FAILURE)
@@ -1809,43 +1883,75 @@ namespace gal::prometheus::unit_test
 
 					current_test_result_->total_assertions_failed += 1;
 
-					check_fails_may_terminate();
+					check_fails_may_terminate<false>();
 				}
 
-				auto on(const events::EventAssertionFatal& assertion_fatal, internal_tag) noexcept -> void
+				template<typename T>
+					requires (
+						std::is_same_v<T, events::EventAssertionRequired> or
+						std::is_same_v<T, events::EventAssertionFatal>
+					)
+				auto on(const T& assertion, internal_tag) noexcept -> void
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
-					GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(config_->call_debugger_if_fatal, "EventAssertionFatal");
+					if constexpr (std::is_same_v<T, events::EventAssertionRequired>)
+					{
+						GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(config_->debug_break_point_required(DebugBreakPoint::REQUIRED), "EventAssertionRequired");
+					}
+					else if constexpr (std::is_same_v<T, events::EventAssertionFatal>)
+					{
+						GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(config_->debug_break_point_required(DebugBreakPoint::FATAL), "EventAssertionFatal");
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
+
+					constexpr auto check_level = []() noexcept -> OutputLevel
+					{
+						if constexpr (std::is_same_v<T, events::EventAssertionRequired>)
+						{
+							return OutputLevel::REQUIRED;
+						}
+						else if constexpr (std::is_same_v<T, events::EventAssertionFatal>)
+						{
+							return OutputLevel::FATAL;
+						}
+						else
+						{
+							GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+						}
+					}();
 
 					if (const auto level = std::to_underlying(config_->output_level);
-						level & OutputLevel::FATAL)
+						level & check_level)
 					{
 						std::format_to(
 							std::back_inserter(current_suite_result_->report_string),
-							"{:{}}^^^ {}FATAL ERROR{}\n",
+							"{:{}}^^^ {}ERROR{}\n",
 							" ",
 							ident_size_of_current_test<IdentType::ASSERTION>() +
 							(
 								// '['
 								1 +
 								// file_name
-								std::string_view::traits_type::length(assertion_fatal.location.file_name())) +
+								std::string_view::traits_type::length(assertion.location.file_name())) +
 							// ':'
 							1 +
 							// line
-							[]<typename T>(T line)
+							[]<typename Line>(Line line)
 							{
-								T result = 0;
+								Line result = 0;
 								while (line)
 								{
 									result += 1;
 									line /= 10;
 								}
 								return result;
-							}(assertion_fatal.location.line()) +
+							}(assertion.location.line()) +
 							// "] ["
 							3,
 							config_->color.fatal,
@@ -1853,20 +1959,23 @@ namespace gal::prometheus::unit_test
 						);
 					}
 
-					current_test_result_->status = test_result_type::Status::FATAL;
+					if constexpr (std::is_same_v<T, events::EventAssertionRequired>)
+					{
+						mark_required_error();
+					}
 
-					check_fails_may_terminate();
+					check_fails_may_terminate<std::is_same_v<T, events::EventAssertionFatal>>();
 				}
 
 				template<expression_t Expression>
-				auto on(const events::EventAssertionFatalSkip<Expression>& assertion_fatal_skip) noexcept -> void
+				auto on(const events::EventAssertionSkip<Expression>& assertion_skip) noexcept -> void
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
 					if (const auto level = std::to_underlying(config_->output_level);
-						level & OutputLevel::FATAL)
+						level & OutputLevel::SKIP)
 					{
 						// @see: Operand::prefer_no_type_name
 						constexpr auto prefer_no_type_name = requires { typename Expression::prefer_no_type_name; };
@@ -1878,10 +1987,10 @@ namespace gal::prometheus::unit_test
 								"{:{}}[{}:{}] {}[{}]{} - {}SKIPPED{}\n",
 								" ",
 								ident_size_of_current_test<IdentType::ASSERTION>(),
-								assertion_fatal_skip.location.file_name(),
-								assertion_fatal_skip.location.line(),
+								assertion_skip.location.file_name(),
+								assertion_skip.location.line(),
 								config_->color.expression,
-								meta::to_string<std::string, not prefer_no_type_name>(assertion_fatal_skip.expression),
+								meta::to_string<std::string, not prefer_no_type_name>(assertion_skip.expression),
 								config_->color.none,
 								config_->color.fatal,
 								config_->color.none
@@ -1895,7 +2004,7 @@ namespace gal::prometheus::unit_test
 								" ",
 								ident_size_of_current_test<IdentType::ASSERTION>(),
 								config_->color.expression,
-								meta::to_string<std::string, not prefer_no_type_name>(assertion_fatal_skip.expression),
+								meta::to_string<std::string, not prefer_no_type_name>(assertion_skip.expression),
 								config_->color.none,
 								config_->color.fatal,
 								config_->color.none
@@ -1905,7 +2014,7 @@ namespace gal::prometheus::unit_test
 
 					current_test_result_->total_assertions_failed += 1;
 
-					check_fails_may_terminate();
+					check_fails_may_terminate<false>();
 				}
 
 				// =========================================
@@ -1918,7 +2027,7 @@ namespace gal::prometheus::unit_test
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_ != nullptr);
 
-					GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(config_->call_debugger_if_exception, "EventException");
+					GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(config_->debug_break_point_required(DebugBreakPoint::EXCEPTION), "EventException");
 
 					auto& [suite_name, report_string, _] = *current_suite_result_;
 					const auto& test_name = current_test_result_->name;
@@ -1952,7 +2061,7 @@ namespace gal::prometheus::unit_test
 						)
 					);
 
-					make_fatal_error();
+					mark_fatal_error();
 				}
 
 				// =========================================
@@ -2176,6 +2285,7 @@ namespace gal::prometheus::unit_test
 					  current_suite_result_{suite_results_.end()},
 					  current_test_result_{nullptr},
 					  total_fails_exclude_current_test_{0},
+					  is_required_error_{false},
 					  is_fatal_error_{false}
 				{
 					// we chose to construct a temporary object here to avoid possible errors, and trust that the optimizer will forgive us ;)
@@ -2267,6 +2377,7 @@ namespace gal::prometheus::unit_test
 						if (not is_fatal_error())
 						{
 							this->on(test.end());
+							reset_required_error();
 						}
 					}
 					else
@@ -2284,7 +2395,7 @@ namespace gal::prometheus::unit_test
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
 
-					if (is_fatal_error())
+					if (is_required_error() or is_fatal_error())
 					{
 						// skip
 						return true;
@@ -2302,7 +2413,7 @@ namespace gal::prometheus::unit_test
 					if (current_test_result_->status == test_result_type::Status::FATAL)
 					[[unlikely]]
 					{
-						this->on(assertion.fatal_skip());
+						this->on(assertion.skip());
 						// Consider the test case execution successful and avoid undesired log output
 						return true;
 					}
@@ -2316,6 +2427,11 @@ namespace gal::prometheus::unit_test
 
 					this->on(assertion.fail());
 					return false;
+				}
+
+				auto on(const events::EventAssertionRequired& assertion_required) noexcept -> void
+				{
+					on(assertion_required, internal_tag{});
 				}
 
 				auto on(const events::EventAssertionFatal& assertion_fatal) noexcept -> void
@@ -5009,15 +5125,17 @@ namespace gal::prometheus::unit_test
 
 			struct expect_result
 			{
+				struct required {};
+
 				struct fatal {};
 
 			private:
 				template<typename T>
-				struct fatal_location
+				struct with_location
 				{
 					std::source_location location;
 
-					constexpr explicit(false) fatal_location(const T&, const std::source_location& l = std::source_location::current()) noexcept
+					constexpr explicit(false) with_location(const T&, const std::source_location& l = std::source_location::current()) noexcept
 						: location{l} {}
 				};
 
@@ -5039,7 +5157,17 @@ namespace gal::prometheus::unit_test
 					return *this;
 				}
 
-				constexpr auto operator<<(const fatal_location<fatal>& location) noexcept -> expect_result&
+				constexpr auto operator<<(const with_location<required>& location) noexcept -> expect_result&
+				{
+					if (not value) //
+					{
+						register_event(events::EventAssertionRequired{.location = location.location});
+					}
+
+					return *this;
+				}
+
+				constexpr auto operator<<(const with_location<fatal>& location) noexcept -> expect_result&
 				{
 					if (not value) //
 					{
@@ -5245,9 +5373,13 @@ namespace gal::prometheus::unit_test
 	// DISPATCHER
 	// =========================================
 
+	// The assertion must succeed, otherwise the assertion followed (this test) will be skipped
+	constexpr unit_test_detail::dispatcher::expect_result::required required{};
+	// The assertion must succeed, otherwise the assertion followed (all suites) will be skipped
 	constexpr unit_test_detail::dispatcher::expect_result::fatal fatal{};
 
 	constexpr unit_test_detail::dispatcher::DispatcherThat that{};
+
 	constexpr unit_test_detail::dispatcher::DispatcherExpect expect{};
 
 	// =========================================
