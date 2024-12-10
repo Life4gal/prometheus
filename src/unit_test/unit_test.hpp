@@ -1629,7 +1629,8 @@ namespace gal::prometheus::unit_test
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_suite_result_ != suite_results_.end());
 
 					// we chose to construct a temporary object here to avoid possible errors, and trust that the optimizer will forgive us ;)
-					auto t = test_result_type{
+					auto t = test_result_type
+					{
 							.name = std::string{test_begin.name},
 							.parent = current_test_result_,
 							.children = {},
@@ -1637,7 +1638,8 @@ namespace gal::prometheus::unit_test
 							.time_start = clock_type::now(),
 							.time_end = {},
 							.total_assertions_passed = 0,
-							.total_assertions_failed = 0};
+							.total_assertions_failed = 0
+					};
 
 					if (current_test_result_)
 					{
@@ -1676,7 +1678,6 @@ namespace gal::prometheus::unit_test
 				auto on(const events::EventTestSkip& test_skip) -> void
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(config_ != nullptr);
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_test_result_);
 
 					on(events::EventTestBegin{.name = test_skip.name});
 					current_test_result_->status = test_result_type::Status::SKIPPED;
@@ -5120,7 +5121,9 @@ namespace gal::prometheus::unit_test
 			template<events::event_t EventType>
 			auto register_event(EventType&& event) noexcept -> decltype(auto) //
 			{
-				return executor::executor().on(std::forward<EventType>(event));
+				return
+						executor::executor()
+						.on(std::forward<EventType>(event));
 			}
 
 			struct expect_result
@@ -5151,7 +5154,7 @@ namespace gal::prometheus::unit_test
 				{
 					if (not value) //
 					{
-						register_event(events::EventLog{.message = std::forward<MessageType>(message)});
+						dispatcher::register_event(events::EventLog{.message = std::forward<MessageType>(message)});
 					}
 
 					return *this;
@@ -5213,7 +5216,7 @@ namespace gal::prometheus::unit_test
 						// workaround if needed
 						// using dispatcher_type = typename Expression::dispatcher_type;
 
-						const auto result = register_event(
+						const auto result = dispatcher::register_event(
 							events::EventAssertion<typename Expression::expression_type>{
 									.expression = std::forward<Expression>(expression).expression,
 									.location = location
@@ -5226,7 +5229,12 @@ namespace gal::prometheus::unit_test
 					{
 						return expect_result
 						{
-								register_event(events::EventAssertion<Expression>{.expression = std::forward<Expression>(expression), .location = location})
+								dispatcher::register_event(
+									events::EventAssertion<Expression>{
+											.expression = std::forward<Expression>(expression),
+											.location = location
+									}
+								)
 						};
 					}
 				}
@@ -5245,11 +5253,14 @@ namespace gal::prometheus::unit_test
 				template<std::invocable InvocableType>
 				constexpr auto operator=(InvocableType&& invocable) & noexcept -> DispatcherTestBase&
 				{
-					register_event(events::EventTest<InvocableType>{
-							.name = static_cast<D&>(*this).name(),
-							.categories = categories_,
-							.invocable = std::forward<InvocableType>(invocable),
-							.arg = {}});
+					dispatcher::register_event(
+						events::EventTest<InvocableType>{
+								.name = static_cast<D&>(*this).name(),
+								.categories = categories_,
+								.invocable = std::forward<InvocableType>(invocable),
+								.arg = {}
+						}
+					);
 
 					return *this;
 				}
@@ -5257,11 +5268,14 @@ namespace gal::prometheus::unit_test
 				template<std::invocable InvocableType>
 				constexpr auto operator=(InvocableType&& invocable) && noexcept -> DispatcherTestBase&
 				{
-					register_event(events::EventTest<InvocableType>{
-							.name = static_cast<D&>(*this).name(),
-							.categories = std::move(categories_),
-							.invocable = std::forward<InvocableType>(invocable),
-							.arg = {}});
+					dispatcher::register_event(
+						events::EventTest<InvocableType>{
+								.name = static_cast<D&>(*this).name(),
+								.categories = std::move(categories_),
+								.invocable = std::forward<InvocableType>(invocable),
+								.arg = {}
+						}
+					);
 
 					return *this;
 				}
