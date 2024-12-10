@@ -190,6 +190,11 @@ namespace
 		);
 	}
 
+	constexpr auto get_ascii(RangeBuilder::ranges_type& ranges) noexcept -> void
+	{
+		ranges.emplace_back(0x0020, 0x007f);
+	}
+
 	constexpr auto get_latin(RangeBuilder::ranges_type& ranges) noexcept -> void
 	{
 		// Basic Latin + Latin Supplement
@@ -264,6 +269,20 @@ namespace
 // ReSharper disable once CppInconsistentNaming
 namespace gal::prometheus::i18n
 {
+	auto RangeBuilder::ascii() & noexcept -> RangeBuilder&
+	{
+		get_ascii(ranges_);
+
+		return *this;
+	}
+
+	auto RangeBuilder::ascii() && noexcept -> RangeBuilder&&
+	{
+		auto& self = *this;
+		self.ascii();
+		return std::move(self);
+	}
+
 	auto RangeBuilder::latin() & noexcept -> RangeBuilder&
 	{
 		get_latin(ranges_);

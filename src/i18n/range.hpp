@@ -36,6 +36,10 @@ namespace gal::prometheus::i18n
 			return std::forward<Self>(self).ranges_;
 		}
 
+		// ASCII
+		auto ascii() & noexcept -> RangeBuilder&;
+		auto ascii() && noexcept -> RangeBuilder&&;
+
 		// Latin
 		auto latin() & noexcept -> RangeBuilder&;
 		auto latin() && noexcept -> RangeBuilder&&;
