@@ -322,18 +322,30 @@
 #define GAL_PROMETHEUS_ERROR_DEBUG_MODULE <prometheus/macro.hpp>
 #endif
 
-#define GAL_PROMETHEUS_ERROR_BREAKPOINT(message) ::gal::prometheus::platform::breakpoint("[" __FILE__ ":" GAL_PROMETHEUS_UTILITY_TO_STRING(__LINE__) "] -> " message)
+#define GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(expression, message) \
+	do {                                                                                                                                                \
+		GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED                                                                                                           \
+		{                                                                                                                                               \
+			if (static_cast<bool>(expression))                                                                                                      \
+			{                                                                                                                                           \
+				::gal::prometheus::platform::breakpoint_if_debugging("[" __FILE__ ":" GAL_PROMETHEUS_UTILITY_TO_STRING(__LINE__) "] -> " message); \
+			}                                                                                                                                           \
+		}                                                                                                                                               \
+	} while (false)
+
+#define GAL_PROMETHEUS_ERROR_BREAKPOINT_OR_TERMINATE_IF(expression, message) \
+	do {                                                                                                                                                \
+		GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED                                                                                                           \
+		{                                                                                                                                               \
+			if (static_cast<bool>(expression))                                                                                                      \
+			{                                                                                                                                           \
+				::gal::prometheus::platform::breakpoint_or_terminate("[" __FILE__ ":" GAL_PROMETHEUS_UTILITY_TO_STRING(__LINE__) "] -> " message); \
+			}                                                                                                                                           \
+		}                                                                                                                                               \
+	} while (false)
 
 #define GAL_PROMETHEUS_ERROR_PRIVATE_DO_CHECK(debug_type, expression, ...) \
-	do {                                                                                                                                                \
-			GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED                                                                                                           \
-			{                                                                                                                                               \
-				if (not static_cast<bool>(expression))                                                                                                      \
-				{                                                                                                                                           \
-					GAL_PROMETHEUS_ERROR_BREAKPOINT("[" debug_type "]: \"" __VA_ARGS__ "\" --> {" GAL_PROMETHEUS_UTILITY_TO_STRING(expression) "}"); \
-				}                                                                                                                                           \
-			}                                                                                                                                               \
-		} while (false)
+	GAL_PROMETHEUS_ERROR_BREAKPOINT_OR_TERMINATE_IF(not static_cast<bool>(expression), "[" debug_type "]: \"" __VA_ARGS__ "\" --> {" GAL_PROMETHEUS_UTILITY_TO_STRING(expression) "}")
 
 #define GAL_PROMETHEUS_ERROR_UNREACHABLE(...) GAL_PROMETHEUS_COMPILER_UNREACHABLE()
 
