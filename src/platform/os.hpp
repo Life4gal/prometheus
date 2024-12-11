@@ -6,8 +6,14 @@
 #pragma once
 
 #include <string>
+#include <exception>
 #include <source_location>
 #include <stacktrace>
+
+#if __has_include(<debugging>)
+#include <debugging>
+#define HAS_STD_DEBUGGING
+#endif
 
 #include <prometheus/macro.hpp>
 
@@ -31,9 +37,41 @@ namespace gal::prometheus::platform
 		}
 	};
 
-	[[nodiscard]] auto is_debugger_present() noexcept -> bool;
+	[[nodiscard]] auto is_debugger_present() noexcept -> bool
+		#if defined(HAS_STD_DEBUGGING)
+		{
+			return std::is_debugger_present();
+		}
+		#else
+	;
+	#endif
 
-	auto breakpoint_if_debugging(const char* message) noexcept -> void;
+	auto breakpoint_message(std::string_view message) noexcept -> void;
 
-	auto breakpoint_or_terminate(const char* message) noexcept -> void;
+	#if defined(HAS_STD_DEBUGGING)
+	inline auto breakpoint_if_debugging(const std::string_view message) noexcept -> void
+	{
+		breakpoint_message(message);
+		std::breakpoint_if_debugging();
+	}
+	#else
+	// use GAL_PROMETHEUS_ERROR_BREAKPOINT_IF
+	#endif
+
+	#if defined(HAS_STD_DEBUGGING)
+	// inline auto breakpoint_or_terminate(const std::string_view message) noexcept -> void
+	// {
+	// 	breakpoint_message(message);
+	// 	if (is_debugger_present())
+	// 	{
+	// 		GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+	// 	}
+	// 	else
+	// 	{
+	// 		std::terminate();
+	// 	}
+	// }
+	#else
+	// use GAL_PROMETHEUS_ERROR_BREAKPOINT_OR_TERMINATE_IF
+	#endif
 }

@@ -1,13 +1,7 @@
 #include <string>
 #include <print>
-#include <atomic>
 #include <format>
 #include <system_error>
-
-#if __has_include(<debugging>)
-#include <debugging>
-#define HAS_STD_DEBUGGING
-#endif
 
 #include <prometheus/macro.hpp>
 
@@ -43,19 +37,15 @@ namespace gal::prometheus::platform
 
 	auto is_debugger_present() noexcept -> bool
 	{
-		#if defined(HAS_STD_DEBUGGING)
-		return std::is_debugger_present();
-		#else
-
 		#if defined(GAL_PROMETHEUS_PLATFORM_WINDOWS)
 
-		if (IsDebuggerPresent())
+		if (IsDebuggerPresent() == TRUE)
 		{
 			return true;
 		}
 
 		BOOL present = FALSE;
-		if (CheckRemoteDebuggerPresent(GetCurrentProcess(), &present))
+		if (CheckRemoteDebuggerPresent(GetCurrentProcess(), &present) == TRUE)
 		{
 			return present == TRUE;
 		}
@@ -102,37 +92,10 @@ namespace gal::prometheus::platform
 		#else
 		#error "fixme"
 		#endif
-
-		#endif
 	}
 
-	auto breakpoint_if_debugging(const char* message) noexcept -> void
+	auto breakpoint_message(std::string_view message) noexcept -> void
 	{
 		std::println(stderr, "BREAKPOINT: {}", message);
-
-		#if defined(HAS_STD_DEBUGGING)
-		return std::breakpoint_if_debugging();
-		#else
-
-		if (is_debugger_present())
-		{
-			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
-		}
-
-		#endif
-	}
-
-	auto breakpoint_or_terminate(const char* message) noexcept -> void
-	{
-		std::println(stderr, "BREAKPOINT: {}", message);
-
-		if (is_debugger_present())
-		{
-			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
-		}
-		else
-		{
-			std::terminate();
-		}
 	}
 }
