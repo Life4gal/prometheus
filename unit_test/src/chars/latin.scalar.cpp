@@ -15,7 +15,7 @@ namespace
 		constexpr std::size_t trials = 1000;
 		for (std::size_t i = 0; i < trials; ++i)
 		{
-			"to_latin"_test = [source = make_random_ascii_string()]
+			"to_latin"_test = [source = make_random_latin_string_ascii_only()]
 			{
 				expect(Scalar<"latin">::validate<true>(source) == "valid latin string"_b) << required;
 				const auto output_length = Scalar<"latin">::length<CharsType::LATIN>(source);
