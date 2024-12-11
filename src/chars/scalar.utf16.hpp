@@ -59,7 +59,8 @@ public:
 			{
 				const auto count_if_error = static_cast<std::size_t>(it_input_current - it_input_end);
 
-				if (it_input_current + 1 == it_input_end)
+				// minimal bound checking
+				if (it_input_current + 1 >= it_input_end)
 				{
 					if constexpr (ReturnResultType)
 					{
@@ -207,7 +208,8 @@ public:
 					}();
 
 					return +((native_word & 0xfc00) != 0xdc00);
-				});
+				}
+			);
 		}
 		else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 	}
@@ -298,7 +300,8 @@ public:
 								{
 									return static_cast<output_char_type>(w);
 								}
-							});
+							}
+						);
 
 						it_input_current += step;
 						it_output_current += step;
@@ -317,6 +320,7 @@ public:
 						return w;
 					}
 				}();
+
 				if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
 				{
 					if ((word & 0xff00) != 0)
@@ -371,7 +375,8 @@ public:
 								{
 									return static_cast<output_char_type>(w);
 								}
-							});
+							}
+						);
 
 						it_input_current += step;
 						it_output_current += step;
@@ -734,7 +739,8 @@ public:
 				}
 
 				return (word & 0xfc00) != 0xdc00;
-			});
+			}
+		);
 	}
 
 	constexpr auto static flip_endian(const input_type input, const output_type_of<chars_type>::pointer output) noexcept -> void
