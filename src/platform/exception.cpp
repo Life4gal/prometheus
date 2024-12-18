@@ -15,7 +15,7 @@ namespace gal::prometheus::platform
 
 		std::println(
 			stderr,
-			"Error occurs when invoke function `{}` at {}:{}:\nReason:{}\nStack trace:\n{}",
+			"Error occurs while invoke function:\n{}\nat {}:{}\nReason:\n{}\nStack trace:\n{}",
 			location.function_name(),
 			location.file_name(),
 			location.line(),
