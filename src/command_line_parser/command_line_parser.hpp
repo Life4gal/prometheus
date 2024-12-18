@@ -1093,12 +1093,12 @@ namespace gal::prometheus::clp
 					}
 				);
 
-				std::println(stderr, "Unrecognized option:\n {}", options);
-
 				if (not allow_unrecognized_)
 				{
 					CommandLineOptionUnrecognizedError::panic(options);
 				}
+
+				std::println(stderr, "Unrecognized option:\n {}", options);
 			}
 		}
 
