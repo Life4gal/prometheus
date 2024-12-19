@@ -1,6 +1,8 @@
 #include <command_line_parser/command_line_parser.hpp>
 #include <unit_test/unit_test.hpp>
 
+#include <chars/chars.hpp>
+
 using namespace gal::prometheus;
 
 int main(const int, char*[])
@@ -17,20 +19,27 @@ int main(const int, char*[])
 			.add_option("exec-suite-name")
 			.add_option("exec-test-name")
 			.add_option("call-debugger-if-fail", option_type::default_value("false"))
-			.add_option("call-debugger-if-required", option_type::default_value("true"))
 			.add_option("call-debugger-if-fatal", option_type::default_value("true"))
-			.add_option("call-debugger-if-exception", option_type::default_value("true"))
 			//
 			;
 	parser
 			.add_alias("x-fail", "call-debugger-if-fail")
-			.add_alias("x-required", "call-debugger-if-required")
 			.add_alias("x-fatal", "call-debugger-if-fatal")
-			.add_alias("x-exception", "call-debugger-if-exception")
 			//
 			;
 
-	parser.parse();
+	auto& config = unit_test::config();
+
+	try
+	{
+		parser.parse();
+	}
+	catch (const platform::IException& exception)
+	{
+		exception.print();
+		config.dry_run = true;
+		return 1;
+	}
 
 	const auto tab_width = parser["tab-width"].as<std::size_t>();
 	const auto max_failures = parser["max-failures"].as<std::size_t>();
@@ -38,11 +47,7 @@ int main(const int, char*[])
 	auto exec_suite_name = parser["exec-suite-name"].as<std::vector<std::string>>();
 	auto exec_test_name = parser["exec-test-name"].as<std::vector<std::string>>();
 	const auto call_debugger_if_fail = parser["call-debugger-if-fail"].as<bool>();
-	const auto call_debugger_if_required = parser["call-debugger-if-required"].as<bool>();
 	const auto call_debugger_if_fatal = parser["call-debugger-if-fatal"].as<bool>();
-	const auto call_debugger_if_exception = parser["call-debugger-if-exception"].as<bool>();
-
-	auto& config = unit_test::config();
 
 	if (tab_width.has_value())
 	{
@@ -83,17 +88,6 @@ int main(const int, char*[])
 			config.debug_break_point &= ~unit_test::DebugBreakPoint::FAIL;
 		}
 	}
-	if (call_debugger_if_required.has_value())
-	{
-		if (*call_debugger_if_required)
-		{
-			config.debug_break_point |= unit_test::DebugBreakPoint::REQUIRED;
-		}
-		else
-		{
-			config.debug_break_point &= ~unit_test::DebugBreakPoint::REQUIRED;
-		}
-	}
 	if (call_debugger_if_fatal.has_value())
 	{
 		if (*call_debugger_if_fatal)
@@ -103,17 +97,6 @@ int main(const int, char*[])
 		else
 		{
 			config.debug_break_point &= ~unit_test::DebugBreakPoint::FATAL;
-		}
-	}
-	if (call_debugger_if_exception.has_value())
-	{
-		if (*call_debugger_if_exception)
-		{
-			config.debug_break_point |= unit_test::DebugBreakPoint::EXCEPTION;
-		}
-		else
-		{
-			config.debug_break_point &= ~unit_test::DebugBreakPoint::EXCEPTION;
 		}
 	}
 
