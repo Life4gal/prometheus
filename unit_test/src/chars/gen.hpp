@@ -113,7 +113,7 @@ namespace gen_detail
 			}
 		}();
 
-		const auto g = [&random, ranges](auto& dest, const auto remaining) noexcept -> std::size_t
+		const auto g = [&random, ranges](auto& dest, [[maybe_unused]] const auto remaining) noexcept -> std::size_t
 		{
 			const auto& [from, to] = ranges[random.get<std::size_t>(0, ranges.size() - 1)];
 
@@ -215,7 +215,7 @@ namespace gen_detail
 			}
 		}();
 
-		const auto g = [&random, &ranges](auto& dest, const auto remaining) noexcept -> std::size_t
+		const auto g = [&random, &ranges](auto& dest, [[maybe_unused]] const auto remaining) noexcept -> std::size_t
 		{
 			const auto& [from, to] = ranges[random.get<std::size_t>(0, ranges.size() - 1)];
 
