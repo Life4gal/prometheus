@@ -606,7 +606,7 @@ namespace gal::prometheus::chars
 									else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 								}
 								if (code_point >
-								    []() noexcept -> auto
+								    []() noexcept -> std::uint32_t
 								    {
 									    if constexpr (OutputType == CharsType::LATIN) { return 0xff; }
 									    else { return 0x7ff; }
