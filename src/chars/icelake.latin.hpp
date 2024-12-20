@@ -40,8 +40,19 @@ public:
 	using pointer_type = scalar_type::pointer_type;
 	using size_type = scalar_type::size_type;
 
-	constexpr static std::size_t char_size = sizeof(char_type);
+private:
+	using data_type = __m512i;
 
+	constexpr static std::size_t size_per_char = sizeof(char_type);
+	constexpr static std::size_t advance_per_step = sizeof(data_type) / size_per_char;
+
+	template<typename OutChar>
+	constexpr static std::size_t advance_per_step_with =
+			// zero extend each set of 8 bit latin1 characters to N x-bit integers
+			// 1 => 1
+			sizeof(data_type) / (sizeof(OutChar) / size_per_char);
+
+public:
 	// note: only used to detect pure ASCII strings, otherwise there is no point in using this function
 	template<bool ReturnResultType = false>
 	[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
@@ -58,7 +69,7 @@ public:
 		// used iff not ReturnResultType
 		auto running_or = _mm512_setzero_si512();
 
-		for (constexpr auto step = 1 * sizeof(__m512i) / char_size; it_input_current + step <= it_input_end; it_input_current += step)
+		for (constexpr auto step = 1 * advance_per_step; it_input_current + step <= it_input_end; it_input_current += step)
 		{
 			if constexpr (const auto in = _mm512_loadu_si512(it_input_current);
 				ReturnResultType)
@@ -124,9 +135,6 @@ public:
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
-		// using output_pointer_type = typename output_type_of<OutputType>::pointer;
-		using output_char_type = typename output_type_of<OutputType>::value_type;
-
 		const auto input_length = input.size();
 
 		const pointer_type it_input_begin = input.data();
@@ -141,7 +149,7 @@ public:
 		// ReSharper restore CppClangTidyBugproneBranchClone
 		else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 		{
-			constexpr auto step = 1 * sizeof(__m512i) / char_size / sizeof(output_char_type);
+			constexpr auto step = 1 * advance_per_step;
 			constexpr size_type long_string_optimization_threshold = 2048;
 
 			// number of 512-bit chunks that fits into the length
@@ -388,7 +396,7 @@ public:
 				return in_length;
 			};
 
-			constexpr auto step = 1 * sizeof(__m512i) / char_size / sizeof(output_char_type);
+			constexpr auto step = 1 * advance_per_step_with<output_char_type>;
 
 			// if there's at least 128 bytes remaining, we don't need to mask the output
 			while (it_input_current + 2 * step <= it_input_end)
@@ -433,7 +441,7 @@ public:
 			// clang-format on
 
 			// round down to nearest multiple of 32
-			constexpr auto step = 1 * sizeof(__m512i) / char_size / sizeof(output_char_type);
+			constexpr auto step = 1 * advance_per_step_with<output_char_type>;
 			const auto rounded_input_length = input_length & ~(step - 1);
 			const auto it_rounded_input_end = it_input_begin + rounded_input_length;
 
@@ -496,7 +504,7 @@ public:
 		else if constexpr (OutputType == CharsType::UTF32)
 		{
 			// Round down to nearest multiple of 16
-			constexpr auto step = 1 * sizeof(__m512i) / char_size / sizeof(output_char_type);
+			constexpr auto step = 1 * advance_per_step_with<output_char_type>;
 			const auto rounded_input_length = input_length & ~(step - 1);
 			const auto it_rounded_input_end = it_input_begin + rounded_input_length;
 

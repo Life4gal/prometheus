@@ -29,8 +29,13 @@ public:
 	using pointer_type = input_type::const_pointer;
 	using size_type = input_type::size_type;
 
-	constexpr static std::size_t char_size = sizeof(char_type);
+private:
+	using data_type = std::uint64_t;
 
+	constexpr static std::size_t size_per_char = sizeof(char_type);
+	constexpr static std::size_t advance_per_step = sizeof(data_type) / size_per_char;
+
+public:
 	template<bool ReturnResultType = false, std::endian SourceEndian = std::endian::native>
 	[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 	{
@@ -272,15 +277,13 @@ public:
 				const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
 				// if it is safe to read 32 more bytes, check that they are ascii
-				if (constexpr auto step = 4 * sizeof(std::uint64_t) / char_size;
+				if (constexpr auto step = 4 * advance_per_step;
 					it_input_current + step <= it_input_end)
 				{
-					constexpr auto offset = sizeof(std::uint64_t) / char_size;
-
-					const auto v1 = to_native(memory::unaligned_load<std::uint64_t>(it_input_current + 0 * offset));
-					const auto v2 = to_native(memory::unaligned_load<std::uint64_t>(it_input_current + 1 * offset));
-					const auto v3 = to_native(memory::unaligned_load<std::uint64_t>(it_input_current + 2 * offset));
-					const auto v4 = to_native(memory::unaligned_load<std::uint64_t>(it_input_current + 3 * offset));
+					const auto v1 = to_native(memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step));
+					const auto v2 = to_native(memory::unaligned_load<data_type>(it_input_current + 1 * advance_per_step));
+					const auto v3 = to_native(memory::unaligned_load<data_type>(it_input_current + 2 * advance_per_step));
+					const auto v4 = to_native(memory::unaligned_load<data_type>(it_input_current + 3 * advance_per_step));
 
 					if (const auto value = v1 | v2 | v3 | v4;
 						(value & 0xff00'ff00'ff00'ff00) == 0)
@@ -350,12 +353,10 @@ public:
 				const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
 				// if it is safe to read 8 more bytes, check that they are ascii
-				if (constexpr auto step = 1 * sizeof(std::uint64_t) / char_size;
+				if (constexpr auto step = 1 * advance_per_step;
 					it_input_current + step <= it_input_end)
 				{
-					constexpr auto offset = sizeof(std::uint64_t) / char_size;
-
-					const auto v1 = to_native(memory::unaligned_load<std::uint64_t>(it_input_current + 0 * offset));
+					const auto v1 = to_native(memory::unaligned_load<std::uint64_t>(it_input_current + 0 * advance_per_step));
 
 					if (const auto value = v1;
 						(value & 0xff80'ff80'ff80'ff80) == 0)

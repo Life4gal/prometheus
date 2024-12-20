@@ -33,8 +33,13 @@ namespace gal::prometheus::chars
 			using pointer_type = typename input_type::const_pointer;
 			using size_type = typename input_type::size_type;
 
-			constexpr static std::size_t char_size = sizeof(char_type);
+		private:
+			using data_type = std::uint64_t;
 
+			constexpr static std::size_t size_per_char = sizeof(char_type);
+			constexpr static std::size_t advance_per_step = sizeof(data_type) / size_per_char;
+
+		public:
 			template<bool ReturnResultType = false>
 			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
 			{
@@ -48,12 +53,11 @@ namespace gal::prometheus::chars
 
 				while (it_input_current != it_input_end)
 				{
-					for (constexpr auto step = 2 * sizeof(std::uint64_t) / char_size; it_input_current + step <= it_input_end; it_input_current += step)
+					// if it is safe to read 16 more bytes, check that they are latin
+					for (constexpr auto step = 2 * advance_per_step; it_input_current + step <= it_input_end; it_input_current += step)
 					{
-						constexpr auto offset = sizeof(std::uint64_t) / char_size;
-
-						const auto v1 = memory::unaligned_load<std::uint64_t>(it_input_current + 0 * offset);
-						const auto v2 = memory::unaligned_load<std::uint64_t>(it_input_current + 1 * offset);
+						const auto v1 = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+						const auto v2 = memory::unaligned_load<data_type>(it_input_current + 1 * advance_per_step);
 
 						if (const auto value = v1 | v2;
 							(value & 0x8080'8080'8080'8080) != 0)
@@ -459,15 +463,12 @@ namespace gal::prometheus::chars
 				{
 					while (it_input_current < it_input_end)
 					{
-						// try to convert the next block of 16 ASCII bytes
 						// if it is safe to read 16 more bytes, check that they are ascii
-						if (constexpr auto step = 2 * sizeof(std::uint64_t) / char_size;
+						if (constexpr auto step = 2 * advance_per_step;
 							it_input_current + step <= it_input_end)
 						{
-							constexpr auto offset = sizeof(std::uint64_t) / char_size;
-
-							const auto v1 = memory::unaligned_load<std::uint64_t>(it_input_current + 0 * offset);
-							const auto v2 = memory::unaligned_load<std::uint64_t>(it_input_current + 1 * offset);
+							const auto v1 = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+							const auto v2 = memory::unaligned_load<data_type>(it_input_current + 1 * advance_per_step);
 
 							if (const auto value = v1 | v2;
 								(value & 0x8080'8080'8080'8080) == 0)

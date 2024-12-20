@@ -29,8 +29,13 @@ public:
 	using pointer_type = input_type::const_pointer;
 	using size_type = input_type::size_type;
 
-	constexpr static std::size_t char_size = sizeof(char_type);
+private:
+	using data_type = std::uint64_t;
 
+	constexpr static std::size_t size_per_char = sizeof(char_type);
+	constexpr static std::size_t advance_per_step = sizeof(data_type) / size_per_char;
+
+public:
 	// note: only used to detect pure ASCII strings, otherwise there is no point in using this function
 	template<bool ReturnResultType = false>
 	[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
@@ -43,12 +48,11 @@ public:
 		pointer_type it_input_current = it_input_begin;
 		const pointer_type it_input_end = it_input_begin + input_length;
 
-		for (constexpr auto step = 2 * sizeof(std::uint64_t) / char_size; it_input_current + step <= it_input_end; it_input_current += step)
+		// if it is safe to read 16 more bytes, check that they are latin
+		for (constexpr auto step = 2 * advance_per_step; it_input_current + step <= it_input_end; it_input_current += step)
 		{
-			constexpr auto offset = sizeof(std::uint64_t) / char_size;
-
-			const auto v1 = memory::unaligned_load<std::uint64_t>(it_input_current + 0 * offset);
-			const auto v2 = memory::unaligned_load<std::uint64_t>(it_input_current + 1 * offset);
+			const auto v1 = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+			const auto v2 = memory::unaligned_load<data_type>(it_input_current + 1 * advance_per_step);
 
 			if (const auto value = v1 | v2;
 				(value & 0x8080'8080'8080'8080) != 0)
@@ -117,32 +121,15 @@ public:
 			pointer_type it_input_current = it_input_begin;
 			const pointer_type it_input_end = it_input_begin + input_length;
 
-			const auto pop = [](const std::uint64_t value) noexcept -> size_type
+			const auto pop = [](const data_type value) noexcept -> size_type
 			{
 				return ((value >> 7) & 0x0101010101010101ull) * 0x0101010101010101ull >> 56;
 			};
 			size_type output_length = input_length;
 
-			for (constexpr auto step = 4 * sizeof(std::uint64_t) / char_size; it_input_current + step <= it_input_end; it_input_current += step)
+			for (constexpr auto step = 1 * advance_per_step; it_input_current + step <= it_input_end; it_input_current += step)
 			{
-				constexpr auto offset = sizeof(std::uint64_t) / char_size;
-
-				const auto v1 = memory::unaligned_load<std::uint64_t>(it_input_current + 0 * offset);
-				const auto v2 = memory::unaligned_load<std::uint64_t>(it_input_current + 1 * offset);
-				const auto v3 = memory::unaligned_load<std::uint64_t>(it_input_current + 2 * offset);
-				const auto v4 = memory::unaligned_load<std::uint64_t>(it_input_current + 3 * offset);
-
-				output_length += pop(v1);
-				output_length += pop(v2);
-				output_length += pop(v3);
-				output_length += pop(v4);
-			}
-
-			for (constexpr auto step = 1 * sizeof(std::uint64_t) / char_size; it_input_current + step <= it_input_end; it_input_current += step)
-			{
-				constexpr auto offset = sizeof(std::uint64_t) / char_size;
-
-				const auto v1 = memory::unaligned_load<std::uint64_t>(it_input_current + 0 * offset);
+				const auto v1 = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
 
 				output_length += pop(v1);
 			}
@@ -218,13 +205,11 @@ public:
 			while (it_input_current < it_input_end)
 			{
 				// if it is safe to read 16 more bytes, check that they are latin
-				if (constexpr auto step = 2 * sizeof(std::uint64_t) / char_size;
+				if (constexpr auto step = 2 * advance_per_step;
 					it_input_current + step <= it_input_end)
 				{
-					constexpr auto offset = sizeof(std::uint64_t) / char_size;
-
-					const auto v1 = memory::unaligned_load<std::uint64_t>(it_input_current + 0 * offset);
-					const auto v2 = memory::unaligned_load<std::uint64_t>(it_input_current + 1 * offset);
+					const auto v1 = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+					const auto v2 = memory::unaligned_load<data_type>(it_input_current + 1 * advance_per_step);
 
 					if (const auto value = v1 | v2;
 						(value & 0x8080'8080'8080'8080) == 0)
