@@ -142,7 +142,6 @@ public:
 		else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 		{
 			constexpr auto step = 1 * sizeof(__m512i) / char_size / sizeof(output_char_type);
-			constexpr auto offset = sizeof(__m512i) / char_size / sizeof(output_char_type);
 			constexpr size_type long_string_optimization_threshold = 2048;
 
 			// number of 512-bit chunks that fits into the length
@@ -174,7 +173,7 @@ public:
 					auto sum = _mm512_setzero_si512();
 					for (; it_input_current < this_turn_end; it_input_current += step)
 					{
-						const auto in = do_load(it_input_current + 0 * offset);
+						const auto in = do_load(it_input_current);
 						const auto mask = _mm512_movepi8_mask(in);
 						// ASCII => 0x00
 						// NON-ASCII => 0xFF
@@ -197,7 +196,7 @@ public:
 			{
 				for (; it_input_current + step <= it_input_end; it_input_current += step)
 				{
-					const auto in = do_load(it_input_current + 0 * offset);
+					const auto in = do_load(it_input_current);
 					const auto not_ascii = _mm512_movepi8_mask(in);
 
 					result_length += std::popcount(not_ascii);
@@ -350,7 +349,7 @@ public:
 					// is the second half of the input vector used?
 					if (in_length > 32)
 					{
-						const auto out_size_high = (in_length - 32) + static_cast<unsigned int>(std::popcount(non_ascii_high));
+						const auto out_size_high = static_cast<unsigned int>(in_length - 32) + static_cast<unsigned int>(std::popcount(non_ascii_high));
 
 						const auto mask_1 = static_cast<__mmask64>(_bzhi_u64(~static_cast<unsigned long long>(0), out_size_low));
 						const auto mask_2 = static_cast<__mmask64>(_bzhi_u64(~static_cast<unsigned long long>(0), out_size_high));
@@ -440,13 +439,11 @@ public:
 
 			while (it_input_current < it_rounded_input_end)
 			{
-				constexpr auto offset = sizeof(__m512i) / char_size / sizeof(output_char_type);
-
 				// Load 32 ascii characters into a 256-bit register
 				const auto in = _mm256_loadu_si256(
 					GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
 						const __m256i *,
-						it_input_current + 0 * offset
+						it_input_current
 					)
 				);
 				// Zero extend each set of 8 ascii characters to 32 16-bit integers
@@ -505,13 +502,11 @@ public:
 
 			while (it_input_current < it_rounded_input_end)
 			{
-				constexpr auto offset = sizeof(__m512i) / char_size / sizeof(output_char_type);
-
 				// Load 16 ascii characters into a 128-bit register
 				const auto in = _mm_loadu_si128(
 					GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
 						const __m128i *,
-						it_input_current + 0 * offset
+						it_input_current
 					)
 				);
 				// Zero extend each set of 8 ascii characters to 16 32-bit integers
