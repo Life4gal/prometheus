@@ -243,6 +243,38 @@ set(
 		${PROJECT_SOURCE_DIR}/src/string/string.hpp
 
 		# =========================
+		# I18N
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/i18n/range.hpp
+
+		${PROJECT_SOURCE_DIR}/src/i18n/i18n.hpp
+
+		# =========================
+		# CHARS
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/chars/encoding.hpp
+
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.latin.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.utf8.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.utf16.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.hpp
+
+		${PROJECT_SOURCE_DIR}/src/chars/icelake.latin.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/icelake.utf8.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/icelake.utf16.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/icelake.hpp
+
+		${PROJECT_SOURCE_DIR}/src/chars/chars.hpp
+
+		# =========================
+		# COMMAND_LINE_PARSER
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/command_line_parser/command_line_parser.hpp
+
+		# =========================
 		# UNIT_TEST
 		# =========================
 
@@ -266,20 +298,13 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/concurrency/thread.cpp
+
+		# =========================
+		# I18N
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/i18n/range.cpp
 )
-
-if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
-	set(
-			${PROJECT_NAME_PREFIX}LIBRARY_SOURCE_PUBLIC_CHARS_ICELAKE
-
-			${PROJECT_SOURCE_DIR}/src/chars/icelake.ixx
-			${PROJECT_SOURCE_DIR}/src/chars/icelake_ascii.ixx
-			${PROJECT_SOURCE_DIR}/src/chars/icelake_utf8.ixx
-			${PROJECT_SOURCE_DIR}/src/chars/icelake_utf16.ixx
-			${PROJECT_SOURCE_DIR}/src/chars/icelake_utf32.ixx
-	)
-	set(${PROJECT_NAME_PREFIX}LIBRARY_SOURCE_PUBLIC ${${PROJECT_NAME_PREFIX}LIBRARY_SOURCE_PUBLIC} ${${PROJECT_NAME_PREFIX}LIBRARY_SOURCE_PUBLIC_CHARS_ICELAKE})
-endif (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 
 set_source_files_properties(
 		${${PROJECT_NAME_PREFIX}LIBRARY_SOURCE_PUBLIC}
