@@ -42,6 +42,7 @@ public:
 
 private:
 	using data_type = __m512i;
+	using mask_type = __mmask32;
 
 	constexpr static std::size_t size_per_char = sizeof(char_type);
 	constexpr static std::size_t advance_per_step = sizeof(data_type) / size_per_char;
@@ -52,6 +53,56 @@ private:
 			// utf8(1 => 2): load(advance_per_step) ==> store(low) + store(high)
 			// utf32(1 => 2): load(advance_per_step) ==> store(low) + store(high)
 			advance_per_step;
+
+	template<CharsType Type>
+	[[nodiscard]] static auto make_mask(const size_type source_length) noexcept -> mask_type
+	{
+		std::ignore = Type;
+		return static_cast<mask_type>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(source_length)));
+	}
+
+	template<CharsType Type, bool MaskOut, std::endian SourceEndian>
+	[[nodiscard]] static auto load_from_memory(const pointer_type source, const size_type source_length) noexcept -> data_type
+	{
+		const auto shuffle = [](const data_type data) noexcept -> data_type
+		{
+			if constexpr (SourceEndian != std::endian::native)
+			{
+				// clang-format off
+				const auto byte_flip = _mm512_setr_epi64(
+					0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
+					0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
+					0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
+					0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809
+				);
+				// clang-format on
+
+				return _mm512_shuffle_epi8(data, byte_flip);
+			}
+			else
+			{
+				return data;
+			}
+		};
+
+		if constexpr (MaskOut)
+		{
+			const auto source_mask = make_mask<Type>(source_length);
+			return shuffle(_mm512_maskz_loadu_epi16(source_mask, source));
+		}
+		else
+		{
+			return shuffle(_mm512_loadu_si512(source));
+		}
+	}
+
+	template<CharsType Type>
+	static auto load_from_register(const data_type source, const size_type source_length) noexcept -> data_type
+	{
+		const auto source_mask = make_mask<Type>(source_length);
+
+		return _mm512_maskz_mov_epi16(source_mask, source);
+	}
 
 public:
 	template<bool ReturnResultType = false, std::endian SourceEndian = std::endian::native>
@@ -65,15 +116,6 @@ public:
 		pointer_type it_input_current = it_input_begin;
 		const pointer_type it_input_end = it_input_begin + input_length;
 
-		// clang-format off
-		const auto byte_flip = _mm512_setr_epi64(
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809
-		);
-		// clang-format on
-
 		constexpr auto step = 1 * advance_per_step;
 		// keep an overlap of one code unit
 		constexpr auto step_keep_high_surrogate = step - 1;
@@ -82,18 +124,7 @@ public:
 		{
 			const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-			const auto in = [](const auto c, [[maybe_unused]] const auto bf) noexcept
-			{
-				if constexpr (const auto v = _mm512_loadu_si512(c);
-					SourceEndian != std::endian::native)
-				{
-					return _mm512_shuffle_epi8(v, bf);
-				}
-				else
-				{
-					return v;
-				}
-			}(it_input_current, byte_flip);
+			const auto in = Simd::load_from_memory<CharsType::UTF16, false, SourceEndian>(it_input_current, step);
 			const auto diff = _mm512_sub_epi16(in, _mm512_set1_epi16(static_cast<short>(0xd800)));
 
 			if (const auto surrogates = _mm512_cmplt_epu16_mask(diff, _mm512_set1_epi16(0x0800));
@@ -136,19 +167,7 @@ public:
 		{
 			const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-			const auto in = [](const auto c, const auto in_length, [[maybe_unused]] const auto bf) noexcept
-			{
-				const auto mask = static_cast<__mmask32>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(in_length)));
-				if constexpr (const auto v = _mm512_maskz_loadu_epi16(mask, c);
-					SourceEndian != std::endian::native)
-				{
-					return _mm512_shuffle_epi8(v, bf);
-				}
-				else
-				{
-					return v;
-				}
-			}(it_input_current, remaining, byte_flip);
+			const auto in = Simd::load_from_memory<CharsType::UTF16, true, SourceEndian>(it_input_current, remaining);
 			const auto diff = _mm512_sub_epi16(in, _mm512_set1_epi16(static_cast<short>(0xd800)));
 
 			if (const auto surrogates = _mm512_cmplt_epu16_mask(diff, _mm512_set1_epi16(0x0800));
@@ -202,15 +221,6 @@ public:
 		pointer_type it_input_current = it_input_begin;
 		const pointer_type it_input_end = it_input_begin + input_length;
 
-		// clang-format off
-		const auto byte_flip = _mm512_setr_epi64(
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809
-		);
-		// clang-format on
-
 		// ReSharper disable CppClangTidyBugproneBranchClone
 		if constexpr (OutputType == CharsType::LATIN)
 		{
@@ -231,20 +241,9 @@ public:
 			// ReSharper restore CppInconsistentNaming
 
 			auto result_length = static_cast<size_type>(0);
-			for (; it_input_current + step <= it_input_end; it_input_current += step)
+			while (it_input_current + step <= it_input_end)
 			{
-				const auto in = [](const auto c, [[maybe_unused]] const auto bf) noexcept
-				{
-					if constexpr (const auto v = _mm512_loadu_si512(c);
-						SourceEndian != std::endian::native)
-					{
-						return _mm512_shuffle_epi8(v, bf);
-					}
-					else
-					{
-						return v;
-					}
-				}(it_input_current, byte_flip);
+				const auto in = Simd::load_from_memory<OutputType, false, SourceEndian>(it_input_current, step);
 
 				const auto ascii_bitmask = _mm512_cmple_epu16_mask(in, v_007f);
 				const auto two_bytes_bitmask = _mm512_mask_cmple_epu16_mask(~ascii_bitmask, in, v_07ff);
@@ -262,6 +261,7 @@ public:
 						2 * two_bytes_count +
 						2 * surrogates_bytes_count +
 						3 * three_bytes_count;
+				it_input_current += step;
 			}
 
 			if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
@@ -286,20 +286,9 @@ public:
 			const auto high = _mm512_set1_epi16(static_cast<short>(0xdfff));
 
 			auto result_length = static_cast<size_type>(0);
-			for (; it_input_current + step <= it_input_end; it_input_current += step)
+			while (it_input_current + step <= it_input_end)
 			{
-				const auto in = [](const auto c, [[maybe_unused]] const auto bf) noexcept
-				{
-					if constexpr (const auto v = _mm512_loadu_si512(c);
-						SourceEndian != std::endian::native)
-					{
-						return _mm512_shuffle_epi8(v, bf);
-					}
-					else
-					{
-						return v;
-					}
-				}(it_input_current, byte_flip);
+				const auto in = Simd::load_from_memory<OutputType, false, SourceEndian>(it_input_current, step);
 
 				const auto not_high_surrogate_bitmask =
 						_mm512_cmpgt_epu16_mask(in, high) |
@@ -308,6 +297,7 @@ public:
 				const auto not_high_surrogate_count = std::popcount(not_high_surrogate_bitmask);
 
 				result_length += not_high_surrogate_count;
+				it_input_current += step;
 			}
 
 			if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
@@ -359,46 +349,44 @@ public:
 		const output_pointer_type it_output_begin = output;
 		output_pointer_type it_output_current = it_output_begin;
 
-		// clang-format off
-		const auto byte_flip = _mm512_setr_epi64(
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809
-		);
-		// clang-format on
-
 		if constexpr (OutputType == CharsType::LATIN)
 		{
 			constexpr auto step = 1 * advance_per_step_with<output_char_type>;
 
 			// ReSharper disable once CppInconsistentNaming
-			const auto v_00ff = _mm512_set1_epi16(0xff);
-			// clang-format off
-			const auto shuffle_mask = _mm512_set_epi8(
-				00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 
-				00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 
-				62, 60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 
-				30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8u, 06, 04, 02, 00
-			);
-			// clang-format on
+			const auto v_00ff = _mm512_set1_epi16(0x00ff);
 
-			for (; it_input_current + step <= it_input_end; it_input_current += step, it_output_current += step)
+			const auto store_to_memory = []<bool MaskOut>(const data_type source, const size_type source_length, output_pointer_type dest) noexcept -> void
+			{
+				// clang-format off
+				const auto shuffle_mask = _mm512_set_epi8(
+					00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 
+					00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 
+					62, 60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 
+					30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8u, 06, 04, 02, 00
+				);
+				// clang-format on
+
+				if constexpr (const auto out = _mm512_castsi512_si256(_mm512_permutexvar_epi8(shuffle_mask, source));
+					MaskOut)
+				{
+					const auto source_mask = make_mask<CharsType::LATIN>(source_length);
+
+					_mm256_mask_storeu_epi8(dest, source_mask, out);
+				}
+				else
+				{
+					auto* p = GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(__m256i*, dest);
+
+					_mm256_storeu_si256(p, out);
+				}
+			};
+
+			while (it_input_current + step <= it_input_end)
 			{
 				const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-				const auto in = [](const pointer_type c, [[maybe_unused]] const __m512i bf) noexcept
-				{
-					if constexpr (const auto v = _mm512_loadu_si512(c);
-						SourceEndian != std::endian::little)
-					{
-						return _mm512_shuffle_epi8(v, bf);
-					}
-					else
-					{
-						return v;
-					}
-				}(it_input_current, byte_flip);
+				const auto in = Simd::load_from_memory<OutputType, false, SourceEndian>(it_input_current, step);
 
 				if (_mm512_cmpgt_epu16_mask(in, v_00ff))
 				{
@@ -444,13 +432,10 @@ public:
 					else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 				}
 
-				_mm256_storeu_si256(
-					GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
-						__m256i*,
-						it_output_current
-					),
-					_mm512_castsi512_si256(_mm512_permutexvar_epi8(shuffle_mask, in))
-				);
+				store_to_memory.template operator()<false>(in, step, it_output_current);
+
+				it_input_current += step;
+				it_output_current += step;
 			}
 
 			if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
@@ -458,19 +443,7 @@ public:
 			{
 				const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-				const auto mask = static_cast<__mmask32>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(remaining)));
-				const auto in = [](const pointer_type c, const __mmask32 m, [[maybe_unused]] const __m512i bf) noexcept
-				{
-					if constexpr (const auto v = _mm512_maskz_loadu_epi16(m, c);
-						SourceEndian != std::endian::little)
-					{
-						return _mm512_shuffle_epi8(v, bf);
-					}
-					else
-					{
-						return v;
-					}
-				}(it_input_current, mask, byte_flip);
+				const auto in = Simd::load_from_memory<OutputType, true, SourceEndian>(it_input_current, remaining);
 
 				if (_mm512_cmpgt_epu16_mask(in, v_00ff))
 				{
@@ -516,7 +489,8 @@ public:
 					else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 				}
 
-				_mm256_mask_storeu_epi8(it_output_current, mask, _mm512_castsi512_si256(_mm512_permutexvar_epi8(shuffle_mask, in)));
+				store_to_memory.template operator()<true>(in, remaining, it_output_current);
+
 				it_input_current += remaining;
 				it_output_current += remaining;
 			}
@@ -540,11 +514,10 @@ public:
 			static_assert(sizeof(process_result) == sizeof(std::uint32_t));
 
 			const auto process = [](
-				const __m512i current_in,
-				const __mmask32 current_in_mask,
-				const size_type current_in_length,
-				const bool current_end_with_surrogate,
-				output_pointer_type current_out
+				const data_type source,
+				const size_type source_length,
+				const bool end_with_surrogate,
+				output_pointer_type dest
 			) noexcept -> process_result
 			{
 				// ReSharper disable CppInconsistentNaming
@@ -568,67 +541,69 @@ public:
 				// ReSharper restore IdentifierTypo
 				// ReSharper restore CppInconsistentNaming
 
-				const auto is_234_byte = _mm512_mask_cmpge_epu16_mask(current_in_mask, current_in, v_0000_0080);
-				if (_ktestz_mask32_u8(current_in_mask, is_234_byte))
+				const auto source_mask = make_mask<OutputType>(source_length);
+
+				const auto is_234_byte = _mm512_mask_cmpge_epu16_mask(source_mask, source, v_0000_0080);
+				if (_ktestz_mask32_u8(source_mask, is_234_byte))
 				{
 					// ASCII only
-					_mm512_mask_cvtepi16_storeu_epi8(current_out, current_in_mask, current_in);
+					_mm512_mask_cvtepi16_storeu_epi8(dest, source_mask, source);
 
 					return process_result
 					{
-							.processed_input = static_cast<std::uint8_t>(current_in_length),
-							.num_output = static_cast<std::uint8_t>(current_in_length),
+							.processed_input = static_cast<std::uint8_t>(source_length),
+							.num_output = static_cast<std::uint8_t>(source_length),
 							.end_with_surrogate = false,
 							.pad = 0
 					};
 				}
 
-				const auto is_12_byte = _mm512_cmplt_epu16_mask(current_in, v_0000_0800);
-				if (_ktestc_mask32_u8(is_12_byte, current_in_mask))
+				const auto is_12_byte = _mm512_cmplt_epu16_mask(source, v_0000_0800);
+				if (_ktestc_mask32_u8(is_12_byte, source_mask))
 				{
 					// 1/2 byte only
 
 					// (A|B)&C
 					const auto two_bytes = _mm512_ternarylogic_epi32(
-						_mm512_slli_epi16(current_in, 8),
-						_mm512_srli_epi16(current_in, 6),
+						_mm512_slli_epi16(source, 8),
+						_mm512_srli_epi16(source, 6),
 						v_0000_3f3f,
 						0xa8
 					);
-					const auto compare_mask = _mm512_mask_blend_epi16(current_in_mask, v_0000_ffff, v_0000_0800);
-					const auto in = _mm512_mask_add_epi16(current_in, is_234_byte, two_bytes, v_0000_80c0);
+					const auto compare_mask = _mm512_mask_blend_epi16(source_mask, v_0000_ffff, v_0000_0800);
+					const auto in = _mm512_mask_add_epi16(source, is_234_byte, two_bytes, v_0000_80c0);
 					const auto smoosh = _mm512_cmpge_epu8_mask(in, compare_mask);
 
 					const auto out = _mm512_maskz_compress_epi8(smoosh, in);
 					const auto out_mask = _pext_u64(smoosh, smoosh);
 
-					_mm512_mask_storeu_epi8(current_out, out_mask, out);
+					_mm512_mask_storeu_epi8(dest, out_mask, out);
 
 					return process_result
 					{
-							.processed_input = static_cast<std::uint8_t>(current_in_length),
-							.num_output = static_cast<std::uint8_t>(current_in_length + std::popcount(_cvtmask32_u32(is_234_byte))),
+							.processed_input = static_cast<std::uint8_t>(source_length),
+							.num_output = static_cast<std::uint8_t>(source_length + std::popcount(_cvtmask32_u32(is_234_byte))),
 							.end_with_surrogate = false,
 							.pad = 0
 					};
 				}
 
-				auto low = _mm512_cvtepu16_epi32(_mm512_castsi512_si256(current_in));
-				auto high = _mm512_cvtepu16_epi32(_mm512_extracti32x8_epi32(current_in, 1));
+				auto low = _mm512_cvtepu16_epi32(_mm512_castsi512_si256(source));
+				auto high = _mm512_cvtepu16_epi32(_mm512_extracti32x8_epi32(source, 1));
 				auto tag_low = v_8080_e000;
 				auto tag_high = v_8080_e000;
 
 				const auto high_surrogate_mask = _mm512_mask_cmpeq_epu16_mask(
-					current_in_mask,
-					_mm512_and_epi32(current_in, v_0000_fc00),
+					source_mask,
+					_mm512_and_epi32(source, v_0000_fc00),
 					v_0000_d800
 				);
 				const auto low_surrogate_mask = _mm512_cmpeq_epu16_mask(
-					_mm512_and_epi32(current_in, v_0000_fc00),
+					_mm512_and_epi32(source, v_0000_fc00),
 					v_0000_dc00
 				);
 
-				bool end_with_surrogate = false;
+				bool this_end_with_surrogate = false;
 				if (not _kortestz_mask32_u8(high_surrogate_mask, low_surrogate_mask))
 				{
 					// handle surrogates
@@ -653,12 +628,12 @@ public:
 					tag_low = _mm512_mask_mov_epi32(tag_low, high_surrogate_mask_low, v_8080_80f0);
 					tag_high = _mm512_mask_mov_epi32(tag_high, high_surrogate_mask_high, v_8080_80f0);
 
-					end_with_surrogate = high_surrogate_mask >> 30;
+					this_end_with_surrogate = high_surrogate_mask >> 30;
 
 					// check for mismatched surrogates
-					if (((high_surrogate_mask << 1) | +current_end_with_surrogate) ^ low_surrogate_mask)
+					if (((high_surrogate_mask << 1) | +end_with_surrogate) ^ low_surrogate_mask)
 					{
-						const auto low_no_high = low_surrogate_mask & ~((high_surrogate_mask << 1) | +current_end_with_surrogate);
+						const auto low_no_high = low_surrogate_mask & ~((high_surrogate_mask << 1) | +end_with_surrogate);
 						const auto high_no_low = high_surrogate_mask & ~(low_surrogate_mask >> 1);
 						const auto length = std::countr_zero(low_no_high | high_no_low);
 
@@ -666,7 +641,7 @@ public:
 						{
 								.processed_input = static_cast<std::uint8_t>(length),
 								.num_output = 0,
-								.end_with_surrogate = current_end_with_surrogate,
+								.end_with_surrogate = end_with_surrogate,
 								.pad = 0
 						};
 					}
@@ -674,7 +649,7 @@ public:
 
 				high = _mm512_maskz_mov_epi32(_cvtu32_mask16(0x0000'7fff), high);
 
-				const auto out_mask = _kandn_mask32(low_surrogate_mask, current_in_mask);
+				const auto out_mask = _kandn_mask32(low_surrogate_mask, source_mask);
 				const auto out_mask_high = static_cast<__mmask16>(out_mask >> 16);
 				const auto out_mask_low = static_cast<__mmask16>(out_mask);
 
@@ -726,14 +701,14 @@ public:
 				const auto want_low_mask = _pext_u64(want_low, want_low);
 				const auto want_high_mask = _pext_u64(want_high, want_high);
 
-				_mm512_mask_storeu_epi8(current_out + 0, want_low_mask, out_low);
-				_mm512_mask_storeu_epi8(current_out + want_low_length, want_high_mask, out_high);
+				_mm512_mask_storeu_epi8(dest + 0, want_low_mask, out_low);
+				_mm512_mask_storeu_epi8(dest + want_low_length, want_high_mask, out_high);
 
 				return process_result
 				{
-						.processed_input = static_cast<std::uint8_t>(current_in_length),
+						.processed_input = static_cast<std::uint8_t>(source_length),
 						.num_output = static_cast<std::uint8_t>(want_low_length + want_high_length),
-						.end_with_surrogate = end_with_surrogate,
+						.end_with_surrogate = this_end_with_surrogate,
 						.pad = 0
 				};
 			};
@@ -741,29 +716,15 @@ public:
 			bool end_with_surrogate = false;
 			while (it_input_current + step <= it_input_end)
 			{
-				const auto in = [](const pointer_type c, [[maybe_unused]] const __m512i bf) noexcept
-				{
-					if constexpr (const auto v = _mm512_loadu_si512(c);
-						SourceEndian != std::endian::native)
-					{
-						return _mm512_shuffle_epi8(v, bf);
-					}
-					else
-					{
-						return v;
-					}
-				}(it_input_current, byte_flip);
-				constexpr auto in_mask = static_cast<__mmask32>(0x7fff'ffff);
-
-				const auto result = process(in, in_mask, step_keep_high_surrogate, end_with_surrogate, it_output_current);
-				if (result.processed_input != step_keep_high_surrogate)
+				const auto in = Simd::load_from_memory<OutputType, false, SourceEndian>(it_input_current, step);
+				if (const auto result = process(in, step_keep_high_surrogate, end_with_surrogate, it_output_current);
+					result.processed_input != step_keep_high_surrogate)
 				{
 					// surrogate mismatch
 
-					const auto valid_in_mask = static_cast<__mmask32>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(result.processed_input)));
-					const auto valid_in = _mm512_maskz_mov_epi16(valid_in_mask, in);
+					const auto valid_in = Simd::load_from_register<OutputType>(in, result.processed_input);
+					const auto valid_result = process(valid_in, result.processed_input, end_with_surrogate, it_output_current);
 
-					const auto valid_result = process(valid_in, valid_in_mask, result.processed_input, end_with_surrogate, it_output_current);
 					it_input_current += valid_result.processed_input;
 					it_output_current += valid_result.num_output;
 
@@ -780,38 +741,26 @@ public:
 					}
 					else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 				}
-
-				it_input_current += result.processed_input;
-				it_output_current += result.num_output;
-				end_with_surrogate = result.end_with_surrogate;
+				else
+				{
+					it_input_current += result.processed_input;
+					it_output_current += result.num_output;
+					end_with_surrogate = result.end_with_surrogate;
+				}
 			}
 
 			if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
 				remaining != 0)
 			{
-				const auto in_mask = static_cast<__mmask32>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(remaining)));
-				const auto in = [](const auto c, const auto m, [[maybe_unused]] const auto bf) noexcept
-				{
-					if constexpr (const auto v = _mm512_maskz_loadu_epi16(m, c);
-						SourceEndian != std::endian::native)
-					{
-						return _mm512_shuffle_epi8(v, bf);
-					}
-					else
-					{
-						return v;
-					}
-				}(it_input_current, in_mask, byte_flip);
-
-				const auto result = process(in, in_mask, remaining, end_with_surrogate, it_output_current);
-				if (result.processed_input != remaining)
+				const auto in = Simd::load_from_memory<OutputType, true, SourceEndian>(it_input_current, remaining);
+				if (const auto result = process(in, remaining, end_with_surrogate, it_output_current);
+					result.processed_input != remaining)
 				{
 					// surrogate mismatch
 
-					const auto valid_in_mask = static_cast<__mmask32>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(result.processed_input)));
-					const auto valid_in = _mm512_maskz_mov_epi16(valid_in_mask, in);
+					const auto valid_in = Simd::load_from_register<OutputType>(in, result.processed_input);
+					const auto valid_result = process(valid_in, result.processed_input, end_with_surrogate, it_output_current);
 
-					const auto valid_result = process(valid_in, valid_in_mask, result.processed_input, end_with_surrogate, it_output_current);
 					it_input_current += valid_result.processed_input;
 					it_output_current += valid_result.num_output;
 
@@ -828,15 +777,18 @@ public:
 					}
 					else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 				}
-
-				it_input_current += result.processed_input;
-				it_output_current += result.num_output;
-				end_with_surrogate = result.end_with_surrogate;
+				else
+				{
+					it_input_current += result.processed_input;
+					it_output_current += result.num_output;
+					end_with_surrogate = result.end_with_surrogate;
+				}
 			}
 		}
 		else if constexpr (OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE)
 		{
 			constexpr auto source_little = SourceEndian == std::endian::native;
+			// ReSharper disable once CppTooWideScopeInitStatement
 			constexpr auto dest_little = OutputType == CharsType::UTF16_LE;
 
 			if constexpr ((source_little and dest_little) or (not source_little and not dest_little))
@@ -853,7 +805,7 @@ public:
 		}
 		else if constexpr (OutputType == CharsType::UTF32)
 		{
-			constexpr auto step = 2 * advance_per_step_with<output_char_type>;
+			constexpr auto step = 1 * advance_per_step_with<output_char_type>;
 			// keep an overlap of one code unit
 			constexpr auto step_keep_high_surrogate = step - 1;
 
@@ -869,38 +821,47 @@ public:
 			};
 			static_assert(sizeof(process_result) == sizeof(std::uint32_t));
 
-			const auto process = [](
-				const __m512i current_in,
-				const __mmask32 current_in_mask,
-				const size_type current_in_length,
-				const bool current_end_with_surrogate,
-				output_pointer_type current_out
+			const auto process = []<bool MaskOut>(
+				const data_type source,
+				const size_type source_length,
+				const bool end_with_surrogate,
+				output_pointer_type dest
 			) noexcept -> process_result
 			{
-				const auto v_0000_fc00 = _mm512_set1_epi16(static_cast<short>(0x0000'fc00));
-				const auto v_0000_d800 = _mm512_set1_epi16(static_cast<short>(0x0000'd800));
-				const auto v_0000_dc00 = _mm512_set1_epi16(static_cast<short>(0x0000'dc00));
+				const auto source_mask = make_mask<OutputType>(source_length);
 
-				const auto high_surrogate_mask = _mm512_mask_cmpeq_epu16_mask(
-					current_in_mask,
-					_mm512_and_epi32(current_in, v_0000_fc00),
-					v_0000_d800
-				);
-				const auto low_surrogate_mask = _mm512_cmpeq_epi16_mask(
-					_mm512_and_epi32(current_in, v_0000_fc00),
-					v_0000_dc00
-				);
+				const auto [high_surrogate_mask, low_surrogate_mask] = [](const data_type i, [[maybe_unused]] const mask_type m) noexcept
+				{
+					const auto v_0000_fc00 = _mm512_set1_epi16(static_cast<short>(0x0000'fc00));
+					const auto v_0000_d800 = _mm512_set1_epi16(static_cast<short>(0x0000'd800));
+					const auto v_0000_dc00 = _mm512_set1_epi16(static_cast<short>(0x0000'dc00));
+
+					if constexpr (const auto v = _mm512_and_si512(i, v_0000_fc00);
+						MaskOut)
+					{
+						const auto high = _mm512_mask_cmpeq_epu16_mask(m, v, v_0000_d800);
+						const auto low = _mm512_cmpeq_epi16_mask(v, v_0000_dc00);
+
+						return std::make_pair(high, low);
+					}
+					else
+					{
+						const auto high = _mm512_cmpeq_epi16_mask(v, v_0000_d800);
+						const auto low = _mm512_cmpeq_epi16_mask(v, v_0000_dc00);
+						return std::make_pair(high, low);
+					}
+				}(source, source_mask);
 
 				if (not _kortestz_mask32_u8(high_surrogate_mask, low_surrogate_mask))
 				{
 					// handle surrogates
 
-					const bool end_with_surrogate = high_surrogate_mask >> 30;
+					const bool this_end_with_surrogate = high_surrogate_mask >> 30;
 
 					// check for mismatched surrogates
-					if (((high_surrogate_mask << 1) | +current_end_with_surrogate) ^ low_surrogate_mask)
+					if (((high_surrogate_mask << 1) | +end_with_surrogate) ^ low_surrogate_mask)
 					{
-						const auto low_no_high = low_surrogate_mask & ~((high_surrogate_mask << 1) | +current_end_with_surrogate);
+						const auto low_no_high = low_surrogate_mask & ~((high_surrogate_mask << 1) | +end_with_surrogate);
 						const auto high_no_low = high_surrogate_mask & ~(low_surrogate_mask >> 1);
 						const auto length = std::countr_zero(low_no_high | high_no_low);
 
@@ -908,7 +869,7 @@ public:
 						{
 								.processed_input = static_cast<std::uint8_t>(length),
 								.num_output = 0,
-								.end_with_surrogate = current_end_with_surrogate,
+								.end_with_surrogate = end_with_surrogate,
 								.pad = 0
 						};
 					}
@@ -922,8 +883,8 @@ public:
 
 					// Expand all code units to 32-bit code units
 					// in > |0000.0000.0000.0000.1101.11aa.aaaa.aaaa|0000.0000.0000.0000.1101.10bb.bbbb.bbbb|
-					const auto low = _mm512_cvtepu16_epi32(_mm512_castsi512_si256(current_in));
-					const auto high = _mm512_cvtepu16_epi32(_mm512_extracti32x8_epi32(current_in, 1));
+					const auto low = _mm512_cvtepu16_epi32(_mm512_castsi512_si256(source));
+					const auto high = _mm512_cvtepu16_epi32(_mm512_extracti32x8_epi32(source, 1));
 
 					// Shift by one 16-bit word to align low surrogates with high surrogates
 					// in >          |0000.0000.0000.0000.1101.11aa.aaaa.aaaa|0000.0000.0000.0000.1101.10bb.bbbb.bbbb|
@@ -948,7 +909,7 @@ public:
 					const auto utf32_low = _mm512_mask_add_epi32(added_low, high_surrogate_mask_low, added_low, constant);
 					const auto utf32_high = _mm512_mask_add_epi32(added_high, high_surrogate_mask_high, added_high, constant);
 
-					const auto valid = ~low_surrogate_mask & current_in_mask;
+					const auto valid = ~low_surrogate_mask & source_mask;
 					const auto valid_high = static_cast<__mmask16>(valid >> 16);
 					const auto valid_low = static_cast<__mmask16>(valid);
 
@@ -960,38 +921,46 @@ public:
 					const auto low_mask = static_cast<__mmask16>(_pext_u32(valid_low, valid_low));
 					const auto high_mask = static_cast<__mmask16>(_pext_u32(valid_high, valid_high));
 
-					_mm512_mask_storeu_epi32(current_out + 0, low_mask, out_low);
-					_mm512_mask_storeu_epi32(current_out + low_length, high_mask, out_high);
+					if constexpr (MaskOut)
+					{
+						_mm512_mask_storeu_epi32(dest + 0, low_mask, out_low);
+						_mm512_mask_storeu_epi32(dest + low_length, high_mask, out_high);
+					}
+					else
+					{
+						_mm512_storeu_si512(dest + 0, out_low);
+						_mm512_mask_storeu_epi32(dest + low_length, high_mask, out_high);
+					}
 
 					return process_result
 					{
-							.processed_input = static_cast<std::uint8_t>(current_in_length),
+							.processed_input = static_cast<std::uint8_t>(source_length),
 							.num_output = static_cast<std::uint8_t>(low_length + high_length),
-							.end_with_surrogate = end_with_surrogate,
+							.end_with_surrogate = this_end_with_surrogate,
 							.pad = 0
 					};
 				}
 
 				// no surrogates
 
-				const auto valid = ~low_surrogate_mask & current_in_mask;
+				const auto valid = ~low_surrogate_mask & source_mask;
 				const auto valid_high = static_cast<__mmask16>(valid >> 16);
 				const auto valid_low = static_cast<__mmask16>(valid);
 
-				const auto out_low = _mm512_cvtepu16_epi32(_mm512_castsi512_si256(current_in));
-				const auto out_high = _mm512_cvtepu16_epi32(_mm512_extracti32x8_epi32(current_in, 1));
+				const auto out_low = _mm512_cvtepu16_epi32(_mm512_castsi512_si256(source));
+				const auto out_high = _mm512_cvtepu16_epi32(_mm512_extracti32x8_epi32(source, 1));
 
 				const auto low_length = std::popcount(valid_low);
 				const auto high_length = std::popcount(valid_high);
 				const auto low_mask = static_cast<__mmask16>(_pext_u32(valid_low, valid_low));
 				const auto high_mask = static_cast<__mmask16>(_pext_u32(valid_high, valid_high));
 
-				_mm512_mask_storeu_epi32(current_out + 0, low_mask, out_low);
-				_mm512_mask_storeu_epi32(current_out + low_length, high_mask, out_high);
+				_mm512_mask_storeu_epi32(dest + 0, low_mask, out_low);
+				_mm512_mask_storeu_epi32(dest + low_length, high_mask, out_high);
 
 				return process_result
 				{
-						.processed_input = static_cast<std::uint8_t>(current_in_length),
+						.processed_input = static_cast<std::uint8_t>(source_length),
 						.num_output = static_cast<std::uint8_t>(low_length + high_length),
 						.end_with_surrogate = false,
 						.pad = 0
@@ -1001,29 +970,15 @@ public:
 			bool end_with_surrogate = false;
 			while (it_input_current + step <= it_input_end)
 			{
-				const auto in = [](const pointer_type c, [[maybe_unused]] const __m512i bf) noexcept
-				{
-					if constexpr (const auto v = _mm512_loadu_si512(c);
-						SourceEndian != std::endian::native)
-					{
-						return _mm512_shuffle_epi8(v, bf);
-					}
-					else
-					{
-						return v;
-					}
-				}(it_input_current, byte_flip);
-				const auto in_mask = _cvtu32_mask32(0x7fff'ffff);
-
-				const auto result = process(in, in_mask, step_keep_high_surrogate, end_with_surrogate, it_output_current);
-				if (result.processed_input != step_keep_high_surrogate)
+				const auto in = Simd::load_from_memory<OutputType, false, SourceEndian>(it_input_current, step);
+				if (const auto result = process.template operator()<false>(in, step_keep_high_surrogate, end_with_surrogate, it_output_current);
+					result.processed_input != step_keep_high_surrogate)
 				{
 					// surrogate mismatch
 
-					const auto valid_in_mask = static_cast<__mmask32>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(result.processed_input)));
-					const auto valid_in = _mm512_maskz_mov_epi16(valid_in_mask, in);
+					const auto valid_in = Simd::load_from_register<OutputType>(in, result.processed_input);
+					const auto valid_result = process.template operator()<true>(valid_in, result.processed_input, end_with_surrogate, it_output_current);
 
-					const auto valid_result = process(valid_in, valid_in_mask, result.processed_input, end_with_surrogate, it_output_current);
 					it_input_current += valid_result.processed_input;
 					it_output_current += valid_result.num_output;
 
@@ -1040,38 +995,26 @@ public:
 					}
 					else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 				}
-
-				it_input_current += result.processed_input;
-				it_output_current += result.num_output;
-				end_with_surrogate = result.end_with_surrogate;
+				else
+				{
+					it_input_current += result.processed_input;
+					it_output_current += result.num_output;
+					end_with_surrogate = result.end_with_surrogate;
+				}
 			}
 
 			if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
 				remaining != 0)
 			{
-				const auto in_mask = static_cast<__mmask32>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(remaining)));
-				const auto in = [](const pointer_type c, const __mmask32 m, [[maybe_unused]] const __m512i bf) noexcept
-				{
-					if constexpr (const auto v = _mm512_maskz_loadu_epi16(m, c);
-						SourceEndian != std::endian::native)
-					{
-						return _mm512_shuffle_epi8(v, bf);
-					}
-					else
-					{
-						return v;
-					}
-				}(it_input_current, in_mask, byte_flip);
-
-				const auto result = process(in, in_mask, remaining, end_with_surrogate, it_output_current);
-				if (result.processed_input != remaining)
+				const auto in = Simd::load_from_memory<OutputType, true, SourceEndian>(it_input_current, remaining);
+				if (const auto result = process.template operator()<true>(in, remaining, end_with_surrogate, it_output_current);
+					result.processed_input != remaining)
 				{
 					// surrogate mismatch
 
-					const auto valid_in_mask = static_cast<__mmask32>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(result.processed_input)));
-					const auto valid_in = _mm512_maskz_mov_epi16(valid_in_mask, in);
+					const auto valid_in = Simd::load_from_register<OutputType>(in, result.processed_input);
+					const auto valid_result = process.template operator()<true>(valid_in, result.processed_input, end_with_surrogate, it_output_current);
 
-					const auto valid_result = process(valid_in, valid_in_mask, result.processed_input, end_with_surrogate, it_output_current);
 					it_input_current += valid_result.processed_input;
 					it_output_current += valid_result.num_output;
 
@@ -1088,10 +1031,12 @@ public:
 					}
 					else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 				}
-
-				it_input_current += result.processed_input;
-				it_output_current += result.num_output;
-				end_with_surrogate = result.end_with_surrogate;
+				else
+				{
+					it_input_current += result.processed_input;
+					it_output_current += result.num_output;
+					end_with_surrogate = result.end_with_surrogate;
+				}
 			}
 		}
 		else
@@ -1211,27 +1156,35 @@ public:
 		const auto it_output_begin = output;
 		auto it_output_current = it_output_begin;
 
-		// clang-format off
-		const auto byte_flip = _mm512_setr_epi64(
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809,
-			0x0607'0405'0203'0001, 0x0e0f'0c0d'0a0b'0809
-		);
-		// clang-format on
+		constexpr auto step = 1 * advance_per_step;
 
-		for (; it_input_current + 32 <= it_input_end; it_input_current += 32, it_output_current += 32)
+		while (it_input_current + step <= it_input_end)
 		{
-			const auto utf16 = _mm512_shuffle_epi8(_mm512_loadu_si512(it_input_current), byte_flip);
-			_mm512_storeu_si512(it_output_current, utf16);
+			const auto in = Simd::load_from_memory<
+				CharsType::UTF16,
+				false,
+				// force shuffle
+				static_cast<std::endian>(std::to_underlying(std::endian::native) + 1)
+			>(it_input_current, step);
+
+			_mm512_storeu_si512(it_output_current, in);
+
+			it_input_current += step;
+			it_output_current += step;
 		}
 
 		if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
 			remaining != 0)
 		{
-			const auto mask = static_cast<__mmask32>((1 << remaining) - 1);
-			const auto utf16 = _mm512_shuffle_epi8(_mm512_maskz_loadu_epi16(mask, it_input_current), byte_flip);
-			_mm512_mask_storeu_epi16(it_output_current, mask, utf16);
+			const auto in = Simd::load_from_memory<
+				CharsType::UTF16,
+				false,
+				// force shuffle
+				static_cast<std::endian>(std::to_underlying(std::endian::native) + 1)
+			>(it_input_current, remaining);
+			const auto in_mask = make_mask<CharsType::UTF16>(remaining);
+
+			_mm512_mask_storeu_epi16(it_output_current, in_mask, in);
 		}
 	}
 
