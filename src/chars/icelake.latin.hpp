@@ -42,6 +42,7 @@ public:
 
 private:
 	using data_type = __m512i;
+	using mask_type = __mmask64;
 
 	constexpr static std::size_t size_per_char = sizeof(char_type);
 	constexpr static std::size_t advance_per_step = sizeof(data_type) / size_per_char;
@@ -51,6 +52,92 @@ private:
 			// zero extend each set of 8 bit latin1 characters to N x-bit integers
 			// 1 => 1
 			sizeof(data_type) / (sizeof(OutChar) / size_per_char);
+
+	template<CharsType Type>
+	[[nodiscard]] static auto make_mask(const size_type source_length) noexcept -> auto
+	{
+		if constexpr (Type == CharsType::LATIN or Type == CharsType::UTF8_CHAR or Type == CharsType::UTF8)
+		{
+			return static_cast<mask_type>(_bzhi_u64(~static_cast<unsigned long long>(0), static_cast<unsigned int>(source_length)));
+		}
+		else if constexpr (Type == CharsType::UTF16 or Type == CharsType::UTF16_LE or Type == CharsType::UTF16_BE)
+		{
+			return static_cast<__mmask32>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(source_length)));
+		}
+		else if constexpr (Type == CharsType::UTF32)
+		{
+			return static_cast<__mmask16>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(source_length)));
+		}
+		else
+		{
+			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+		}
+	}
+
+	template<CharsType Type, bool MaskOut>
+	[[nodiscard]] static auto load_from_memory(const pointer_type source, const size_type source_length) noexcept -> auto
+	{
+		if constexpr (Type == CharsType::LATIN or Type == CharsType::UTF8_CHAR or Type == CharsType::UTF8)
+		{
+			if constexpr (MaskOut)
+			{
+				const auto source_mask = make_mask<Type>(source_length);
+				return _mm512_maskz_loadu_epi8(source_mask, source);
+			}
+			else
+			{
+				return _mm512_loadu_si512(source);
+			}
+		}
+		else if constexpr (Type == CharsType::UTF16 or Type == CharsType::UTF16_LE or Type == CharsType::UTF16_BE)
+		{
+			if constexpr (MaskOut)
+			{
+				const auto source_mask = make_mask<Type>(source_length);
+				return _mm256_maskz_loadu_epi8(source_length, source);
+			}
+			else
+			{
+				// Load 32 ascii characters into a 256-bit register
+				return _mm256_loadu_si256(
+					GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
+						const __m256i *,
+						source
+					)
+				);
+			}
+		}
+		else if constexpr (Type == CharsType::UTF32)
+		{
+			if constexpr (MaskOut)
+			{
+				const auto source_mask = make_mask<Type>(source_length);
+				return _mm_maskz_loadu_epi8(source_mask, source);
+			}
+			else
+			{
+				// Load 16 ascii characters into a 128-bit register
+				return _mm_loadu_si128(
+					GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
+						const __m128i *,
+						source
+					)
+				);
+			}
+		}
+		else
+		{
+			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+		}
+	}
+
+	template<CharsType Type>
+	static auto load_from_register(const data_type source, const size_type source_length) noexcept -> data_type
+	{
+		const auto source_mask = make_mask<Type>(source_length);
+
+		return _mm512_maskz_mov_epi8(source_mask, source);
+	}
 
 public:
 	// note: only used to detect pure ASCII strings, otherwise there is no point in using this function
@@ -65,13 +152,15 @@ public:
 		pointer_type it_input_current = it_input_begin;
 		const pointer_type it_input_end = it_input_begin + input_length;
 
+		constexpr auto step = 1 * advance_per_step;
+
 		const auto ascii = _mm512_set1_epi8(static_cast<char>(0x80));
 		// used iff not ReturnResultType
 		auto running_or = _mm512_setzero_si512();
 
-		for (constexpr auto step = 1 * advance_per_step; it_input_current + step <= it_input_end; it_input_current += step)
+		while (it_input_current + step <= it_input_end)
 		{
-			if constexpr (const auto in = _mm512_loadu_si512(it_input_current);
+			if constexpr (const auto in = Simd::load_from_memory<CharsType::LATIN, false>(it_input_current, step);
 				ReturnResultType)
 			{
 				const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
@@ -87,15 +176,15 @@ public:
 				// running_or | (in & ascii)
 				running_or = _mm512_ternarylogic_epi32(running_or, in, ascii, 0xf8);
 			}
+
+			it_input_current += step;
 		}
 
 		if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
 			remaining != 0)
 		{
-			const auto mask = static_cast<__mmask64>(_bzhi_u64(~static_cast<unsigned long long>(0), static_cast<unsigned int>(remaining)));
-			const auto in = _mm512_maskz_loadu_epi8(mask, it_input_current);
-
-			if constexpr (ReturnResultType)
+			if constexpr (const auto in = Simd::load_from_memory<CharsType::LATIN, true>(it_input_current, remaining);
+				ReturnResultType)
 			{
 				const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
 
@@ -155,17 +244,7 @@ public:
 			// number of 512-bit chunks that fits into the length
 			auto result_length = input_length / step * step;
 
-			if (
-				const auto do_load = [](const auto it) noexcept -> auto
-				{
-					return _mm512_loadu_si512(
-						GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
-							const __m512i *,
-							it
-						)
-					);
-				};
-				input_length >= long_string_optimization_threshold)
+			if (input_length >= long_string_optimization_threshold)
 			{
 				auto eight_64_bits = _mm512_setzero_si512();
 				do
@@ -179,9 +258,9 @@ public:
 					const auto this_turn_end = it_input_current + (iterations * step);
 
 					auto sum = _mm512_setzero_si512();
-					for (; it_input_current < this_turn_end; it_input_current += step)
+					while (it_input_current < this_turn_end)
 					{
-						const auto in = do_load(it_input_current);
+						const auto in = Simd::load_from_memory<CharsType::LATIN, false>(it_input_current, step);
 						const auto mask = _mm512_movepi8_mask(in);
 						// ASCII => 0x00
 						// NON-ASCII => 0xFF
@@ -192,6 +271,7 @@ public:
 						// const auto counts = _mm512_and_si512(mask_vec, _mm512_set1_epi8(1));
 
 						sum = _mm512_add_epi8(sum, counts);
+						it_input_current += step;
 					}
 
 					const auto abs = _mm512_sad_epu8(sum, _mm512_setzero_si512());
@@ -202,12 +282,13 @@ public:
 			}
 			else
 			{
-				for (; it_input_current + step <= it_input_end; it_input_current += step)
+				while (it_input_current + step <= it_input_end)
 				{
-					const auto in = do_load(it_input_current);
+					const auto in = Simd::load_from_memory<CharsType::LATIN, false>(it_input_current, step);
 					const auto not_ascii = _mm512_movepi8_mask(in);
 
 					result_length += std::popcount(not_ascii);
+					it_input_current += step;
 				}
 			}
 
@@ -276,9 +357,13 @@ public:
 		}
 		else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 		{
-			const auto process = []<bool MaskOut>(const __m512i in, const size_type in_length, output_pointer_type out) noexcept -> size_type
+			const auto process = []<bool MaskOut>(
+				const data_type source,
+				const size_type source_length,
+				output_pointer_type dest
+			) noexcept -> size_type
 			{
-				const auto non_ascii = _mm512_movepi8_mask(in);
+				const auto non_ascii = _mm512_movepi8_mask(source);
 				const auto non_ascii_high = static_cast<std::uint32_t>(non_ascii >> 32);
 				const auto non_ascii_low = static_cast<std::uint32_t>(non_ascii);
 
@@ -292,7 +377,7 @@ public:
 				const auto mask_low = ~_pdep_u64(ascii_low, alternate_bits);
 
 				// interleave bytes from top and bottom halves (abcd...ABCD -> aAbBcCdD)
-				const auto in_interleaved = _mm512_permutexvar_epi8(
+				const auto source_interleaved = _mm512_permutexvar_epi8(
 					// clang-format off
 					_mm512_set_epi32(
 						0x3f1f3e1e, 0x3d1d3c1c, 0x3b1b3a1a, 0x39193818,
@@ -301,16 +386,16 @@ public:
 						0x27072606, 0x25052404, 0x23032202, 0x21012000
 					),
 					// clang-format on
-					in
+					source
 				);
 
 				// Mask to denote whether the byte is a leading byte that is not ascii
 				// binary representation of -64: 1100'0000
-				const auto sixth = _mm512_cmpge_epu8_mask(in, _mm512_set1_epi8(static_cast<char>(-64)));
+				const auto sixth = _mm512_cmpge_epu8_mask(source, _mm512_set1_epi8(static_cast<char>(-64)));
 				const auto sixth_high = static_cast<__mmask32>(sixth >> 32);
 				const auto sixth_low = static_cast<__mmask32>(sixth);
 
-				const auto output_low = [](const __m512i interleaved, const __mmask32 s, const __mmask64 mask) noexcept -> auto
+				const auto output_low = [](const data_type interleaved, const __mmask32 s, const __mmask64 mask) noexcept -> auto
 				{
 					// Upscale the bytes to 16-bit value, adding the 0b1100'0010 leading byte in the process.
 					// We adjust for the bytes that have their two most significant bits.
@@ -326,7 +411,7 @@ public:
 					);
 					// prune redundant bytes
 					return _mm512_maskz_compress_epi8(mask, v);
-				}(in_interleaved, sixth_low, mask_low);
+				}(source_interleaved, sixth_low, mask_low);
 
 				const auto output_high = [](const __m512i interleaved, const __mmask32 s, const __mmask64 mask) noexcept -> auto
 				{
@@ -347,53 +432,53 @@ public:
 					);
 					// prune redundant bytes
 					return _mm512_maskz_compress_epi8(mask, v);
-				}(in_interleaved, sixth_high, mask_high);
+				}(source_interleaved, sixth_high, mask_high);
 
-				const auto out_size = static_cast<unsigned int>(in_length + std::popcount(non_ascii));
+				const auto out_size = static_cast<unsigned int>(source_length + std::popcount(non_ascii));
 				const auto out_size_low = 32 + static_cast<unsigned int>(std::popcount(non_ascii_low));
 
 				if constexpr (MaskOut)
 				{
 					// is the second half of the input vector used?
-					if (in_length > 32)
+					if (source_length > 32)
 					{
-						const auto out_size_high = static_cast<unsigned int>(in_length - 32) + static_cast<unsigned int>(std::popcount(non_ascii_high));
+						const auto out_size_high = static_cast<unsigned int>(source_length - 32) + static_cast<unsigned int>(std::popcount(non_ascii_high));
 
-						const auto mask_1 = static_cast<__mmask64>(_bzhi_u64(~static_cast<unsigned long long>(0), out_size_low));
-						const auto mask_2 = static_cast<__mmask64>(_bzhi_u64(~static_cast<unsigned long long>(0), out_size_high));
+						const auto mask_1 = make_mask<OutputType>(out_size_low);
+						const auto mask_2 = make_mask<OutputType>(out_size_high);
 
-						_mm512_mask_storeu_epi8(out + 0, mask_1, output_low);
-						_mm512_mask_storeu_epi8(out + out_size_low, mask_2, output_high);
+						_mm512_mask_storeu_epi8(dest + 0, mask_1, output_low);
+						_mm512_mask_storeu_epi8(dest + out_size_low, mask_2, output_high);
 					}
 					else
 					{
-						const auto mask = static_cast<__mmask64>(_bzhi_u64(~static_cast<unsigned long long>(0), out_size));
+						const auto mask = make_mask<OutputType>(out_size);
 
-						_mm512_mask_storeu_epi8(out, mask, output_low);
+						_mm512_mask_storeu_epi8(dest, mask, output_low);
 					}
 				}
 				else
 				{
-					_mm512_storeu_si512(out + 0, output_low);
-					_mm512_storeu_si512(out + out_size_low, output_high);
+					_mm512_storeu_si512(dest + 0, output_low);
+					_mm512_storeu_si512(dest + out_size_low, output_high);
 				}
 
 				return out_size;
 			};
 
-			const auto process_or_just_store = [process](const __m512i in, const size_type in_length, output_pointer_type out) noexcept -> size_type
+			const auto process_or_just_store = [process](const data_type source, const size_type source_length, output_pointer_type dest) noexcept -> size_type
 			{
-				const auto non_ascii = _mm512_movepi8_mask(in);
+				const auto non_ascii = _mm512_movepi8_mask(source);
 				const auto count = std::popcount(non_ascii);
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(count >= 0);
 
 				if (count != 0)
 				{
-					return process.template operator()<false>(in, in_length, out);
+					return process.template operator()<false>(source, source_length, dest);
 				}
 
-				_mm512_storeu_si512(out, in);
-				return in_length;
+				_mm512_storeu_si512(dest, source);
+				return source_length;
 			};
 
 			constexpr auto step = 1 * advance_per_step_with<output_char_type>;
@@ -401,7 +486,7 @@ public:
 			// if there's at least 128 bytes remaining, we don't need to mask the output
 			while (it_input_current + 2 * step <= it_input_end)
 			{
-				const auto in = _mm512_loadu_si512(it_input_current);
+				const auto in = Simd::load_from_memory<OutputType, false>(it_input_current, step);
 
 				it_output_current += process_or_just_store(in, step, it_output_current);
 				it_input_current += step;
@@ -410,7 +495,7 @@ public:
 			// in the last 128 bytes, the first 64 may require masking the output
 			while (it_input_current + step <= it_input_end)
 			{
-				const auto in = _mm512_loadu_si512(it_input_current);
+				const auto in = Simd::load_from_memory<OutputType, false>(it_input_current, step);
 
 				it_output_current += process.template operator()<true>(in, step, it_output_current);
 				it_input_current += step;
@@ -420,8 +505,7 @@ public:
 			if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
 				remaining != 0)
 			{
-				const auto mask = static_cast<__mmask64>(_bzhi_u64(~static_cast<unsigned long long>(0), static_cast<unsigned int>(remaining)));
-				const auto in = _mm512_maskz_loadu_epi8(mask, it_input_current);
+				const auto in = Simd::load_from_memory<OutputType, true>(it_input_current, remaining);
 
 				it_output_current += process.template operator()<true>(in, remaining, it_output_current);
 				it_input_current += remaining;
@@ -448,12 +532,7 @@ public:
 			while (it_input_current < it_rounded_input_end)
 			{
 				// Load 32 ascii characters into a 256-bit register
-				const auto in = _mm256_loadu_si256(
-					GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
-						const __m256i *,
-						it_input_current
-					)
-				);
+				const auto in = Simd::load_from_memory<OutputType, false>(it_input_current, step);
 				// Zero extend each set of 8 ascii characters to 32 16-bit integers
 				const auto out = [](const auto i, [[maybe_unused]] const auto bf) noexcept -> auto
 				{
@@ -470,6 +549,7 @@ public:
 
 				// Store the results back to memory
 				_mm512_storeu_si512(it_output_current, out);
+
 				it_input_current += step;
 				it_output_current += step;
 			}
@@ -479,8 +559,9 @@ public:
 			if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
 				remaining != 0)
 			{
-				const auto mask = static_cast<__mmask32>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(remaining)));
-				const auto in = _mm256_maskz_loadu_epi8(mask, it_input_current);
+				const auto in = Simd::load_from_memory<OutputType, true>(it_input_current, remaining);
+				const auto in_mask = make_mask<OutputType>(remaining);
+
 				// Zero extend each set of 8 ascii characters to 32 16-bit integers
 				const auto out = [](const auto i, [[maybe_unused]] const auto bf) noexcept -> auto
 				{
@@ -496,7 +577,8 @@ public:
 				}(in, byte_flip);
 
 				// Store the results back to memory
-				_mm512_mask_storeu_epi16(it_output_current, mask, out);
+				_mm512_mask_storeu_epi16(it_output_current, in_mask, out);
+
 				it_input_current += remaining;
 				it_output_current += remaining;
 			}
@@ -511,17 +593,14 @@ public:
 			while (it_input_current < it_rounded_input_end)
 			{
 				// Load 16 ascii characters into a 128-bit register
-				const auto in = _mm_loadu_si128(
-					GAL_PROMETHEUS_SEMANTIC_TRIVIAL_REINTERPRET_CAST(
-						const __m128i *,
-						it_input_current
-					)
-				);
+				const auto in = Simd::load_from_memory<OutputType, false>(it_input_current, step);
+
 				// Zero extend each set of 8 ascii characters to 16 32-bit integers
 				const auto out = _mm512_cvtepu8_epi32(in);
 
 				// Store the results back to memory
 				_mm512_storeu_si512(it_output_current, out);
+
 				it_input_current += step;
 				it_output_current += step;
 			}
@@ -531,13 +610,15 @@ public:
 			if (const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
 				remaining != 0)
 			{
-				const auto mask = static_cast<__mmask16>(_bzhi_u32(~static_cast<unsigned int>(0), static_cast<unsigned int>(remaining)));
-				const auto in = _mm_maskz_loadu_epi8(mask, it_input_current);
+				const auto in = Simd::load_from_memory<OutputType, true>(it_input_current, remaining);
+				const auto in_mask = make_mask<OutputType>(remaining);
+
 				// Zero extend each set of 8 ascii characters to 16 32-bit integers
 				const auto out = _mm512_cvtepu8_epi32(in);
 
 				// Store the results back to memory
-				_mm512_mask_storeu_epi32(it_output_current, mask, out);
+				_mm512_mask_storeu_epi32(it_output_current, in_mask, out);
+
 				it_input_current += remaining;
 				it_output_current += remaining;
 			}
