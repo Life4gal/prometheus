@@ -31,7 +31,7 @@ namespace
 
 					const auto error = Simd<"icelake.latin">::convert<CharsType::LATIN>(source, dest.data());
 					expect(error.has_error() != "valid latin string"_b) << fatal;
-					expect(error.count == value(source.size()));
+					expect(error.count == value(source.size())) << fatal;
 
 					const auto valid = Simd<"icelake.latin">::validate<true>(dest);
 					expect(valid == "valid latin string"_b) << fatal;
@@ -71,7 +71,7 @@ namespace
 
 					const auto error = Simd<"icelake.latin">::convert<CharsType::UTF8_CHAR>(source, dest.data());
 					expect(error.has_error() != "valid utf8_char string"_b) << fatal;
-					expect(error.count == value(source.size()));
+					expect(error.count == value(source.size())) << fatal;
 
 					const auto valid = Scalar<"utf8.char">::validate<true>(dest);
 					expect(valid == "valid utf8_char string"_b) << fatal;
@@ -111,7 +111,7 @@ namespace
 
 					const auto error = Simd<"icelake.latin">::convert<CharsType::UTF8>(source, dest.data());
 					expect(error.has_error() != "valid utf8 string"_b) << fatal;
-					expect(error.count == value(source.size()));
+					expect(error.count == value(source.size())) << fatal;
 
 					const auto valid = Scalar<"utf8">::validate<true>(dest);
 					expect(valid == "valid utf8 string"_b) << fatal;
@@ -151,7 +151,7 @@ namespace
 
 					const auto error = Simd<"icelake.latin">::convert<CharsType::UTF16_LE>(source, dest.data());
 					expect(error.has_error() != "valid utf16_le string"_b) << fatal;
-					expect(error.count == value(source.size()));
+					expect(error.count == value(source.size())) << fatal;
 
 					const auto valid = Simd<"icelake.utf16">::validate<true, std::endian::little>(dest);
 					expect(valid == "valid utf16_le string"_b) << fatal;
@@ -191,7 +191,7 @@ namespace
 
 					const auto error = Simd<"icelake.latin">::convert<CharsType::UTF16_BE>(source, dest.data());
 					expect(error.has_error() != "valid utf16_be string"_b) << fatal;
-					expect(error.count == value(source.size()));
+					expect(error.count == value(source.size())) << fatal;
 
 					const auto valid = Simd<"icelake.utf16">::validate<true, std::endian::big>(dest);
 					expect(valid == "valid utf16_be string"_b) << fatal;
@@ -231,7 +231,7 @@ namespace
 
 					const auto error = Simd<"icelake.latin">::convert<CharsType::UTF32>(source, dest.data());
 					expect(error.has_error() != "valid utf32 string"_b) << fatal;
-					expect(error.count == value(source.size()));
+					expect(error.count == value(source.size())) << fatal;
 
 					const auto valid = Scalar<"utf32">::validate<true>(dest);
 					expect(valid == "valid utf32 string"_b) << fatal;
