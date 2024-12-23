@@ -21,27 +21,35 @@ namespace
 				const auto source = make_random_utf16_le_string_ascii_only();
 
 				expect(Scalar<"utf16">::validate<true, std::endian::little>(source) == "valid utf16 string"_b) << fatal;
+				const auto output_length = Scalar<"utf16">::length<CharsType::LATIN, std::endian::little>(source);
 
 				using output_type = std::basic_string<char>;
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::LATIN, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto error = Scalar<"utf16">::convert<CharsType::LATIN, std::endian::little>(source, dest.data());
-
 					expect(error.has_error() != "valid latin string"_b) << fatal;
-					expect(Scalar<"latin">::validate<true>(dest) == "valid latin string"_b) << fatal;
+					expect(error.count == value(source.size()));
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::LATIN, std::endian::little>(source)) << fatal;
+					const auto valid = Scalar<"latin">::validate<true>(dest);
+					expect(valid == "valid latin string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::LATIN, std::endian::little>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::LATIN, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto length = Scalar<"utf16">::convert<CharsType::LATIN, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 					expect(length == value(dest.size())) << fatal;
-					expect(Scalar<"latin">::validate<true>(dest) == "valid latin string"_b) << fatal;
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::LATIN, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+					const auto valid = Scalar<"latin">::validate<true>(dest);
+					expect(valid == "valid latin string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::LATIN, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 			}
 		};
@@ -53,27 +61,35 @@ namespace
 				const auto source = make_random_utf16_le_string();
 
 				expect(Scalar<"utf16">::validate<true, std::endian::little>(source) == "valid utf16 string"_b) << fatal;
+				const auto output_length = Scalar<"utf16">::length<CharsType::UTF8_CHAR, std::endian::little>(source);
 
 				using output_type = std::basic_string<char>;
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF8_CHAR, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto error = Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::little>(source, dest.data());
-
 					expect(error.has_error() != "valid utf8_char string"_b) << fatal;
-					expect(Scalar<"utf8.char">::validate<true>(dest) == "valid utf8_char string"_b) << fatal;
+					expect(error.count == value(source.size()));
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::little>(source)) << fatal;
+					const auto valid = Scalar<"utf8.char">::validate<true>(dest);
+					expect(valid == "valid utf8_char string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::little>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF8_CHAR, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto length = Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 					expect(length == value(dest.size())) << fatal;
-					expect(Scalar<"utf8.char">::validate<true>(dest) == "valid utf8_char string"_b) << fatal;
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+					const auto valid = Scalar<"utf8.char">::validate<true>(dest);
+					expect(valid == "valid utf8_char string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 			}
 		};
@@ -85,27 +101,35 @@ namespace
 				const auto source = make_random_utf16_le_string();
 
 				expect(Scalar<"utf16">::validate<true, std::endian::little>(source) == "valid utf16 string"_b) << fatal;
+				const auto output_length = Scalar<"utf16">::length<CharsType::UTF8, std::endian::little>(source);
 
 				using output_type = std::basic_string<char8_t>;
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF8, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto error = Scalar<"utf16">::convert<CharsType::UTF8, std::endian::little>(source, dest.data());
-
 					expect(error.has_error() != "valid utf8 string"_b) << fatal;
-					expect(Scalar<"utf8">::validate<true>(dest) == "valid utf8 string"_b) << fatal;
+					expect(error.count == value(source.size()));
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF8, std::endian::little>(source)) << fatal;
+					const auto valid = Scalar<"utf8">::validate<true>(dest);
+					expect(valid == "valid utf8 string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF8, std::endian::little>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF8, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto length = Scalar<"utf16">::convert<CharsType::UTF8, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 					expect(length == value(dest.size())) << fatal;
-					expect(Scalar<"utf8">::validate<true>(dest) == "valid utf8 string"_b) << fatal;
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF8, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+					const auto valid = Scalar<"utf8">::validate<true>(dest);
+					expect(valid == "valid utf8 string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF8, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 			}
 		};
@@ -117,28 +141,35 @@ namespace
 				const auto source = make_random_utf16_le_string();
 
 				expect(Scalar<"utf16">::validate<true, std::endian::little>(source) == "valid utf16 string"_b) << fatal;
-				expect(Scalar<"utf16">::length<CharsType::UTF16_LE, std::endian::little>(source) == value(source.size())) << fatal;
+				const auto output_length = Scalar<"utf16">::length<CharsType::UTF16_LE, std::endian::little>(source);
 
 				using output_type = std::basic_string<char16_t>;
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF16_LE, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto error = Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::little>(source, dest.data());
-
 					expect(error.has_error() != "valid utf16_le string"_b) << fatal;
-					expect(Scalar<"utf16">::validate<true, std::endian::little>(dest) == "valid utf16_le string"_b) << fatal;
+					expect(error.count == value(source.size()));
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::little>(source)) << fatal;
+					const auto valid = Scalar<"utf16">::validate<true, std::endian::little>(dest);
+					expect(valid == "valid utf16_le string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::little>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF16_LE, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto length = Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 					expect(length == value(dest.size())) << fatal;
-					expect(Scalar<"utf16">::validate<true, std::endian::little>(dest) == "valid utf16_le string"_b) << fatal;
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+					const auto valid = Scalar<"utf16">::validate<true, std::endian::little>(dest);
+					expect(valid == "valid utf16_le string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 			}
 		};
@@ -150,28 +181,35 @@ namespace
 				const auto source = make_random_utf16_le_string();
 
 				expect(Scalar<"utf16">::validate<true, std::endian::little>(source) == "valid utf16 string"_b) << fatal;
-				expect(Scalar<"utf16">::length<CharsType::UTF16_BE, std::endian::little>(source) == value(source.size())) << fatal;
+				const auto output_length = Scalar<"utf16">::length<CharsType::UTF16_BE, std::endian::little>(source);
 
 				using output_type = std::basic_string<char16_t>;
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF16_BE, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto error = Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::little>(source, dest.data());
-
 					expect(error.has_error() != "valid utf16_be string"_b) << fatal;
-					expect(Scalar<"utf16">::validate<true, std::endian::big>(dest) == "valid utf16_be string"_b) << fatal;
+					expect(error.count == value(source.size()));
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::little>(source)) << fatal;
+					const auto valid = Scalar<"utf16">::validate<true, std::endian::big>(dest);
+					expect(valid == "valid utf16_be string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::little>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF16_BE, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto length = Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 					expect(length == value(dest.size())) << fatal;
-					expect(Scalar<"utf16">::validate<true, std::endian::big>(dest) == "valid utf16_be string"_b) << fatal;
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+					const auto valid = Scalar<"utf16">::validate<true, std::endian::big>(dest);
+					expect(valid == "valid utf16_be string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 			}
 		};
@@ -183,27 +221,35 @@ namespace
 				const auto source = make_random_utf16_le_string();
 
 				expect(Scalar<"utf16">::validate<true, std::endian::little>(source) == "valid utf8_char string"_b) << fatal;
+				const auto output_length = Scalar<"utf16">::length<CharsType::UTF32, std::endian::little>(source);
 
 				using output_type = std::basic_string<char32_t>;
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF32, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto error = Scalar<"utf16">::convert<CharsType::UTF32, std::endian::little>(source, dest.data());
-
 					expect(error.has_error() != "valid utf32 string"_b) << fatal;
-					expect(Scalar<"utf32">::validate<true>(dest) == "valid utf32 string"_b) << fatal;
+					expect(error.count == value(source.size()));
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF32, std::endian::little>(source)) << fatal;
+					const auto valid = Scalar<"utf32">::validate<true>(dest);
+					expect(valid == "valid utf32 string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF32, std::endian::little>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF32, std::endian::little>(source));
+					dest.resize(output_length);
+
 					const auto length = Scalar<"utf16">::convert<CharsType::UTF32, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 					expect(length == value(dest.size())) << fatal;
-					expect(Scalar<"utf32">::validate<true>(dest) == "valid utf32 string"_b) << fatal;
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF32, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+					const auto valid = Scalar<"utf32">::validate<true>(dest);
+					expect(valid == "valid utf32 string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF32, std::endian::little, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 			}
 		};
@@ -1651,27 +1697,35 @@ namespace
 				const auto source = make_random_utf16_be_string_ascii_only();
 
 				expect(Scalar<"utf16">::validate<true, std::endian::big>(source) == "valid utf16 string"_b) << fatal;
+				const auto output_length = Scalar<"utf16">::length<CharsType::LATIN, std::endian::big>(source);
 
 				using output_type = std::basic_string<char>;
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::LATIN, std::endian::big>(source));
+					dest.resize(output_length);
+
 					const auto error = Scalar<"utf16">::convert<CharsType::LATIN, std::endian::big>(source, dest.data());
-
 					expect(error.has_error() != "valid latin string"_b) << fatal;
-					expect(Scalar<"latin">::validate<true>(dest) == "valid latin string"_b) << fatal;
+					expect(error.count == value(source.size()));
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::LATIN, std::endian::big>(source)) << fatal;
+					const auto valid = Scalar<"latin">::validate<true>(dest);
+					expect(valid == "valid latin string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::LATIN, std::endian::big>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::LATIN, std::endian::big>(source));
+					dest.resize(output_length);
+
 					const auto length = Scalar<"utf16">::convert<CharsType::LATIN, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 					expect(length == value(dest.size())) << fatal;
-					expect(Scalar<"latin">::validate<true>(dest) == "valid latin string"_b) << fatal;
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::LATIN, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+					const auto valid = Scalar<"latin">::validate<true>(dest);
+					expect(valid == "valid latin string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::LATIN, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 			}
 		};
@@ -1683,27 +1737,35 @@ namespace
 				const auto source = make_random_utf16_be_string();
 
 				expect(Scalar<"utf16">::validate<true, std::endian::big>(source) == "valid utf16 string"_b) << fatal;
+				const auto output_length = Scalar<"utf16">::length<CharsType::UTF8_CHAR, std::endian::big>(source);
 
 				using output_type = std::basic_string<char>;
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF8_CHAR, std::endian::big>(source));
+					dest.resize(output_length);
+
 					const auto error = Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::big>(source, dest.data());
-
 					expect(error.has_error() != "valid utf8_char string"_b) << fatal;
-					expect(Scalar<"utf8.char">::validate<true>(dest) == "valid utf8_char string"_b) << fatal;
+					expect(error.count == value(source.size()));
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::big>(source)) << fatal;
+					const auto valid = Scalar<"utf8.char">::validate<true>(dest);
+					expect(valid == "valid utf8_char string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::big>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF8_CHAR, std::endian::big>(source));
+					dest.resize(output_length);
+
 					const auto length = Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 					expect(length == value(dest.size())) << fatal;
-					expect(Scalar<"utf8.char">::validate<true>(dest) == "valid utf8_char string"_b) << fatal;
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+					const auto valid = Scalar<"utf8.char">::validate<true>(dest);
+					expect(valid == "valid utf8_char string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF8_CHAR, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 			}
 		};
@@ -1715,27 +1777,35 @@ namespace
 				const auto source = make_random_utf16_be_string();
 
 				expect(Scalar<"utf16">::validate<true, std::endian::big>(source) == "valid utf16 string"_b) << fatal;
+				const auto output_length = Scalar<"utf16">::length<CharsType::UTF8, std::endian::big>(source);
 
 				using output_type = std::basic_string<char8_t>;
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF8, std::endian::big>(source));
+					dest.resize(output_length);
+
 					const auto error = Scalar<"utf16">::convert<CharsType::UTF8, std::endian::big>(source, dest.data());
-
 					expect(error.has_error() != "valid utf8 string"_b) << fatal;
-					expect(Scalar<"utf8">::validate<true>(dest) == "valid utf8 string"_b) << fatal;
+					expect(error.count == value(source.size()));
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF8, std::endian::big>(source)) << fatal;
+					const auto valid = Scalar<"utf8">::validate<true>(dest);
+					expect(valid == "valid utf8 string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF8, std::endian::big>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF8, std::endian::big>(source));
+					dest.resize(output_length);
+
 					const auto length = Scalar<"utf16">::convert<CharsType::UTF8, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 					expect(length == value(dest.size())) << fatal;
-					expect(Scalar<"utf8">::validate<true>(dest) == "valid utf8 string"_b) << fatal;
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF8, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+					const auto valid = Scalar<"utf8">::validate<true>(dest);
+					expect(valid == "valid utf8 string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF8, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 			}
 		};
@@ -1745,28 +1815,35 @@ namespace
 			const auto source = make_random_utf16_be_string();
 
 			expect(Scalar<"utf16">::validate<true, std::endian::big>(source) == "valid utf16 string"_b) << fatal;
-			expect(Scalar<"utf16">::length<CharsType::UTF16_LE, std::endian::big>(source) == value(source.size())) << fatal;
+			const auto output_length = Scalar<"utf16">::length<CharsType::UTF16_LE, std::endian::big>(source);
 
 			using output_type = std::basic_string<char16_t>;
 			{
 				output_type dest{};
-				dest.resize(Scalar<"utf16">::length<CharsType::UTF16_LE, std::endian::big>(source));
+				dest.resize(output_length);
+
 				const auto error = Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::big>(source, dest.data());
-
 				expect(error.has_error() != "valid utf16_le string"_b) << fatal;
-				expect(Scalar<"utf16">::validate<true, std::endian::little>(dest) == "valid utf16_le string"_b) << fatal;
+				expect(error.count == value(source.size()));
 
-				expect(dest == Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::big>(source)) << fatal;
+				const auto valid = Scalar<"utf16">::validate<true, std::endian::little>(dest);
+				expect(valid == "valid utf16_le string"_b) << fatal;
+
+				const auto result = Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::big>(source);
+				expect(dest == ref(result)) << fatal;
 			}
 			{
 				output_type dest{};
-				dest.resize(Scalar<"utf16">::length<CharsType::UTF16_LE, std::endian::big>(source));
+				dest.resize(output_length);
+
 				const auto length = Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 				expect(length == value(dest.size())) << fatal;
-				expect(Scalar<"utf16">::validate<true, std::endian::little>(dest) == "valid utf16_le string"_b) << fatal;
 
-				expect(dest == Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+				const auto valid = Scalar<"utf16">::validate<true, std::endian::little>(dest);
+				expect(valid == "valid utf16_le string"_b) << fatal;
+
+				const auto result = Scalar<"utf16">::convert<CharsType::UTF16_LE, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+				expect(dest == ref(result)) << fatal;
 			}
 		};
 
@@ -1775,28 +1852,35 @@ namespace
 			const auto source = make_random_utf16_be_string();
 
 			expect(Scalar<"utf16">::validate<true, std::endian::big>(source) == "valid utf16 string"_b) << fatal;
-			expect(Scalar<"utf16">::length<CharsType::UTF16_BE, std::endian::big>(source) == value(source.size())) << fatal;
+			const auto output_length = Scalar<"utf16">::length<CharsType::UTF16_BE, std::endian::big>(source);
 
 			using output_type = std::basic_string<char16_t>;
 			{
 				output_type dest{};
-				dest.resize(Scalar<"utf16">::length<CharsType::UTF16_BE, std::endian::big>(source));
+				dest.resize(output_length);
+
 				const auto error = Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::big>(source, dest.data());
-
 				expect(error.has_error() != "valid utf16_be string"_b) << fatal;
-				expect(Scalar<"utf16">::validate<true, std::endian::big>(dest) == "valid utf16_be string"_b) << fatal;
+				expect(error.count == value(source.size()));
 
-				expect(dest == Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::big>(source)) << fatal;
+				const auto valid = Scalar<"utf16">::validate<true, std::endian::big>(dest);
+				expect(valid == "valid utf16_be string"_b) << fatal;
+
+				const auto result = Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::big>(source);
+				expect(dest == ref(result)) << fatal;
 			}
 			{
 				output_type dest{};
-				dest.resize(Scalar<"utf16">::length<CharsType::UTF16_BE, std::endian::big>(source));
+				dest.resize(output_length);
+
 				const auto length = Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 				expect(length == value(dest.size())) << fatal;
-				expect(Scalar<"utf16">::validate<true, std::endian::big>(dest) == "valid utf16_be string"_b) << fatal;
 
-				expect(dest == Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+				const auto valid = Scalar<"utf16">::validate<true, std::endian::big>(dest);
+				expect(valid == "valid utf16_be string"_b) << fatal;
+
+				const auto result = Scalar<"utf16">::convert<CharsType::UTF16_BE, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+				expect(dest == ref(result)) << fatal;
 			}
 		};
 
@@ -1807,27 +1891,35 @@ namespace
 				const auto source = make_random_utf16_be_string();
 
 				expect(Scalar<"utf16">::validate<true, std::endian::big>(source) == "valid utf32 string"_b) << fatal;
+				const auto output_length = Scalar<"utf16">::length<CharsType::UTF32, std::endian::big>(source);
 
 				using output_type = std::basic_string<char32_t>;
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF32, std::endian::big>(source));
+					dest.resize(output_length);
+
 					const auto error = Scalar<"utf16">::convert<CharsType::UTF32, std::endian::big>(source, dest.data());
-
 					expect(error.has_error() != "valid utf32 string"_b) << fatal;
-					expect(Scalar<"utf32">::validate<true>(dest) == "valid utf32 string"_b) << fatal;
+					expect(error.count == value(source.size()));
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF32, std::endian::big>(source)) << fatal;
+					const auto valid = Scalar<"utf32">::validate<true>(dest);
+					expect(valid == "valid utf32 string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF32, std::endian::big>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 				{
 					output_type dest{};
-					dest.resize(Scalar<"utf16">::length<CharsType::UTF32, std::endian::big>(source));
+					dest.resize(output_length);
+
 					const auto length = Scalar<"utf16">::convert<CharsType::UTF32, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-
 					expect(length == value(dest.size())) << fatal;
-					expect(Scalar<"utf32">::validate<true>(dest) == "valid utf32 string"_b) << fatal;
 
-					expect(dest == Scalar<"utf16">::convert<CharsType::UTF32, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source)) << fatal;
+					const auto valid = Scalar<"utf32">::validate<true>(dest);
+					expect(valid == "valid utf32 string"_b) << fatal;
+
+					const auto result = Scalar<"utf16">::convert<CharsType::UTF32, std::endian::big, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
+					expect(dest == ref(result)) << fatal;
 				}
 			}
 		};
