@@ -39,302 +39,6 @@ namespace gal::prometheus::chars
 			constexpr static std::size_t size_per_char = sizeof(char_type);
 			constexpr static std::size_t advance_per_step = sizeof(data_type) / size_per_char;
 
-		public:
-			template<bool ReturnResultType = false>
-			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
-			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
-
-				const auto input_length = input.size();
-
-				const pointer_type it_input_begin = input.data();
-				pointer_type it_input_current = it_input_begin;
-				const pointer_type it_input_end = it_input_begin + input_length;
-
-				while (it_input_current != it_input_end)
-				{
-					// if it is safe to read 16 more bytes, check that they are latin
-					for (constexpr auto step = 2 * advance_per_step; it_input_current + step <= it_input_end; it_input_current += step)
-					{
-						const auto v1 = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
-						const auto v2 = memory::unaligned_load<data_type>(it_input_current + 1 * advance_per_step);
-
-						if (const auto value = v1 | v2;
-							(value & 0x8080'8080'8080'8080) != 0)
-						{
-							break;
-						}
-					}
-
-					if (it_input_current =
-					    std::ranges::find_if(
-						    it_input_current,
-						    it_input_end,
-						    [](const auto byte) noexcept
-						    {
-							    const auto b = static_cast<std::uint8_t>(byte);
-							    // ASCII ONLY
-							    return b >= 0b1000'0000;
-						    }
-					    );
-						it_input_current == it_input_end
-					)
-					{
-						if constexpr (ReturnResultType)
-						{
-							return result_type{.error = ErrorCode::NONE, .count = input_length};
-						}
-						else
-						{
-							return true;
-						}
-					}
-
-					const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
-
-					if (const auto leading_byte = static_cast<std::uint8_t>(*it_input_current);
-						(leading_byte & 0b1110'0000) == 0b1100'0000)
-					{
-						// we have a two-byte UTF-8
-
-						// minimal bound checking
-						if (it_input_current + 1 >= it_input_end)
-						{
-							if constexpr (ReturnResultType)
-							{
-								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-							}
-							else
-							{
-								return false;
-							}
-						}
-
-						const auto next_byte = static_cast<std::uint8_t>(*(it_input_current + 1));
-
-						if ((next_byte & 0b1100'0000) != 0b1000'0000)
-						{
-							if constexpr (ReturnResultType)
-							{
-								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-							}
-							else
-							{
-								return false;
-							}
-						}
-
-						// range check
-						const auto code_point = static_cast<std::uint32_t>(leading_byte & 0b0001'1111) << 6 | (next_byte & 0b0011'1111);
-
-						if (code_point < 0x80)
-						{
-							if constexpr (ReturnResultType)
-							{
-								return {.error = ErrorCode::OVERLONG, .count = length_if_error};
-							}
-							else
-							{
-								return false;
-							}
-						}
-						if (code_point > 0x7ff)
-						{
-							if constexpr (ReturnResultType)
-							{
-								return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error};
-							}
-							else
-							{
-								return false;
-							}
-						}
-
-						it_input_current += 2;
-					}
-					else if ((leading_byte & 0b1111'0000) == 0b1110'0000)
-					{
-						// we have a three-byte UTF-8
-
-						// minimal bound checking
-						if (it_input_current + 2 >= it_input_end)
-						{
-							if constexpr (ReturnResultType)
-							{
-								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-							}
-							else
-							{
-								return false;
-							}
-						}
-
-						const auto next_byte_1 = static_cast<std::uint8_t>(*(it_input_current + 1));
-						const auto next_byte_2 = static_cast<std::uint8_t>(*(it_input_current + 2));
-
-						if (
-							((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
-							((next_byte_2 & 0b1100'0000) != 0b1000'0000)
-						)
-						{
-							if constexpr (ReturnResultType)
-							{
-								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-							}
-							else
-							{
-								return false;
-							}
-						}
-
-						// range check
-						const auto code_point = static_cast<std::uint32_t>(
-							(leading_byte & 0b0000'1111) << 12 |
-							(next_byte_1 & 0b0011'1111) << 6 |
-							(next_byte_2 & 0b0011'1111)
-						);
-
-						const auto do_return = [length_if_error](const auto error) noexcept
-						{
-							if constexpr (ReturnResultType)
-							{
-								return result_type{.error = error, .count = length_if_error};
-							}
-							else
-							{
-								std::ignore = error;
-								return false;
-							}
-						};
-
-						if (code_point < 0x800)
-						{
-							return do_return(ErrorCode::OVERLONG);
-						}
-						if (code_point > 0xffff)
-						{
-							return do_return(ErrorCode::TOO_LARGE);
-						}
-						if (code_point > 0xd7ff and code_point < 0xe000)
-						{
-							return do_return(ErrorCode::SURROGATE);
-						}
-
-						it_input_current += 3;
-					}
-					else if ((leading_byte & 0b1111'1000) == 0b1111'0000)
-					{
-						// we have a four-byte UTF-8 word.
-
-						// minimal bound checking
-						if (it_input_current + 3 >= it_input_end)
-						{
-							if constexpr (ReturnResultType)
-							{
-								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-							}
-							else
-							{
-								return false;
-							}
-						}
-
-						const auto next_byte_1 = static_cast<std::uint8_t>(*(it_input_current + 1));
-						const auto next_byte_2 = static_cast<std::uint8_t>(*(it_input_current + 2));
-						const auto next_byte_3 = static_cast<std::uint8_t>(*(it_input_current + 3));
-
-						if (
-							((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
-							((next_byte_2 & 0b1100'0000) != 0b1000'0000) or
-							((next_byte_3 & 0b1100'0000) != 0b1000'0000)
-						)
-						{
-							if constexpr (ReturnResultType)
-							{
-								return {.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-							}
-							else
-							{
-								return false;
-							}
-						}
-
-						// range check
-						const auto code_point = static_cast<std::uint32_t>(
-							(leading_byte & 0b0000'0111) << 18 |
-							(next_byte_1 & 0b0011'1111) << 12 |
-							(next_byte_2 & 0b0011'1111) << 6 |
-							(next_byte_3 & 0b0011'1111)
-						);
-
-						const auto do_return = [length_if_error](const auto error) noexcept
-						{
-							if constexpr (ReturnResultType)
-							{
-								return result_type{.error = error, .count = length_if_error};
-							}
-							else
-							{
-								std::ignore = error;
-								return false;
-							}
-						};
-
-						if (code_point <= 0xffff)
-						{
-							return do_return(ErrorCode::OVERLONG);
-						}
-						if (code_point > 0x10'ffff)
-						{
-							return do_return(ErrorCode::TOO_LARGE);
-						}
-
-						it_input_current += 4;
-					}
-					else
-					{
-						// we either have too many continuation bytes or an invalid leading byte
-						if ((leading_byte & 0b1100'0000) == 0b1000'0000)
-						{
-							if constexpr (ReturnResultType)
-							{
-								// we have too many continuation bytes
-								return {.error = ErrorCode::TOO_LONG, .count = length_if_error};
-							}
-							else
-							{
-								return false;
-							}
-						}
-
-						if constexpr (ReturnResultType)
-						{
-							// we have an invalid leading byte
-							return {.error = ErrorCode::HEADER_BITS, .count = length_if_error};
-						}
-						else
-						{
-							return false;
-						}
-					}
-				}
-
-				if constexpr (ReturnResultType)
-				{
-					return {.error = ErrorCode::NONE, .count = input_length};
-				}
-				else
-				{
-					return true;
-				}
-			}
-
-			template<bool ReturnResultType = false>
-			[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
-			{
-				return Scalar::validate<ReturnResultType>({input, std::char_traits<char_type>::length(input)});
-			}
-
 			// Finds the previous leading byte starting backward from `current` and validates with errors from there.
 			// Used to pinpoint the location of an error when an invalid chunk is detected.
 			// We assume that the stream starts with a leading byte, and to check that it is the case,
@@ -343,7 +47,7 @@ namespace gal::prometheus::chars
 				const pointer_type begin,
 				const pointer_type current,
 				const pointer_type end
-			) noexcept -> result_type
+			) noexcept -> auto
 			{
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(begin != nullptr);
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current != nullptr);
@@ -371,8 +75,358 @@ namespace gal::prometheus::chars
 				const pointer_type it_current = current - extra_count;
 
 				auto result = Scalar::validate<true>({it_current, static_cast<size_type>(end - begin + extra_count)});
-				result.count -= extra_count;
+				result.input -= extra_count;
 				return result;
+			}
+
+			template<CharsType OutputType>
+			[[nodiscard]] constexpr static auto rewind_and_convert(
+				const pointer_type furthest_possible_begin,
+				const input_type input,
+				typename output_type_of<OutputType>::pointer output
+			) noexcept -> auto
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(furthest_possible_begin != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() >= furthest_possible_begin);
+				// fixme
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(furthest_possible_begin - input.data() <= 3);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
+
+				// using output_pointer_type = typename output_type<OutputType>::pointer;
+				// using output_char_type = typename output_type<OutputType>::value_type;
+
+				const auto input_length = input.size();
+
+				const pointer_type it_input_begin = input.data();
+				// pointer_type it_input_current = it_input_begin;
+				// const pointer_type it_input_end = it_input_begin + input_length;
+
+				// const output_pointer_type it_output_begin = output;
+				// output_pointer_type it_output_current = it_output_begin;
+
+				// const auto range = std::ranges::subrange{std::make_reverse_iterator(it_input_current), std::make_reverse_iterator(furthest_possible_begin)};
+				const auto range = std::ranges::subrange{furthest_possible_begin, it_input_begin} | std::views::reverse;
+				// fixme: no leading bytes?
+				const auto extra_count = std::ranges::distance(
+					range |
+					std::views::take_while(
+						[](const auto c) noexcept -> bool
+						{
+							return (c & 0b1100'0000) != 0b1000'0000;
+						}
+					)
+				);
+
+				const auto it_current = it_input_begin - extra_count;
+
+				auto result = Scalar::convert<OutputType, InputProcessPolicy::DEFAULT>({it_current, input_length + extra_count}, output);
+				if (result.has_error())
+				{
+					result.input -= extra_count;
+				}
+
+				return result;
+			}
+
+		public:
+			template<bool Detail = false>
+			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> auto
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+
+				constexpr auto process_policy = Detail ? InputProcessPolicy::DEFAULT : InputProcessPolicy::RESULT;
+
+				const auto input_length = input.size();
+
+				const pointer_type it_input_begin = input.data();
+				pointer_type it_input_current = it_input_begin;
+				const pointer_type it_input_end = it_input_begin + input_length;
+
+				// n is the minimum number of characters that need to be processed.
+				// Actual processing may exceed this number (depending on the UTF8 character length)
+				const auto check = [
+							// Used to calculate the processed input length
+							it_input_begin,
+							&it_input_current,
+							// Used to determine the length of the current character if it is a correct UTF8 character
+							it_input_end
+						](const size_type n) noexcept -> auto
+				{
+					// [error/input/output]
+					constexpr auto process_policy_keep_all_result = InputProcessPolicy::WRITE_ALL_CORRECT_2;
+
+					const auto end = it_input_current + n;
+
+					while (it_input_current < end)
+					{
+						const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+						constexpr auto current_output_length = static_cast<std::size_t>(0);
+
+						if (const auto leading_byte = static_cast<std::uint8_t>(*it_input_current);
+							(leading_byte & 0x80) == 0)
+						{
+							// ascii
+							it_input_current += 1;
+						}
+						else if ((leading_byte & 0b1110'0000) == 0b1100'0000)
+						{
+							// we have a two-byte UTF-8
+
+							// minimal bound checking
+							if (it_input_current + 1 >= it_input_end)
+							{
+								return make_result<process_policy_keep_all_result>(
+									ErrorCode::TOO_SHORT,
+									current_input_length,
+									current_output_length
+								);
+							}
+
+							const auto next_byte = static_cast<std::uint8_t>(*(it_input_current + 1));
+
+							if ((next_byte & 0b1100'0000) != 0b1000'0000)
+							{
+								return make_result<process_policy_keep_all_result>(
+									ErrorCode::TOO_SHORT,
+									current_input_length,
+									current_output_length
+								);
+							}
+
+							// range check
+							const auto code_point = static_cast<std::uint32_t>(leading_byte & 0b0001'1111) << 6 | (next_byte & 0b0011'1111);
+
+							if (code_point < 0x80)
+							{
+								return make_result<process_policy_keep_all_result>(
+									ErrorCode::OVERLONG,
+									current_input_length,
+									current_output_length
+								);
+							}
+							if (code_point > 0x7ff)
+							{
+								return make_result<process_policy_keep_all_result>(
+									ErrorCode::TOO_LARGE,
+									current_input_length,
+									current_output_length
+								);
+							}
+
+							it_input_current += 2;
+						}
+						else if ((leading_byte & 0b1111'0000) == 0b1110'0000)
+						{
+							// we have a three-byte UTF-8
+
+							// minimal bound checking
+							if (it_input_current + 2 >= it_input_end)
+							{
+								return make_result<process_policy_keep_all_result>(
+									ErrorCode::TOO_SHORT,
+									current_input_length,
+									current_output_length
+								);
+							}
+
+							const auto next_byte_1 = static_cast<std::uint8_t>(*(it_input_current + 1));
+							const auto next_byte_2 = static_cast<std::uint8_t>(*(it_input_current + 2));
+
+							if (
+								((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
+								((next_byte_2 & 0b1100'0000) != 0b1000'0000)
+							)
+							{
+								return make_result<process_policy_keep_all_result>(
+									ErrorCode::TOO_SHORT,
+									current_input_length,
+									current_output_length
+								);
+							}
+
+							// range check
+							const auto code_point = static_cast<std::uint32_t>(
+								(leading_byte & 0b0000'1111) << 12 |
+								(next_byte_1 & 0b0011'1111) << 6 |
+								(next_byte_2 & 0b0011'1111)
+							);
+
+							const auto do_return = [current_input_length](const auto error) noexcept
+							{
+								return make_result<process_policy_keep_all_result>(
+									error,
+									current_input_length,
+									current_output_length
+								);
+							};
+
+							if (code_point < 0x800)
+							{
+								return do_return(ErrorCode::OVERLONG);
+							}
+							if (code_point > 0xffff)
+							{
+								return do_return(ErrorCode::TOO_LARGE);
+							}
+							if (code_point > 0xd7ff and code_point < 0xe000)
+							{
+								return do_return(ErrorCode::SURROGATE);
+							}
+
+							it_input_current += 3;
+						}
+						else if ((leading_byte & 0b1111'1000) == 0b1111'0000)
+						{
+							// we have a four-byte UTF-8 word.
+
+							// minimal bound checking
+							if (it_input_current + 3 >= it_input_end)
+							{
+								return make_result<process_policy_keep_all_result>(
+									ErrorCode::TOO_SHORT,
+									current_input_length,
+									current_output_length
+								);
+							}
+
+							const auto next_byte_1 = static_cast<std::uint8_t>(*(it_input_current + 1));
+							const auto next_byte_2 = static_cast<std::uint8_t>(*(it_input_current + 2));
+							const auto next_byte_3 = static_cast<std::uint8_t>(*(it_input_current + 3));
+
+							if (
+								((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
+								((next_byte_2 & 0b1100'0000) != 0b1000'0000) or
+								((next_byte_3 & 0b1100'0000) != 0b1000'0000)
+							)
+							{
+								return make_result<process_policy_keep_all_result>(
+									ErrorCode::TOO_SHORT,
+									current_input_length,
+									current_output_length
+								);
+							}
+
+							// range check
+							const auto code_point = static_cast<std::uint32_t>(
+								(leading_byte & 0b0000'0111) << 18 |
+								(next_byte_1 & 0b0011'1111) << 12 |
+								(next_byte_2 & 0b0011'1111) << 6 |
+								(next_byte_3 & 0b0011'1111)
+							);
+
+							const auto do_return = [current_input_length](const auto error) noexcept
+							{
+								return make_result<process_policy_keep_all_result>(
+									error,
+									current_input_length,
+									current_output_length
+								);
+							};
+
+							if (code_point <= 0xffff)
+							{
+								return do_return(ErrorCode::OVERLONG);
+							}
+							if (code_point > 0x10'ffff)
+							{
+								return do_return(ErrorCode::TOO_LARGE);
+							}
+
+							it_input_current += 4;
+						}
+						else
+						{
+							// we either have too many continuation bytes or an invalid leading byte
+							if ((leading_byte & 0b1100'0000) == 0b1000'0000)
+							{
+								// we have too many continuation bytes
+								return make_result<process_policy_keep_all_result>(
+									ErrorCode::TOO_LONG,
+									current_input_length,
+									current_output_length
+								);
+							}
+
+							// we have an invalid leading byte
+							return make_result<process_policy_keep_all_result>(
+								ErrorCode::HEADER_BITS,
+								current_input_length,
+								current_output_length
+							);
+						}
+					}
+
+					// ==================================================
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current >= end);
+					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+					constexpr auto current_output_length = static_cast<std::size_t>(0);
+					return make_result<process_policy_keep_all_result>(
+						ErrorCode::NONE,
+						current_input_length,
+						current_output_length
+					);
+				};
+
+				constexpr auto step = 1 * advance_per_step;
+				// 8 bytes
+				while (it_input_current + step <= it_input_end)
+				{
+					#if GAL_PROMETHEUS_COMPILER_DEBUG
+					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, step};
+					#endif
+
+					if (const auto value = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+						(value & 0x8080'8080'8080'8080) != 0)
+					{
+						// MSB => LSB
+						const auto msb = (value >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
+
+						const auto packed = msb * static_cast<data_type>(0x01'02'04'08'10'20'40'80);
+
+						const auto mask = static_cast<std::uint8_t>(packed >> 56);
+						// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
+						//           ^ n_ascii
+						//                                                 ^ n_next_possible_ascii_thunk_begin
+						const auto n_ascii = std::countr_zero(mask);
+						const auto n_next_possible_ascii_thunk_begin = step - std::countl_zero(mask) - n_ascii;
+
+						it_input_current += n_ascii;
+						if (const auto result = check(n_next_possible_ascii_thunk_begin);
+							result.has_error())
+						{
+							return make_result<process_policy>(
+								result.error,
+								result.input,
+								result.output
+							);
+						}
+					}
+					else
+					{
+						it_input_current += step;
+					}
+				}
+
+				const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
+				GAL_PROMETHEUS_ERROR_ASSUME(remaining < step);
+
+				#if GAL_PROMETHEUS_COMPILER_DEBUG
+				[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, remaining};
+				#endif
+
+				const auto result = check(remaining);
+				return make_result<process_policy>(
+					result.error,
+					result.input,
+					result.output
+				);
+			}
+
+			template<bool Detail = false>
+			[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> auto
+			{
+				return Scalar::validate<Detail>({input, std::char_traits<char_type>::length(input)});
 			}
 
 			// note: we are not BOM aware
@@ -426,16 +480,16 @@ namespace gal::prometheus::chars
 
 			template<
 				CharsType OutputType,
-				InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+				InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 			>
 			[[nodiscard]] constexpr static auto convert(
 				const input_type input,
 				typename output_type_of<OutputType>::pointer output
-			) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
+			) noexcept -> auto
 			{
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
-				if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
+				if constexpr (assume_all_correct<ProcessPolicy>())
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(Scalar::validate(input));
 				}
@@ -455,519 +509,446 @@ namespace gal::prometheus::chars
 
 				if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 				{
+					if constexpr (assume_all_correct<ProcessPolicy>())
+					{
+						if (const auto result = Scalar::validate<true>(input);
+							result.has_error())
+						{
+							if constexpr (write_all_correct<ProcessPolicy>())
+							{
+								std::memcpy(it_output_current, it_input_current, result.input * sizeof(char_type));
+								it_input_current += result.input;
+								it_output_current += result.input;
+							}
+
+							return make_result<ProcessPolicy>(
+								result.error,
+								result.input,
+								result.input
+							);
+						}
+					}
+
 					std::memcpy(it_output_current, it_input_current, input_length * sizeof(char_type));
 					it_input_current += input_length;
 					it_output_current += input_length;
 				}
 				else
 				{
-					while (it_input_current < it_input_end)
-					{
-						// if it is safe to read 16 more bytes, check that they are ascii
-						if (constexpr auto step = 2 * advance_per_step;
-							it_input_current + step <= it_input_end)
-						{
-							const auto v1 = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
-							const auto v2 = memory::unaligned_load<data_type>(it_input_current + 1 * advance_per_step);
+					constexpr auto is_native_endian = (OutputType == CharsType::UTF16_LE) == (std::endian::native == std::endian::little);
+					constexpr auto is_byte_swap_required =
+							(OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE) and
+							(not is_native_endian);
 
-							if (const auto value = v1 | v2;
-								(value & 0x8080'8080'8080'8080) == 0)
+					const auto transform = [
+								// Used to calculate the processed input length
+								it_input_begin,
+								&it_input_current,
+								// Used to determine the length of the current character if it is a correct UTF8 character
+								it_input_end,
+								// Used to calculate the processed output length
+								it_output_begin,
+								&it_output_current
+							]<bool Pure>(const size_type n) noexcept -> auto
+					{
+						// [error/input/output]
+						constexpr auto process_policy_keep_all_result = InputProcessPolicy::WRITE_ALL_CORRECT_2;
+
+						const auto do_write = [&it_output_current](const auto value) noexcept -> void
+						{
+							if constexpr (is_byte_swap_required)
 							{
-								std::ranges::transform(
-									it_input_current,
-									it_input_current + step,
-									it_output_current,
-									[](const auto byte) noexcept
+								*(it_output_current + 0) = std::byteswap(static_cast<output_char_type>(value));
+							}
+							else
+							{
+								*(it_output_current + 0) = static_cast<output_char_type>(value);
+							}
+
+							it_output_current += 1;
+						};
+
+						const auto end = it_input_current + n;
+
+						while (it_input_current < end)
+						{
+							const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+							const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+
+							if constexpr (const auto leading_byte = static_cast<std::uint8_t>(*it_input_current);
+								Pure)
+							{
+								GAL_PROMETHEUS_ERROR_DEBUG_ASSUME((leading_byte & 0x80) == 0);
+
+								do_write(leading_byte);
+
+								it_input_current += 1;
+							}
+							else
+							{
+								if ((leading_byte & 0x80) == 0)
+								{
+									// ascii
+									do_write(leading_byte);
+
+									it_input_current += 1;
+								}
+								else if ((leading_byte & 0b1110'0000) == 0b1100'0000)
+								{
+									// we have a two-byte UTF-8
+
+									// minimal bound checking
+									if (it_input_current + 1 >= it_input_end)
 									{
-										const auto b = static_cast<std::uint8_t>(byte);
-										if constexpr (const auto data = static_cast<output_char_type>(b);
-											(OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE) and
-											(OutputType == CharsType::UTF16_LE) != (std::endian::native == std::endian::little)
+										return make_result<process_policy_keep_all_result>(
+											ErrorCode::TOO_SHORT,
+											current_input_length,
+											current_output_length
+										);
+									}
+
+									const auto next_byte = static_cast<std::uint8_t>(*(it_input_current + 1));
+
+									// checks if the next byte is a valid continuation byte in UTF-8.
+									// A valid continuation byte starts with 10.
+									if ((next_byte & 0b1100'0000) != 0b1000'0000)
+									{
+										return make_result<process_policy_keep_all_result>(
+											ErrorCode::TOO_SHORT,
+											current_input_length,
+											current_output_length
+										);
+									}
+
+									// assembles the Unicode code point from the two bytes.
+									// It does this by discarding the leading 110 and 10 bits from the two bytes,
+									// shifting the remaining bits of the first byte,
+									// and then combining the results with a bitwise OR operation.
+									const auto code_point = static_cast<std::uint32_t>(leading_byte & 0b0001'1111) << 6 | (next_byte & 0b0011'1111);
+
+									if constexpr (not assume_all_correct<ProcessPolicy>())
+									{
+										if (code_point < 0x80)
+										{
+											return make_result<process_policy_keep_all_result>(
+												ErrorCode::OVERLONG,
+												current_input_length,
+												current_output_length
+											);
+										}
+										if (code_point >
+										    []() noexcept -> std::uint32_t
+										    {
+											    if constexpr (OutputType == CharsType::LATIN) { return 0xff; }
+											    else { return 0x7ff; }
+										    }()
 										)
 										{
-											return std::byteswap(data);
+											return make_result<process_policy_keep_all_result>(
+												ErrorCode::TOO_LARGE,
+												current_input_length,
+												current_output_length
+											);
+										}
+									}
+
+									do_write(code_point);
+
+									it_input_current += 2;
+								}
+								else if ((leading_byte & 0b1111'0000) == 0b1110'0000)
+								{
+									// we have a three-byte UTF-8
+
+									if constexpr (
+										OutputType == CharsType::UTF16_LE or
+										OutputType == CharsType::UTF16_BE or
+										OutputType == CharsType::UTF32
+									)
+									{
+										// minimal bound checking
+										if (it_input_current + 2 >= it_input_end)
+										{
+											return make_result<process_policy_keep_all_result>(
+												ErrorCode::TOO_SHORT,
+												current_input_length,
+												current_output_length
+											);
+										}
+
+										const auto next_byte_1 = static_cast<std::uint8_t>(*(it_input_current + 1));
+										const auto next_byte_2 = static_cast<std::uint8_t>(*(it_input_current + 2));
+
+										if constexpr (not assume_all_correct<ProcessPolicy>())
+										{
+											if (
+												((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
+												((next_byte_2 & 0b1100'0000) != 0b1000'0000)
+											)
+											{
+												return make_result<process_policy_keep_all_result>(
+													ErrorCode::TOO_SHORT,
+													current_input_length,
+													current_output_length
+												);
+											}
+										}
+
+										const auto code_point = static_cast<std::uint32_t>(
+											(leading_byte & 0b0000'1111) << 12 |
+											(next_byte_1 & 0b0011'1111) << 6 |
+											(next_byte_2 & 0b0011'1111)
+										);
+
+										if constexpr (not assume_all_correct<ProcessPolicy>())
+										{
+											const auto do_return = [current_input_length, current_output_length](const auto error) noexcept
+											{
+												return make_result<process_policy_keep_all_result>(
+													error,
+													current_input_length,
+													current_output_length
+												);
+											};
+
+											if (code_point < 0x800)
+											{
+												return do_return(ErrorCode::OVERLONG);
+											}
+											if (code_point > 0xffff)
+											{
+												return do_return(ErrorCode::TOO_LARGE);
+											}
+											if (code_point > 0xd7ff and code_point < 0xe000)
+											{
+												return do_return(ErrorCode::SURROGATE);
+											}
+										}
+
+										do_write(code_point);
+
+										it_input_current += 3;
+									}
+									else
+									{
+										return make_result<process_policy_keep_all_result>(
+											ErrorCode::TOO_LARGE,
+											current_input_length,
+											current_output_length
+										);
+									}
+								}
+								else if ((leading_byte & 0b1111'1000) == 0b1111'0000)
+								{
+									// we have a four-byte UTF-8 word.
+
+									if constexpr (
+										OutputType == CharsType::UTF16_LE or
+										OutputType == CharsType::UTF16_BE or
+										OutputType == CharsType::UTF32
+									)
+									{
+										// minimal bound checking
+										if (it_input_current + 3 >= it_input_end)
+										{
+											return make_result<process_policy_keep_all_result>(
+												ErrorCode::TOO_SHORT,
+												current_input_length,
+												current_output_length
+											);
+										}
+
+										const auto next_byte_1 = static_cast<std::uint8_t>(*(it_input_current + 1));
+										const auto next_byte_2 = static_cast<std::uint8_t>(*(it_input_current + 2));
+										const auto next_byte_3 = static_cast<std::uint8_t>(*(it_input_current + 3));
+
+										if constexpr (not assume_all_correct<ProcessPolicy>())
+										{
+											if (
+												((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
+												((next_byte_2 & 0b1100'0000) != 0b1000'0000) or
+												((next_byte_3 & 0b1100'0000) != 0b1000'0000)
+											)
+											{
+												return make_result<process_policy_keep_all_result>(
+													ErrorCode::TOO_SHORT,
+													current_input_length,
+													current_output_length
+												);
+											}
+										}
+
+										const auto code_point = static_cast<std::uint32_t>(
+											(leading_byte & 0b0000'0111) << 18 |
+											(next_byte_1 & 0b0011'1111) << 12 |
+											(next_byte_2 & 0b0011'1111) << 6 |
+											(next_byte_3 & 0b0011'1111)
+										);
+
+										if constexpr (not assume_all_correct<ProcessPolicy>())
+										{
+											const auto do_return = [current_input_length, current_output_length](const auto error) noexcept
+											{
+												return make_result<process_policy_keep_all_result>(
+													error,
+													current_input_length,
+													current_output_length
+												);
+											};
+
+											if (code_point <= 0xffff)
+											{
+												return do_return(ErrorCode::OVERLONG);
+											}
+											if (code_point > 0x10'ffff)
+											{
+												return do_return(ErrorCode::TOO_LARGE);
+											}
+										}
+
+										if constexpr (OutputType == CharsType::UTF32)
+										{
+											do_write(code_point);
 										}
 										else
 										{
-											return data;
+											const auto [high_surrogate, low_surrogate] = [cp = code_point - 0x1'0000]() noexcept -> auto
+											{
+												const auto high = static_cast<std::uint16_t>(0xd800 + (cp >> 10));
+												const auto low = static_cast<std::uint16_t>(0xdc00 + (cp & 0x3ff));
+
+												return std::make_pair(high, low);
+											}();
+
+											do_write(high_surrogate);
+											do_write(low_surrogate);
 										}
-									}
-								);
 
-								it_input_current += step;
-								it_output_current += step;
-								continue;
-							}
-						}
-
-						const auto length_if_error = static_cast<std::size_t>(it_input_current - it_input_begin);
-
-						// suppose it is not an all ASCII byte sequence
-						if (const auto leading_byte = static_cast<std::uint8_t>(*it_input_current);
-							leading_byte < 0b1000'0000)
-						{
-							// converting one ASCII byte
-
-							// ReSharper disable CppClangTidyBugproneBranchClone
-							if constexpr (OutputType == CharsType::LATIN)
-							{
-								*it_output_current = static_cast<output_char_type>(leading_byte);
-							}
-							// ReSharper restore CppClangTidyBugproneBranchClone
-							else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
-							{
-								GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-							}
-							else if constexpr (OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE)
-							{
-								*it_output_current = [leading_byte]() noexcept -> auto
-								{
-									if constexpr ((OutputType == CharsType::UTF16_LE) != (std::endian::native == std::endian::little))
-									{
-										return std::byteswap(static_cast<output_char_type>(leading_byte));
+										it_input_current += 4;
 									}
 									else
 									{
-										return static_cast<output_char_type>(leading_byte);
+										return make_result<process_policy_keep_all_result>(
+											ErrorCode::TOO_LARGE,
+											current_input_length,
+											current_output_length
+										);
 									}
-								}();
-							}
-							// ReSharper disable CppClangTidyBugproneBranchClone
-							else if constexpr (OutputType == CharsType::UTF32)
-							{
-								*it_output_current = static_cast<output_char_type>(leading_byte);
-							}
-							// ReSharper restore CppClangTidyBugproneBranchClone
-							else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-
-							it_input_current += 1;
-							it_output_current += 1;
-						}
-						else if ((leading_byte & 0b1110'0000) == 0b1100'0000)
-						{
-							// we have a two-byte UTF-8
-
-							// minimal bound checking
-							if (it_input_current + 1 >= it_input_end)
-							{
-								if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT)
-								{
-									return 0;
-								}
-								else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-								{
-									return result_type{.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-								}
-								else if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
-								{
-									break;
-								}
-								else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-							}
-
-							const auto next_byte = static_cast<std::uint8_t>(*(it_input_current + 1));
-
-							// checks if the next byte is a valid continuation byte in UTF-8.
-							// A valid continuation byte starts with 10.
-							if ((next_byte & 0b1100'0000) != 0b1000'0000)
-							{
-								if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT)
-								{
-									return 0;
-								}
-								else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-								{
-									return result_type{.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-								}
-								else if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
-								{
-									break;
-								}
-								else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-							}
-
-							// assembles the Unicode code point from the two bytes.
-							// It does this by discarding the leading 110 and 10 bits from the two bytes,
-							// shifting the remaining bits of the first byte,
-							// and then combining the results with a bitwise OR operation.
-							const auto code_point = static_cast<std::uint32_t>(leading_byte & 0b0001'1111) << 6 | (next_byte & 0b0011'1111);
-
-							if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
-							{
-								if (code_point < 0x80)
-								{
-									if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT)
-									{
-										return 0;
-									}
-									else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-									{
-										return result_type{.error = ErrorCode::OVERLONG, .count = length_if_error};
-									}
-									else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-								}
-								if (code_point >
-								    []() noexcept -> std::uint32_t
-								    {
-									    if constexpr (OutputType == CharsType::LATIN) { return 0xff; }
-									    else { return 0x7ff; }
-								    }()
-								)
-								{
-									if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT)
-									{
-										return 0;
-									}
-									else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-									{
-										return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error};
-									}
-									else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-								}
-							}
-
-							// ReSharper disable CppClangTidyBugproneBranchClone
-							if constexpr (OutputType == CharsType::LATIN)
-							{
-								*it_output_current = static_cast<output_char_type>(code_point);
-							}
-							// ReSharper restore CppClangTidyBugproneBranchClone
-							else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
-							{
-								GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-							}
-							else if constexpr (OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE)
-							{
-								*it_output_current = [code_point]() noexcept -> auto
-								{
-									if constexpr ((OutputType == CharsType::UTF16_LE) != (std::endian::native == std::endian::little))
-									{
-										return std::byteswap(static_cast<output_char_type>(code_point));
-									}
-									else { return static_cast<output_char_type>(code_point); }
-								}();
-							}
-							// ReSharper disable CppClangTidyBugproneBranchClone
-							else if constexpr (OutputType == CharsType::UTF32)
-							{
-								*it_output_current = static_cast<output_char_type>(code_point);
-							}
-							// ReSharper restore CppClangTidyBugproneBranchClone
-							else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-
-							it_input_current += 2;
-							it_output_current += 1;
-						}
-						else if ((leading_byte & 0b1111'0000) == 0b1110'0000)
-						{
-							// we have a three-byte UTF-8
-
-							if constexpr (OutputType == CharsType::LATIN)
-							{
-								if constexpr (
-									ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-									ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
-								)
-								{
-									return 0;
-								}
-								else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-								{
-									return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error};
-								}
-								else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-							}
-							else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
-							{
-								GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-							}
-							else if constexpr (
-								OutputType == CharsType::UTF16_LE or
-								OutputType == CharsType::UTF16_BE or
-								OutputType == CharsType::UTF32
-							)
-							{
-								// minimal bound checking
-								if (it_input_current + 2 >= it_input_end)
-								{
-									if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT)
-									{
-										return 0;
-									}
-									else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-									{
-										return result_type{.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-									}
-									else if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
-									{
-										break;
-									}
-									else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-								}
-
-								const auto next_byte_1 = static_cast<std::uint8_t>(*(it_input_current + 1));
-								const auto next_byte_2 = static_cast<std::uint8_t>(*(it_input_current + 2));
-
-								if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
-								{
-									if (
-										((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
-										((next_byte_2 & 0b1100'0000) != 0b1000'0000)
-									)
-									{
-										if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT)
-										{
-											return 0;
-										}
-										if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-										{
-											return result_type{.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-										}
-										else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-									}
-								}
-
-								const auto code_point = static_cast<std::uint32_t>(
-									(leading_byte & 0b0000'1111) << 12 |
-									(next_byte_1 & 0b0011'1111) << 6 |
-									(next_byte_2 & 0b0011'1111)
-								);
-
-								if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
-								{
-									const auto do_return = [length_if_error](const auto error) noexcept
-									{
-										if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT)
-										{
-											std::ignore = error;
-											return 0;
-										}
-										else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-										{
-											return result_type{.error = error, .count = length_if_error};
-										}
-										else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-									};
-
-									if (code_point < 0x800)
-									{
-										return do_return(ErrorCode::OVERLONG);
-									}
-									if (code_point > 0xffff)
-									{
-										return do_return(ErrorCode::TOO_LARGE);
-									}
-									if (code_point > 0xd7ff and code_point < 0xe000)
-									{
-										return do_return(ErrorCode::SURROGATE);
-									}
-								}
-
-								*it_output_current = [cp = static_cast<output_char_type>(code_point)]() noexcept
-								{
-									if constexpr (
-										(OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE) and
-										(OutputType == CharsType::UTF16_LE) != (std::endian::native == std::endian::little)
-									)
-									{
-										return std::byteswap(cp);
-									}
-									else
-									{
-										return cp;
-									}
-								}();
-
-								it_input_current += 3;
-								it_output_current += 1;
-							}
-							else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-						}
-						else if ((leading_byte & 0b1111'1000) == 0b1111'0000)
-						{
-							// we have a four-byte UTF-8 word.
-
-							if constexpr (OutputType == CharsType::LATIN)
-							{
-								if constexpr (
-									ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-									ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
-								)
-								{
-									return 0;
-								}
-								else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-								{
-									return result_type{.error = ErrorCode::TOO_LARGE, .count = length_if_error};
-								}
-								else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-							}
-							else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
-							{
-								GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-							}
-							// NOLINT(bugprone-branch-clone)
-							else if constexpr (
-								OutputType == CharsType::UTF16_LE or
-								OutputType == CharsType::UTF16_BE or
-								OutputType == CharsType::UTF32
-							)
-							{
-								// minimal bound checking
-								if (it_input_current + 3 >= it_input_end)
-								{
-									if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT)
-									{
-										return 0;
-									}
-									else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-									{
-										return result_type{.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-									}
-									else if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
-									{
-										break;
-									}
-									else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-								}
-
-								const auto next_byte_1 = static_cast<std::uint8_t>(*(it_input_current + 1));
-								const auto next_byte_2 = static_cast<std::uint8_t>(*(it_input_current + 2));
-								const auto next_byte_3 = static_cast<std::uint8_t>(*(it_input_current + 3));
-
-								if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
-								{
-									if (
-										((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
-										((next_byte_2 & 0b1100'0000) != 0b1000'0000) or
-										((next_byte_3 & 0b1100'0000) != 0b1000'0000)
-									)
-									{
-										if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT)
-										{
-											return 0;
-										}
-										if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-										{
-											return result_type{.error = ErrorCode::TOO_SHORT, .count = length_if_error};
-										}
-										else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-									}
-								}
-
-								const auto code_point = static_cast<std::uint32_t>(
-									(leading_byte & 0b0000'0111) << 18 |
-									(next_byte_1 & 0b0011'1111) << 12 |
-									(next_byte_2 & 0b0011'1111) << 6 |
-									(next_byte_3 & 0b0011'1111)
-								);
-
-								if constexpr (ProcessPolicy != InputProcessPolicy::ASSUME_VALID_INPUT)
-								{
-									const auto do_return = [length_if_error](const auto error) noexcept
-									{
-										if constexpr (ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT)
-										{
-											std::ignore = error;
-											return 0;
-										}
-										else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-										{
-											return result_type{.error = error, .count = length_if_error};
-										}
-										else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-									};
-
-									if (code_point <= 0xffff)
-									{
-										return do_return(ErrorCode::OVERLONG);
-									}
-									if (code_point > 0x10'ffff)
-									{
-										return do_return(ErrorCode::TOO_LARGE);
-									}
-								}
-
-								if constexpr (OutputType == CharsType::UTF32)
-								{
-									*it_output_current = static_cast<output_char_type>(code_point);
-									it_output_current += 1;
 								}
 								else
 								{
-									const auto [high_surrogate, low_surrogate] = [cp = code_point - 0x1'0000]() noexcept -> auto
+									// we either have too many continuation bytes or an invalid leading byte
+									if ((leading_byte & 0b1100'0000) == 0b1000'0000)
 									{
-										const auto high = static_cast<std::uint16_t>(0xd800 + (cp >> 10));
-										const auto low = static_cast<std::uint16_t>(0xdc00 + (cp & 0x3ff));
+										// we have too many continuation bytes
+										return make_result<process_policy_keep_all_result>(
+											ErrorCode::TOO_LONG,
+											current_input_length,
+											current_output_length
+										);
+									}
 
-										if constexpr ((OutputType == CharsType::UTF16_LE) != (std::endian::native == std::endian::little))
-										{
-											return std::make_pair(std::byteswap(high), std::byteswap(low));
-										}
-										else
-										{
-											return std::make_pair(high, low);
-										}
-									}();
-
-									*it_output_current = static_cast<output_char_type>(high_surrogate);
-									it_output_current += 1;
-
-									*it_output_current = static_cast<output_char_type>(low_surrogate);
-									it_output_current += 1;
+									// we have an invalid leading byte
+									return make_result<process_policy_keep_all_result>(
+										ErrorCode::HEADER_BITS,
+										current_input_length,
+										current_output_length
+									);
 								}
-
-								it_input_current += 4;
 							}
-							else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+						}
+
+						// ==================================================
+						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current >= end);
+						const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+						constexpr auto current_output_length = static_cast<std::size_t>(0);
+						return make_result<process_policy_keep_all_result>(
+							ErrorCode::NONE,
+							current_input_length,
+							current_output_length
+						);
+					};
+
+					constexpr auto step = 1 * advance_per_step;
+					// 8 bytes
+					while (it_input_current + step <= it_input_end)
+					{
+						#if GAL_PROMETHEUS_COMPILER_DEBUG
+						[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, step};
+						#endif
+
+						if (const auto value = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+							(value & 0x8080'8080'8080'8080) != 0)
+						{
+							// MSB => LSB
+							const auto msb = (value >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
+
+							const auto packed = msb * static_cast<data_type>(0x01'02'04'08'10'20'40'80);
+
+							const auto mask = static_cast<std::uint8_t>(packed >> 56);
+							// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
+							//           ^ n_ascii
+							//                                                 ^ n_next_possible_ascii_thunk_begin
+							const auto n_ascii = std::countr_zero(mask);
+							const auto n_next_possible_ascii_thunk_begin = step - std::countl_zero(mask) - n_ascii;
+
+							const auto result1 = transform.template operator()<true>(n_ascii);
+							GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not result1.has_error());
+
+							if (const auto result2 = transform.template operator()<false>(n_next_possible_ascii_thunk_begin);
+								result2.has_error())
+							{
+								return make_result<ProcessPolicy>(
+									result2.error,
+									result2.input,
+									result2.output
+								);
+							}
 						}
 						else
 						{
-							if constexpr (
-								ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-								ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
-							)
-							{
-								return 0;
-							}
-							else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-							{
-								// we either have too many continuation bytes or an invalid leading byte
-								if ((leading_byte & 0b1100'0000) == 0b1000'0000)
-								{
-									// we have too many continuation bytes
-									return result_type{.error = ErrorCode::TOO_LONG, .count = length_if_error};
-								}
-								// we have an invalid leading byte
-								return result_type{.error = ErrorCode::HEADER_BITS, .count = length_if_error};
-							}
-							else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+							const auto result = transform.template operator()<true>(step);
+							GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not result.has_error());
 						}
+					}
+
+					const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
+					GAL_PROMETHEUS_ERROR_ASSUME(remaining < step);
+
+					#if GAL_PROMETHEUS_COMPILER_DEBUG
+					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, remaining};
+					#endif
+
+					if (const auto result = transform.template operator()<false>(remaining);
+						result.has_error())
+					{
+						return make_result<ProcessPolicy>(
+							result.error,
+							result.input,
+							result.output
+						);
 					}
 				}
 
-				if constexpr (
-					ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-					ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
-				)
-				{
-					return static_cast<std::size_t>(it_output_current - it_output_begin);
-				}
-				else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-				{
-					return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
-				}
-				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+
+				const auto current_input_length = static_cast<std::size_t>(input_length);
+				const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+				return make_result<ProcessPolicy>(
+					ErrorCode::NONE,
+					current_input_length,
+					current_output_length
+				);
 			}
 
 			template<
 				CharsType OutputType,
-				InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+				InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 			>
 			[[nodiscard]] constexpr static auto convert(
 				const pointer_type input,
 				typename output_type_of<OutputType>::pointer output
-			) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
+			) noexcept -> auto
 			{
 				return Scalar::convert<OutputType, ProcessPolicy>({input, std::char_traits<char_type>::length(input)}, output);
 			}
@@ -975,7 +956,7 @@ namespace gal::prometheus::chars
 			template<
 				typename StringType,
 				CharsType OutputType,
-				InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+				InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 			>
 				requires requires(StringType& string)
 				{
@@ -987,7 +968,7 @@ namespace gal::prometheus::chars
 			[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> StringType
 			{
 				StringType result{};
-				result.resize(length<OutputType>(input));
+				result.resize(Scalar::length<OutputType>(input));
 
 				std::ignore = Scalar::convert<OutputType, ProcessPolicy>(input, result.data());
 				return result;
@@ -996,7 +977,7 @@ namespace gal::prometheus::chars
 			template<
 				typename StringType,
 				CharsType OutputType,
-				InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+				InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 			>
 				requires requires(StringType& string)
 				{
@@ -1007,86 +988,30 @@ namespace gal::prometheus::chars
 				}
 			[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> StringType
 			{
-				StringType result{};
-				result.resize(length<OutputType>(input));
-
-				return Scalar::convert<OutputType, ProcessPolicy>({input, std::char_traits<char_type>::length(input)}, result.data());
+				return Scalar::convert<OutputType, ProcessPolicy>({input, std::char_traits<char_type>::length(input)});
 			}
 
 			template<
 				CharsType OutputType,
-				InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+				InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 			>
 			[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> std::basic_string<typename output_type_of<OutputType>::value_type>
 			{
-				std::basic_string<typename output_type_of<OutputType>::value_type> result{};
-				result.resize(length<OutputType>(input));
-
-				std::ignore = Scalar::convert<OutputType, ProcessPolicy>(input, result.data());
-				return result;
+				using string_type = std::basic_string<typename output_type_of<OutputType>::value_type>;
+				return Scalar::convert<string_type, OutputType, ProcessPolicy>(input);
 			}
 
 			template<
 				CharsType OutputType,
-				InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+				InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 			>
 			[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> std::basic_string<typename output_type_of<OutputType>::value_type>
 			{
-				std::basic_string<typename output_type_of<OutputType>::value_type> result{};
-				result.resize(length<OutputType>(input));
-
-				return Scalar::convert<OutputType, ProcessPolicy>({input, std::char_traits<char_type>::length(input)}, result.data());
+				using string_type = std::basic_string<typename output_type_of<OutputType>::value_type>;
+				return Scalar::convert<string_type, OutputType, ProcessPolicy>(input);
 			}
 
-			template<CharsType OutputType>
-			[[nodiscard]] constexpr static auto rewind_and_convert(
-				const pointer_type furthest_possible_begin,
-				const input_type input,
-				typename output_type_of<OutputType>::pointer output
-			) noexcept -> result_type
-			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(furthest_possible_begin != nullptr);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() >= furthest_possible_begin);
-				// fixme
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(furthest_possible_begin - input.data() <= 3);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
-
-				// using output_pointer_type = typename output_type<OutputType>::pointer;
-				// using output_char_type = typename output_type<OutputType>::value_type;
-
-				const auto input_length = input.size();
-
-				const pointer_type it_input_begin = input.data();
-				// pointer_type it_input_current = it_input_begin;
-				// const pointer_type it_input_end = it_input_begin + input_length;
-
-				// const output_pointer_type it_output_begin = output;
-				// output_pointer_type it_output_current = it_output_begin;
-
-				// const auto range = std::ranges::subrange{std::make_reverse_iterator(it_input_current), std::make_reverse_iterator(furthest_possible_begin)};
-				const auto range = std::ranges::subrange{furthest_possible_begin, it_input_begin} | std::views::reverse;
-				// fixme: no leading bytes?
-				const auto extra_count = std::ranges::distance(
-					range |
-					std::views::take_while([](const auto c) noexcept -> bool
-					{
-						return (c & 0b1100'0000) != 0b1000'0000;
-					})
-				);
-
-				const auto it_current = it_input_begin - extra_count;
-
-				auto result = Scalar::convert<OutputType, InputProcessPolicy::RETURN_RESULT_TYPE>({it_current, input_length + extra_count}, output);
-				if (result.has_error())
-				{
-					result.count -= extra_count;
-				}
-
-				return result;
-			}
-
-			[[nodiscard]] constexpr static auto code_points(const input_type input) noexcept -> std::size_t
+			[[nodiscard]] constexpr static auto code_points(const input_type input) noexcept -> size_type
 			{
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
