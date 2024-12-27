@@ -52,22 +52,27 @@ public:
 
 		constexpr auto step = 1 * advance_per_step;
 		// 8 bytes
-		while (it_input_current + 1 * step <= it_input_end)
+		while (it_input_current + step <= it_input_end)
 		{
-			const auto v = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+			#if GAL_PROMETHEUS_COMPILER_DEBUG
+			[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, step};
+			#endif
 
-			if (const auto value = v;
+			if (const auto value = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
 				(value & 0x8080'8080'8080'8080) != 0)
 			{
 				// MSB => LSB
-				const auto msb = (v >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
+				const auto msb = (value >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
 
 				const auto packed = msb * static_cast<data_type>(0x01'02'04'08'10'20'40'80);
 
 				const auto mask = static_cast<std::uint8_t>(packed >> 56);
-				const auto pos = std::countr_zero(mask);
+				// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
+				//           ^ n_ascii
+				//                                                 ^ n_next_possible_ascii_thunk_begin
+				const auto n_ascii = std::countr_zero(mask);
 
-				it_input_current += pos;
+				it_input_current += n_ascii;
 
 				const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
 				constexpr auto current_output_length = static_cast<std::size_t>(0);
@@ -79,12 +84,19 @@ public:
 				);
 			}
 
-			it_input_current += 1 * step;
+			it_input_current += step;
 		}
-		// any bytes
+
+		const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
+		GAL_PROMETHEUS_ERROR_ASSUME(remaining < step);
+
+		#if GAL_PROMETHEUS_COMPILER_DEBUG
+		[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, remaining};
+		#endif
+
 		if (std::ranges::any_of(
 				it_input_current,
-				it_input_end,
+				it_input_current + remaining,
 				[](const auto byte) noexcept -> bool
 				{
 					const auto b = static_cast<std::uint8_t>(byte);
@@ -103,7 +115,7 @@ public:
 				current_output_length
 			);
 		}
-		it_input_current = it_input_end;
+		it_input_current += remaining;
 
 		// ==================================================
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
@@ -147,15 +159,17 @@ public:
 
 			constexpr auto step = 1 * advance_per_step;
 			// 8 bytes
-			while (it_input_current + 1 * step <= it_input_end)
+			while (it_input_current + step <= it_input_end)
 			{
-				const auto v = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+				#if GAL_PROMETHEUS_COMPILER_DEBUG
+				[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, step};
+				#endif
 
-				if (const auto value = v;
+				if (const auto value = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
 					(value & 0x8080'8080'8080'8080) != 0)
 				{
 					// MSB => LSB
-					const auto msb = (v >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
+					const auto msb = (value >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
 
 					// const auto packed = msb * static_cast<data_type>(0x01'01'01'01'01'01'01'01);
 					//
@@ -166,12 +180,19 @@ public:
 					output_length += count;
 				}
 
-				it_input_current += 1 * step;
+				it_input_current += step;
 			}
-			// any bytes
+
+			const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
+			GAL_PROMETHEUS_ERROR_ASSUME(remaining < step);
+
+			#if GAL_PROMETHEUS_COMPILER_DEBUG
+			[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, remaining};
+			#endif
+
 			return std::transform_reduce(
 				it_input_current,
-				it_input_end,
+				it_input_current + remaining,
 				output_length,
 				std::plus<>{},
 				[](const auto byte) noexcept
@@ -237,131 +258,112 @@ public:
 		}
 		else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 		{
-			while (it_input_current < it_input_end)
+			const auto transform = [&it_input_current, &it_output_current]<bool Pure>(const size_type n) noexcept -> void
 			{
-				// at least one character is processed in each round
-				size_type n = 1;
-
-				constexpr auto step = 1 * advance_per_step;
-				// 8 bytes
-				while (it_input_current + 1 * step <= it_input_end)
-				{
-					const auto v = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
-
-					if (const auto value = v;
-						(value & 0x8080'8080'8080'8080) != 0)
-					{
-						// MSB => LSB
-						const auto msb = (v >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
-
-						const auto packed = msb * static_cast<data_type>(0x01'02'04'08'10'20'40'80);
-
-						const auto mask = static_cast<std::uint8_t>(packed >> 56);
-						const auto pos_ascii = std::countr_zero(mask);
-
-						std::ranges::transform(
-							it_input_current,
-							it_input_current + pos_ascii,
-							it_output_current,
-							[](const auto byte) noexcept
-							{
-								const auto b = static_cast<std::uint8_t>(byte);
-								return static_cast<output_char_type>(b);
-							}
-						);
-
-						// skip n characters until next possible block of ascii characters
-						n = step - std::countl_zero(mask) - pos_ascii;
-						it_input_current += pos_ascii;
-						it_output_current += pos_ascii;
-						break;
-					}
-
-					std::ranges::transform(
-						it_input_current,
-						it_input_current + step,
-						it_output_current,
-						[](const auto byte) noexcept
-						{
-							const auto b = static_cast<std::uint8_t>(byte);
-							return static_cast<output_char_type>(b);
-						}
-					);
-
-					// pure ascii block, no extra characters need to be processed separately
-					n = 0;
-					it_input_current += 1 * step;
-					it_output_current += 1 * step;
-				}
-
-				// any bytes
+				const auto end = it_input_current + n;
 				std::ranges::for_each(
 					it_input_current,
-					it_input_current + n,
+					end,
 					[&it_output_current](const auto byte) noexcept -> void
 					{
-						if (const auto data = static_cast<std::uint8_t>(byte);
-							(data & 0x80) == 0)
+						if constexpr (const auto data = static_cast<std::uint8_t>(byte);
+							Pure)
 						{
+							GAL_PROMETHEUS_ERROR_DEBUG_ASSUME((data & 0x80) == 0);
+
 							*(it_output_current + 0) = static_cast<output_char_type>(data);
 
 							it_output_current += 1;
 						}
 						else
 						{
-							*(it_output_current + 0) = static_cast<output_char_type>((data >> 6) | 0b1100'0000);
-							*(it_output_current + 1) = static_cast<output_char_type>((data & 0b0011'1111) | 0b1000'0000);
+							if ((data & 0x80) == 0)
+							{
+								*(it_output_current + 0) = static_cast<output_char_type>(data);
 
-							it_output_current += 2;
+								it_output_current += 1;
+							}
+							else
+							{
+								*(it_output_current + 0) = static_cast<output_char_type>((data >> 6) | 0b1100'0000);
+								*(it_output_current + 1) = static_cast<output_char_type>((data & 0b0011'1111) | 0b1000'0000);
+
+								it_output_current += 2;
+							}
 						}
 					}
 				);
-				it_input_current += n;
+				it_input_current = end;
+			};
+
+			constexpr auto step = 1 * advance_per_step;
+			// 8 bytes
+			while (it_input_current + step <= it_input_end)
+			{
+				#if GAL_PROMETHEUS_COMPILER_DEBUG
+				[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, step};
+				#endif
+
+				if (const auto value = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+					(value & 0x8080'8080'8080'8080) != 0)
+				{
+					// MSB => LSB
+					const auto msb = (value >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
+
+					const auto packed = msb * static_cast<data_type>(0x01'02'04'08'10'20'40'80);
+
+					const auto mask = static_cast<std::uint8_t>(packed >> 56);
+					// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
+					//           ^ n_ascii
+					//                                                 ^ n_next_possible_ascii_thunk_begin
+					const auto n_ascii = std::countr_zero(mask);
+					const auto n_next_possible_ascii_thunk_begin = step - std::countl_zero(mask) - n_ascii;
+
+					transform.template operator()<true>(n_ascii);
+					transform.template operator()<false>(n_next_possible_ascii_thunk_begin);
+				}
+				else
+				{
+					transform.template operator()<true>(step);
+				}
 			}
+
+			const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
+			GAL_PROMETHEUS_ERROR_ASSUME(remaining < step);
+
+			#if GAL_PROMETHEUS_COMPILER_DEBUG
+			[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, remaining};
+			#endif
+
+			transform.template operator()<false>(remaining);
 		}
 		else if constexpr (
 			OutputType == CharsType::UTF16_LE or
-			OutputType == CharsType::UTF16_BE
+			OutputType == CharsType::UTF16_BE or
+			OutputType == CharsType::UTF32
 		)
 		{
 			constexpr auto is_native_endian = (OutputType == CharsType::UTF16_LE) == (std::endian::native == std::endian::little);
+			constexpr auto is_byte_swap_required =
+					(OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE) and
+					(not is_native_endian);
 
-			// zero extend each set of 8 bit latin1 characters to 16-bit integers
+			// zero extend each set of 8 bit latin1 characters to 16/32-bit integers
 			std::ranges::transform(
 				it_input_current,
 				it_input_end,
 				it_output_current,
 				[](const auto byte) noexcept
 				{
-					const auto b = static_cast<std::uint8_t>(byte);
-					if constexpr (
-						const auto data = static_cast<output_char_type>(b);
-						is_native_endian
-					)
+					const auto data = static_cast<std::uint8_t>(byte);
+					if constexpr (is_byte_swap_required)
 					{
-						return data;
+						return std::byteswap(static_cast<output_char_type>(data));
 					}
 					else
 					{
-						return std::byteswap(data);
+						return static_cast<output_char_type>(data);
 					}
-				}
-			);
-
-			it_input_current += input_length;
-			it_output_current += input_length;
-		}
-		else if constexpr (OutputType == CharsType::UTF32)
-		{
-			// zero extend each set of 8 bit latin1 characters to 32-bit integers
-			std::ranges::transform(
-				it_input_current,
-				it_input_end,
-				it_output_current,
-				[](const auto byte) noexcept
-				{
-					const auto b = static_cast<std::uint8_t>(byte);
-					return static_cast<output_char_type>(b);
 				}
 			);
 
