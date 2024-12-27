@@ -37,10 +37,12 @@ private:
 
 public:
 	// note: only used to detect pure ASCII strings, otherwise there is no point in using this function
-	template<bool ReturnResultType = false>
-	[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
+	template<bool Detail = false>
+	[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> auto
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+
+		constexpr auto process_policy = Detail ? InputProcessPolicy::DEFAULT : InputProcessPolicy::RESULT;
 
 		const auto input_length = input.size();
 
@@ -48,57 +50,77 @@ public:
 		pointer_type it_input_current = it_input_begin;
 		const pointer_type it_input_end = it_input_begin + input_length;
 
-		// if it is safe to read 16 more bytes, check that they are latin
-		for (constexpr auto step = 2 * advance_per_step; it_input_current + step <= it_input_end; it_input_current += step)
+		constexpr auto step = 1 * advance_per_step;
+		// 8 bytes
+		while (it_input_current + 1 * step <= it_input_end)
 		{
-			const auto v1 = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
-			const auto v2 = memory::unaligned_load<data_type>(it_input_current + 1 * advance_per_step);
+			const auto v = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
 
-			if (const auto value = v1 | v2;
+			if (const auto value = v;
 				(value & 0x8080'8080'8080'8080) != 0)
 			{
-				break;
-			}
-		}
+				// MSB => LSB
+				const auto msb = (v >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
 
-		if (const auto it =
-					std::ranges::find_if(
-						it_input_current,
-						it_input_end,
-						[](const auto byte) noexcept
-						{
-							const auto b = static_cast<std::uint8_t>(byte);
-							// ASCII ONLY
-							return b >= 0b1000'0000;
-						}
-					);
-			it != it_input_end)
-		{
-			if constexpr (ReturnResultType)
-			{
-				return result_type{.error = ErrorCode::TOO_LARGE, .count = static_cast<std::size_t>(std::ranges::distance(it, it_input_begin))};
-			}
-			else
-			{
-				return false;
-			}
-		}
+				const auto packed = msb * static_cast<data_type>(0x01'02'04'08'10'20'40'80);
 
-		if constexpr (ReturnResultType)
-		{
-			return result_type{.error = ErrorCode::NONE, .count = input_length};
+				const auto mask = static_cast<std::uint8_t>(packed >> 56);
+				const auto pos = std::countr_zero(mask);
+
+				it_input_current += pos;
+
+				const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+				constexpr auto current_output_length = static_cast<std::size_t>(0);
+
+				return make_result<process_policy>(
+					ErrorCode::TOO_LARGE,
+					current_input_length,
+					current_output_length
+				);
+			}
+
+			it_input_current += 1 * step;
 		}
-		else
+		// any bytes
+		if (std::ranges::any_of(
+				it_input_current,
+				it_input_end,
+				[](const auto byte) noexcept -> bool
+				{
+					const auto b = static_cast<std::uint8_t>(byte);
+					// ASCII ONLY
+					return b >= 0b1000'0000;
+				}
+			)
+		)
 		{
-			return true;
+			const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+			constexpr auto current_output_length = static_cast<std::size_t>(0);
+
+			return make_result<process_policy>(
+				ErrorCode::TOO_LARGE,
+				current_input_length,
+				current_output_length
+			);
 		}
+		it_input_current = it_input_end;
+
+		// ==================================================
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+		const auto current_input_length = static_cast<std::size_t>(input_length);
+		constexpr auto current_output_length = static_cast<std::size_t>(0);
+		return make_result<process_policy>(
+			ErrorCode::NONE,
+			current_input_length,
+			current_output_length
+		);
 	}
 
 	// note: only used to detect pure ASCII strings, otherwise there is no point in using this function
-	template<bool ReturnResultType = false>
-	[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> std::conditional_t<ReturnResultType, result_type, bool>
+	template<bool Detail = false>
+	[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> auto
 	{
-		return Scalar::validate<ReturnResultType>({input, std::char_traits<char_type>::length(input)});
+		return Scalar::validate<Detail>({input, std::char_traits<char_type>::length(input)});
 	}
 
 	// note: we are not BOM aware
@@ -121,19 +143,32 @@ public:
 			pointer_type it_input_current = it_input_begin;
 			const pointer_type it_input_end = it_input_begin + input_length;
 
-			const auto pop = [](const data_type value) noexcept -> size_type
-			{
-				return ((value >> 7) & 0x0101010101010101ull) * 0x0101010101010101ull >> 56;
-			};
 			size_type output_length = input_length;
 
-			for (constexpr auto step = 1 * advance_per_step; it_input_current + step <= it_input_end; it_input_current += step)
+			constexpr auto step = 1 * advance_per_step;
+			// 8 bytes
+			while (it_input_current + 1 * step <= it_input_end)
 			{
-				const auto v1 = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+				const auto v = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
 
-				output_length += pop(v1);
+				if (const auto value = v;
+					(value & 0x8080'8080'8080'8080) != 0)
+				{
+					// MSB => LSB
+					const auto msb = (v >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
+
+					// const auto packed = msb * static_cast<data_type>(0x01'01'01'01'01'01'01'01);
+					//
+					// const auto count = static_cast<std::uint8_t>(packed >> 56);
+
+					const auto count = std::popcount(msb);
+
+					output_length += count;
+				}
+
+				it_input_current += 1 * step;
 			}
-
+			// any bytes
 			return std::transform_reduce(
 				it_input_current,
 				it_input_end,
@@ -168,16 +203,16 @@ public:
 
 	template<
 		CharsType OutputType,
-		InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+		InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 	>
 	[[nodiscard]] constexpr static auto convert(
 		const input_type input,
 		typename output_type_of<OutputType>::pointer output
-	) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
+	) noexcept -> auto
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
-		if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT)
+		if constexpr (assume_all_correct<ProcessPolicy>())
 		{
 			// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(Scalar::validate(input));
 		}
@@ -204,19 +239,29 @@ public:
 		{
 			while (it_input_current < it_input_end)
 			{
-				// if it is safe to read 16 more bytes, check that they are latin
-				if (constexpr auto step = 2 * advance_per_step;
-					it_input_current + step <= it_input_end)
-				{
-					const auto v1 = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
-					const auto v2 = memory::unaligned_load<data_type>(it_input_current + 1 * advance_per_step);
+				// at least one character is processed in each round
+				size_type n = 1;
 
-					if (const auto value = v1 | v2;
-						(value & 0x8080'8080'8080'8080) == 0)
+				constexpr auto step = 1 * advance_per_step;
+				// 8 bytes
+				while (it_input_current + 1 * step <= it_input_end)
+				{
+					const auto v = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+
+					if (const auto value = v;
+						(value & 0x8080'8080'8080'8080) != 0)
 					{
+						// MSB => LSB
+						const auto msb = (v >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
+
+						const auto packed = msb * static_cast<data_type>(0x01'02'04'08'10'20'40'80);
+
+						const auto mask = static_cast<std::uint8_t>(packed >> 56);
+						const auto pos_ascii = std::countr_zero(mask);
+
 						std::ranges::transform(
 							it_input_current,
-							it_input_current + step,
+							it_input_current + pos_ascii,
 							it_output_current,
 							[](const auto byte) noexcept
 							{
@@ -225,28 +270,53 @@ public:
 							}
 						);
 
-						it_input_current += step;
-						it_output_current += step;
-						continue;
+						// skip n characters until next possible block of ascii characters
+						n = step - std::countl_zero(mask) - pos_ascii;
+						it_input_current += pos_ascii;
+						it_output_current += pos_ascii;
+						break;
 					}
+
+					std::ranges::transform(
+						it_input_current,
+						it_input_current + step,
+						it_output_current,
+						[](const auto byte) noexcept
+						{
+							const auto b = static_cast<std::uint8_t>(byte);
+							return static_cast<output_char_type>(b);
+						}
+					);
+
+					// pure ascii block, no extra characters need to be processed separately
+					n = 0;
+					it_input_current += 1 * step;
+					it_output_current += 1 * step;
 				}
 
-				if (const auto byte = static_cast<std::uint8_t>(*it_input_current);
-					(byte & 0x80) == 0)
-				{
-					*(it_output_current + 0) = static_cast<output_char_type>(byte);
+				// any bytes
+				std::ranges::for_each(
+					it_input_current,
+					it_input_current + n,
+					[&it_output_current](const auto byte) noexcept -> void
+					{
+						if (const auto data = static_cast<std::uint8_t>(byte);
+							(data & 0x80) == 0)
+						{
+							*(it_output_current + 0) = static_cast<output_char_type>(data);
 
-					it_input_current += 1;
-					it_output_current += 1;
-				}
-				else
-				{
-					*(it_output_current + 0) = static_cast<output_char_type>((byte >> 6) | 0b1100'0000);
-					*(it_output_current + 1) = static_cast<output_char_type>((byte & 0b0011'1111) | 0b1000'0000);
+							it_output_current += 1;
+						}
+						else
+						{
+							*(it_output_current + 0) = static_cast<output_char_type>((data >> 6) | 0b1100'0000);
+							*(it_output_current + 1) = static_cast<output_char_type>((data & 0b0011'1111) | 0b1000'0000);
 
-					it_input_current += 1;
-					it_output_current += 2;
-				}
+							it_output_current += 2;
+						}
+					}
+				);
+				it_input_current += n;
 			}
 		}
 		else if constexpr (
@@ -254,6 +324,9 @@ public:
 			OutputType == CharsType::UTF16_BE
 		)
 		{
+			constexpr auto is_native_endian = (OutputType == CharsType::UTF16_LE) == (std::endian::native == std::endian::little);
+
+			// zero extend each set of 8 bit latin1 characters to 16-bit integers
 			std::ranges::transform(
 				it_input_current,
 				it_input_end,
@@ -262,9 +335,8 @@ public:
 				{
 					const auto b = static_cast<std::uint8_t>(byte);
 					if constexpr (
-						// extend Latin-1 char to 16-bit Unicode code point
 						const auto data = static_cast<output_char_type>(b);
-						(OutputType == CharsType::UTF16_LE) == (std::endian::native == std::endian::little)
+						is_native_endian
 					)
 					{
 						return data;
@@ -275,11 +347,13 @@ public:
 					}
 				}
 			);
+
 			it_input_current += input_length;
 			it_output_current += input_length;
 		}
 		else if constexpr (OutputType == CharsType::UTF32)
 		{
+			// zero extend each set of 8 bit latin1 characters to 32-bit integers
 			std::ranges::transform(
 				it_input_current,
 				it_input_end,
@@ -290,36 +364,34 @@ public:
 					return static_cast<output_char_type>(b);
 				}
 			);
+
 			it_input_current += input_length;
 			it_output_current += input_length;
 		}
 		else
 		{
-			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("Unknown or unsupported `OutputType` (we don't know the `endian` by UTF16, so it's not allowed to use it here).");
+			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 		}
 
-		if constexpr (
-			ProcessPolicy == InputProcessPolicy::ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT or
-			ProcessPolicy == InputProcessPolicy::ASSUME_VALID_INPUT
-		)
-		{
-			return static_cast<std::size_t>(it_output_current - it_output_begin);
-		}
-		else if constexpr (ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE)
-		{
-			return result_type{.error = ErrorCode::NONE, .count = static_cast<std::size_t>(it_input_current - it_input_begin)};
-		}
-		else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+		// ==================================================
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+		const auto current_input_length = static_cast<std::size_t>(input_length);
+		const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+		return make_result<ProcessPolicy>(
+			ErrorCode::NONE,
+			current_input_length,
+			current_output_length
+		);
 	}
 
 	template<
 		CharsType OutputType,
-		InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+		InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 	>
 	[[nodiscard]] constexpr static auto convert(
 		const pointer_type input,
 		typename output_type_of<OutputType>::pointer output
-	) noexcept -> std::conditional_t<ProcessPolicy == InputProcessPolicy::RETURN_RESULT_TYPE, result_type, std::size_t>
+	) noexcept -> auto
 	{
 		return Scalar::convert<OutputType, ProcessPolicy>({input, std::char_traits<char_type>::length(input)}, output);
 	}
@@ -327,7 +399,7 @@ public:
 	template<
 		typename StringType,
 		CharsType OutputType,
-		InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+		InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 	>
 		requires requires(StringType& string)
 		{
@@ -339,7 +411,7 @@ public:
 	[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> StringType
 	{
 		StringType result{};
-		result.resize(length<OutputType>(input));
+		result.resize(Scalar::length<OutputType>(input));
 
 		std::ignore = Scalar::convert<OutputType, ProcessPolicy>(input, result.data());
 		return result;
@@ -348,7 +420,7 @@ public:
 	template<
 		typename StringType,
 		CharsType OutputType,
-		InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+		InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 	>
 		requires requires(StringType& string)
 		{
@@ -359,34 +431,26 @@ public:
 		}
 	[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> StringType
 	{
-		StringType result{};
-		result.resize(length<OutputType>(input));
-
-		return Scalar::convert<OutputType, ProcessPolicy>({input, std::char_traits<char_type>::length(input)}, result.data());
+		return Scalar::convert<OutputType, ProcessPolicy>({input, std::char_traits<char_type>::length(input)});
 	}
 
 	template<
 		CharsType OutputType,
-		InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+		InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 	>
 	[[nodiscard]] constexpr static auto convert(const input_type input) noexcept -> std::basic_string<typename output_type_of<OutputType>::value_type>
 	{
-		std::basic_string<typename output_type_of<OutputType>::value_type> result{};
-		result.resize(length<OutputType>(input));
-
-		std::ignore = Scalar::convert<OutputType, ProcessPolicy>(input, result.data());
-		return result;
+		using string_type = std::basic_string<typename output_type_of<OutputType>::value_type>;
+		return Scalar::convert<string_type, OutputType, ProcessPolicy>(input);
 	}
 
 	template<
 		CharsType OutputType,
-		InputProcessPolicy ProcessPolicy = InputProcessPolicy::RETURN_RESULT_TYPE
+		InputProcessPolicy ProcessPolicy = InputProcessPolicy::DEFAULT
 	>
 	[[nodiscard]] constexpr static auto convert(const pointer_type input) noexcept -> std::basic_string<typename output_type_of<OutputType>::value_type>
 	{
-		std::basic_string<typename output_type_of<OutputType>::value_type> result{};
-		result.resize(length<OutputType>(input));
-
-		return Scalar::convert<OutputType, ProcessPolicy>({input, std::char_traits<char_type>::length(input)}, result.data());
+		using string_type = std::basic_string<typename output_type_of<OutputType>::value_type>;
+		return Scalar::convert<string_type, OutputType, ProcessPolicy>(input);
 	}
 };
