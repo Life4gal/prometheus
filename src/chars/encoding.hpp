@@ -254,12 +254,46 @@ namespace gal::prometheus::chars
 
 	// ReSharper restore CommentTypo
 
-	struct result_type
+	enum class InputProcessPolicy : std::uint8_t
+	{
+		INTERNAL_INPUT = 0b0000'0001,
+		INTERNAL_OUTPUT = 0b0000'0010,
+		INTERNAL_ERROR = 0b0000'0100,
+
+		// Guaranteed to write all correct characters to the result (up to the first incorrect character)
+		WRITE_ALL_CORRECT = INTERNAL_INPUT | INTERNAL_ERROR,
+		// Guaranteed to write all correct characters to the result (up to the first incorrect character)
+		WRITE_ALL_CORRECT_2 = INTERNAL_INPUT | INTERNAL_OUTPUT | INTERNAL_ERROR,
+		// Stop immediately after detecting an error,
+		// which means that the characters in the last processed block will not be written (but the returned input will contain this part)
+		FAST_FAIL = INTERNAL_INPUT | INTERNAL_OUTPUT,
+		// LITERAL
+		ASSUME_ALL_CORRECT = INTERNAL_OUTPUT,
+		// true/false (internal used only)
+		RESULT = INTERNAL_ERROR,
+
+		DEFAULT = WRITE_ALL_CORRECT,
+	};
+
+	template<InputProcessPolicy ProcessPolicy>
+	[[nodiscard]] constexpr auto write_all_correct() noexcept -> bool
+	{
+		return
+				ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT or
+				ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT_2;
+	}
+
+	template<InputProcessPolicy ProcessPolicy>
+	[[nodiscard]] constexpr auto assume_all_correct() noexcept -> bool
+	{
+		return
+				ProcessPolicy == InputProcessPolicy::ASSUME_ALL_CORRECT;
+	}
+
+	struct result_error_input_type
 	{
 		ErrorCode error;
-		// In case of error, indicates the position of the error.
-		// In case of success, indicates the number of code units validated/written.
-		std::size_t count;
+		std::size_t input;
 
 		[[nodiscard]] constexpr auto has_error() const noexcept -> bool
 		{
@@ -272,12 +306,63 @@ namespace gal::prometheus::chars
 		}
 	};
 
-	enum class InputProcessPolicy : std::uint8_t
+	struct result_error_input_output_type
 	{
-		ZERO_IF_ERROR_ELSE_PROCESSED_OUTPUT,
-		RETURN_RESULT_TYPE,
-		ASSUME_VALID_INPUT,
+		ErrorCode error;
+		std::size_t input;
+		std::size_t output;
+
+		[[nodiscard]] constexpr auto has_error() const noexcept -> bool
+		{
+			return error != ErrorCode::NONE;
+		}
+
+		[[nodiscard]] constexpr explicit operator bool() const noexcept
+		{
+			return not has_error();
+		}
 	};
+
+	struct result_input_output_type
+	{
+		std::size_t input;
+		std::size_t output;
+	};
+
+	template<InputProcessPolicy ProcessPolicy>
+	[[nodiscard]] constexpr auto make_result(const ErrorCode error, const std::size_t input, const std::size_t output) noexcept -> auto
+	{
+		if constexpr (ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT)
+		{
+			std::ignore = output;
+			return result_error_input_type{.error = error, .input = input};
+		}
+		else if constexpr (ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT_2)
+		{
+			return result_error_input_output_type{.error = error, .input = input, .output = output};
+		}
+		else if constexpr (ProcessPolicy == InputProcessPolicy::FAST_FAIL)
+		{
+			std::ignore = error;
+			return result_input_output_type{.input = input, .output = output};
+		}
+		else if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_ALL_CORRECT)
+		{
+			std::ignore = error;
+			std::ignore = input;
+			return output;
+		}
+		else if constexpr (ProcessPolicy == InputProcessPolicy::RESULT)
+		{
+			std::ignore = input;
+			std::ignore = output;
+			return error == ErrorCode::NONE;
+		}
+		else
+		{
+			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+		}
+	}
 
 	template<meta::basic_fixed_string Name>
 	class Scalar;
