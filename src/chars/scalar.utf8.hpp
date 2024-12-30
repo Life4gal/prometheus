@@ -509,7 +509,7 @@ namespace gal::prometheus::chars
 
 				if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 				{
-					if constexpr (assume_all_correct<ProcessPolicy>())
+					if constexpr (not assume_all_correct<ProcessPolicy>())
 					{
 						if (const auto result = Scalar::validate<true>(input);
 							result.has_error())
@@ -930,8 +930,8 @@ namespace gal::prometheus::chars
 					}
 				}
 
+				// ==================================================
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
-
 				const auto current_input_length = static_cast<std::size_t>(input_length);
 				const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
 				return make_result<ProcessPolicy>(
