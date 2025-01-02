@@ -20,25 +20,65 @@
 
 namespace gal::prometheus::chars
 {
+	template<>
+	class Scalar<"utf8">;
+
+	template<>
+	class Scalar<"utf8.char">;
+
+	template<>
+	class Scalar<"utf8_char">;
+
+	template<>
+	struct descriptor_type<Scalar<"utf8">>
+	{
+		constexpr static auto chars_type = CharsType::UTF8;
+
+		using input_type = input_type_of<chars_type>;
+		using char_type = input_type::value_type;
+		using pointer_type = input_type::const_pointer;
+		using size_type = input_type::size_type;
+
+		using data_type = std::uint64_t;
+
+		constexpr static std::ptrdiff_t advance_per_step = sizeof(data_type) / sizeof(char_type);
+		// zero extend ==> 1 char -> 1 out_char
+		template<CharsType Type>
+		constexpr static std::ptrdiff_t advance_per_step_with = advance_per_step;
+	};
+
+	template<>
+	struct descriptor_type<Scalar<"utf8.char">> : descriptor_type<Scalar<"utf8">>
+	{
+		constexpr static auto chars_type = CharsType::UTF8_CHAR;
+
+		using input_type = input_type_of<chars_type>;
+		using char_type = input_type::value_type;
+		using pointer_type = input_type::const_pointer;
+		using size_type = input_type::size_type;
+	};
+
+	template<>
+	struct descriptor_type<Scalar<"utf8_char">> : descriptor_type<Scalar<"utf8.char">> {};
+
 	namespace scalar_utf8_detail
 	{
-		template<CharsType Type>
+		template<typename Identity>
 		class Scalar
 		{
 		public:
-			constexpr static auto chars_type = Type;
+			using descriptor_type = descriptor_type<Identity>;
 
-			using input_type = input_type_of<chars_type>;
-			using char_type = typename input_type::value_type;
-			using pointer_type = typename input_type::const_pointer;
-			using size_type = typename input_type::size_type;
+			constexpr static auto chars_type = descriptor_type::chars_type;
+
+			using input_type = typename descriptor_type::input_type;
+			using char_type = typename descriptor_type::char_type;
+			using pointer_type = typename descriptor_type::pointer_type;
+			using size_type = typename descriptor_type::size_type;
+
+			using data_type = typename descriptor_type::data_type;
 
 		private:
-			using data_type = std::uint64_t;
-
-			constexpr static std::size_t size_per_char = sizeof(char_type);
-			constexpr static std::size_t advance_per_step = sizeof(data_type) / size_per_char;
-
 			// Finds the previous leading byte starting backward from `current` and validates with errors from there.
 			// Used to pinpoint the location of an error when an invalid chunk is detected.
 			// We assume that the stream starts with a leading byte, and to check that it is the case,
@@ -368,15 +408,13 @@ namespace gal::prometheus::chars
 					);
 				};
 
-				constexpr auto step = 1 * advance_per_step;
-				// 8 bytes
-				while (it_input_current + step <= it_input_end)
+				while (it_input_current + descriptor_type::advance_per_step <= it_input_end)
 				{
 					#if GAL_PROMETHEUS_COMPILER_DEBUG
-					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, step};
+					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, descriptor_type::advance_per_step};
 					#endif
 
-					if (const auto value = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+					if (const auto value = memory::unaligned_load<data_type>(it_input_current);
 						(value & 0x8080'8080'8080'8080) != 0)
 					{
 						// MSB => LSB
@@ -387,12 +425,12 @@ namespace gal::prometheus::chars
 						const auto mask = static_cast<std::uint8_t>(packed >> 56);
 						// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
 						//           ^ n_ascii
-						//                                                 ^ n_next_possible_ascii_thunk_begin
+						//                                                 ^ n_next_possible_ascii_chunk_begin
 						const auto n_ascii = std::countr_zero(mask);
-						const auto n_next_possible_ascii_thunk_begin = step - std::countl_zero(mask) - n_ascii;
+						const auto n_next_possible_ascii_chunk_begin = descriptor_type::advance_per_step - std::countl_zero(mask) - n_ascii;
 
 						it_input_current += n_ascii;
-						if (const auto result = check(n_next_possible_ascii_thunk_begin);
+						if (const auto result = check(n_next_possible_ascii_chunk_begin);
 							result.has_error())
 						{
 							return make_result<process_policy>(
@@ -404,12 +442,12 @@ namespace gal::prometheus::chars
 					}
 					else
 					{
-						it_input_current += step;
+						it_input_current += descriptor_type::advance_per_step;
 					}
 				}
 
 				const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < step);
+				GAL_PROMETHEUS_ERROR_ASSUME(remaining < descriptor_type::advance_per_step);
 
 				#if GAL_PROMETHEUS_COMPILER_DEBUG
 				[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, remaining};
@@ -496,7 +534,6 @@ namespace gal::prometheus::chars
 
 				using output_type = output_type_of<OutputType>;
 				using output_pointer_type = typename output_type::pointer;
-				using output_char_type = typename output_type::value_type;
 
 				const auto input_length = input.size();
 
@@ -535,11 +572,6 @@ namespace gal::prometheus::chars
 				}
 				else
 				{
-					constexpr auto is_native_endian = (OutputType == CharsType::UTF16_LE) == (std::endian::native == std::endian::little);
-					constexpr auto is_byte_swap_required =
-							(OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE) and
-							(not is_native_endian);
-
 					const auto transform = [
 								// Used to calculate the processed input length
 								it_input_begin,
@@ -554,20 +586,6 @@ namespace gal::prometheus::chars
 						// [error/input/output]
 						constexpr auto process_policy_keep_all_result = InputProcessPolicy::WRITE_ALL_CORRECT_2;
 
-						const auto do_write = [&it_output_current](const auto value) noexcept -> void
-						{
-							if constexpr (is_byte_swap_required)
-							{
-								*(it_output_current + 0) = std::byteswap(static_cast<output_char_type>(value));
-							}
-							else
-							{
-								*(it_output_current + 0) = static_cast<output_char_type>(value);
-							}
-
-							it_output_current += 1;
-						};
-
 						const auto end = it_input_current + n;
 
 						while (it_input_current < end)
@@ -580,8 +598,9 @@ namespace gal::prometheus::chars
 							{
 								GAL_PROMETHEUS_ERROR_DEBUG_ASSUME((leading_byte & 0x80) == 0);
 
-								do_write(leading_byte);
+								*(it_output_current + 0) = to_output_type<OutputType>(leading_byte);
 
+								it_output_current += 1;
 								it_input_current += 1;
 							}
 							else
@@ -589,8 +608,9 @@ namespace gal::prometheus::chars
 								if ((leading_byte & 0x80) == 0)
 								{
 									// ascii
-									do_write(leading_byte);
+									*(it_output_current + 0) = to_output_type<OutputType>(leading_byte);
 
+									it_output_current += 1;
 									it_input_current += 1;
 								}
 								else if ((leading_byte & 0b1110'0000) == 0b1100'0000)
@@ -652,8 +672,9 @@ namespace gal::prometheus::chars
 										}
 									}
 
-									do_write(code_point);
+									*(it_output_current + 0) = to_output_type<OutputType>(code_point);
 
+									it_output_current += 1;
 									it_input_current += 2;
 								}
 								else if ((leading_byte & 0b1111'0000) == 0b1110'0000)
@@ -725,8 +746,9 @@ namespace gal::prometheus::chars
 											}
 										}
 
-										do_write(code_point);
+										*(it_output_current + 0) = to_output_type<OutputType>(code_point);
 
+										it_output_current += 1;
 										it_input_current += 3;
 									}
 									else
@@ -808,7 +830,9 @@ namespace gal::prometheus::chars
 
 										if constexpr (OutputType == CharsType::UTF32)
 										{
-											do_write(code_point);
+											*(it_output_current + 0) = to_output_type<OutputType>(code_point);
+
+											it_output_current += 1;
 										}
 										else
 										{
@@ -820,8 +844,10 @@ namespace gal::prometheus::chars
 												return std::make_pair(high, low);
 											}();
 
-											do_write(high_surrogate);
-											do_write(low_surrogate);
+											*(it_output_current + 0) = to_output_type<OutputType>(high_surrogate);
+											*(it_output_current + 1) = to_output_type<OutputType>(low_surrogate);
+
+											it_output_current += 2;
 										}
 
 										it_input_current += 4;
@@ -869,15 +895,13 @@ namespace gal::prometheus::chars
 						);
 					};
 
-					constexpr auto step = 1 * advance_per_step;
-					// 8 bytes
-					while (it_input_current + step <= it_input_end)
+					while (it_input_current + descriptor_type::advance_per_step <= it_input_end)
 					{
 						#if GAL_PROMETHEUS_COMPILER_DEBUG
-						[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, step};
+						[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, descriptor_type::advance_per_step};
 						#endif
 
-						if (const auto value = memory::unaligned_load<data_type>(it_input_current + 0 * advance_per_step);
+						if (const auto value = memory::unaligned_load<data_type>(it_input_current);
 							(value & 0x8080'8080'8080'8080) != 0)
 						{
 							// MSB => LSB
@@ -888,14 +912,14 @@ namespace gal::prometheus::chars
 							const auto mask = static_cast<std::uint8_t>(packed >> 56);
 							// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
 							//           ^ n_ascii
-							//                                                 ^ n_next_possible_ascii_thunk_begin
+							//                                                 ^ n_next_possible_ascii_chunk_begin
 							const auto n_ascii = std::countr_zero(mask);
-							const auto n_next_possible_ascii_thunk_begin = step - std::countl_zero(mask) - n_ascii;
+							const auto n_next_possible_ascii_chunk_begin = descriptor_type::advance_per_step - std::countl_zero(mask) - n_ascii;
 
 							const auto result1 = transform.template operator()<true>(n_ascii);
 							GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not result1.has_error());
 
-							if (const auto result2 = transform.template operator()<false>(n_next_possible_ascii_thunk_begin);
+							if (const auto result2 = transform.template operator()<false>(n_next_possible_ascii_chunk_begin);
 								result2.has_error())
 							{
 								return make_result<ProcessPolicy>(
@@ -907,13 +931,13 @@ namespace gal::prometheus::chars
 						}
 						else
 						{
-							const auto result = transform.template operator()<true>(step);
+							const auto result = transform.template operator()<true>(descriptor_type::advance_per_step);
 							GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not result.has_error());
 						}
 					}
 
 					const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
-					GAL_PROMETHEUS_ERROR_ASSUME(remaining < step);
+					GAL_PROMETHEUS_ERROR_ASSUME(remaining < descriptor_type::advance_per_step);
 
 					#if GAL_PROMETHEUS_COMPILER_DEBUG
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, remaining};
@@ -1030,11 +1054,11 @@ namespace gal::prometheus::chars
 	}
 
 	template<>
-	class Scalar<"utf8"> : public scalar_utf8_detail::Scalar<CharsType::UTF8> {};
+	class Scalar<"utf8"> : public scalar_utf8_detail::Scalar<Scalar<"utf8">> {};
 
 	template<>
-	class Scalar<"utf8.char"> : public scalar_utf8_detail::Scalar<CharsType::UTF8_CHAR> {};
+	class Scalar<"utf8.char"> : public scalar_utf8_detail::Scalar<Scalar<"utf8.char">> {};
 
 	template<>
-	class Scalar<"utf8_char"> : public scalar_utf8_detail::Scalar<CharsType::UTF8_CHAR> {};
+	class Scalar<"utf8_char"> : public scalar_utf8_detail::Scalar<Scalar<"utf8_char">> {};
 }

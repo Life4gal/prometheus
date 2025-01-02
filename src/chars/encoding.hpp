@@ -228,6 +228,62 @@ namespace gal::prometheus::chars
 	template<CharsType Type>
 	using output_type_of = typename encoding_detail::io_selector<Type>::output;
 
+	/**
+	 * @brief Convert char16_t or uint16_t code point to native endian
+	 */
+	template<std::endian SourceEndian, typename T>
+		requires (std::is_same_v<T, std::uint16_t> or std::is_same_v<T, input_type_of<CharsType::UTF16>::value_type>)
+	[[nodiscard]] constexpr auto to_native_word(const T value) noexcept -> std::uint16_t
+	{
+		if constexpr (const auto data = static_cast<std::uint16_t>(value);
+			SourceEndian != std::endian::native)
+		{
+			return std::byteswap(data);
+		}
+		else
+		{
+			return data;
+		}
+	}
+
+	/**
+	 * @brief Convert a code point to target type
+	 * @param value Assuming the code point is native endian
+	 */
+	template<CharsType OutputType, typename T>
+	[[nodiscard]] constexpr auto to_output_type(const T value) noexcept -> typename output_type_of<OutputType>::value_type
+	{
+		// LATIN/UTF8/UTF32 => truncate / zero-extended
+		if constexpr (
+			OutputType == CharsType::LATIN or
+			OutputType == CharsType::UTF8_CHAR or
+			OutputType == CharsType::UTF8 or
+			OutputType == CharsType::UTF32
+		)
+		{
+			return static_cast<typename output_type_of<OutputType>::value_type>(value);
+		}
+		else if constexpr (
+			OutputType == CharsType::UTF16_LE or
+			OutputType == CharsType::UTF16_BE
+		)
+		{
+			if constexpr (const auto data = static_cast<std::uint16_t>(value);
+				(OutputType == CharsType::UTF16_LE) != (std::endian::native == std::endian::little))
+			{
+				return static_cast<typename output_type_of<OutputType>::value_type>(std::byteswap(data));
+			}
+			else
+			{
+				return static_cast<typename output_type_of<OutputType>::value_type>(data);
+			}
+		}
+		else
+		{
+			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+		}
+	}
+
 	// ReSharper disable CommentTypo
 
 	enum class ErrorCode : std::uint8_t
@@ -242,12 +298,16 @@ namespace gal::prometheus::chars
 		// The leading byte must be followed by N-1 continuation bytes, where N is the UTF-8 character length.
 		// This is also the error when the input is truncated.
 		TOO_SHORT,
+
 		// We either have too many consecutive continuation bytes or the string starts with a continuation byte.
 		TOO_LONG,
+
 		// The decoded character must be above U+7F for two-byte characters, U+7FF for three-byte characters, and U+FFFF for four-byte characters.
 		OVERLONG,
+
 		// The decoded character must be less than or equal to U+10FFFF, less than or equal than U+7F for ASCII OR less than equal than U+FF for Latin1.
 		TOO_LARGE,
+
 		// Any byte must have fewer than 5 header bits.
 		HEADER_BITS,
 	};
@@ -363,6 +423,35 @@ namespace gal::prometheus::chars
 			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 		}
 	}
+
+	/**
+	 * @code
+	 * // step by step
+	 * while (it_input_current + descriptor.advance <= it_input_end)
+	 * {
+	 *  const auto data = do_load_data(it_input_current, descriptor.step_size);
+	 *  do_process_data(data);
+	 *  it_input_current += descriptor.advance;
+	 * }
+	 *
+	 * // tail
+	 * const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
+	 * const auto data = do_load_data(it_input_current, remaining);
+	 * do_process_data(data);
+	 * @endcode 
+	 */
+	template<typename ScalarOrSimd>
+	struct descriptor_type;
+	// {
+	// 	// [data] => [char, char, ..., char]
+	// // 	constexpr static std::size_t step_size = sizeof(data_type);
+	// 	// it_input_current += advance => [next data]
+	// 	constexpr static std::ptrdiff_t advance_per_step = sizeof(data_type) / sizeof(char_type);
+	//
+	// 	// [data] => [out data] => it_output_current += advance_with<...>
+	// 	template<CharsType Type>
+	// 	constexpr static std::ptrdiff_t advance_per_step_with = advance / (sizeof(out_char_type) / sizeof(char_type));
+	// };
 
 	template<meta::basic_fixed_string Name>
 	class Scalar;
