@@ -12,45 +12,20 @@ namespace
 		using namespace unit_test;
 		using namespace chars;
 
+		using source_type = Scalar<"latin">;
+
+		"error"_test = []
+		{
+			make_test_latin_error<source_type>();
+		};
+
 		constexpr std::size_t trials = 1000;
 
 		"to_latin"_test = []
 		{
 			for (std::size_t i = 0; i < trials; ++i)
 			{
-				const auto source = make_random_latin_string_ascii_only();
-
-				expect(Scalar<"latin">::validate<true>(source) == "valid latin string"_b) << fatal;
-				const auto output_length = Scalar<"latin">::length<CharsType::LATIN>(source);
-
-				using output_type = std::basic_string<char>;
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto error = Scalar<"latin">::convert<CharsType::LATIN>(source, dest.data());
-					expect(error.has_error() != "valid latin string"_b) << fatal;
-					expect(error.count == value(source.size())) << fatal;
-
-					const auto valid = Scalar<"latin">::validate<true>(dest);
-					expect(valid == "valid latin string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::LATIN>(source);
-					expect(dest == ref(result)) << fatal;
-				}
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto length = Scalar<"latin">::convert<CharsType::LATIN, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-					expect(length == value(dest.size())) << fatal;
-
-					const auto valid = Scalar<"latin">::validate<true>(dest);
-					expect(valid == "valid latin string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::LATIN, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-					expect(dest == ref(result)) << fatal;
-				}
+				make_test<source_type, Scalar<"latin">, true>(make_random_latin_string_ascii_only());
 			}
 		};
 
@@ -58,39 +33,7 @@ namespace
 		{
 			for (std::size_t i = 0; i < trials; ++i)
 			{
-				const auto source = make_random_latin_string();
-
-				// expect(Scalar<"latin">::validate<true>(source) == "valid latin string"_b) << fatal;
-				const auto output_length = Scalar<"latin">::length<CharsType::UTF8_CHAR>(source);
-
-				using output_type = std::basic_string<char>;
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto error = Scalar<"latin">::convert<CharsType::UTF8_CHAR>(source, dest.data());
-					expect(error.has_error() != "valid utf8_char string"_b) << fatal;
-					expect(error.count == value(source.size())) << fatal;
-
-					const auto valid = Scalar<"utf8.char">::validate<true>(dest);
-					expect(valid == "valid utf8_char string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::UTF8_CHAR>(source);
-					expect(dest == ref(result)) << fatal;
-				}
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto length = Scalar<"latin">::convert<CharsType::UTF8_CHAR, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-					expect(length == value(dest.size())) << fatal;
-
-					const auto valid = Scalar<"utf8.char">::validate<true>(dest);
-					expect(valid == "valid utf8_char string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::UTF8_CHAR, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-					expect(dest == ref(result)) << fatal;
-				}
+				make_test<source_type, Scalar<"utf8.char">, false>(make_random_latin_string());
 			}
 		};
 
@@ -98,39 +41,7 @@ namespace
 		{
 			for (std::size_t i = 0; i < trials; ++i)
 			{
-				const auto source = make_random_latin_string();
-
-				// expect(Scalar<"latin">::validate<true>(source) == "valid latin string"_b) << fatal;
-				const auto output_length = Scalar<"latin">::length<CharsType::UTF8>(source);
-
-				using output_type = std::basic_string<char8_t>;
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto error = Scalar<"latin">::convert<CharsType::UTF8>(source, dest.data());
-					expect(error.has_error() != "valid utf8 string"_b) << fatal;
-					expect(error.count == value(source.size())) << fatal;
-
-					const auto valid = Scalar<"utf8">::validate<true>(dest);
-					expect(valid == "valid utf8 string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::UTF8>(source);
-					expect(dest == ref(result)) << fatal;
-				}
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto length = Scalar<"latin">::convert<CharsType::UTF8, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-					expect(length == value(dest.size())) << fatal;
-
-					const auto valid = Scalar<"utf8">::validate<true>(dest);
-					expect(valid == "valid utf8 string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::UTF8, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-					expect(dest == ref(result)) << fatal;
-				}
+				make_test<source_type, Scalar<"utf8">, false>(make_random_latin_string());
 			}
 		};
 
@@ -138,39 +49,7 @@ namespace
 		{
 			for (std::size_t i = 0; i < trials; ++i)
 			{
-				const auto source = make_random_latin_string();
-
-				// expect(Scalar<"latin">::validate<true>(source) == "valid latin string"_b) << fatal;
-				const auto output_length = Scalar<"latin">::length<CharsType::UTF16>(source);
-
-				using output_type = std::basic_string<char16_t>;
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto error = Scalar<"latin">::convert<CharsType::UTF16_LE>(source, dest.data());
-					expect(error.has_error() != "valid utf16_le string"_b) << fatal;
-					expect(error.count == value(source.size())) << fatal;
-
-					const auto valid = Scalar<"utf16">::validate<true, std::endian::little>(dest);
-					expect(valid == "valid utf16_le string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::UTF16_LE>(source);
-					expect(dest == ref(result)) << fatal;
-				}
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto length = Scalar<"latin">::convert<CharsType::UTF16_LE, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-					expect(length == value(dest.size())) << fatal;
-
-					const auto valid = Scalar<"utf16">::validate<true, std::endian::little>(dest);
-					expect(valid == "valid utf16_le string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::UTF16_LE, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-					expect(dest == ref(result)) << fatal;
-				}
+				make_test<source_type, Scalar<"utf16.le">, false>(make_random_latin_string());
 			}
 		};
 
@@ -178,39 +57,7 @@ namespace
 		{
 			for (std::size_t i = 0; i < trials; ++i)
 			{
-				const auto source = make_random_latin_string();
-
-				// expect(Scalar<"latin">::validate<true>(source) == "valid latin string"_b) << fatal;
-				const auto output_length = Scalar<"latin">::length<CharsType::UTF16>(source);
-
-				using output_type = std::basic_string<char16_t>;
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto error = Scalar<"latin">::convert<CharsType::UTF16_BE>(source, dest.data());
-					expect(error.has_error() != "valid utf16_be string"_b) << fatal;
-					expect(error.count == value(source.size())) << fatal;
-
-					const auto valid = Scalar<"utf16">::validate<true, std::endian::big>(dest);
-					expect(valid == "valid utf16_be string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::UTF16_BE>(source);
-					expect(dest == ref(result)) << fatal;
-				}
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto length = Scalar<"latin">::convert<CharsType::UTF16_BE, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-					expect(length == value(dest.size())) << fatal;
-
-					const auto valid = Scalar<"utf16">::validate<true, std::endian::big>(dest);
-					expect(valid == "valid utf16_be string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::UTF16_BE, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-					expect(dest == ref(result)) << fatal;
-				}
+				make_test<source_type, Scalar<"utf16.be">, false>(make_random_latin_string());
 			}
 		};
 
@@ -218,39 +65,7 @@ namespace
 		{
 			for (std::size_t i = 0; i < trials; ++i)
 			{
-				const auto source = make_random_latin_string();
-
-				// expect(Scalar<"latin">::validate<true>(source) == "valid latin string"_b) << fatal;
-				const auto output_length = Scalar<"latin">::length<CharsType::UTF32>(source);
-
-				using output_type = std::basic_string<char32_t>;
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto error = Scalar<"latin">::convert<CharsType::UTF32>(source, dest.data());
-					expect(error.has_error() != "valid utf32 string"_b) << fatal;
-					expect(error.count == value(source.size())) << fatal;
-
-					const auto valid = Scalar<"utf32">::validate<true>(dest);
-					expect(valid == "valid utf32 string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::UTF32>(source);
-					expect(dest == ref(result)) << fatal;
-				}
-				{
-					output_type dest{};
-					dest.resize(output_length);
-
-					const auto length = Scalar<"latin">::convert<CharsType::UTF32, InputProcessPolicy::ASSUME_VALID_INPUT>(source, dest.data());
-					expect(length == value(dest.size())) << fatal;
-
-					const auto valid = Scalar<"utf32">::validate<true>(dest);
-					expect(valid == "valid utf32 string"_b) << fatal;
-
-					const auto result = Scalar<"latin">::convert<CharsType::UTF32, InputProcessPolicy::ASSUME_VALID_INPUT>(source);
-					expect(dest == ref(result)) << fatal;
-				}
+				make_test<source_type, Scalar<"utf32">, false>(make_random_latin_string());
 			}
 		};
 	};
