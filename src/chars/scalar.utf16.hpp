@@ -380,6 +380,7 @@ namespace gal::prometheus::chars
 									if ((leading_word & 0xff80) == 0)
 									{
 										// 1-byte utf8
+
 										*(it_output_current + 0) = to_output_type<OutputType>(leading_word);
 
 										it_input_current += 1;
@@ -388,6 +389,7 @@ namespace gal::prometheus::chars
 									else if ((leading_word & 0xf800) == 0)
 									{
 										// 2-bytes utf8
+
 										// 0b110?'???? 0b10??'????
 										*(it_output_current + 0) = to_output_type<OutputType>((leading_word >> 6) | 0b1100'0000);
 										*(it_output_current + 1) = to_output_type<OutputType>((leading_word & 0b0011'1111) | 0b1000'0000);
@@ -398,6 +400,7 @@ namespace gal::prometheus::chars
 									else if ((leading_word & 0xf800) != 0xd800)
 									{
 										// 3-bytes utf8
+
 										// 0b1110'???? 0b10??'???? 0b10??'????
 										*(it_output_current + 0) = to_output_type<OutputType>((leading_word >> 12) | 0b1110'0000);
 										*(it_output_current + 1) = to_output_type<OutputType>(((leading_word >> 6) & 0b0011'1111) | 0b1000'0000);
@@ -435,17 +438,7 @@ namespace gal::prometheus::chars
 											}
 										}
 
-										const auto next_word = [w = static_cast<std::uint16_t>(*(it_input_current + 1))]() noexcept
-										{
-											if constexpr (SourceEndian != std::endian::native)
-											{
-												return std::byteswap(w);
-											}
-											else
-											{
-												return w;
-											}
-										}();
+										const auto next_word = to_native_word<SourceEndian>(*(it_input_current + 1));
 										const auto next_diff = static_cast<std::uint16_t>(next_word - 0xdc00);
 
 										if constexpr (not assume_all_correct<ProcessPolicy>())
@@ -751,14 +744,11 @@ namespace gal::prometheus::chars
 
 				return std::ranges::count_if(
 					input,
-					[](auto word) noexcept -> bool
+					[](const auto word) noexcept -> bool
 					{
-						if constexpr (SourceEndian != std::endian::native)
-						{
-							word = std::byteswap(word);
-						}
+						const auto native_word = to_native_word<SourceEndian>(word);
 
-						return (word & 0xfc00) != 0xdc00;
+						return (native_word & 0xfc00) != 0xdc00;
 					}
 				);
 			}
@@ -773,7 +763,8 @@ namespace gal::prometheus::chars
 					output,
 					[](const auto word) noexcept
 					{
-						return static_cast<typename output_type_of<chars_type>::value_type>(std::byteswap(word));
+						// force byte swap
+						return to_output_type<std::endian::native == std::endian::little ? CharsType::UTF16_BE : CharsType::UTF16_LE>(word);
 					}
 				);
 			}
