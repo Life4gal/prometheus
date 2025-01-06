@@ -551,31 +551,19 @@ namespace gal::prometheus::chars
 						[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, descriptor_type::advance_per_step};
 						#endif
 
-						const auto value = [it_input_current]() noexcept -> auto
-						{
-							if constexpr (const auto data = memory::unaligned_load<data_type>(it_input_current);
-								SourceEndian == std::endian::native)
+						if (const auto value = [it_input_current]() noexcept -> auto
 							{
-								return data;
-							}
-							else
-							{
-								return (data >> 8) | (data << 56);
-							}
-						}();
-						const auto pure = [value]() noexcept -> bool
-						{
-							if constexpr (OutputType == CharsType::LATIN)
-							{
-								return (value & static_cast<data_type>(0xff00'ff00'ff00'ff00)) == 0;
-							}
-							else
-							{
-								return (value & static_cast<data_type>(0xff80'ff80'ff80'ff80)) == 0;
-							}
-						}();
-
-						if (not pure)
+								if constexpr (const auto data = memory::unaligned_load<data_type>(it_input_current);
+									SourceEndian == std::endian::native)
+								{
+									return data;
+								}
+								else
+								{
+									return (data >> 8) | (data << 56);
+								}
+							}();
+							(value & 0xff80'ff80'ff80'ff80) != 0)
 						{
 							// const auto to_bit = [value](const auto offset) noexcept -> auto
 							// {

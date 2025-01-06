@@ -435,20 +435,8 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, descriptor_type::advance_per_step};
 					#endif
 
-					const auto value = memory::unaligned_load<std::uint64_t>(it_input_current + 0);
-					const auto pure = [value]() noexcept -> bool
-					{
-						if constexpr (OutputType == CharsType::LATIN)
-						{
-							return (value & static_cast<data_type>(0xffff'ff00'ffff'ff00)) == 0;
-						}
-						else
-						{
-							return (value & static_cast<data_type>(0xff80'ff80'ff80'ff80)) == 0;
-						}
-					}();
-
-					if (not pure)
+					if (const auto value = memory::unaligned_load<std::uint64_t>(it_input_current + 0);
+						(value & 0xffff'ff80'ffff'ff80) != 0)
 					{
 						if (const auto result = transform.template operator()<false>(descriptor_type::advance_per_step);
 							result.has_error())
