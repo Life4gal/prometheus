@@ -11,6 +11,7 @@
 
 #include <prometheus/macro.hpp>
 
+#include <chars/scalar.common.hpp>
 #include <chars/scalar.latin.hpp>
 #include <chars/scalar.utf8.hpp>
 #include <chars/scalar.utf16.hpp>
