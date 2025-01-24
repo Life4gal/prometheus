@@ -46,6 +46,28 @@
 		},
 
 		{
+			"name": "windows-base-gcc",
+			"hidden": true,
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/out/build/${presetName}",
+			"installDir": "${sourceDir}/out/install/${presetName}",
+			"cacheVariables": {
+				"CMAKE_C_COMPILER": "gcc.exe",
+				"CMAKE_CXX_COMPILER": "g++.exe"
+			},
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Windows"
+			},
+			"vendor": {
+				"microsoft.com/VisualStudioSettings/CMake/1.0": {
+					"hostOS": [ "Windows" ]
+				}
+			}
+		},
+
+		{
 			"name": "linux-base-gcc",
 			"hidden": true,
 			"generator": "Ninja",
@@ -164,6 +186,43 @@
 			"name": "win-x64-RelWithDebInfo-CLANG",
 			"displayName": "Windows x64 RelWithDebInfo CLANG",
 			"inherits": "win-x64-Debug-CLANG",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
+			}
+		},
+
+		{
+			"name": "win-x64-Debug-GCC",
+			"displayName": "Windows x64 Debug GCC",
+			"inherits": "windows-base-gcc",
+			"architecture": {
+				"value": "x64",
+				"strategy": "external"
+			},
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		},
+		{
+			"name": "win-x64-Release-GCC",
+			"displayName": "Windows x64 Release GCC",
+			"inherits": "win-x64-Debug-GCC",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release"
+			}
+		},
+		{
+			"name": "win-x64-MinSizeRel-GCC",
+			"displayName": "Windows x64 MinSizeRel GCC",
+			"inherits": "win-x64-Debug-GCC",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "MinSizeRel"
+			}
+		},
+		{
+			"name": "win-x64-RelWithDebInfo-GCC",
+			"displayName": "Windows x64 RelWithDebInfo GCC",
+			"inherits": "win-x64-Debug-GCC",
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
 			}
