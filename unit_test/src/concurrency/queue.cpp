@@ -165,7 +165,7 @@ namespace
 			using sum_production_type = std::uint64_t;
 
 			constexpr static std::uint32_t terminate_product_id = 42;
-			const static production_type terminate_product{.name = "", .id = terminate_product_id};
+			const production_type terminate_product{.name = "", .id = terminate_product_id};
 
 			constexpr static sum_production_type production_per_producer = 1'000'000;
 			[[maybe_unused]] constexpr static auto expected_total_production =
@@ -175,7 +175,7 @@ namespace
 					                           producers_count
 					);
 
-			const auto do_create_consumers = [](
+			const auto do_create_consumers = [terminate_product](
 				auto& queue,
 				std::span<sum_production_type, consumers_count> sums,
 				std::span<std::thread, consumers_count> consumers
@@ -183,12 +183,12 @@ namespace
 			{
 				std::ranges::for_each(
 					std::views::zip(sums, consumers),
-					[&queue](const std::tuple<std::uint64_t&, std::thread&>& pack) noexcept -> void
+					[&queue, terminate_product](const std::tuple<std::uint64_t&, std::thread&>& pack) noexcept -> void
 					{
 						auto& [sum, consumer] = pack;
 
 						consumer = std::thread{
-								[&queue, &sum]() noexcept -> void
+								[&queue, &sum, terminate_product]() noexcept -> void
 								{
 									std::uint64_t total = 0;
 									while (true)
@@ -209,17 +209,17 @@ namespace
 				);
 			};
 
-			const auto do_create_producers = [](
+			const auto do_create_producers = [terminate_product](
 				auto& queue,
 				std::span<std::thread, producers_count> producers
 			) noexcept -> void
 			{
 				std::ranges::for_each(
 					producers,
-					[&queue](std::thread& producer) noexcept -> void
+					[&queue, terminate_product](std::thread& producer) noexcept -> void
 					{
 						producer = std::thread{
-								[&queue]() noexcept -> void
+								[&queue, terminate_product]() noexcept -> void
 								{
 									for (auto n = production_per_producer; n != terminate_product.id; --n)
 									{
@@ -234,7 +234,7 @@ namespace
 				);
 			};
 
-			const auto do_start_and_check = [](
+			const auto do_start_and_check = [terminate_product](
 				auto& queue,
 				std::span<sum_production_type, consumers_count> sums,
 				std::span<std::thread, consumers_count> consumers,
@@ -242,7 +242,7 @@ namespace
 			) noexcept -> void
 			{
 				std::ranges::for_each(producers, &std::thread::join);
-				std::ranges::for_each(std::views::iota(0) | std::views::take(consumers_count), [&queue](auto) { queue.push(terminate_product); });
+				std::ranges::for_each(std::views::iota(0) | std::views::take(consumers_count), [&queue, terminate_product](auto) { queue.push(terminate_product); });
 				std::ranges::for_each(consumers, &std::thread::join);
 
 				const auto total = std::ranges::fold_left(

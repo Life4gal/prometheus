@@ -13,25 +13,19 @@ namespace gen_detail
 {
 	// =====================================================
 
-	[[nodiscard]] inline auto ranges_ascii() noexcept -> const auto&
+	[[nodiscard]] inline auto ranges_ascii() noexcept -> auto
 	{
-		const static auto range = i18n::RangeBuilder{}.ascii().range();
-
-		return range;
+		return i18n::RangeBuilder{}.ascii().range();
 	}
 
-	[[nodiscard]] inline auto ranges_latin() noexcept -> const auto&
+	[[nodiscard]] inline auto ranges_latin() noexcept -> auto
 	{
-		const static auto range = i18n::RangeBuilder{}.latin().range();
-
-		return range;
+		return i18n::RangeBuilder{}.latin().range();
 	}
 
-	[[nodiscard]] inline auto ranges_all() noexcept -> const auto&
+	[[nodiscard]] inline auto ranges_all() noexcept -> auto
 	{
-		const static auto range = i18n::RangeBuilder{}.latin().greek().korean().japanese().simplified_chinese_common().range();
-
-		return range;
+		return i18n::RangeBuilder{}.latin().greek().korean().japanese().simplified_chinese_common().range();
 	}
 
 	template<typename Char>
