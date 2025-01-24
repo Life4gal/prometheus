@@ -316,15 +316,18 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/chars/encoding.hpp
 
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.common.hpp
 		${PROJECT_SOURCE_DIR}/src/chars/scalar.latin.hpp
 		${PROJECT_SOURCE_DIR}/src/chars/scalar.utf8.hpp
 		${PROJECT_SOURCE_DIR}/src/chars/scalar.utf16.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.utf32.hpp
 		${PROJECT_SOURCE_DIR}/src/chars/scalar.hpp
 
-		${PROJECT_SOURCE_DIR}/src/chars/icelake.latin.hpp
-		${PROJECT_SOURCE_DIR}/src/chars/icelake.utf8.hpp
-		${PROJECT_SOURCE_DIR}/src/chars/icelake.utf16.hpp
-		${PROJECT_SOURCE_DIR}/src/chars/icelake.hpp
+		#${PROJECT_SOURCE_DIR}/src/chars/icelake.latin.hpp
+		#${PROJECT_SOURCE_DIR}/src/chars/icelake.utf8.hpp
+		#${PROJECT_SOURCE_DIR}/src/chars/icelake.utf16.hpp
+		#${PROJECT_SOURCE_DIR}/src/chars/icelake.utf32.hpp
+		#${PROJECT_SOURCE_DIR}/src/chars/icelake.hpp
 
 		${PROJECT_SOURCE_DIR}/src/chars/chars.hpp
 
@@ -338,6 +341,11 @@ set(
 		# UNIT_TEST
 		# =========================
 
+		${PROJECT_SOURCE_DIR}/src/unit_test/def.hpp
+		${PROJECT_SOURCE_DIR}/src/unit_test/events.hpp
+		${PROJECT_SOURCE_DIR}/src/unit_test/operands.hpp
+		${PROJECT_SOURCE_DIR}/src/unit_test/executor.hpp
+		${PROJECT_SOURCE_DIR}/src/unit_test/dispatcher.hpp
 		${PROJECT_SOURCE_DIR}/src/unit_test/unit_test.hpp
 )
 
