@@ -6,7 +6,7 @@ using namespace gal::prometheus;
 
 namespace
 {
-	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"utility.function_ref"> _ = []
+	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"functional.function_ref"> _ = []
 	{
 		using namespace unit_test;
 		using namespace functional;
