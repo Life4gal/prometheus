@@ -9,64 +9,117 @@ add_library(gal::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 if (${PROJECT_NAME_PREFIX}COMPILER_MSVC)
 	set(${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/D_CRT_SECURE_NO_WARNINGS")
+	# ====================
+	# PEDANTIC
 	if (${PROJECT_NAME_PREFIX}PEDANTIC)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/W4")
 	else ()
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/W3")
 	endif (${PROJECT_NAME_PREFIX}PEDANTIC)
+	# ====================
+	# WERROR
 	if (${PROJECT_NAME_PREFIX}WERROR)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/WX")
-	endif ()
+	endif (${PROJECT_NAME_PREFIX}WERROR)
+	# ====================
+	# ASAN
+	if (${PROJECT_NAME_PREFIX}ASAN)
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/fsanitize=address")
+	endif (${PROJECT_NAME_PREFIX}ASAN)
 elseif (${PROJECT_NAME_PREFIX}COMPILER_CLANG_CL)
 	set(${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/D_CRT_SECURE_NO_WARNINGS")
+	# ====================
+	# PEDANTIC
 	if (${PROJECT_NAME_PREFIX}PEDANTIC)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/W4")
 	else ()
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/W3")
 	endif (${PROJECT_NAME_PREFIX}PEDANTIC)
+	# ====================
+	# WERROR
 	if (${PROJECT_NAME_PREFIX}WERROR)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/WX")
-	endif ()
+	endif (${PROJECT_NAME_PREFIX}WERROR)
+	# ====================
+	# ASAN
+	if (${PROJECT_NAME_PREFIX}ASAN)
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/fsanitize=address")
+	endif (${PROJECT_NAME_PREFIX}ASAN)
 
+	# ====================
+	# CHARS
 	if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 		# chars/icelake_xxx
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-march=native")
 	endif (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 elseif (${PROJECT_NAME_PREFIX}COMPILER_CLANG)
 	set(${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Wall")
+	# ====================
+	# PEDANTIC
 	if (${PROJECT_NAME_PREFIX}PEDANTIC)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Wextra" "-Wpedantic")
 	endif (${PROJECT_NAME_PREFIX}PEDANTIC)
+	# ====================
+	# WERROR
 	if (${PROJECT_NAME_PREFIX}WERROR)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Werror")
-	endif ()
+	endif (${PROJECT_NAME_PREFIX}WERROR)
+	# ====================
+	# ASAN
+	if (${PROJECT_NAME_PREFIX}ASAN)
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+	endif (${PROJECT_NAME_PREFIX}ASAN)
 
+	# ====================
+	# CHARS
 	if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 		# chars/icelake_xxx
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-march=native")
 	endif (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 elseif (${PROJECT_NAME_PREFIX}COMPILER_GNU)
 	set(${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Wall")
+	# ====================
+	# PEDANTIC
 	if (${PROJECT_NAME_PREFIX}PEDANTIC)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Wextra" "-Wpedantic")
 	endif (${PROJECT_NAME_PREFIX}PEDANTIC)
+	# ====================
+	# WERROR
 	if (${PROJECT_NAME_PREFIX}WERROR)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Werror")
-	endif ()
+	endif (${PROJECT_NAME_PREFIX}WERROR)
+	# ====================
+	# ASAN
+	if (${PROJECT_NAME_PREFIX}ASAN)
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+	endif (${PROJECT_NAME_PREFIX}ASAN)
 
+	# ====================
+	# CHARS
 	if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 		# chars/icelake_xxx
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-march=native")
 	endif (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 elseif (${PROJECT_NAME_PREFIX}COMPILER_CLANG_APPLE)
 	set(${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Wall")
+	# ====================
+	# PEDANTIC
 	if (${PROJECT_NAME_PREFIX}PEDANTIC)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Wextra" "-Wpedantic")
 	endif (${PROJECT_NAME_PREFIX}PEDANTIC)
+	# ====================
+	# WERROR
 	if (${PROJECT_NAME_PREFIX}WERROR)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Werror")
-	endif ()
+	endif (${PROJECT_NAME_PREFIX}WERROR)
+	# ====================
+	# ASAN
+	if (${PROJECT_NAME_PREFIX}ASAN)
+		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+	endif (${PROJECT_NAME_PREFIX}ASAN)
 
+	# ====================
+	# CHARS
 	if (${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED})
 		# chars/icelake_xxx
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-march=native")
@@ -85,6 +138,12 @@ target_compile_options(
 # ===================================================================================================
 # COMPILE DEFINITIONS & FEATURES
 
+if (${PROJECT_NAME_PREFIX}ASAN)
+	set(${PROJECT_NAME_PREFIX}ASAN_VALUE 1)
+else ()
+	set(${PROJECT_NAME_PREFIX}ASAN_VALUE 0)
+endif (${PROJECT_NAME_PREFIX}ASAN)
+
 target_compile_definitions(
 		${PROJECT_NAME}
 		PUBLIC
@@ -102,6 +161,7 @@ target_compile_definitions(
 
 		${${PROJECT_NAME_PREFIX}PLATFORM_NAME}
 
+		${PROJECT_NAME_PREFIX}ENABLE_ASAN=${${PROJECT_NAME_PREFIX}ASAN_VALUE}
 		${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED=${${PROJECT_NAME_PREFIX}CPU_FEATURES_ICELAKE_SUPPORTED}
 
 		# msvc
