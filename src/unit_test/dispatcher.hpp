@@ -2831,33 +2831,41 @@ namespace gal::prometheus::unit_test::dispatcher
 			}
 
 		private:
-			template<typename Arg>
-			constexpr auto do_push(Arg&& arg) noexcept -> void //
-				requires requires { categories_.emplace_back(std::decay_t<Arg>::value); }
+			// string literal
+			template<std::size_t N>
+			constexpr auto do_push(const char (&string)[N]) noexcept -> void
 			{
-				std::ignore = std::forward<Arg>(arg);
-				categories_.emplace_back(std::decay_t<Arg>::value);
+				categories_.emplace_back(string);
 			}
 
-			template<typename Arg>
-			constexpr auto do_push(Arg&& arg) noexcept -> void //
-				requires requires { categories_.emplace_back(std::forward<Arg>(arg)); }
+			// string literal
+			constexpr auto do_push(const char* string) noexcept -> void
 			{
-				categories_.emplace_back(std::forward<Arg>(arg));
+				categories_.emplace_back(string);
 			}
 
-			template<typename Arg>
-			constexpr auto do_push(Arg&& arg) noexcept -> void //
-				requires requires { categories_.append_range(std::forward<Arg>(arg)); }
+			// string/string_view
+			constexpr auto do_push(const std::string_view string) noexcept -> void
 			{
-				categories_.append_range(std::forward<Arg>(arg));
+				categories_.emplace_back(string);
 			}
 
-			template<typename Arg>
-			constexpr auto do_push(Arg&& arg) noexcept -> void //
-				requires requires { categories_.insert(categories_.end(), std::ranges::begin(std::forward<Arg>(arg)), std::ranges::end(std::forward<Arg>(arg))); }
+			// string&&
+			constexpr auto do_push(std::string&& string) noexcept -> void
 			{
-				categories_.insert(categories_.end(), std::ranges::begin(std::forward<Arg>(arg)), std::ranges::end(std::forward<Arg>(arg)));
+				categories_.emplace_back(std::move(string));
+			}
+
+			// const vector<string>&
+			constexpr auto do_push(const test_categories_view_type categories) noexcept -> void
+			{
+				categories_.append_range(categories.get());
+			}
+
+			// vector<string>&&
+			constexpr auto do_push(test_categories_type&& categories) noexcept -> void
+			{
+				categories_.append_range(std::move(categories));
 			}
 
 			[[nodiscard]] constexpr auto do_move() && noexcept -> D&&
