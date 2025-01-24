@@ -84,7 +84,7 @@ namespace gen_detail
 	// UTF8
 
 	template<typename Char, bool AsciiOnly = false>
-	[[nodiscard]] auto make_random_utf8_string(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<Char>
+	[[nodiscard]] auto make_random_utf8_string(const std::size_t min_length, const std::size_t max_length) noexcept -> std::basic_string<Char>
 	{
 		using namespace gal::prometheus::numeric;
 
@@ -290,7 +290,7 @@ namespace gen_detail
 	// UTF32
 
 	template<bool AsciiOnly = false>
-	[[nodiscard]] auto make_random_utf32_string(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char32_t>
+	[[nodiscard]] auto make_random_utf32_string(const std::size_t min_length, const std::size_t max_length) noexcept -> std::basic_string<char32_t>
 	{
 		using namespace gal::prometheus::numeric;
 
@@ -349,12 +349,12 @@ namespace gen_detail
 // ==============================
 // LATIN
 
-[[nodiscard]] inline auto make_random_latin_string(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char>
+[[nodiscard]] inline auto make_random_latin_string(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char>
 {
 	return gen_detail::make_random_latin_string<char>(min_length, max_length);
 }
 
-[[nodiscard]] inline auto make_random_latin_string_ascii_only(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char>
+[[nodiscard]] inline auto make_random_latin_string_ascii_only(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char>
 {
 	return gen_detail::make_random_latin_string<char, true>(min_length, max_length);
 }
@@ -362,22 +362,22 @@ namespace gen_detail
 // ==============================
 // UTF8
 
-[[nodiscard]] inline auto make_random_utf8_char_string(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char>
+[[nodiscard]] inline auto make_random_utf8_char_string(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char>
 {
 	return gen_detail::make_random_utf8_string<char>(min_length, max_length);
 }
 
-[[nodiscard]] inline auto make_random_utf8_char_string_ascii_only(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char>
+[[nodiscard]] inline auto make_random_utf8_char_string_ascii_only(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char>
 {
 	return gen_detail::make_random_utf8_string<char, true>(min_length, max_length);
 }
 
-[[nodiscard]] inline auto make_random_utf8_string(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char8_t>
+[[nodiscard]] inline auto make_random_utf8_string(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char8_t>
 {
 	return gen_detail::make_random_utf8_string<char8_t>(min_length, max_length);
 }
 
-[[nodiscard]] inline auto make_random_utf8_string_ascii_only(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char8_t>
+[[nodiscard]] inline auto make_random_utf8_string_ascii_only(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char8_t>
 {
 	return gen_detail::make_random_utf8_string<char8_t, true>(min_length, max_length);
 }
@@ -385,22 +385,22 @@ namespace gen_detail
 // ==============================
 // UTF16
 
-[[nodiscard]] inline auto make_random_utf16_le_string(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char16_t>
+[[nodiscard]] inline auto make_random_utf16_le_string(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char16_t>
 {
 	return gen_detail::make_random_utf16_string<true>(min_length, max_length);
 }
 
-[[nodiscard]] inline auto make_random_utf16_be_string(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char16_t>
+[[nodiscard]] inline auto make_random_utf16_be_string(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char16_t>
 {
 	return gen_detail::make_random_utf16_string<false>(min_length, max_length);
 }
 
-[[nodiscard]] inline auto make_random_utf16_le_string_ascii_only(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char16_t>
+[[nodiscard]] inline auto make_random_utf16_le_string_ascii_only(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char16_t>
 {
 	return gen_detail::make_random_utf16_string<true, true>(min_length, max_length);
 }
 
-[[nodiscard]] inline auto make_random_utf16_be_string_ascii_only(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char16_t>
+[[nodiscard]] inline auto make_random_utf16_be_string_ascii_only(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char16_t>
 {
 	return gen_detail::make_random_utf16_string<false, true>(min_length, max_length);
 }
@@ -408,12 +408,12 @@ namespace gen_detail
 // ==============================
 // UTF32
 
-[[nodiscard]] inline auto make_random_utf32_string(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char32_t>
+[[nodiscard]] inline auto make_random_utf32_string(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char32_t>
 {
 	return gen_detail::make_random_utf32_string(min_length, max_length);
 }
 
-[[nodiscard]] inline auto make_random_utf32_string_ascii_only(const std::size_t min_length = 0, const std::size_t max_length = 65535) noexcept -> std::basic_string<char32_t>
+[[nodiscard]] inline auto make_random_utf32_string_ascii_only(const std::size_t min_length = 4096, const std::size_t max_length = 65535) noexcept -> std::basic_string<char32_t>
 {
 	return gen_detail::make_random_utf32_string<true>(min_length, max_length);
 }
