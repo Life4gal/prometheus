@@ -12,6 +12,7 @@
 #include <prometheus/macro.hpp>
 
 #include <functional/enumeration.hpp>
+#include <platform/os.hpp>
 
 #include <unit_test/def.hpp>
 #include <unit_test/events.hpp>
