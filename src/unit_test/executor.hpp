@@ -820,7 +820,7 @@ namespace gal::prometheus::unit_test::executor
 			// build chain
 			test_node_type node{.parent = nullptr, .name = test.name, .categories = test.categories};
 			{
-				auto* parent = &node.parent;
+				auto* parent = std::addressof(node.parent);
 				std::ranges::for_each(
 					test_data_stack_ | std::views::reverse,
 					[&parent](const test_data_type& data) noexcept -> void
