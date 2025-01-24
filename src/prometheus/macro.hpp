@@ -1,5 +1,5 @@
 // This file is part of prometheus
-// Copyright (C) 2022-2024 Life4gal <life4gal@gmail.com>
+// Copyright (C) 2022-2025 Life4gal <life4gal@gmail.com>
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
@@ -383,11 +383,7 @@
 #define GAL_PROMETHEUS_ERROR_UNREACHABLE(...) GAL_PROMETHEUS_COMPILER_UNREACHABLE()
 
 #if __has_cpp_attribute(assume)
-#define GAL_PROMETHEUS_ERROR_ASSUME(expression, ...) \
-	do                                                                                \
-	{                                                                                 \
-		GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED { [[assume(expression)]]; } \
-	} while (false)
+#define GAL_PROMETHEUS_ERROR_ASSUME(expression, ...) [[assume(expression)]]
 #else
 #define GAL_PROMETHEUS_ERROR_ASSUME(expression, ...) \
 	do                                                                                \

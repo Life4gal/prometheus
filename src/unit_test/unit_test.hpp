@@ -1,9 +1,9 @@
 // This file is part of prometheus
-// Copyright (C) 2022-2024 Life4gal <life4gal@gmail.com>
+// Copyright (C) 2022-2025 Life4gal <life4gal@gmail.com>
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-// unit_test module, inspired by boost-ext/ut(https://github.com/boost-ext/ut)(http://www.boost.org/LICENSE_1_0.txt)
+// inspired by boost-ext/ut(https://github.com/boost-ext/ut)(http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
 
