@@ -44,259 +44,6 @@ namespace gal::prometheus::chars
 						? std::endian::little
 						: std::endian::big;
 
-			template<std::endian SourceEndian>
-			[[nodiscard]] constexpr static auto to_native_word(const auto value) noexcept -> std::uint16_t
-			{
-				if constexpr (const auto data = static_cast<std::uint16_t>(value);
-					SourceEndian != std::endian::native)
-				{
-					return std::byteswap(data);
-				}
-				else
-				{
-					return data;
-				}
-			}
-
-			// 1-word UTF-16
-			// 2-words UTF-16(surrogate pair)
-			template<std::endian SourceEndian>
-			[[nodiscard]] constexpr static auto validate(const pointer_type current, const pointer_type end) noexcept -> std::pair<size_type, ErrorCode>
-			{
-				const auto leading_word = Scalar::to_native_word<SourceEndian>(*(current + 0));
-
-				if ((leading_word & 0xf800) == 0xd800)
-				{
-					// we have a two-word UTF16
-					// must be a surrogate pair
-					constexpr size_type length = 2;
-
-					// minimal bound checking
-					if (current + 1 >= end)
-					{
-						return {length, ErrorCode::SURROGATE};
-					}
-
-					if (const auto diff = static_cast<std::uint16_t>(leading_word - 0xd800);
-						diff > 0x3ff)
-					{
-						return {length, ErrorCode::SURROGATE};
-					}
-
-					const auto next_word = to_native_word<SourceEndian>(*(current + 1));
-					if (const auto diff = static_cast<std::uint16_t>(next_word - 0xdc00);
-						diff > 0x3ff)
-					{
-						return {length, ErrorCode::SURROGATE};
-					}
-
-					return {length, ErrorCode::NONE};
-				}
-
-				// we have a one-word UTF16
-				constexpr size_type length = 1;
-
-				return {length, ErrorCode::NONE};
-			}
-
-			/**
-			 * 1-word UTF-16:
-			 *	=> 1 LATIN
-			 *	=> 1/2/3 UTF-8
-			 *	=> 1 UTF-32
-			 * 2-words UTF-16(surrogate pair):
-			 *	=> 4 UTF-8
-			 *	=> 1 UTF-32
-			 */
-			template<CharsType OutputType, std::endian SourceEndian, bool PureAscii = false, bool Validate = true>
-			constexpr static auto write(
-				typename output_type_of<OutputType>::pointer& dest,
-				const pointer_type current,
-				const pointer_type& end
-			) noexcept -> std::pair<size_type, ErrorCode>
-			{
-				const auto leading_word = Scalar::to_native_word<SourceEndian>(*(current + 0));
-
-				if constexpr (PureAscii)
-				{
-					constexpr size_type length = 1;
-
-					*(dest + 0) = scalar_block::char_of<OutputType>(leading_word);
-
-					dest += 1;
-					return {length, ErrorCode::NONE};
-				}
-				else
-				{
-					if constexpr (OutputType == CharsType::LATIN)
-					{
-						constexpr size_type length = 1;
-
-						if constexpr (Validate)
-						{
-							if ((leading_word & 0xff00) != 0)
-							{
-								return {length, ErrorCode::TOO_LARGE};
-							}
-						}
-
-						*(dest + 0) = scalar_block::char_of<OutputType>(leading_word);
-
-						dest += 1;
-						return {length, ErrorCode::NONE};
-					}
-					else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
-					{
-						if ((leading_word & 0xff80) == 0)
-						{
-							// 1-word utf16 => 1-byte utf8
-							constexpr size_type length = 1;
-
-							*(dest + 0) = scalar_block::char_of<OutputType>(leading_word);
-
-							dest += 1;
-							return {length, ErrorCode::NONE};
-						}
-
-						if ((leading_word & 0xf800) == 0)
-						{
-							// 1-word utf16 => 2-bytes utf8
-							constexpr size_type length = 1;
-
-							// 0b110?'???? 0b10??'????
-							const auto c1 = static_cast<std::uint16_t>((leading_word >> 6) | 0b1100'0000);
-							const auto c2 = static_cast<std::uint16_t>((leading_word & 0b0011'1111) | 0b1000'0000);
-
-							*(dest + 0) = scalar_block::char_of<OutputType>(c1);
-							*(dest + 1) = scalar_block::char_of<OutputType>(c2);
-
-							dest += 2;
-							return {length, ErrorCode::NONE};
-						}
-
-						if ((leading_word & 0xf800) != 0xd800)
-						{
-							// 1-word utf16 => 3-bytes utf8
-							constexpr size_type length = 1;
-
-							// 0b1110'???? 0b10??'???? 0b10??'????
-							const auto c1 = static_cast<std::uint16_t>((leading_word >> 12) | 0b1110'0000);
-							const auto c2 = static_cast<std::uint16_t>(((leading_word >> 6) & 0b0011'1111) | 0b1000'0000);
-							const auto c3 = static_cast<std::uint16_t>((leading_word & 0b0011'1111) | 0b1000'0000);
-
-							*(dest + 0) = scalar_block::char_of<OutputType>(c1);
-							*(dest + 1) = scalar_block::char_of<OutputType>(c2);
-							*(dest + 2) = scalar_block::char_of<OutputType>(c3);
-
-							dest += 3;
-							return {length, ErrorCode::NONE};
-						}
-
-						// 2-word utf16 => 4-bytes utf8
-						// must be a surrogate pair
-						constexpr size_type length = 2;
-
-						// minimal bound checking
-						if (current + 1 >= end)
-						{
-							return {length, ErrorCode::SURROGATE};
-						}
-
-						const auto diff = static_cast<std::uint16_t>(leading_word - 0xd800);
-
-						if constexpr (Validate)
-						{
-							if (diff > 0x3ff)
-							{
-								return {length, ErrorCode::SURROGATE};
-							}
-						}
-
-						const auto next_word = Scalar::to_native_word<SourceEndian>(*(current + 1));
-						const auto next_diff = static_cast<std::uint16_t>(next_word - 0xdc00);
-
-						if constexpr (Validate)
-						{
-							if (next_diff > 0x3ff)
-							{
-								return {length, ErrorCode::SURROGATE};
-							}
-						}
-
-						const auto value = static_cast<std::uint32_t>((diff << 10) + next_diff + 0x1'0000);
-
-						// 0b1111'0??? 0b10??'???? 0b10??'???? 0b10??'????
-						const auto c1 = static_cast<std::uint16_t>((value >> 18) | 0b1111'0000);
-						const auto c2 = static_cast<std::uint16_t>(((value >> 12) & 0b0011'1111) | 0b1000'0000);
-						const auto c3 = static_cast<std::uint16_t>(((value >> 6) & 0b0011'1111) | 0b1000'0000);
-						const auto c4 = static_cast<std::uint16_t>((value & 0b0011'1111) | 0b1000'0000);
-
-						*(dest + 0) = scalar_block::char_of<OutputType>(c1);
-						*(dest + 1) = scalar_block::char_of<OutputType>(c2);
-						*(dest + 2) = scalar_block::char_of<OutputType>(c3);
-						*(dest + 3) = scalar_block::char_of<OutputType>(c4);
-
-						dest += 4;
-						return {length, ErrorCode::NONE};
-					}
-					else if constexpr (OutputType == CharsType::UTF32)
-					{
-						if ((leading_word & 0xf800) == 0xd800)
-						{
-							// we have a two-word UTF16
-							// must be a surrogate pair
-							constexpr size_type length = 2;
-
-							// minimal bound checking
-							if (current + 1 >= end)
-							{
-								return {length, ErrorCode::SURROGATE};
-							}
-
-							const auto diff = static_cast<std::uint16_t>(leading_word - 0xd800);
-
-							if constexpr (Validate)
-							{
-								if (diff > 0x3ff)
-								{
-									return {length, ErrorCode::SURROGATE};
-								}
-							}
-
-							const auto next_word = Scalar::to_native_word<SourceEndian>(*(current + 1));
-							const auto next_diff = static_cast<std::uint16_t>(next_word - 0xdc00);
-
-							if constexpr (Validate)
-							{
-								if (next_diff > 0x3ff)
-								{
-									return {length, ErrorCode::SURROGATE};
-								}
-							}
-
-							const auto value = static_cast<std::uint32_t>((diff << 10) + next_diff + 0x1'0000);
-
-							*(dest + 0) = scalar_block::char_of<OutputType>(value);
-
-							dest += 1;
-							return {length, ErrorCode::NONE};
-						}
-
-						// we have a one-word UTF16
-						constexpr size_type length = 1;
-
-						*(dest + 0) = scalar_block::char_of<OutputType>(leading_word);
-
-						dest += 1;
-						return {length, ErrorCode::NONE};
-					}
-					else
-					{
-						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-					}
-				}
-			}
-
 		public:
 			template<bool Detail = false, std::endian SourceEndian = default_endian>
 			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> auto
@@ -314,15 +61,16 @@ namespace gal::prometheus::chars
 				while (it_input_current < it_input_end)
 				{
 					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-					constexpr auto current_output_length = static_cast<std::size_t>(0);
 
-					const auto [length, error] = Scalar::validate<SourceEndian>(it_input_current, it_input_end);
+					const auto [length, error] = scalar_block::validate<
+						SourceEndian == std::endian::little ? CharsType::UTF16_LE : CharsType::UTF16_BE
+					>(it_input_current, it_input_end);
 					if (error != ErrorCode::NONE)
 					{
 						return chars::make_result<process_policy>(
 							error,
 							current_input_length,
-							current_output_length
+							length_ignored
 						);
 					}
 
@@ -332,11 +80,10 @@ namespace gal::prometheus::chars
 				// ==================================================
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
 				const auto current_input_length = static_cast<std::size_t>(input_length);
-				constexpr auto current_output_length = static_cast<std::size_t>(0);
 				return chars::make_result<process_policy>(
 					ErrorCode::NONE,
 					current_input_length,
-					current_output_length
+					length_ignored
 				);
 			}
 
@@ -367,7 +114,7 @@ namespace gal::prometheus::chars
 						std::plus<>{},
 						[](const auto word) noexcept
 						{
-							const auto native_word = Scalar::to_native_word<SourceEndian>(word);
+							const auto native_word = scalar_block::utf16_to_native<SourceEndian>(word);
 
 							return
 									// ASCII
@@ -397,7 +144,7 @@ namespace gal::prometheus::chars
 						std::plus<>{},
 						[](const auto word) noexcept
 						{
-							const auto native_word = Scalar::to_native_word<SourceEndian>(word);
+							const auto native_word = scalar_block::utf16_to_native<SourceEndian>(word);
 
 							return +((native_word & 0xfc00) != 0xdc00);
 						}
@@ -523,11 +270,11 @@ namespace gal::prometheus::chars
 							const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
 							const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
 
-							const auto [length, error] = Scalar::write<
+							const auto [length, error] = scalar_block::write<
+								SourceEndian == std::endian::little ? CharsType::UTF16_LE : CharsType::UTF16_BE,
 								OutputType,
-								SourceEndian,
 								Pure,
-								not assume_all_correct<ProcessPolicy>()
+								assume_all_correct<ProcessPolicy>()
 							>(
 								it_output_current,
 								it_input_current,
@@ -548,11 +295,10 @@ namespace gal::prometheus::chars
 						// ==================================================
 						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current >= end);
 						const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-						constexpr auto current_output_length = static_cast<std::size_t>(0);
 						return chars::make_result<process_policy_keep_all_result>(
 							ErrorCode::NONE,
 							current_input_length,
-							current_output_length
+							length_ignored
 						);
 					};
 
@@ -564,7 +310,7 @@ namespace gal::prometheus::chars
 
 						if (const auto value = [it_input_current]() noexcept -> auto
 							{
-								if constexpr (const auto data = scalar_block::read<chars_type>(it_input_current);
+								if constexpr (const auto data = scalar_block::read<chars_type, OutputType>(it_input_current);
 									SourceEndian == std::endian::native)
 								{
 									return data;
@@ -713,7 +459,7 @@ namespace gal::prometheus::chars
 					input,
 					[](const auto word) noexcept -> bool
 					{
-						const auto native_word = Scalar::to_native_word<SourceEndian>(word);
+						const auto native_word = scalar_block::utf16_to_native<SourceEndian>(word);
 
 						return (native_word & 0xfc00) != 0xdc00;
 					}

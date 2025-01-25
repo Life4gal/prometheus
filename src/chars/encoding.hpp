@@ -333,6 +333,9 @@ namespace gal::prometheus::chars
 		std::size_t output;
 	};
 
+	// Use when the length is meaningless
+	constexpr auto length_ignored = std::numeric_limits<std::size_t>::max();
+
 	template<InputProcessPolicy ProcessPolicy>
 	[[nodiscard]] constexpr auto make_result(const ErrorCode error, const std::size_t input, const std::size_t output) noexcept -> auto
 	{

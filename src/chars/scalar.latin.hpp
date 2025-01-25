@@ -34,89 +34,6 @@ namespace gal::prometheus::chars
 
 		using data_type = scalar_block::data_type;
 
-	private:
-		// ASCII
-		[[nodiscard]] constexpr static auto validate(const char_type c) noexcept -> ErrorCode
-		{
-			if (static_cast<std::uint8_t>(c) < 0x80)
-			{
-				return ErrorCode::NONE;
-			}
-
-			return ErrorCode::TOO_LARGE;
-		}
-
-		/**
-		 * 1-byte LATIN:
-		 *	=> 1/2 UTF-8
-		 *	=> 1 UTF-16
-		 *	=> 1 UTF-32
-		 */
-		template<CharsType OutputType, bool PureAscii = false>
-		constexpr static auto write(
-			typename output_type_of<OutputType>::pointer& dest,
-			const pointer_type current,
-			[[maybe_unused]] const pointer_type& end
-		) noexcept -> std::pair<size_type, ErrorCode>
-		{
-			constexpr size_type length = 1;
-
-			const auto value = static_cast<std::uint8_t>(*(current + 0));
-
-			if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
-			{
-				if constexpr (PureAscii)
-				{
-					*(dest + 0) = scalar_block::char_of<OutputType>(value);
-
-					dest += 1;
-					return {length, ErrorCode::NONE};
-				}
-				else
-				{
-					if ((value & 0x80) == 0)
-					{
-						// ASCII
-						*(dest + 0) = scalar_block::char_of<OutputType>(value);
-
-						dest += 1;
-						return {length, ErrorCode::NONE};
-					}
-
-					// 0b110?'???? 0b10??'????
-					const auto c1 = static_cast<std::uint8_t>((value >> 6) | 0b1100'0000);
-					const auto c2 = static_cast<std::uint8_t>((value & 0b0011'1111) | 0b1000'0000);
-
-					*(dest + 0) = scalar_block::char_of<OutputType>(c1);
-					*(dest + 1) = scalar_block::char_of<OutputType>(c2);
-
-					dest += 2;
-					return {length, ErrorCode::NONE};
-				}
-			}
-			// ReSharper disable CppClangTidyBugproneBranchClone
-			else if constexpr (OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE)
-			{
-				*(dest + 0) = scalar_block::char_of<OutputType>(value);
-
-				dest += 1;
-				return {length, ErrorCode::NONE};
-			}
-			else if constexpr (OutputType == CharsType::UTF32)
-			{
-				*(dest + 0) = scalar_block::char_of<OutputType>(value);
-
-				dest += 1;
-				return {length, ErrorCode::NONE};
-			}
-			// ReSharper restore CppClangTidyBugproneBranchClone
-			else
-			{
-				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-			}
-		}
-
-	public:
 		// note: only used to detect pure ASCII strings, otherwise there is no point in using this function
 		template<bool Detail = false>
 		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> auto
@@ -138,29 +55,36 @@ namespace gal::prometheus::chars
 				[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 				#endif
 
-				if (const auto value = scalar_block::read<chars_type>(it_input_current);
+				if (const auto value = scalar_block::read<chars_type, chars_type>(it_input_current);
 					not scalar_block::pure_ascii<chars_type>(value))
 				{
-					// MSB => LSB
-					const auto msb = (value >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
-					const auto packed = msb * static_cast<data_type>(0x01'02'04'08'10'20'40'80);
-					const auto mask = static_cast<std::uint8_t>(packed >> 56);
+					if constexpr (Detail)
+					{
+						const auto mask = scalar_block::not_ascii_mask<chars_type>(value);
 
-					// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
-					//           ^ n_ascii
-					//                                                 ^ n_next_possible_ascii_chunk_begin
-					const auto n_ascii = std::countr_zero(mask);
+						// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
+						//           ^ n_ascii
+						//                                                 ^ n_next_possible_ascii_chunk_begin
+						const auto n_ascii = std::countr_zero(mask);
 
-					it_input_current += n_ascii;
+						it_input_current += n_ascii;
 
-					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-					constexpr auto current_output_length = static_cast<std::size_t>(0);
+						const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-					return chars::make_result<process_policy>(
-						ErrorCode::TOO_LARGE,
-						current_input_length,
-						current_output_length
-					);
+						return chars::make_result<process_policy>(
+							ErrorCode::TOO_LARGE,
+							current_input_length,
+							length_ignored
+						);
+					}
+					else
+					{
+						return chars::make_result<process_policy>(
+							ErrorCode::TOO_LARGE,
+							length_ignored,
+							length_ignored
+						);
+					}
 				}
 
 				it_input_current += advance;
@@ -176,38 +100,33 @@ namespace gal::prometheus::chars
 				#endif
 
 				const auto end = it_input_current + remaining;
-				if (const auto it = std::ranges::find_if(
-						it_input_current,
-						end,
-						[](const auto error) noexcept -> bool
-						{
-							return error != ErrorCode::NONE;
-						},
-						static_cast<auto(*)(char_type) noexcept -> ErrorCode>(&Scalar::validate)
-					);
-					it != end)
+				while (it_input_current < end)
 				{
 					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-					constexpr auto current_output_length = static_cast<std::size_t>(0);
 
-					return chars::make_result<process_policy>(
-						ErrorCode::TOO_LARGE,
-						current_input_length,
-						current_output_length
-					);
+					const auto [length, error] = scalar_block::validate<chars_type>(it_input_current, it_input_end);
+					GAL_PROMETHEUS_ERROR_ASSUME(length == 1);
+
+					if (error != ErrorCode::NONE)
+					{
+						return chars::make_result<process_policy>(
+							error,
+							current_input_length,
+							length_ignored
+						);
+					}
+
+					it_input_current += length;
 				}
-
-				it_input_current += remaining;
 			}
 
 			// ==================================================
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
 			const auto current_input_length = static_cast<std::size_t>(input_length);
-			constexpr auto current_output_length = static_cast<std::size_t>(0);
 			return chars::make_result<process_policy>(
 				ErrorCode::NONE,
 				current_input_length,
-				current_output_length
+				length_ignored
 			);
 		}
 
@@ -248,17 +167,10 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 					#endif
 
-					if (const auto value = scalar_block::read<chars_type>(it_input_current);
+					if (const auto value = scalar_block::read<chars_type, OutputType>(it_input_current);
 						not scalar_block::pure_ascii<chars_type>(value))
 					{
-						// MSB => LSB
-						const auto msb = (value >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
-
-						// const auto packed = msb * static_cast<data_type>(0x01'01'01'01'01'01'01'01);
-						//
-						// const auto count = static_cast<std::uint8_t>(packed >> 56);
-
-						const auto count = std::popcount(msb);
+						const auto count = scalar_block::not_ascii_count<chars_type>(value);
 
 						output_length += count;
 					}
@@ -275,15 +187,19 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, remaining};
 					#endif
 
-					const auto extra = std::ranges::count_if(
-						it_input_current,
-						it_input_current + remaining,
-						[](const auto value) noexcept -> bool
+					const auto end = it_input_current + remaining;
+					while (it_input_current < end)
+					{
+						const auto [length, error] = scalar_block::validate<chars_type>(it_input_current, it_input_end);
+						GAL_PROMETHEUS_ERROR_ASSUME(length == 1);
+
+						if (error != ErrorCode::NONE)
 						{
-							return Scalar::validate(value) != ErrorCode::NONE;
+							output_length += 1;
 						}
-					);
-					output_length += extra;
+
+						it_input_current += length;
+					}
 				}
 
 				return output_length;
@@ -361,7 +277,7 @@ namespace gal::prometheus::chars
 					const auto end = it_input_current + n;
 					while (it_input_current < end)
 					{
-						const auto [length, error] = Scalar::write<OutputType, Pure>(it_output_current, it_input_current, it_input_end);
+						const auto [length, error] = scalar_block::write<chars_type, OutputType, Pure, false>(it_output_current, it_input_current, it_input_end);
 						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(length == 1);
 						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(error == ErrorCode::NONE);
 
@@ -375,15 +291,11 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 					#endif
 
-					if (const auto value = scalar_block::read<chars_type>(it_input_current);
+					if (const auto value = scalar_block::read<chars_type, OutputType>(it_input_current);
 						not scalar_block::pure_ascii<chars_type>(value))
 					{
-						// MSB => LSB
-						const auto msb = (value >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
+						const auto mask = scalar_block::not_ascii_mask<chars_type>(value);
 
-						const auto packed = msb * static_cast<data_type>(0x01'02'04'08'10'20'40'80);
-
-						const auto mask = static_cast<std::uint8_t>(packed >> 56);
 						// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
 						//           ^ n_ascii
 						//                                                 ^ n_next_possible_ascii_chunk_begin

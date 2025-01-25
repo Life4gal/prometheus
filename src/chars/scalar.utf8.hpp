@@ -36,424 +36,6 @@ namespace gal::prometheus::chars
 			using data_type = scalar_block::data_type;
 
 		private:
-			// 1-byte UTF-8
-			// 2-bytes UTF-8 
-			// 3-bytes UTF-8 
-			// 4-bytes UTF-8 
-			[[nodiscard]] constexpr static auto validate(const pointer_type current, const pointer_type end) noexcept -> std::pair<size_type, ErrorCode>
-			{
-				const auto leading_byte = static_cast<std::uint8_t>(*(current + 0));
-
-				if ((leading_byte & 0x80) == 0)
-				{
-					// ASCII
-					constexpr size_type length = 1;
-
-					return {length, ErrorCode::NONE};
-				}
-
-				if ((leading_byte & 0b1110'0000) == 0b1100'0000)
-				{
-					// we have a two-bytes UTF-8
-					constexpr size_type length = 2;
-
-					// minimal bound checking
-					if (current + 1 >= end)
-					{
-						return {length, ErrorCode::TOO_SHORT};
-					}
-
-					const auto next_byte = static_cast<std::uint8_t>(*(current + 1));
-
-					if ((next_byte & 0b1100'0000) != 0b1000'0000)
-					{
-						return {length, ErrorCode::TOO_SHORT};
-					}
-
-					// range check
-					const auto code_point = static_cast<std::uint32_t>(
-						(leading_byte & 0b0001'1111) << 6 |
-						(next_byte & 0b0011'1111)
-					);
-
-					if (code_point < 0x80)
-					{
-						return {length, ErrorCode::OVERLONG};
-					}
-					if (code_point > 0x7ff)
-					{
-						return {length, ErrorCode::TOO_LARGE};
-					}
-
-					return {length, ErrorCode::NONE};
-				}
-
-				if ((leading_byte & 0b1111'0000) == 0b1110'0000)
-				{
-					// we have a three-byte UTF-8
-					constexpr size_type length = 3;
-
-					// minimal bound checking
-					if (current + 2 >= end)
-					{
-						return {length, ErrorCode::TOO_SHORT};
-					}
-
-					const auto next_byte_1 = static_cast<std::uint8_t>(*(current + 1));
-					const auto next_byte_2 = static_cast<std::uint8_t>(*(current + 2));
-
-					if (
-						((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
-						((next_byte_2 & 0b1100'0000) != 0b1000'0000)
-					)
-					{
-						return {length, ErrorCode::TOO_SHORT};
-					}
-
-					// range check
-					const auto code_point = static_cast<std::uint32_t>(
-						(leading_byte & 0b0000'1111) << 12 |
-						(next_byte_1 & 0b0011'1111) << 6 |
-						(next_byte_2 & 0b0011'1111)
-					);
-
-					if (code_point < 0x800)
-					{
-						return {length, ErrorCode::OVERLONG};
-					}
-					if (code_point > 0xffff)
-					{
-						return {length, ErrorCode::TOO_LARGE};
-					}
-					if (code_point > 0xd7ff and code_point < 0xe000)
-					{
-						return {length, ErrorCode::SURROGATE};
-					}
-
-					return {length, ErrorCode::NONE};
-				}
-
-				if ((leading_byte & 0b1111'1000) == 0b1111'0000)
-				{
-					// we have a four-byte UTF-8 word
-					constexpr size_type length = 4;
-
-					// minimal bound checking
-					if (current + 3 >= end)
-					{
-						return {length, ErrorCode::TOO_SHORT};
-					}
-
-					const auto next_byte_1 = static_cast<std::uint8_t>(*(current + 1));
-					const auto next_byte_2 = static_cast<std::uint8_t>(*(current + 2));
-					const auto next_byte_3 = static_cast<std::uint8_t>(*(current + 3));
-
-					if (
-						((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
-						((next_byte_2 & 0b1100'0000) != 0b1000'0000) or
-						((next_byte_3 & 0b1100'0000) != 0b1000'0000)
-					)
-					{
-						return {length, ErrorCode::TOO_SHORT};
-					}
-
-					// range check
-					const auto code_point = static_cast<std::uint32_t>(
-						(leading_byte & 0b0000'0111) << 18 |
-						(next_byte_1 & 0b0011'1111) << 12 |
-						(next_byte_2 & 0b0011'1111) << 6 |
-						(next_byte_3 & 0b0011'1111)
-					);
-
-					if (code_point <= 0xffff)
-					{
-						return {length, ErrorCode::OVERLONG};
-					}
-					if (code_point > 0x10'ffff)
-					{
-						return {length, ErrorCode::TOO_LARGE};
-					}
-
-					return {length, ErrorCode::NONE};
-				}
-
-				// we either have too many continuation bytes or an invalid leading byte
-				constexpr size_type length = 0;
-
-				if ((leading_byte & 0b1100'0000) == 0b1000'0000)
-				{
-					// we have too many continuation bytes
-					return {length, ErrorCode::TOO_LONG};
-				}
-
-				// we have an invalid leading byte
-				return {length, ErrorCode::HEADER_BITS};
-			}
-
-			/**
-			 * 1-byte UTF-8:
-			 *	=> 1 LATIN
-			 *	=> 1 UTF-16
-			 *	=> 1 UTF-32
-			 * 2-bytes UTF-8:
-			 *	=> 1 LATIN
-			 *	=> 1 UTF-16
-			 *	=> 1 UTF-32
-			 * 3-bytes UTF-8:
-			 *	=> 1 UTF-16
-			 *	=> 1 UTF-32
-			 * 4-bytes UTF-8:
-			 *	=> 2 UTF-16
-			 *	=> 1 UTF-32	
-			 */
-			template<CharsType OutputType, bool PureAscii = false, bool Validate = true>
-			constexpr static auto write(
-				typename output_type_of<OutputType>::pointer& dest,
-				const pointer_type current,
-				const pointer_type& end
-			) noexcept -> std::pair<size_type, ErrorCode>
-			{
-				const auto leading_byte = static_cast<std::uint8_t>(*(current + 0));
-
-				if constexpr (PureAscii)
-				{
-					constexpr size_type length = 1;
-
-					*(dest + 0) = scalar_block::char_of<OutputType>(leading_byte);
-
-					dest += 1;
-					return {length, ErrorCode::NONE};
-				}
-				else
-				{
-					if ((leading_byte & 0x80) == 0)
-					{
-						// ASCII
-						constexpr size_type length = 1;
-
-						*(dest + 0) = scalar_block::char_of<OutputType>(leading_byte);
-
-						dest += 1;
-						return {length, ErrorCode::NONE};
-					}
-
-					if ((leading_byte & 0b1110'0000) == 0b1100'0000)
-					{
-						// we have a two-byte UTF-8
-						constexpr size_type length = 2;
-
-						// minimal bound checking
-						if (current + 1 >= end)
-						{
-							return {length, ErrorCode::TOO_SHORT};
-						}
-
-						const auto next_byte = static_cast<std::uint8_t>(*(current + 1));
-
-						// checks if the next byte is a valid continuation byte in UTF-8.
-						// A valid continuation byte starts with 10.
-						if ((next_byte & 0b1100'0000) != 0b1000'0000)
-						{
-							return {length, ErrorCode::TOO_SHORT};
-						}
-
-						// assembles the Unicode code point from the two bytes.
-						// It does this by discarding the leading 110 and 10 bits from the two bytes,
-						// shifting the remaining bits of the first byte,
-						// and then combining the results with a bitwise OR operation.
-						const auto code_point = static_cast<std::uint32_t>(
-							(leading_byte & 0b0001'1111) << 6 |
-							(next_byte & 0b0011'1111)
-						);
-
-						if constexpr (Validate)
-						{
-							if (code_point < 0x80)
-							{
-								return {length, ErrorCode::OVERLONG};
-							}
-
-							if (code_point >
-							    []() noexcept -> std::uint32_t
-							    {
-								    if constexpr (OutputType == CharsType::LATIN) { return 0xff; }
-								    else { return 0x7ff; }
-							    }()
-							)
-							{
-								return {length, ErrorCode::TOO_LARGE};
-							}
-						}
-
-						*(dest + 0) = scalar_block::char_of<OutputType>(code_point);
-
-						dest += 1;
-						return {length, ErrorCode::NONE};
-					}
-
-					if ((leading_byte & 0b1111'0000) == 0b1110'0000)
-					{
-						// we have a three-byte UTF-8
-						constexpr size_type length = 3;
-
-						if constexpr (
-							OutputType == CharsType::UTF16_LE or
-							OutputType == CharsType::UTF16_BE or
-							OutputType == CharsType::UTF32
-						)
-						{
-							// minimal bound checking
-							if (current + 2 >= end)
-							{
-								return {length, ErrorCode::TOO_SHORT};
-							}
-
-							const auto next_byte_1 = static_cast<std::uint8_t>(*(current + 1));
-							const auto next_byte_2 = static_cast<std::uint8_t>(*(current + 2));
-
-							if constexpr (Validate)
-							{
-								if (
-									((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
-									((next_byte_2 & 0b1100'0000) != 0b1000'0000)
-								)
-								{
-									return {length, ErrorCode::TOO_SHORT};
-								}
-							}
-
-							const auto code_point = static_cast<std::uint32_t>(
-								(leading_byte & 0b0000'1111) << 12 |
-								(next_byte_1 & 0b0011'1111) << 6 |
-								(next_byte_2 & 0b0011'1111)
-							);
-
-							if constexpr (Validate)
-							{
-								if (code_point < 0x800)
-								{
-									return {length, ErrorCode::OVERLONG};
-								}
-
-								if (code_point > 0xffff)
-								{
-									return {length, ErrorCode::TOO_LARGE};
-								}
-
-								if (code_point > 0xd7ff and code_point < 0xe000)
-								{
-									return {length, ErrorCode::SURROGATE};
-								}
-							}
-
-							*(dest + 0) = scalar_block::char_of<OutputType>(code_point);
-
-							dest += 1;
-							return {length, ErrorCode::NONE};
-						}
-						else
-						{
-							return {length, ErrorCode::TOO_LARGE};
-						}
-					}
-
-					if ((leading_byte & 0b1111'1000) == 0b1111'0000)
-					{
-						// we have a four-byte UTF-8 word
-						constexpr size_type length = 4;
-
-						if constexpr (
-							OutputType == CharsType::UTF16_LE or
-							OutputType == CharsType::UTF16_BE or
-							OutputType == CharsType::UTF32
-						)
-						{
-							// minimal bound checking
-							if (current + 3 >= end)
-							{
-								return {length, ErrorCode::TOO_SHORT};
-							}
-
-							const auto next_byte_1 = static_cast<std::uint8_t>(*(current + 1));
-							const auto next_byte_2 = static_cast<std::uint8_t>(*(current + 2));
-							const auto next_byte_3 = static_cast<std::uint8_t>(*(current + 3));
-
-							if constexpr (Validate)
-							{
-								if (
-									((next_byte_1 & 0b1100'0000) != 0b1000'0000) or
-									((next_byte_2 & 0b1100'0000) != 0b1000'0000) or
-									((next_byte_3 & 0b1100'0000) != 0b1000'0000)
-								)
-								{
-									return {length, ErrorCode::TOO_SHORT};
-								}
-							}
-
-							const auto code_point = static_cast<std::uint32_t>(
-								(leading_byte & 0b0000'0111) << 18 |
-								(next_byte_1 & 0b0011'1111) << 12 |
-								(next_byte_2 & 0b0011'1111) << 6 |
-								(next_byte_3 & 0b0011'1111)
-							);
-
-							if constexpr (Validate)
-							{
-								if (code_point <= 0xffff)
-								{
-									return {length, ErrorCode::OVERLONG};
-								}
-
-								if (code_point > 0x10'ffff)
-								{
-									return {length, ErrorCode::TOO_LARGE};
-								}
-							}
-
-							if constexpr (OutputType == CharsType::UTF32)
-							{
-								*(dest + 0) = scalar_block::char_of<OutputType>(code_point);
-
-								dest += 1;
-							}
-							else
-							{
-								const auto [high_surrogate, low_surrogate] = [cp = code_point - 0x1'0000]() noexcept -> auto
-								{
-									const auto high = static_cast<std::uint16_t>(0xd800 + (cp >> 10));
-									const auto low = static_cast<std::uint16_t>(0xdc00 + (cp & 0x3ff));
-
-									return std::make_pair(high, low);
-								}();
-
-								*(dest + 0) = scalar_block::char_of<OutputType>(high_surrogate);
-								*(dest + 1) = scalar_block::char_of<OutputType>(low_surrogate);
-
-								dest += 2;
-							}
-
-							return {length, ErrorCode::NONE};
-						}
-						else
-						{
-							return {length, ErrorCode::TOO_LARGE};
-						}
-					}
-
-					// we either have too many continuation bytes or an invalid leading byte
-					constexpr size_type length = 0;
-
-					if ((leading_byte & 0b1100'0000) == 0b1000'0000)
-					{
-						// we have too many continuation bytes
-						return {length, ErrorCode::TOO_LONG};
-					}
-
-					// we have an invalid leading byte
-					return {length, ErrorCode::HEADER_BITS};
-				}
-			}
-
 			// Finds the previous leading byte starting backward from `current` and validates with errors from there.
 			// Used to pinpoint the location of an error when an invalid chunk is detected.
 			// We assume that the stream starts with a leading byte, and to check that it is the case,
@@ -577,15 +159,14 @@ namespace gal::prometheus::chars
 					while (it_input_current < end)
 					{
 						const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-						constexpr auto current_output_length = static_cast<std::size_t>(0);
 
-						const auto [length, error] = Scalar::validate(it_input_current, it_input_end);
+						const auto [length, error] = scalar_block::validate<chars_type>(it_input_current, it_input_end);
 						if (error != ErrorCode::NONE)
 						{
 							return chars::make_result<process_policy_keep_all_result>(
 								error,
 								current_input_length,
-								current_output_length
+								length_ignored
 							);
 						}
 
@@ -595,11 +176,10 @@ namespace gal::prometheus::chars
 					// ==================================================
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current >= end);
 					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-					constexpr auto current_output_length = static_cast<std::size_t>(0);
 					return chars::make_result<process_policy_keep_all_result>(
 						ErrorCode::NONE,
 						current_input_length,
-						current_output_length
+						length_ignored
 					);
 				};
 
@@ -609,15 +189,11 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 					#endif
 
-					if (const auto value = scalar_block::read<chars_type>(it_input_current);
+					if (const auto value = scalar_block::read<chars_type, chars_type>(it_input_current);
 						not scalar_block::pure_ascii<chars_type>(value))
 					{
-						// MSB => LSB
-						const auto msb = (value >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
+						const auto mask = scalar_block::not_ascii_mask<chars_type>(value);
 
-						const auto packed = msb * static_cast<data_type>(0x01'02'04'08'10'20'40'80);
-
-						const auto mask = static_cast<std::uint8_t>(packed >> 56);
 						// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
 						//           ^ n_ascii
 						//                                                 ^ n_next_possible_ascii_chunk_begin
@@ -661,11 +237,10 @@ namespace gal::prometheus::chars
 				// ==================================================
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
 				const auto current_input_length = static_cast<std::size_t>(input_length);
-				constexpr auto current_output_length = static_cast<std::size_t>(0);
 				return chars::make_result<process_policy>(
 					ErrorCode::NONE,
 					current_input_length,
-					current_output_length
+					length_ignored
 				);
 			}
 
@@ -807,10 +382,11 @@ namespace gal::prometheus::chars
 							const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
 							const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
 
-							const auto [length, error] = Scalar::write<
+							const auto [length, error] = scalar_block::write<
+								chars_type,
 								OutputType,
 								Pure,
-								not assume_all_correct<ProcessPolicy>()
+								assume_all_correct<ProcessPolicy>()
 							>(
 								it_output_current,
 								it_input_current,
@@ -831,11 +407,10 @@ namespace gal::prometheus::chars
 						// ==================================================
 						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current >= end);
 						const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-						constexpr auto current_output_length = static_cast<std::size_t>(0);
 						return chars::make_result<process_policy_keep_all_result>(
 							ErrorCode::NONE,
 							current_input_length,
-							current_output_length
+							length_ignored
 						);
 					};
 
@@ -845,15 +420,11 @@ namespace gal::prometheus::chars
 						[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 						#endif
 
-						if (const auto value = scalar_block::read<chars_type>(it_input_current);
+						if (const auto value = scalar_block::read<chars_type, OutputType>(it_input_current);
 							not scalar_block::pure_ascii<chars_type>(value))
 						{
-							// MSB => LSB
-							const auto msb = (value >> 7) & static_cast<data_type>(0x01'01'01'01'01'01'01'01);
+							const auto mask = scalar_block::not_ascii_mask<chars_type>(value);
 
-							const auto packed = msb * static_cast<data_type>(0x01'02'04'08'10'20'40'80);
-
-							const auto mask = static_cast<std::uint8_t>(packed >> 56);
 							// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
 							//           ^ n_ascii
 							//                                                 ^ n_next_possible_ascii_chunk_begin
