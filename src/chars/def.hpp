@@ -5,14 +5,9 @@
 
 #pragma once
 
-#include <utility>
-#include <span>
-
-#include <prometheus/macro.hpp>
-
 #include <meta/string.hpp>
 
-namespace gal::prometheus::chars
+namespace gal::prometheus::chars_1
 {
 	enum class EncodingType : std::uint8_t
 	{
@@ -44,77 +39,6 @@ namespace gal::prometheus::chars
 
 		UTF32 = 0b0010'0000,
 	};
-
-	[[nodiscard]] constexpr auto width_of(const EncodingType type) noexcept -> std::size_t
-	{
-		switch (type)
-		{
-			case EncodingType::UNKNOWN:
-			{
-				return 0;
-			}
-			case EncodingType::UTF8:
-			{
-				return 3;
-			}
-			case EncodingType::UTF16_LE:
-			case EncodingType::UTF16_BE:
-			{
-				return 2;
-			}
-			case EncodingType::UTF32_LE:
-			case EncodingType::UTF32_BE:
-			{
-				return 4;
-			}
-			default: { GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE(); } // NOLINT(clang-diagnostic-covered-switch-default)
-		}
-	}
-
-	[[nodiscard]] constexpr auto bom_of(const std::span<const char8_t> string) noexcept -> EncodingType
-	{
-		// https://en.wikipedia.org/wiki/Byte_order_mark#Byte-order_marks_by_encoding
-
-		const auto length = string.size();
-		if (length < 2)
-		{
-			return EncodingType::UNKNOWN;
-		}
-
-		if (string[0] == 0xff and string[1] == 0xfe)
-		{
-			if (length >= 4 and string[2] == 0x00 and string[3] == 0x00)
-			{
-				return EncodingType::UTF32_LE;
-			}
-			return EncodingType::UTF16_LE;
-		}
-
-		if (string[0] == 0xfe and string[1] == 0xff)
-		{
-			return EncodingType::UTF16_BE;
-		}
-
-		if (length >= 4 and string[0] == 0x00 and string[1] == 0x00 and string[2] == 0xfe and string[3] == 0xff)
-		{
-			return EncodingType::UTF32_BE;
-		}
-
-		if (length >= 3 and string[0] == 0xef and string[1] == 0xbb and string[2] == 0xbf)
-		{
-			return EncodingType::UTF8;
-		}
-
-		return EncodingType::UNKNOWN;
-	}
-
-	[[nodiscard]] constexpr auto bom_of(const std::span<const char> string) noexcept -> EncodingType
-	{
-		static_assert(sizeof(char) == sizeof(char8_t));
-
-		const auto* char8_string = GAL_PROMETHEUS_SEMANTIC_UNRESTRICTED_CHAR_POINTER_CAST(char8_t, string.data());
-		return bom_of({char8_string, string.size()});
-	}
 
 	namespace encoding_detail
 	{
@@ -264,17 +188,18 @@ namespace gal::prometheus::chars
 		INTERNAL_OUTPUT = 0b0000'0010,
 		INTERNAL_ERROR = 0b0000'0100,
 
-		// Guaranteed to write all correct characters to the result (up to the first incorrect character)
+		// Write all characters until the first error character
 		WRITE_ALL_CORRECT = INTERNAL_INPUT | INTERNAL_ERROR,
-		// Guaranteed to write all correct characters to the result (up to the first incorrect character)
+		// Write all characters until the first error character
 		WRITE_ALL_CORRECT_2 = INTERNAL_INPUT | INTERNAL_OUTPUT | INTERNAL_ERROR,
-		// Stop immediately after detecting an error,
-		// which means that the characters in the last processed block will not be written (but the returned input will contain this part)
-		FAST_FAIL = INTERNAL_INPUT | INTERNAL_OUTPUT,
-		// LITERAL
+		// Similar to WRITE_ALL_CORRECT, but the last block is not written
+		// You can expect better performance with this policy (compared to WRITE_ALL_CORRECT), and the write length is a multiple of the block size
+		WRITE_LAST_BLOCK = INTERNAL_INPUT | INTERNAL_ERROR,
+		// Similar to WRITE_ALL_CORRECT, but the last block is not written
+		// You can expect better performance with this policy (compared to WRITE_ALL_CORRECT), and the write length is a multiple of the block size
+		WRITE_LAST_BLOCK_2 = INTERNAL_INPUT | INTERNAL_OUTPUT | INTERNAL_ERROR,
+		// Assuming that the inputs are correct, this means that the characters are not checked for correctness during the write process
 		ASSUME_ALL_CORRECT = INTERNAL_OUTPUT,
-		// true/false (internal used only)
-		RESULT = INTERNAL_ERROR,
 
 		DEFAULT = WRITE_ALL_CORRECT,
 	};
@@ -288,18 +213,18 @@ namespace gal::prometheus::chars
 	}
 
 	template<InputProcessPolicy ProcessPolicy>
+	[[nodiscard]] constexpr auto write_last_block() noexcept -> bool
+	{
+		return
+				ProcessPolicy == InputProcessPolicy::WRITE_LAST_BLOCK or
+				ProcessPolicy == InputProcessPolicy::WRITE_LAST_BLOCK_2;
+	}
+
+	template<InputProcessPolicy ProcessPolicy>
 	[[nodiscard]] constexpr auto assume_all_correct() noexcept -> bool
 	{
 		return
 				ProcessPolicy == InputProcessPolicy::ASSUME_ALL_CORRECT;
-	}
-
-	template<InputProcessPolicy ProcessPolicy>
-	[[nodiscard]] constexpr auto fast_fail() noexcept -> bool
-	{
-		return
-				assume_all_correct<ProcessPolicy>() or
-				ProcessPolicy == InputProcessPolicy::FAST_FAIL;
 	}
 
 	struct result_error_input_type
@@ -335,9 +260,8 @@ namespace gal::prometheus::chars
 		}
 	};
 
-	struct result_input_output_type
+	struct result_output_type
 	{
-		std::size_t input;
 		std::size_t output;
 	};
 
@@ -347,53 +271,32 @@ namespace gal::prometheus::chars
 	template<InputProcessPolicy ProcessPolicy>
 	[[nodiscard]] constexpr auto make_result(const ErrorCode error, const std::size_t input, const std::size_t output) noexcept -> auto
 	{
-		if constexpr (ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT)
+		if constexpr (
+			ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT or
+			ProcessPolicy == InputProcessPolicy::WRITE_LAST_BLOCK
+		)
 		{
 			std::ignore = output;
+
 			return result_error_input_type{.error = error, .input = input};
 		}
-		else if constexpr (ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT_2)
+		else if constexpr (
+			ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT_2 or
+			ProcessPolicy == InputProcessPolicy::WRITE_LAST_BLOCK_2
+		)
 		{
 			return result_error_input_output_type{.error = error, .input = input, .output = output};
-		}
-		else if constexpr (ProcessPolicy == InputProcessPolicy::FAST_FAIL)
-		{
-			std::ignore = error;
-			return result_input_output_type{.input = input, .output = output};
 		}
 		else if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_ALL_CORRECT)
 		{
 			std::ignore = error;
 			std::ignore = input;
-			return output;
-		}
-		else if constexpr (ProcessPolicy == InputProcessPolicy::RESULT)
-		{
-			std::ignore = input;
-			std::ignore = output;
-			return error == ErrorCode::NONE;
+
+			return result_output_type{.output = output};
 		}
 		else
 		{
 			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 		}
 	}
-
-	template<auto Tag, CharsType InputType>
-	struct block;
-
-	template<auto Tag, CharsType InputType, CharsType OutputType>
-	struct block_agent;
-
-	template<meta::basic_fixed_string Name>
-	class Scalar;
-
-	template<meta::basic_fixed_string Name>
-	class Simd;
-
-	template<meta::basic_fixed_string Name>
-	class Detector;
-
-	template<CharsType Type>
-	class Selector;
 }

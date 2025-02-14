@@ -32,15 +32,14 @@ namespace gal::prometheus::chars
 		using pointer_type = input_type::const_pointer;
 		using size_type = input_type::size_type;
 
-		using data_type = scalar_block::data_type;
+		using block_type = block<category_tag_scalar, chars_type>;
+		using data_type = block_type::data_type;
 
-		template<bool Detail = false>
-		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> auto
+		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> result_error_input_type
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
-			constexpr auto process_policy = Detail ? InputProcessPolicy::DEFAULT : InputProcessPolicy::RESULT;
-			// constexpr auto advance = scalar_block::advance_of<chars_type, chars_type>();
+			using block_agent_type = block_type::agent_type<chars_type>;
 
 			const auto input_length = input.size();
 
@@ -52,16 +51,12 @@ namespace gal::prometheus::chars
 			{
 				const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-				const auto [length, error] = scalar_block::validate<chars_type>(it_input_current, it_input_end);
+				const auto [length, error] = block_agent_type::validate(it_input_current, it_input_end);
 				GAL_PROMETHEUS_ERROR_ASSUME(length == 1);
 
 				if (error != ErrorCode::NONE)
 				{
-					return chars::make_result<process_policy>(
-						error,
-						current_input_length,
-						length_ignored
-					);
+					return {.error = error, .input = current_input_length};
 				}
 
 				it_input_current += length;
@@ -70,17 +65,12 @@ namespace gal::prometheus::chars
 			// ==================================================
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
 			const auto current_input_length = static_cast<std::size_t>(input_length);
-			return chars::make_result<process_policy>(
-				ErrorCode::NONE,
-				current_input_length,
-				length_ignored
-			);
+			return {.error = ErrorCode::NONE, .input = current_input_length};
 		}
 
-		template<bool Detail = false>
 		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> auto
 		{
-			return Scalar::validate<Detail>({input, std::char_traits<char_type>::length(input)});
+			return Scalar::validate({input, std::char_traits<char_type>::length(input)});
 		}
 
 		// note: we are not BOM aware
@@ -183,7 +173,7 @@ namespace gal::prometheus::chars
 			{
 				if constexpr (not assume_all_correct<ProcessPolicy>())
 				{
-					if (const auto result = Scalar::validate<true>(input);
+					if (const auto result = Scalar::validate(input);
 						result.has_error())
 					{
 						if constexpr (write_all_correct<ProcessPolicy>())

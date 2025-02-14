@@ -33,7 +33,8 @@ namespace gal::prometheus::chars
 			using pointer_type = typename input_type::const_pointer;
 			using size_type = typename input_type::size_type;
 
-			using data_type = scalar_block::data_type;
+			using block_type = block<category_tag_scalar, chars_type>;
+			using data_type = typename block_type::data_type;
 
 		private:
 			constexpr static auto know_endian = chars_type == CharsType::UTF16_LE or chars_type == CharsType::UTF16_BE;
@@ -44,13 +45,32 @@ namespace gal::prometheus::chars
 						? std::endian::little
 						: std::endian::big;
 
+			template<bool KnownEndian, CharsType InputType, CharsType OutputType>
+			struct agent_selector;
+
+			template<CharsType InputType, CharsType OutputType>
+			struct agent_selector<true, InputType, OutputType>
+			{
+				using type = typename block_type::template agent_type<OutputType>;
+			};
+
+			template<CharsType InputType, CharsType OutputType>
+			struct agent_selector<false, InputType, OutputType>
+			{
+				using type = typename block_type::template agent_type<InputType, OutputType>;
+			};
+
+			template<CharsType InputType, CharsType OutputType>
+			using select_agent = typename agent_selector<know_endian, InputType, OutputType>::type;
+
 		public:
-			template<bool Detail = false, std::endian SourceEndian = default_endian>
-			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> auto
+			template<std::endian SourceEndian = default_endian>
+			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> result_error_input_type
 			{
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
-				constexpr auto process_policy = Detail ? InputProcessPolicy::DEFAULT : InputProcessPolicy::RESULT;
+				constexpr auto type = SourceEndian == std::endian::little ? CharsType::UTF16_LE : CharsType::UTF16_BE;
+				using block_agent_type = select_agent<type, type>;
 
 				const auto input_length = input.size();
 
@@ -62,16 +82,10 @@ namespace gal::prometheus::chars
 				{
 					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-					const auto [length, error] = scalar_block::validate<
-						SourceEndian == std::endian::little ? CharsType::UTF16_LE : CharsType::UTF16_BE
-					>(it_input_current, it_input_end);
+					const auto [length, error] = block_agent_type::validate(it_input_current, it_input_end);
 					if (error != ErrorCode::NONE)
 					{
-						return chars::make_result<process_policy>(
-							error,
-							current_input_length,
-							length_ignored
-						);
+						return {.error = error, .input = current_input_length};
 					}
 
 					it_input_current += length;
@@ -80,17 +94,13 @@ namespace gal::prometheus::chars
 				// ==================================================
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
 				const auto current_input_length = static_cast<std::size_t>(input_length);
-				return chars::make_result<process_policy>(
-					ErrorCode::NONE,
-					current_input_length,
-					length_ignored
-				);
+				return {.error = ErrorCode::NONE, .input = current_input_length};
 			}
 
-			template<bool Detail = false, std::endian SourceEndian = default_endian>
+			template<std::endian SourceEndian = default_endian>
 			[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> auto
 			{
-				return Scalar::validate<Detail, SourceEndian>({input, std::char_traits<char_type>::length(input)});
+				return Scalar::validate<SourceEndian>({input, std::char_traits<char_type>::length(input)});
 			}
 
 			// note: we are not BOM aware
@@ -114,7 +124,7 @@ namespace gal::prometheus::chars
 						std::plus<>{},
 						[](const auto word) noexcept
 						{
-							const auto native_word = scalar_block::utf16_to_native<SourceEndian>(word);
+							const auto native_word = scalar_common_detail::shuffle<SourceEndian>(word);
 
 							return
 									// ASCII
@@ -144,7 +154,7 @@ namespace gal::prometheus::chars
 						std::plus<>{},
 						[](const auto word) noexcept
 						{
-							const auto native_word = scalar_block::utf16_to_native<SourceEndian>(word);
+							const auto native_word = scalar_common_detail::shuffle<SourceEndian>(word);
 
 							return +((native_word & 0xfc00) != 0xdc00);
 						}
@@ -175,8 +185,8 @@ namespace gal::prometheus::chars
 				if constexpr (assume_all_correct<ProcessPolicy>())
 				{
 					// fixme: error C2187
-					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(Scalar::validate<false, SourceEndian>(input));
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME((Scalar::validate<false, SourceEndian>(input)));
+					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(Scalar::validate<SourceEndian>(input));
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME((Scalar::validate<SourceEndian>(input)));
 				}
 
 				using output_type = output_type_of<OutputType>;
@@ -203,7 +213,7 @@ namespace gal::prometheus::chars
 
 					if constexpr (not assume_all_correct<ProcessPolicy>())
 					{
-						if (const auto result = Scalar::validate<true>(input);
+						if (const auto result = Scalar::validate(input);
 							result.has_error())
 						{
 							if constexpr (write_all_correct<ProcessPolicy>())
@@ -221,7 +231,7 @@ namespace gal::prometheus::chars
 								it_output_current += result.input;
 							}
 
-							return make_result<ProcessPolicy>(
+							return chars::make_result<ProcessPolicy>(
 								result.error,
 								result.input,
 								result.input
@@ -248,7 +258,10 @@ namespace gal::prometheus::chars
 					OutputType == CharsType::UTF32
 				)
 				{
-					constexpr auto advance = scalar_block::advance_of<chars_type, OutputType>();
+					constexpr auto type = SourceEndian == std::endian::little ? CharsType::UTF16_LE : CharsType::UTF16_BE;
+					using block_agent_type = select_agent<type, OutputType>;
+
+					constexpr auto advance = block_agent_type::advance();
 
 					const auto transform = [
 								// Used to calculate the processed input length
@@ -267,21 +280,17 @@ namespace gal::prometheus::chars
 						const auto end = it_input_current + n;
 						while (it_input_current < end)
 						{
-							const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-							const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
-
-							const auto [length, error] = scalar_block::write<
-								SourceEndian == std::endian::little ? CharsType::UTF16_LE : CharsType::UTF16_BE,
-								OutputType,
-								Pure,
-								assume_all_correct<ProcessPolicy>()
-							>(
+							const auto [length, error] = block_agent_type::template write<Pure, assume_all_correct<ProcessPolicy>()>(
 								it_output_current,
 								it_input_current,
 								it_input_end
 							);
+
 							if (error != ErrorCode::NONE)
 							{
+								const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+								const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+
 								return chars::make_result<process_policy_keep_all_result>(
 									error,
 									current_input_length,
@@ -308,19 +317,21 @@ namespace gal::prometheus::chars
 						[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 						#endif
 
-						if (const auto value = [it_input_current]() noexcept -> auto
+						const auto data = [it_input_current]() noexcept -> auto
+						{
+							if constexpr (const auto d = block_agent_type::read(it_input_current);
+								SourceEndian == std::endian::native)
 							{
-								if constexpr (const auto data = scalar_block::read<chars_type, OutputType>(it_input_current);
-									SourceEndian == std::endian::native)
-								{
-									return data;
-								}
-								else
-								{
-									return (data >> 8) | (data << 56);
-								}
-							}();
-							not scalar_block::pure_ascii<chars_type>(value))
+								return d;
+							}
+							else
+							{
+								return (d >> 8) | (d << 56);
+							}
+						}();
+
+						if (const auto sign = block_agent_type::sign_of(data);
+							not sign.pure())
 						{
 							if (const auto result = transform.template operator()<false>(advance);
 								result.has_error())
@@ -459,7 +470,7 @@ namespace gal::prometheus::chars
 					input,
 					[](const auto word) noexcept -> bool
 					{
-						const auto native_word = scalar_block::utf16_to_native<SourceEndian>(word);
+						const auto native_word = scalar_common_detail::shuffle<SourceEndian>(word);
 
 						return (native_word & 0xfc00) != 0xdc00;
 					}

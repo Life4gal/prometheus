@@ -33,7 +33,8 @@ namespace gal::prometheus::chars
 			using pointer_type = typename input_type::const_pointer;
 			using size_type = typename input_type::size_type;
 
-			using data_type = scalar_block::data_type;
+			using block_type = block<category_tag_scalar, chars_type>;
+			using data_type = typename block_type::data_type;
 
 		private:
 			// Finds the previous leading byte starting backward from `current` and validates with errors from there.
@@ -71,7 +72,7 @@ namespace gal::prometheus::chars
 
 				const pointer_type it_current = current - extra_count;
 
-				auto result = Scalar::validate<true>({it_current, static_cast<size_type>(end - begin + extra_count)});
+				auto result = Scalar::validate({it_current, static_cast<size_type>(end - begin + extra_count)});
 				result.input -= extra_count;
 				return result;
 			}
@@ -127,13 +128,13 @@ namespace gal::prometheus::chars
 			}
 
 		public:
-			template<bool Detail = false>
-			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> auto
+			[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> result_error_input_type
 			{
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
-				constexpr auto process_policy = Detail ? InputProcessPolicy::DEFAULT : InputProcessPolicy::RESULT;
-				constexpr auto advance = scalar_block::advance_of<chars_type, chars_type>();
+				using block_agent_type = typename block_type::template agent_type<chars_type>;
+
+				constexpr auto advance = block_agent_type::advance();
 
 				const auto input_length = input.size();
 
@@ -149,25 +150,18 @@ namespace gal::prometheus::chars
 							&it_input_current,
 							// Used to determine the length of the current character if it is a correct UTF8 character
 							it_input_end
-						](const size_type n) noexcept -> auto
+						](const size_type n) noexcept -> result_error_input_type
 				{
-					// [error/input/output]
-					constexpr auto process_policy_keep_all_result = InputProcessPolicy::WRITE_ALL_CORRECT_2;
-
 					const auto end = it_input_current + n;
 
 					while (it_input_current < end)
 					{
 						const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-						const auto [length, error] = scalar_block::validate<chars_type>(it_input_current, it_input_end);
+						const auto [length, error] = block_agent_type::validate(it_input_current, it_input_end);
 						if (error != ErrorCode::NONE)
 						{
-							return chars::make_result<process_policy_keep_all_result>(
-								error,
-								current_input_length,
-								length_ignored
-							);
+							return {.error = error, .input = current_input_length};
 						}
 
 						it_input_current += length;
@@ -176,11 +170,7 @@ namespace gal::prometheus::chars
 					// ==================================================
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current >= end);
 					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-					return chars::make_result<process_policy_keep_all_result>(
-						ErrorCode::NONE,
-						current_input_length,
-						length_ignored
-					);
+					return {.error = ErrorCode::NONE, .input = current_input_length};
 				};
 
 				while (it_input_current + advance <= it_input_end)
@@ -189,26 +179,20 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 					#endif
 
-					if (const auto value = scalar_block::read<chars_type, chars_type>(it_input_current);
-						not scalar_block::pure_ascii<chars_type>(value))
+					const auto data = block_agent_type::read(it_input_current);
+
+					if (const auto sign = block_agent_type::sign_of(data);
+						not sign.pure())
 					{
-						const auto mask = scalar_block::not_ascii_mask<chars_type>(value);
+						const auto start_count = sign.start_count();
+						const auto end_count = sign.end_count();
+						const auto unknown_count = advance - start_count - end_count;
 
-						// [ascii] [non-ascii] [?] [?] [?] [?] [ascii] [ascii]
-						//           ^ n_ascii
-						//                                                 ^ n_next_possible_ascii_chunk_begin
-						const auto n_ascii = std::countr_zero(mask);
-						const auto n_next_possible_ascii_chunk_begin = advance - std::countl_zero(mask) - n_ascii;
-
-						it_input_current += n_ascii;
-						if (const auto result = check(n_next_possible_ascii_chunk_begin);
+						it_input_current += start_count;
+						if (const auto result = check(unknown_count);
 							result.has_error())
 						{
-							return chars::make_result<process_policy>(
-								result.error,
-								result.input,
-								result.output
-							);
+							return result;
 						}
 					}
 					else
@@ -226,28 +210,22 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, remaining};
 					#endif
 
-					const auto result = check(remaining);
-					return chars::make_result<process_policy>(
-						result.error,
-						result.input,
-						result.output
-					);
+					if (const auto result = check(remaining);
+						result.has_error())
+					{
+						return result;
+					}
 				}
 
 				// ==================================================
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
 				const auto current_input_length = static_cast<std::size_t>(input_length);
-				return chars::make_result<process_policy>(
-					ErrorCode::NONE,
-					current_input_length,
-					length_ignored
-				);
+				return {.error = ErrorCode::NONE, .input = current_input_length};
 			}
 
-			template<bool Detail = false>
 			[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> auto
 			{
-				return Scalar::validate<Detail>({input, std::char_traits<char_type>::length(input)});
+				return Scalar::validate({input, std::char_traits<char_type>::length(input)});
 			}
 
 			// note: we are not BOM aware
@@ -331,7 +309,7 @@ namespace gal::prometheus::chars
 				{
 					if constexpr (not assume_all_correct<ProcessPolicy>())
 					{
-						if (const auto result = Scalar::validate<true>(input);
+						if (const auto result = Scalar::validate(input);
 							result.has_error())
 						{
 							if constexpr (write_all_correct<ProcessPolicy>())
@@ -341,7 +319,7 @@ namespace gal::prometheus::chars
 								it_output_current += result.input;
 							}
 
-							return make_result<ProcessPolicy>(
+							return chars::make_result<ProcessPolicy>(
 								result.error,
 								result.input,
 								result.input

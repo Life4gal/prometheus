@@ -41,7 +41,7 @@ public:
 		if ((input.size() % 2) == 0)
 		{
 			if (const auto p = GAL_PROMETHEUS_SEMANTIC_UNRESTRICTED_CHAR_POINTER_CAST(Scalar<"utf16">::char_type, input.data());
-				Scalar<"utf16">::validate<false, std::endian::little>({p, input.size() / 2}))
+				Scalar<"utf16">::validate<std::endian::little>({p, input.size() / 2}))
 			{
 				all_possible |= std::to_underlying(EncodingType::UTF16_LE);
 			}

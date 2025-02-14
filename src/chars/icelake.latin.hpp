@@ -37,16 +37,17 @@ namespace gal::prometheus::chars
 		using pointer_type = scalar_type::pointer_type;
 		using size_type = scalar_type::size_type;
 
-		using data_type = icelake_block::data_type;
+		using block_type = block<category_tag_icelake, chars_type>;
+		using data_type = block_type::data_type;
 
 		// note: only used to detect pure ASCII strings, otherwise there is no point in using this function
-		template<bool Detail = false>
-		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> auto
+		[[nodiscard]] constexpr static auto validate(const input_type input) noexcept -> result_error_input_type
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
 
-			constexpr auto process_policy = Detail ? InputProcessPolicy::DEFAULT : InputProcessPolicy::RESULT;
-			constexpr auto advance = icelake_block::advance_of<chars_type, chars_type>();
+			using block_agent_type = block_type::agent_type<chars_type>;
+
+			constexpr auto advance = block_agent_type::advance();
 
 			const auto input_length = input.size();
 
@@ -60,36 +61,16 @@ namespace gal::prometheus::chars
 				[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 				#endif
 
-				if (const auto value = icelake_block::read<chars_type, chars_type>(it_input_current);
-					not icelake_block::pure_ascii<chars_type>(value))
+				const auto data = block_agent_type::read(it_input_current);
+
+				if (const auto sign = block_agent_type::sign_of(data);
+					not sign.pure())
 				{
-					if constexpr (Detail)
-					{
-						const auto mask = icelake_block::not_ascii_mask<chars_type>(value);
+					it_input_current += sign.start_count();
 
-						// [ascii] [non-ascii] [?] [?] ... Xn ... [?] [?] [ascii] [ascii]
-						//           ^ n_ascii
-						//                                                   ^ n_next_possible_ascii_chunk_begin
-						const auto n_ascii = std::countr_zero(mask);
+					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-						it_input_current += n_ascii;
-
-						const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-
-						return chars::make_result<process_policy>(
-							ErrorCode::TOO_LARGE,
-							current_input_length,
-							length_ignored
-						);
-					}
-					else
-					{
-						return chars::make_result<process_policy>(
-							ErrorCode::TOO_LARGE,
-							length_ignored,
-							length_ignored
-						);
-					}
+					return {.error = ErrorCode::TOO_LARGE, .input = current_input_length};
 				}
 
 				it_input_current += advance;
@@ -104,36 +85,16 @@ namespace gal::prometheus::chars
 				[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, remaining};
 				#endif
 
-				if (const auto value = icelake_block::read<chars_type, chars_type>(it_input_current, remaining);
-					not icelake_block::pure_ascii<chars_type>(value))
+				const auto data = block_agent_type::read(it_input_current, remaining);
+
+				if (const auto sign = block_agent_type::sign_of(data);
+					not sign.pure())
 				{
-					if constexpr (Detail)
-					{
-						const auto mask = icelake_block::not_ascii_mask<chars_type>(value);
+					it_input_current += sign.start_count();
 
-						// [ascii] [non-ascii] [?] [?] ... Xn ... [?] [?] [ascii] [ascii]
-						//           ^ n_ascii
-						//                                                             ^ n_next_possible_ascii_chunk_begin
-						const auto n_ascii = std::countr_zero(mask);
+					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
 
-						it_input_current += n_ascii;
-
-						const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-
-						return chars::make_result<process_policy>(
-							ErrorCode::TOO_LARGE,
-							current_input_length,
-							length_ignored
-						);
-					}
-					else
-					{
-						return chars::make_result<process_policy>(
-							ErrorCode::TOO_LARGE,
-							length_ignored,
-							length_ignored
-						);
-					}
+					return {.error = ErrorCode::TOO_LARGE, .input = current_input_length};
 				}
 
 				it_input_current += remaining;
@@ -142,18 +103,13 @@ namespace gal::prometheus::chars
 			// ==================================================
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
 			const auto current_input_length = static_cast<std::size_t>(input_length);
-			return chars::make_result<process_policy>(
-				ErrorCode::NONE,
-				current_input_length,
-				length_ignored
-			);
+			return {.error = ErrorCode::NONE, .input = current_input_length};
 		}
 
 		// note: only used to detect pure ASCII strings, otherwise there is no point in using this function
-		template<bool Detail = false>
 		[[nodiscard]] constexpr static auto validate(const pointer_type input) noexcept -> auto
 		{
-			return Simd::validate<Detail>({input, std::char_traits<char_type>::length(input)});
+			return Simd::validate({input, std::char_traits<char_type>::length(input)});
 		}
 
 		// note: we are not BOM aware
@@ -161,8 +117,6 @@ namespace gal::prometheus::chars
 		[[nodiscard]] constexpr static auto length(const input_type input) noexcept -> size_type
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
-
-			constexpr auto advance = icelake_block::advance_of<chars_type, chars_type>();
 
 			// ReSharper disable CppClangTidyBugproneBranchClone
 			if constexpr (OutputType == CharsType::LATIN)
@@ -172,6 +126,10 @@ namespace gal::prometheus::chars
 			// ReSharper restore CppClangTidyBugproneBranchClone
 			else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 			{
+				using block_agent_type = block_type::agent_type<OutputType>;
+
+				constexpr auto advance = block_agent_type::advance();
+
 				const auto input_length = input.size();
 
 				const pointer_type it_input_begin = input.data();
@@ -187,15 +145,12 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 					#endif
 
-					// opt: pure_ascii+not_ascii_count (or `_mm512_cmpge_epu8_mask`+`_mm512_movepi8_mask`+`popcount`) is actually redundant,
-					// it could have been `_mm512_cmpge_epu8_mask`+`popcount`, but for the sake of code style consistency,
-					// no changes are made here, and if this does create performance issues, we'll come back ;)
-					if (const auto value = icelake_block::read<chars_type, OutputType>(it_input_current);
-						not icelake_block::pure_ascii<chars_type>(value))
-					{
-						const auto count = icelake_block::not_ascii_count<chars_type>(value);
+					const auto data = block_agent_type::read(it_input_current);
 
-						output_length += count;
+					if (const auto sign = block_agent_type::sign_of(data);
+						not sign.pure())
+					{
+						output_length += sign.count();
 					}
 
 					it_input_current += advance;
@@ -272,7 +227,9 @@ namespace gal::prometheus::chars
 			}
 			else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 			{
-				constexpr auto advance = icelake_block::advance_of<chars_type, OutputType>();
+				using block_agent_type = block_type::agent_type<OutputType>;
+
+				constexpr auto advance = block_agent_type::advance();
 
 				const auto process = [
 							// advance only
@@ -289,7 +246,9 @@ namespace gal::prometheus::chars
 						GAL_PROMETHEUS_ERROR_ASSUME(data_length == advance);
 					}
 
-					const auto non_ascii = icelake_block::not_ascii_mask<chars_type>(data);
+					const auto sign = block_agent_type::sign_of(data);
+
+					const auto non_ascii = sign.mask();
 					const auto non_ascii_high = static_cast<std::uint32_t>(non_ascii >> 32);
 					const auto non_ascii_low = static_cast<std::uint32_t>(non_ascii);
 
@@ -378,13 +337,8 @@ namespace gal::prometheus::chars
 					{
 						const auto out_size_high = static_cast<unsigned int>(data_length - 32) + static_cast<unsigned int>(std::popcount(non_ascii_high));
 
-						const auto [low_length, low_error] = icelake_block::write<chars_type, OutputType>(it_output_current, output_low, out_size_low);
-						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low_length == out_size_low);
-						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low_error == ErrorCode::NONE);
-
-						const auto [high_length, high_error] = icelake_block::write<chars_type, OutputType>(it_output_current, output_high, out_size_high);
-						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(high_length == out_size_high);
-						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(high_error == ErrorCode::NONE);
+						block_agent_type::write(it_output_current, output_low, out_size_low);
+						block_agent_type::write(it_output_current, output_high, out_size_high);
 					};
 
 					if constexpr (MaskOut)
@@ -396,9 +350,7 @@ namespace gal::prometheus::chars
 						}
 						else
 						{
-							const auto [length, error] = icelake_block::write<chars_type, OutputType>(it_output_current, output_low, out_size);
-							GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(length == out_size);
-							GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(error == ErrorCode::NONE);
+							block_agent_type::write(it_output_current, output_low, out_size);
 						}
 					}
 					else
@@ -416,12 +368,12 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 					#endif
 
-					if (const auto data = icelake_block::read<chars_type, OutputType>(it_input_current);
-						icelake_block::not_ascii_mask<chars_type>(data) == 0)
+					const auto data = block_agent_type::read(it_input_current);
+
+					if (const auto sign = block_agent_type::sign_of(data);
+						sign.pure())
 					{
-						const auto [length, error] = icelake_block::write<chars_type, OutputType>(it_output_current, data);
-						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(length == advance);
-						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(error == ErrorCode::NONE);
+						block_agent_type::write(it_output_current, data);
 
 						it_input_current += advance;
 					}
@@ -438,7 +390,7 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 					#endif
 
-					const auto data = icelake_block::read<chars_type, OutputType>(it_input_current);
+					const auto data = block_agent_type::read(it_input_current);
 					process.template operator()<true>(data, advance);
 				}
 
@@ -452,7 +404,7 @@ namespace gal::prometheus::chars
 					#endif
 
 					// with the last 64 bytes, the input also needs to be masked
-					const auto data = icelake_block::read<chars_type, OutputType>(it_input_current, remaining);
+					const auto data = block_agent_type::read(it_input_current, remaining);
 					process.template operator()<true>(data, remaining);
 				}
 			}
@@ -462,7 +414,9 @@ namespace gal::prometheus::chars
 				OutputType == CharsType::UTF32
 			)
 			{
-				constexpr auto advance = icelake_block::advance_of<chars_type, OutputType>();
+				using block_agent_type = block_type::agent_type<OutputType>;
+
+				constexpr auto advance = block_agent_type::advance();
 
 				while (it_input_current + advance <= it_input_end)
 				{
@@ -470,13 +424,11 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, advance};
 					#endif
 
-					const auto data = icelake_block::read<chars_type, OutputType>(it_input_current);
+					const auto data = block_agent_type::read(it_input_current);
 
-					const auto [length, error] = icelake_block::write<chars_type, OutputType>(it_output_current, data);
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(length == advance);
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(error == ErrorCode::NONE);
+					block_agent_type::write(it_output_current, data);
 
-					it_input_current += length;
+					it_input_current += advance;
 				}
 
 				const auto remaining = static_cast<size_type>(it_input_end - it_input_current);
@@ -488,11 +440,9 @@ namespace gal::prometheus::chars
 					[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, remaining};
 					#endif
 
-					const auto data = icelake_block::read<chars_type, OutputType>(it_input_current, remaining);
+					const auto data = block_agent_type::read(it_input_current, remaining);
 
-					const auto [length, error] = icelake_block::write<chars_type, OutputType>(it_output_current, data, remaining);
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(length == remaining);
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(error == ErrorCode::NONE);
+					block_agent_type::write(it_output_current, data, remaining);
 
 					it_input_current += remaining;
 				}
