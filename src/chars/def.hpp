@@ -299,4 +299,47 @@ namespace gal::prometheus::chars_1
 			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 		}
 	}
+
+	namespace latin
+	{
+		using input_type = input_type_of<CharsType::LATIN>;
+		using char_type = input_type::value_type;
+		using size_type = input_type::size_type;
+		using pointer_type = input_type::const_pointer;
+	}
+
+	namespace utf8_char
+	{
+		using input_type = input_type_of<CharsType::UTF8_CHAR>;
+		using char_type = input_type::value_type;
+		using size_type = input_type::size_type;
+		using pointer_type = input_type::const_pointer;
+	}
+
+	namespace utf8
+	{
+		using input_type = input_type_of<CharsType::UTF8>;
+		using char_type = input_type::value_type;
+		using size_type = input_type::size_type;
+		using pointer_type = input_type::const_pointer;
+	}
+
+	namespace utf16
+	{
+		using input_type = input_type_of<CharsType::UTF16>;
+		static_assert(std::is_same_v<input_type, input_type_of<CharsType::UTF16_LE>>);
+		static_assert(std::is_same_v<input_type, input_type_of<CharsType::UTF16_BE>>);
+
+		using char_type = input_type::value_type;
+		using size_type = input_type::size_type;
+		using pointer_type = input_type::const_pointer;
+	}
+
+	namespace utf32
+	{
+		using input_type = input_type_of<CharsType::UTF32>;
+		using char_type = input_type::value_type;
+		using size_type = input_type::size_type;
+		using pointer_type = input_type::const_pointer;
+	}
 }
