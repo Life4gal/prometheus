@@ -7,7 +7,7 @@
 
 #include <meta/string.hpp>
 
-namespace gal::prometheus::chars_1
+namespace gal::prometheus::chars
 {
 	enum class EncodingType : std::uint8_t
 	{
@@ -40,7 +40,7 @@ namespace gal::prometheus::chars_1
 		UTF32 = 0b0010'0000,
 	};
 
-	namespace encoding_detail
+	namespace def_detail
 	{
 		template<CharsType Type>
 		struct io_selector;
@@ -144,13 +144,13 @@ namespace gal::prometheus::chars_1
 	}
 
 	template<typename T>
-	constexpr auto chars_type_of = encoding_detail::type_of<T>::value;
+	constexpr auto chars_type_of = def_detail::type_of<T>::value;
 
 	template<CharsType Type>
-	using input_type_of = typename encoding_detail::io_selector<Type>::input;
+	using input_type_of = typename def_detail::io_selector<Type>::input;
 
 	template<CharsType Type>
-	using output_type_of = typename encoding_detail::io_selector<Type>::output;
+	using output_type_of = typename def_detail::io_selector<Type>::output;
 
 	// ReSharper disable CommentTypo
 
@@ -181,51 +181,6 @@ namespace gal::prometheus::chars_1
 	};
 
 	// ReSharper restore CommentTypo
-
-	enum class InputProcessPolicy : std::uint8_t
-	{
-		INTERNAL_INPUT = 0b0000'0001,
-		INTERNAL_OUTPUT = 0b0000'0010,
-		INTERNAL_ERROR = 0b0000'0100,
-
-		// Write all characters until the first error character
-		WRITE_ALL_CORRECT = INTERNAL_INPUT | INTERNAL_ERROR,
-		// Write all characters until the first error character
-		WRITE_ALL_CORRECT_2 = INTERNAL_INPUT | INTERNAL_OUTPUT | INTERNAL_ERROR,
-		// Similar to WRITE_ALL_CORRECT, but the last block is not written
-		// You can expect better performance with this policy (compared to WRITE_ALL_CORRECT), and the write length is a multiple of the block size
-		WRITE_LAST_BLOCK = INTERNAL_INPUT | INTERNAL_ERROR,
-		// Similar to WRITE_ALL_CORRECT, but the last block is not written
-		// You can expect better performance with this policy (compared to WRITE_ALL_CORRECT), and the write length is a multiple of the block size
-		WRITE_LAST_BLOCK_2 = INTERNAL_INPUT | INTERNAL_OUTPUT | INTERNAL_ERROR,
-		// Assuming that the inputs are correct, this means that the characters are not checked for correctness during the write process
-		ASSUME_ALL_CORRECT = INTERNAL_OUTPUT,
-
-		DEFAULT = WRITE_ALL_CORRECT,
-	};
-
-	template<InputProcessPolicy ProcessPolicy>
-	[[nodiscard]] constexpr auto write_all_correct() noexcept -> bool
-	{
-		return
-				ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT or
-				ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT_2;
-	}
-
-	template<InputProcessPolicy ProcessPolicy>
-	[[nodiscard]] constexpr auto write_last_block() noexcept -> bool
-	{
-		return
-				ProcessPolicy == InputProcessPolicy::WRITE_LAST_BLOCK or
-				ProcessPolicy == InputProcessPolicy::WRITE_LAST_BLOCK_2;
-	}
-
-	template<InputProcessPolicy ProcessPolicy>
-	[[nodiscard]] constexpr auto assume_all_correct() noexcept -> bool
-	{
-		return
-				ProcessPolicy == InputProcessPolicy::ASSUME_ALL_CORRECT;
-	}
 
 	struct result_error_input_type
 	{
@@ -264,41 +219,6 @@ namespace gal::prometheus::chars_1
 	{
 		std::size_t output;
 	};
-
-	// Use when the length is meaningless
-	constexpr auto length_ignored = std::numeric_limits<std::size_t>::max();
-
-	template<InputProcessPolicy ProcessPolicy>
-	[[nodiscard]] constexpr auto make_result(const ErrorCode error, const std::size_t input, const std::size_t output) noexcept -> auto
-	{
-		if constexpr (
-			ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT or
-			ProcessPolicy == InputProcessPolicy::WRITE_LAST_BLOCK
-		)
-		{
-			std::ignore = output;
-
-			return result_error_input_type{.error = error, .input = input};
-		}
-		else if constexpr (
-			ProcessPolicy == InputProcessPolicy::WRITE_ALL_CORRECT_2 or
-			ProcessPolicy == InputProcessPolicy::WRITE_LAST_BLOCK_2
-		)
-		{
-			return result_error_input_output_type{.error = error, .input = input, .output = output};
-		}
-		else if constexpr (ProcessPolicy == InputProcessPolicy::ASSUME_ALL_CORRECT)
-		{
-			std::ignore = error;
-			std::ignore = input;
-
-			return result_output_type{.output = output};
-		}
-		else
-		{
-			GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
-		}
-	}
 
 	namespace latin
 	{

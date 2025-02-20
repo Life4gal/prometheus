@@ -3,7 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#include <chars/scalar_1.hpp>
+#include <chars/scalar.hpp>
 
 #include <ranges>
 #include <algorithm>
@@ -16,9 +16,9 @@
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace chars_1;
+	using namespace chars;
 
-	using data_type = scalar::data_type;
+	using data_type = std::uint64_t;
 
 	namespace common
 	{
@@ -152,10 +152,10 @@ namespace
 
 	namespace latin
 	{
-		using input_type = chars_1::latin::input_type;
-		using char_type = chars_1::latin::char_type;
-		using size_type = chars_1::latin::size_type;
-		using pointer_type = chars_1::latin::pointer_type;
+		using input_type = chars::latin::input_type;
+		using char_type = chars::latin::char_type;
+		using size_type = chars::latin::size_type;
+		using pointer_type = chars::latin::pointer_type;
 
 		[[nodiscard]] constexpr auto validate(const pointer_type current, const pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
@@ -444,7 +444,7 @@ namespace
 					OutputType == CharsType::UTF8
 				)
 			[[nodiscard]] constexpr auto write_utf8(
-				typename output_type_of<OutputType>::pointer& output,
+				const typename output_type_of<OutputType>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -533,7 +533,7 @@ namespace
 					OutputType == CharsType::UTF16_BE
 				)
 			[[nodiscard]] constexpr auto write_utf16(
-				typename output_type_of<OutputType>::pointer& output,
+				const typename output_type_of<OutputType>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -621,7 +621,7 @@ namespace
 					OutputType == CharsType::UTF32
 				)
 			[[nodiscard]] constexpr auto write_utf32(
-				typename output_type_of<OutputType>::pointer& output,
+				const typename output_type_of<OutputType>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -696,44 +696,6 @@ namespace
 
 					transform.template operator()<false>(remaining);
 				}
-
-				// ==================================================
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
-				const auto current_input_length = static_cast<std::size_t>(input_length);
-				const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
-				return {.error = ErrorCode::NONE, .input = current_input_length, .output = current_output_length};
-			}
-
-			template<CharsType OutputType, bool Pure, bool Correct>
-				requires (
-					OutputType == CharsType::LATIN
-				)
-			[[nodiscard]] constexpr auto write_latin(
-				typename output_type_of<OutputType>::pointer& output,
-				const input_type input
-			) noexcept -> result_error_input_output_type
-			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
-
-				std::ignore = Pure;
-				std::ignore = Correct;
-
-				using output_type = output_type_of<CharsType::LATIN>;
-				using output_pointer_type = output_type::pointer;
-
-				const auto input_length = input.size();
-
-				const pointer_type it_input_begin = input.data();
-				pointer_type it_input_current = it_input_begin;
-				const pointer_type it_input_end = it_input_begin + input_length;
-
-				const output_pointer_type it_output_begin = output;
-				output_pointer_type it_output_current = it_output_begin;
-
-				std::memcpy(it_output_current, it_input_current, input_length * sizeof(char_type));
-				it_input_current += input_length;
-				it_output_current += input_length;
 
 				// ==================================================
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
@@ -1716,7 +1678,7 @@ namespace
 					         OutputType == CharsType::LATIN
 				         )
 			[[nodiscard]] constexpr auto write_latin(
-				typename output_type_of<OutputType>::pointer& output,
+				const typename output_type_of<OutputType>::pointer output,
 				const input_type_of<InputType> input
 			) noexcept -> result_error_input_output_type
 			{
@@ -1759,7 +1721,8 @@ namespace
 					// ==================================================
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current >= end);
 					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-					return {.error = ErrorCode::NONE, .input = current_input_length, .output = length_ignored};
+					const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+					return {.error = ErrorCode::NONE, .input = current_input_length, .output = current_output_length};
 				};
 
 				while (it_input_current + advance <= it_input_end)
@@ -1834,7 +1797,7 @@ namespace
 					         OutputType == CharsType::UTF16_BE
 				         )
 			[[nodiscard]] constexpr auto write_utf16(
-				typename output_type_of<OutputType>::pointer& output,
+				const typename output_type_of<OutputType>::pointer output,
 				const input_type_of<InputType> input
 			) noexcept -> result_error_input_output_type
 			{
@@ -1877,7 +1840,8 @@ namespace
 					// ==================================================
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current >= end);
 					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-					return {.error = ErrorCode::NONE, .input = current_input_length, .output = length_ignored};
+					const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+					return {.error = ErrorCode::NONE, .input = current_input_length, .output = current_output_length};
 				};
 
 				while (it_input_current + advance <= it_input_end)
@@ -1951,7 +1915,7 @@ namespace
 					         OutputType == CharsType::UTF32
 				         )
 			[[nodiscard]] constexpr auto write_utf32(
-				typename output_type_of<OutputType>::pointer& output,
+				const typename output_type_of<OutputType>::pointer output,
 				const input_type_of<InputType> input
 			) noexcept -> result_error_input_output_type
 			{
@@ -1994,7 +1958,8 @@ namespace
 					// ==================================================
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current >= end);
 					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
-					return {.error = ErrorCode::NONE, .input = current_input_length, .output = length_ignored};
+					const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+					return {.error = ErrorCode::NONE, .input = current_input_length, .output = current_output_length};
 				};
 
 				while (it_input_current + advance <= it_input_end)
@@ -2061,7 +2026,7 @@ namespace
 
 			// UTF8_CHAR => UTF8
 			// UTF8 => UTF8_CHAR
-			template<CharsType InputType, CharsType OutputType, bool Pure, bool Correct>
+			template<CharsType InputType, CharsType OutputType>
 				requires (
 					         InputType == CharsType::UTF8_CHAR and
 					         OutputType == CharsType::UTF8
@@ -2071,40 +2036,43 @@ namespace
 					         OutputType == CharsType::UTF8_CHAR
 				         )
 			[[nodiscard]] constexpr auto transform(
-				typename output_type_of<OutputType>::pointer& output,
+				const typename output_type_of<OutputType>::pointer output,
 				const input_type_of<InputType> input
-			) noexcept -> result_error_input_output_type
+			) noexcept -> result_error_input_type
 			{
 				using char_type = typename input_type_of<InputType>::value_type;
 
-				if constexpr (not Pure or not Correct)
+				if (const auto result = scalar::validate<InputType>(input);
+					result.has_error())
 				{
-					if (const auto result = scalar::validate<InputType>(input);
-						result.has_error())
-					{
-						std::memcpy(output, input.data(), result.input * sizeof(char_type));
-						return {.error = result.error, .input = result.input, .output = result.input};
-					}
+					std::memcpy(output, input.data(), result.input * sizeof(char_type));
+					return {.error = result.error, .input = result.input};
 				}
 
 				std::memcpy(output, input.data(), input.size() * sizeof(char_type));
-				return {.error = ErrorCode::NONE, .input = input.size(), .output = input.size()};
+				return {.error = ErrorCode::NONE, .input = input.size()};
 			}
 		}
 	}
 
 	namespace utf16
 	{
-		template<std::endian SourceEndian>
-		[[nodiscard]] constexpr auto do_validate(
-			const input_type_of<CharsType::UTF16>::const_pointer current,
-			const input_type_of<CharsType::UTF16>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		using input_type = chars::utf16::input_type;
+		// using char_type = chars::utf16::char_type;
+		using size_type = chars::utf16::size_type;
+		using pointer_type = chars::utf16::pointer_type;
+
+		template<CharsType InputType>
+			requires (
+				InputType == CharsType::UTF16_LE or
+				InputType == CharsType::UTF16_BE
+			)
+		[[nodiscard]] constexpr auto validate(const pointer_type current, const pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
 			// 1-word UTF-16
 			// 2-words UTF-16(surrogate pair)
 
-			if (const auto leading_word = common::to_native_utf16<SourceEndian>(*(current + 0));
+			if (const auto leading_word = common::to_native_utf16<InputType>(*(current + 0));
 				(leading_word & 0xf800) == 0xd800)
 			{
 				// we have a two-word UTF16
@@ -2123,7 +2091,7 @@ namespace
 					return {length, ErrorCode::SURROGATE};
 				}
 
-				const auto next_word = common::to_native_utf16<SourceEndian>(*(current + 1));
+				const auto next_word = common::to_native_utf16<InputType>(*(current + 1));
 				if (const auto diff = static_cast<std::uint16_t>(next_word - 0xdc00);
 					diff > 0x3ff)
 				{
@@ -2139,7 +2107,7 @@ namespace
 			return {length, ErrorCode::NONE};
 		}
 
-		// 1-word UTF-16 => 1 LATIN
+		// 1 UTF-16 => 1 LATIN
 		template<CharsType InputType, CharsType OutputType, bool Pure, bool Correct>
 			requires (
 				         InputType == CharsType::UTF16_LE or
@@ -2148,10 +2116,10 @@ namespace
 			         (
 				         OutputType == CharsType::LATIN
 			         )
-		[[nodiscard]] constexpr auto do_write(
+		[[nodiscard]] constexpr auto write_latin(
 			typename output_type_of<OutputType>::pointer& output,
-			const input_type_of<CharsType::UTF16>::const_pointer current,
-			const input_type_of<CharsType::UTF16>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
 			std::ignore = end;
@@ -2174,8 +2142,8 @@ namespace
 			return {length, ErrorCode::NONE};
 		}
 
-		// 1-word UTF-16 => 1/2/3 UTF-8
-		// 2-words UTF-16(surrogate pair) => 4 UTF-8
+		// 1 UTF-16 => 1/2/3 UTF-8
+		// 2 UTF-16(surrogate pair) => 4 UTF-8
 		template<CharsType InputType, CharsType OutputType, bool Pure, bool Correct>
 			requires (
 				         InputType == CharsType::UTF16_LE or
@@ -2185,10 +2153,10 @@ namespace
 				         OutputType == CharsType::UTF8_CHAR or
 				         OutputType == CharsType::UTF8
 			         )
-		[[nodiscard]] constexpr auto do_write(
+		[[nodiscard]] constexpr auto write_utf8(
 			typename output_type_of<OutputType>::pointer& output,
-			const input_type_of<CharsType::UTF16>::const_pointer current,
-			const input_type_of<CharsType::UTF16>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
 			if constexpr (const auto leading_word = common::to_native_utf16<InputType>(*(current + 0));
@@ -2205,7 +2173,7 @@ namespace
 			{
 				if ((leading_word & 0xff80) == 0)
 				{
-					// 1-word utf16 => 1-byte utf8
+					// 1 utf16 => 1 utf8
 					constexpr std::size_t length = 1;
 
 					*(output + 0) = common::to_char<OutputType>(leading_word);
@@ -2216,7 +2184,7 @@ namespace
 
 				if ((leading_word & 0xf800) == 0)
 				{
-					// 1-word utf16 => 2-bytes utf8
+					// 1 utf16 => 2 utf8
 					constexpr std::size_t length = 1;
 
 					// 0b110?'???? 0b10??'????
@@ -2232,7 +2200,7 @@ namespace
 
 				if ((leading_word & 0xf800) != 0xd800)
 				{
-					// 1-word utf16 => 3-bytes utf8
+					// 1 utf16 => 3 utf8
 					constexpr std::size_t length = 1;
 
 					// 0b1110'???? 0b10??'???? 0b10??'????
@@ -2248,7 +2216,7 @@ namespace
 					return {length, ErrorCode::NONE};
 				}
 
-				// 2-word utf16 => 4-bytes utf8
+				// 2 utf16 => 4 utf8
 				// must be a surrogate pair
 				constexpr std::size_t length = 2;
 
@@ -2297,8 +2265,8 @@ namespace
 			}
 		}
 
-		// 1-word UTF-16 => 1 UTF-32
-		// 2-words UTF-16(surrogate pair) => 1 UTF-32
+		// 1 UTF-16 => 1 UTF-32
+		// 2 UTF-16(surrogate pair) => 1 UTF-32
 		template<CharsType InputType, CharsType OutputType, bool Pure, bool Correct>
 			requires (
 				         InputType == CharsType::UTF16_LE or
@@ -2307,10 +2275,10 @@ namespace
 			         (
 				         OutputType == CharsType::UTF32
 			         )
-		[[nodiscard]] constexpr auto do_write(
+		[[nodiscard]] constexpr auto write_utf32(
 			typename output_type_of<OutputType>::pointer& output,
-			const input_type_of<CharsType::UTF16>::const_pointer current,
-			const input_type_of<CharsType::UTF16>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
 			if constexpr (const auto leading_word = common::to_native_utf16<InputType>(*(current + 0));
@@ -2375,14 +2343,324 @@ namespace
 				return {length, ErrorCode::NONE};
 			}
 		}
+
+		namespace scalar
+		{
+			template<CharsType InputType>
+				requires (
+					InputType == CharsType::UTF16_LE or
+					InputType == CharsType::UTF16_BE
+				)
+			[[nodiscard]] constexpr auto validate(const input_type input) noexcept -> result_error_input_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+
+				const auto input_length = input.size();
+
+				const pointer_type it_input_begin = input.data();
+				pointer_type it_input_current = it_input_begin;
+				const pointer_type it_input_end = it_input_begin + input_length;
+
+				while (it_input_current < it_input_end)
+				{
+					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+
+					const auto [length, error] = ::utf16::validate<InputType>(it_input_current, it_input_end);
+					GAL_PROMETHEUS_ERROR_ASSUME(length == 1 or length == 2);
+
+					if (error != ErrorCode::NONE)
+					{
+						return {.error = error, .input = current_input_length};
+					}
+
+					it_input_current += length;
+				}
+
+				// ==================================================
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+				const auto current_input_length = static_cast<std::size_t>(input_length);
+				return {.error = ErrorCode::NONE, .input = current_input_length};
+			}
+
+			template<CharsType InputType, CharsType OutputType>
+				requires (
+					InputType == CharsType::UTF16_LE or
+					InputType == CharsType::UTF16_BE
+				)
+			[[nodiscard]] constexpr auto length(const input_type input) noexcept -> size_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+
+				// ReSharper disable CppClangTidyBugproneBranchClone
+				if constexpr (
+					OutputType == CharsType::LATIN
+				)
+				{
+					return input.size();
+				}
+				// ReSharper restore CppClangTidyBugproneBranchClone
+				else if constexpr (
+					OutputType == CharsType::UTF8_CHAR or
+					OutputType == CharsType::UTF8
+				)
+				{
+					return std::ranges::fold_left(
+						input.begin(),
+						input.end(),
+						size_type{0},
+						[](const size_type total, const auto word) noexcept -> size_type
+						{
+							const auto native_word = common::to_native_utf16<InputType>(word);
+
+							return
+									total +
+									// ASCII
+									1
+									+
+									// non-ASCII is at least 2 bytes, surrogates are 2*2 == 4 bytes
+									(native_word > 0x7f)
+									+
+									(native_word > 0x7ff && native_word <= 0xd7ff)
+									+
+									(native_word >= 0xe000);
+						}
+					);
+				}
+				// ReSharper disable CppClangTidyBugproneBranchClone
+				else if constexpr (
+					OutputType == CharsType::UTF16_LE or
+					OutputType == CharsType::UTF16_BE or
+					OutputType == CharsType::UTF16
+				)
+				{
+					return input.size();
+				}
+				// ReSharper restore CppClangTidyBugproneBranchClone
+				else if constexpr (
+					OutputType == CharsType::UTF32
+				)
+				{
+					return std::ranges::fold_left(
+						input.begin(),
+						input.end(),
+						size_type{0},
+						[](const size_type total, const auto word) noexcept -> size_type
+						{
+							const auto native_word = common::to_native_utf16<InputType>(word);
+
+							return total + ((native_word & 0xfc00) != 0xdc00);
+						}
+					);
+				}
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			}
+
+			template<CharsType InputType, CharsType OutputType, bool Pure, bool Correct>
+				requires (
+					         InputType == CharsType::UTF16_LE or
+					         InputType == CharsType::UTF16_BE
+				         ) and
+				         (
+					         OutputType == CharsType::LATIN
+				         )
+			[[nodiscard]] constexpr auto write_latin(
+				const typename output_type_of<OutputType>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
+
+				using output_type = output_type_of<OutputType>;
+				using output_pointer_type = typename output_type::pointer;
+
+				const auto input_length = input.size();
+
+				const pointer_type it_input_begin = input.data();
+				pointer_type it_input_current = it_input_begin;
+				const pointer_type it_input_end = it_input_begin + input_length;
+
+				const output_pointer_type it_output_begin = output;
+				output_pointer_type it_output_current = it_output_begin;
+
+				while (it_input_current < it_input_end)
+				{
+					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+					const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+
+					const auto [length, error] = ::utf16::write_latin<InputType, OutputType, Pure, Correct>(it_output_current, it_input_current, it_input_end);
+					GAL_PROMETHEUS_ERROR_ASSUME(length == 1);
+
+					if (error != ErrorCode::NONE)
+					{
+						return {.error = error, .input = current_input_length, .output = current_output_length};
+					}
+
+					it_input_current += length;
+				}
+
+				// ==================================================
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+				const auto current_input_length = static_cast<std::size_t>(input_length);
+				const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+				return {.error = ErrorCode::NONE, .input = current_input_length, .output = current_output_length};
+			}
+
+			template<CharsType InputType, CharsType OutputType, bool Pure, bool Correct>
+				requires (
+					         InputType == CharsType::UTF16_LE or
+					         InputType == CharsType::UTF16_BE
+				         ) and
+				         (
+					         OutputType == CharsType::UTF8_CHAR or
+					         OutputType == CharsType::UTF8
+				         )
+			[[nodiscard]] constexpr auto write_utf8(
+				const typename output_type_of<OutputType>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
+
+				using output_type = output_type_of<OutputType>;
+				using output_pointer_type = typename output_type::pointer;
+
+				const auto input_length = input.size();
+
+				const pointer_type it_input_begin = input.data();
+				pointer_type it_input_current = it_input_begin;
+				const pointer_type it_input_end = it_input_begin + input_length;
+
+				const output_pointer_type it_output_begin = output;
+				output_pointer_type it_output_current = it_output_begin;
+
+				while (it_input_current < it_input_end)
+				{
+					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+					const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+
+					const auto [length, error] = ::utf16::write_utf8<InputType, OutputType, Pure, Correct>(it_output_current, it_input_current, it_input_end);
+
+					if (error != ErrorCode::NONE)
+					{
+						return {.error = error, .input = current_input_length, .output = current_output_length};
+					}
+
+					it_input_current += length;
+				}
+
+				// ==================================================
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+				const auto current_input_length = static_cast<std::size_t>(input_length);
+				const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+				return {.error = ErrorCode::NONE, .input = current_input_length, .output = current_output_length};
+			}
+
+			template<CharsType InputType, CharsType OutputType, bool Pure, bool Correct>
+				requires (
+					         InputType == CharsType::UTF16_LE or
+					         InputType == CharsType::UTF16_BE
+				         ) and
+				         (
+					         OutputType == CharsType::UTF32
+				         )
+			[[nodiscard]] constexpr auto write_utf32(
+				const typename output_type_of<OutputType>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
+
+				using output_type = output_type_of<OutputType>;
+				using output_pointer_type = typename output_type::pointer;
+
+				const auto input_length = input.size();
+
+				const pointer_type it_input_begin = input.data();
+				pointer_type it_input_current = it_input_begin;
+				const pointer_type it_input_end = it_input_begin + input_length;
+
+				const output_pointer_type it_output_begin = output;
+				output_pointer_type it_output_current = it_output_begin;
+
+				while (it_input_current < it_input_end)
+				{
+					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+					const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+
+					const auto [length, error] = ::utf16::write_utf32<InputType, OutputType, Pure, Correct>(it_output_current, it_input_current, it_input_end);
+					GAL_PROMETHEUS_ERROR_ASSUME(length == 1 or length == 2);
+
+					if (error != ErrorCode::NONE)
+					{
+						return {.error = error, .input = current_input_length, .output = current_output_length};
+					}
+
+					it_input_current += length;
+				}
+
+				// ==================================================
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+				const auto current_input_length = static_cast<std::size_t>(input_length);
+				const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+				return {.error = ErrorCode::NONE, .input = current_input_length, .output = current_output_length};
+			}
+
+			constexpr auto flip(
+				const output_type_of<CharsType::UTF16>::pointer output,
+				const input_type_of<CharsType::UTF16> input
+			) noexcept -> void
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
+
+				std::ranges::transform(
+					input,
+					output,
+					[](const auto word) noexcept
+					{
+						return std::byteswap(word);
+					}
+				);
+			}
+
+			template<CharsType InputType, CharsType OutputType>
+				requires (
+					         InputType == CharsType::UTF16_LE and
+					         OutputType == CharsType::UTF16_BE
+				         ) or
+				         (
+					         InputType == CharsType::UTF16_BE and
+					         OutputType == CharsType::UTF16_LE
+				         )
+			constexpr auto transform(
+				const typename output_type_of<OutputType>::pointer output,
+				const input_type_of<InputType> input
+			) noexcept -> result_error_input_type
+			{
+				if (const auto result = scalar::validate<InputType>(input);
+					result.has_error())
+				{
+					scalar::flip(output, {input.data(), result.input});
+					return {.error = result.error, .input = result.input};
+				}
+
+				scalar::flip(output, input);
+				return {.error = ErrorCode::NONE, .input = input.size()};
+			}
+		}
 	}
 
 	namespace utf32
 	{
-		[[nodiscard]] constexpr auto do_validate(
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		using input_type = chars::utf32::input_type;
+		// using char_type = chars::utf32::char_type;
+		using size_type = chars::utf32::size_type;
+		using pointer_type = chars::utf32::pointer_type;
+
+		[[nodiscard]] constexpr auto validate(const pointer_type current, const pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
 			std::ignore = end;
 			constexpr std::ptrdiff_t length = 1;
@@ -2402,15 +2680,15 @@ namespace
 			return {length, ErrorCode::NONE};
 		}
 
-		// 1-dword UTF-32 => 1 LATIN
+		// 1 UTF-32 => 1 LATIN
 		template<CharsType OutputType, bool Pure, bool Correct>
 			requires (
 				OutputType == CharsType::LATIN
 			)
-		[[nodiscard]] constexpr auto do_write(
+		[[nodiscard]] constexpr auto write_latin(
 			typename output_type_of<OutputType>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
 			std::ignore = end;
@@ -2433,16 +2711,16 @@ namespace
 			return {length, ErrorCode::NONE};
 		}
 
-		// 1-dword UTF-32 => 1/2/3/4 UTF-8
+		// 1 UTF-32 => 1/2/3/4 UTF-8
 		template<CharsType OutputType, bool Pure, bool Correct>
 			requires (
 				OutputType == CharsType::UTF8_CHAR or
 				OutputType == CharsType::UTF8
 			)
-		[[nodiscard]] constexpr auto do_write(
+		[[nodiscard]] constexpr auto write_utf8(
 			typename output_type_of<OutputType>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
 			std::ignore = end;
@@ -2535,16 +2813,16 @@ namespace
 			}
 		}
 
-		// 1-dword UTF-32 => 1/2 UTF-16
+		// 1 UTF-32 => 1/2 UTF-16
 		template<CharsType OutputType, bool Pure, bool Correct>
 			requires (
 				OutputType == CharsType::UTF16_LE or
 				OutputType == CharsType::UTF16_BE
 			)
-		[[nodiscard]] constexpr auto do_write(
+		[[nodiscard]] constexpr auto write_utf16(
 			typename output_type_of<OutputType>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
 			std::ignore = end;
@@ -2602,10 +2880,258 @@ namespace
 				return {length, ErrorCode::NONE};
 			}
 		}
+
+		namespace scalar
+		{
+			[[nodiscard]] constexpr auto validate(const input_type input) noexcept -> result_error_input_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+
+				const auto input_length = input.size();
+
+				const pointer_type it_input_begin = input.data();
+				pointer_type it_input_current = it_input_begin;
+				const pointer_type it_input_end = it_input_begin + input_length;
+
+				while (it_input_current < it_input_end)
+				{
+					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+
+					const auto [length, error] = ::utf32::validate(it_input_current, it_input_end);
+					GAL_PROMETHEUS_ERROR_ASSUME(length == 1);
+
+					if (error != ErrorCode::NONE)
+					{
+						return {.error = error, .input = current_input_length};
+					}
+
+					it_input_current += length;
+				}
+
+				// ==================================================
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+				const auto current_input_length = static_cast<std::size_t>(input_length);
+				return {.error = ErrorCode::NONE, .input = current_input_length};
+			}
+
+			template<CharsType OutputType>
+			[[nodiscard]] constexpr auto length(const input_type input) noexcept -> size_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+
+				// ReSharper disable CppClangTidyBugproneBranchClone
+				if constexpr (
+					OutputType == CharsType::LATIN
+				)
+				{
+					return input.size();
+				}
+				// ReSharper restore CppClangTidyBugproneBranchClone
+				else if constexpr (
+					OutputType == CharsType::UTF8_CHAR or
+					OutputType == CharsType::UTF8
+				)
+				{
+					return std::ranges::fold_left(
+						input.begin(),
+						input.end(),
+						size_type{0},
+						[](const size_type total, const auto data) noexcept -> size_type
+						{
+							const auto v = static_cast<std::uint32_t>(data);
+							return
+									total +
+									1 // ascii
+									+
+									(v > 0x7f) // two-byte
+									+
+									(v > 0x7ff) // three-byte
+									+
+									(v > 0xffff) // four-byte
+									;
+						}
+					);
+				}
+				else if constexpr (
+					OutputType == CharsType::UTF16_LE or
+					OutputType == CharsType::UTF16_BE or
+					OutputType == CharsType::UTF16
+				)
+				{
+					return std::ranges::fold_left(
+						input.begin(),
+						input.end(),
+						size_type{0},
+						[](const size_type total, const auto data) noexcept -> size_type
+						{
+							const auto v = static_cast<std::uint32_t>(data);
+							return
+									total +
+									1 // non-surrogate word
+									+
+									(v > 0xffff) // surrogate pair
+									;
+						}
+					);
+				}
+				// ReSharper disable CppClangTidyBugproneBranchClone
+				else if constexpr (
+					OutputType == CharsType::UTF32
+				)
+				{
+					return input.size();
+				}
+				// ReSharper restore CppClangTidyBugproneBranchClone
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			}
+
+			template<CharsType OutputType, bool Pure, bool Correct>
+				requires (
+					OutputType == CharsType::LATIN
+				)
+			[[nodiscard]] constexpr auto write_latin(
+				const typename output_type_of<OutputType>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
+
+				using output_type = output_type_of<OutputType>;
+				using output_pointer_type = typename output_type::pointer;
+
+				const auto input_length = input.size();
+
+				const pointer_type it_input_begin = input.data();
+				pointer_type it_input_current = it_input_begin;
+				const pointer_type it_input_end = it_input_begin + input_length;
+
+				const output_pointer_type it_output_begin = output;
+				output_pointer_type it_output_current = it_output_begin;
+
+				while (it_input_current < it_input_end)
+				{
+					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+					const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+
+					const auto [length, error] = ::utf32::write_latin<OutputType, Pure, Correct>(it_output_current, it_input_current, it_input_end);
+					GAL_PROMETHEUS_ERROR_ASSUME(length == 1);
+
+					if (error != ErrorCode::NONE)
+					{
+						return {.error = error, .input = current_input_length, .output = current_output_length};
+					}
+
+					it_input_current += length;
+				}
+
+				// ==================================================
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+				const auto current_input_length = static_cast<std::size_t>(input_length);
+				const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+				return {.error = ErrorCode::NONE, .input = current_input_length, .output = current_output_length};
+			}
+
+			template<CharsType OutputType, bool Pure, bool Correct>
+				requires (
+					OutputType == CharsType::UTF8_CHAR or
+					OutputType == CharsType::UTF8
+				)
+			[[nodiscard]] constexpr auto write_utf8(
+				const typename output_type_of<OutputType>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
+
+				using output_type = output_type_of<OutputType>;
+				using output_pointer_type = typename output_type::pointer;
+
+				const auto input_length = input.size();
+
+				const pointer_type it_input_begin = input.data();
+				pointer_type it_input_current = it_input_begin;
+				const pointer_type it_input_end = it_input_begin + input_length;
+
+				const output_pointer_type it_output_begin = output;
+				output_pointer_type it_output_current = it_output_begin;
+
+				while (it_input_current < it_input_end)
+				{
+					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+					const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+
+					const auto [length, error] = ::utf32::write_utf8<OutputType, Pure, Correct>(it_output_current, it_input_current, it_input_end);
+					GAL_PROMETHEUS_ERROR_ASSUME(length == 1);
+
+					if (error != ErrorCode::NONE)
+					{
+						return {.error = error, .input = current_input_length, .output = current_output_length};
+					}
+
+					it_input_current += length;
+				}
+
+				// ==================================================
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+				const auto current_input_length = static_cast<std::size_t>(input_length);
+				const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+				return {.error = ErrorCode::NONE, .input = current_input_length, .output = current_output_length};
+			}
+
+			template<CharsType OutputType, bool Pure, bool Correct>
+				requires (
+					OutputType == CharsType::UTF16_LE or
+					OutputType == CharsType::UTF16_BE
+				)
+			[[nodiscard]] constexpr auto write_utf16(
+				const typename output_type_of<OutputType>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
+
+				using output_type = output_type_of<OutputType>;
+				using output_pointer_type = typename output_type::pointer;
+
+				const auto input_length = input.size();
+
+				const pointer_type it_input_begin = input.data();
+				pointer_type it_input_current = it_input_begin;
+				const pointer_type it_input_end = it_input_begin + input_length;
+
+				const output_pointer_type it_output_begin = output;
+				output_pointer_type it_output_current = it_output_begin;
+
+				while (it_input_current < it_input_end)
+				{
+					const auto current_input_length = static_cast<std::size_t>(it_input_current - it_input_begin);
+					const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+
+					const auto [length, error] = ::utf32::write_utf16<OutputType, Pure, Correct>(it_output_current, it_input_current, it_input_end);
+					GAL_PROMETHEUS_ERROR_ASSUME(length == 1);
+
+					if (error != ErrorCode::NONE)
+					{
+						return {.error = error, .input = current_input_length, .output = current_output_length};
+					}
+
+					it_input_current += length;
+				}
+
+				// ==================================================
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+				const auto current_input_length = static_cast<std::size_t>(input_length);
+				const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
+				return {.error = ErrorCode::NONE, .input = current_input_length, .output = current_output_length};
+			}
+		}
 	}
 }
 
-namespace gal::prometheus::chars_1
+namespace gal::prometheus::chars
 {
 	namespace latin
 	{
@@ -2761,6 +3287,16 @@ namespace gal::prometheus::chars_1
 				return validate({input, std::char_traits<char_type>::length(input)});
 			}
 
+			auto length_for_latin(const input_type input) noexcept -> size_type
+			{
+				return input.size();
+			}
+
+			auto length_for_latin(pointer_type input) noexcept -> size_type
+			{
+				return length_for_latin({input, std::char_traits<char_type>::length(input)});
+			}
+
 			auto length_for_utf8(const input_type input) noexcept -> size_type
 			{
 				const auto length = ::latin::scalar::length<CharsType::UTF8_CHAR>(input);
@@ -2799,7 +3335,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -2807,7 +3343,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
 				pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -2815,7 +3351,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -2824,7 +3360,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
@@ -2832,7 +3368,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -2841,7 +3377,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
 				const pointer_type input
 			) noexcept -> result_output_type
 			{
@@ -2849,7 +3385,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8(
-				output_type_of<CharsType::UTF8>::pointer& output,
+				const output_type_of<CharsType::UTF8>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -2857,7 +3393,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8(
-				output_type_of<CharsType::UTF8>::pointer& output,
+				const output_type_of<CharsType::UTF8>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -2865,7 +3401,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8>::pointer& output,
+				const output_type_of<CharsType::UTF8>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -2874,15 +3410,15 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8>::pointer& output,
-				pointer_type input
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
 				return write_utf8_pure(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
 			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8>::pointer& output,
+				const output_type_of<CharsType::UTF8>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -2891,7 +3427,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8>::pointer& output,
+				const output_type_of<CharsType::UTF8>::pointer output,
 				const pointer_type input
 			) noexcept -> result_output_type
 			{
@@ -2899,7 +3435,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -2907,7 +3443,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -2915,7 +3451,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -2924,7 +3460,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
@@ -2932,7 +3468,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -2941,15 +3477,15 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
-				pointer_type input
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const pointer_type input
 			) noexcept -> result_output_type
 			{
 				return write_utf16_le_correct(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
 			auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -2957,15 +3493,15 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
-				pointer_type input
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
 				return write_utf16_be(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
 			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -2974,7 +3510,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
@@ -2982,7 +3518,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -2991,7 +3527,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_output_type
 			{
@@ -2999,7 +3535,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3007,7 +3543,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3015,7 +3551,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3024,7 +3560,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3032,7 +3568,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -3041,61 +3577,11 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer& output,
-				pointer_type input
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const pointer_type input
 			) noexcept -> result_output_type
 			{
 				return write_utf32_correct(output, {input, std::char_traits<char_type>::length(input)});
-			}
-
-			auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer& output,
-				const input_type input
-			) noexcept -> result_error_input_output_type
-			{
-				return ::latin::scalar::write_latin<CharsType::LATIN, false, false>(output, input);
-			}
-
-			auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer& output,
-				const pointer_type input
-			) noexcept -> result_error_input_output_type
-			{
-				return write_latin(output, {input, std::char_traits<char_type>::length(input)});
-			}
-
-			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer& output,
-				const input_type input
-			) noexcept -> result_error_input_type
-			{
-				const auto result = ::latin::scalar::write_latin<CharsType::LATIN, true, false>(output, input);
-				return {.error = result.error, .input = result.input};
-			}
-
-			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer& output,
-				const pointer_type input
-			) noexcept -> result_error_input_type
-			{
-				return write_latin_pure(output, {input, std::char_traits<char_type>::length(input)});
-			}
-
-			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer& output,
-				const input_type input
-			) noexcept -> result_output_type
-			{
-				const auto result = ::latin::scalar::write_latin<CharsType::LATIN, false, true>(output, input);
-				return {.output = result.output};
-			}
-
-			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer& output,
-				pointer_type input
-			) noexcept -> result_output_type
-			{
-				return write_latin_correct(output, {input, std::char_traits<char_type>::length(input)});
 			}
 		}
 	}
@@ -3264,6 +3750,16 @@ namespace gal::prometheus::chars_1
 				return length_for_latin({input, std::char_traits<char_type>::length(input)});
 			}
 
+			auto length_for_utf8(const input_type input) noexcept -> size_type
+			{
+				return input.size();
+			}
+
+			auto length_for_utf8(const pointer_type input) noexcept -> size_type
+			{
+				return length_for_utf8({input, std::char_traits<char_type>::length(input)});
+			}
+
 			auto length_for_utf16(const input_type input) noexcept -> size_type
 			{
 				const auto length = ::utf8::scalar::length<CharsType::UTF8_CHAR, CharsType::UTF16>(input);
@@ -3283,13 +3779,13 @@ namespace gal::prometheus::chars_1
 				return ::utf8::scalar::length<CharsType::UTF8_CHAR, CharsType::UTF32>(input);
 			}
 
-			auto length_for_utf32(pointer_type input) noexcept -> size_type
+			auto length_for_utf32(const pointer_type input) noexcept -> size_type
 			{
 				return length_for_utf32({input, std::char_traits<char_type>::length(input)});
 			}
 
 			auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer& output,
+				const output_type_of<CharsType::LATIN>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3297,7 +3793,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer& output,
+				const output_type_of<CharsType::LATIN>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3305,7 +3801,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer& output,
+				const output_type_of<CharsType::LATIN>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3314,15 +3810,15 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer& output,
-				pointer_type input
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
 				return write_latin_pure(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
 			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer& output,
+				const output_type_of<CharsType::LATIN>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -3331,7 +3827,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer& output,
+				const output_type_of<CharsType::LATIN>::pointer output,
 				const pointer_type input
 			) noexcept -> result_output_type
 			{
@@ -3339,7 +3835,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3347,7 +3843,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3355,7 +3851,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3364,7 +3860,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3372,7 +3868,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -3381,15 +3877,15 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
-				pointer_type input
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const pointer_type input
 			) noexcept -> result_output_type
 			{
 				return write_utf16_le_correct(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
 			auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3397,7 +3893,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3405,7 +3901,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3414,7 +3910,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3422,7 +3918,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -3431,15 +3927,15 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
-				pointer_type input
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const pointer_type input
 			) noexcept -> result_output_type
 			{
 				return write_utf16_be_correct(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
 			auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3447,7 +3943,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3455,7 +3951,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3464,7 +3960,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3472,7 +3968,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -3481,7 +3977,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const pointer_type input
 			) noexcept -> result_output_type
 			{
@@ -3489,53 +3985,19 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8(
-				output_type_of<CharsType::UTF8>::pointer& output,
+				const output_type_of<CharsType::UTF8>::pointer output,
 				const input_type input
-			) noexcept -> result_error_input_output_type
+			) noexcept -> result_error_input_type
 			{
-				return ::utf8::scalar::transform<CharsType::UTF8_CHAR, CharsType::UTF8, false, false>(output, input);
+				return ::utf8::scalar::transform<CharsType::UTF8_CHAR, CharsType::UTF8>(output, input);
 			}
 
 			auto write_utf8(
-				output_type_of<CharsType::UTF8>::pointer& output,
+				const output_type_of<CharsType::UTF8>::pointer output,
 				const pointer_type input
-			) noexcept -> result_error_input_output_type
+			) noexcept -> result_error_input_type
 			{
 				return write_utf8(output, {input, std::char_traits<char_type>::length(input)});
-			}
-
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8>::pointer& output,
-				const input_type input
-			) noexcept -> result_error_input_type
-			{
-				const auto result = ::utf8::scalar::transform<CharsType::UTF8_CHAR, CharsType::UTF8, true, false>(output, input);
-				return {.error = result.error, .input = result.input};
-			}
-
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8>::pointer& output,
-				const pointer_type input
-			) noexcept -> result_error_input_type
-			{
-				return write_utf8_pure(output, {input, std::char_traits<char_type>::length(input)});
-			}
-
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8>::pointer& output,
-				const pointer_type input
-			) noexcept -> result_output_type
-			{
-				return write_utf8_correct(output, {input, std::char_traits<char_type>::length(input)});
-			}
-
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8>::pointer& output,
-				const input_type input
-			) noexcept -> result_output_type
-			{
-				const auto result = ::utf8::scalar::transform<CharsType::UTF8_CHAR, CharsType::UTF8, false, true>(output, input);
-				return {.output = result.output};
 			}
 		}
 	}
@@ -3704,6 +4166,16 @@ namespace gal::prometheus::chars_1
 				return length_for_latin({input, std::char_traits<char_type>::length(input)});
 			}
 
+			auto length_for_utf8(const input_type input) noexcept -> size_type
+			{
+				return input.size();
+			}
+
+			auto length_for_utf8(const pointer_type input) noexcept -> size_type
+			{
+				return length_for_utf8({input, std::char_traits<char_type>::length(input)});
+			}
+
 			auto length_for_utf16(const input_type input) noexcept -> size_type
 			{
 				const auto length = ::utf8::scalar::length<CharsType::UTF8, CharsType::UTF16>(input);
@@ -3729,7 +4201,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer& output,
+				const output_type_of<CharsType::LATIN>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3737,7 +4209,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer& output,
+				const output_type_of<CharsType::LATIN>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3745,7 +4217,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer& output,
+				const output_type_of<CharsType::LATIN>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3754,15 +4226,15 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer& output,
-				pointer_type input
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
 				return write_latin_pure(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
 			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer& output,
+				const output_type_of<CharsType::LATIN>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -3771,7 +4243,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer& output,
+				const output_type_of<CharsType::LATIN>::pointer output,
 				const pointer_type input
 			) noexcept -> result_output_type
 			{
@@ -3779,7 +4251,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3787,7 +4259,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3795,7 +4267,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3804,7 +4276,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3812,7 +4284,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -3821,15 +4293,15 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer& output,
-				pointer_type input
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const pointer_type input
 			) noexcept -> result_output_type
 			{
 				return write_utf16_le_correct(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
 			auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3837,7 +4309,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3845,7 +4317,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3854,7 +4326,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3862,7 +4334,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -3871,15 +4343,15 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer& output,
-				pointer_type input
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const pointer_type input
 			) noexcept -> result_output_type
 			{
 				return write_utf16_be_correct(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
 			auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3887,7 +4359,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_output_type
 			{
@@ -3895,7 +4367,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const input_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3904,7 +4376,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const pointer_type input
 			) noexcept -> result_error_input_type
 			{
@@ -3912,7 +4384,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const input_type input
 			) noexcept -> result_output_type
 			{
@@ -3921,7 +4393,7 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer& output,
+				const output_type_of<CharsType::UTF32>::pointer output,
 				const pointer_type input
 			) noexcept -> result_output_type
 			{
@@ -3929,53 +4401,19 @@ namespace gal::prometheus::chars_1
 			}
 
 			auto write_utf8(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
 				const input_type input
-			) noexcept -> result_error_input_output_type
+			) noexcept -> result_error_input_type
 			{
-				return ::utf8::scalar::transform<CharsType::UTF8, CharsType::UTF8_CHAR, false, false>(output, input);
+				return ::utf8::scalar::transform<CharsType::UTF8, CharsType::UTF8_CHAR>(output, input);
 			}
 
 			auto write_utf8(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
 				const pointer_type input
-			) noexcept -> result_error_input_output_type
+			) noexcept -> result_error_input_type
 			{
 				return write_utf8(output, {input, std::char_traits<char_type>::length(input)});
-			}
-
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-				const input_type input
-			) noexcept -> result_error_input_type
-			{
-				const auto result = ::utf8::scalar::transform<CharsType::UTF8, CharsType::UTF8_CHAR, true, false>(output, input);
-				return {.error = result.error, .input = result.input};
-			}
-
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-				const pointer_type input
-			) noexcept -> result_error_input_type
-			{
-				return write_utf8_pure(output, {input, std::char_traits<char_type>::length(input)});
-			}
-
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-				const pointer_type input
-			) noexcept -> result_output_type
-			{
-				return write_utf8_correct(output, {input, std::char_traits<char_type>::length(input)});
-			}
-
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-				const input_type input
-			) noexcept -> result_output_type
-			{
-				const auto result = ::utf8::scalar::transform<CharsType::UTF8, CharsType::UTF8_CHAR, false, true>(output, input);
-				return {.output = result.output};
 			}
 		}
 	}
@@ -3984,388 +4422,1222 @@ namespace gal::prometheus::chars_1
 	{
 		[[nodiscard]] auto validate_le(const pointer_type current, const pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_validate<std::endian::little>(current, end);
+			return ::utf16::validate<CharsType::UTF16_LE>(current, end);
 		}
-	}
 
-	namespace utf32
-	{
-		//
-	}
-}
+		[[nodiscard]] auto validate_be(const pointer_type current, const pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::validate<CharsType::UTF16_BE>(current, end);
+		}
 
-namespace gal::prometheus::chars_1::scalar
-{
-	namespace utf16
-	{
 		[[nodiscard]] auto write_latin_le(
 			output_type_of<CharsType::LATIN>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::LATIN, false, false>(output, current, end);
-		}
-
-		[[nodiscard]] auto write_latin_pure_le(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::LATIN, true, false>(output, current, end);
-		}
-
-		[[nodiscard]] auto write_latin_correct_le(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::LATIN, false, true>(output, current, end);
-		}
-
-		[[nodiscard]] auto write_utf8_le(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::UTF8_CHAR, false, false>(output, current, end);
-		}
-
-		[[nodiscard]] auto write_utf8_pure_le(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::UTF8_CHAR, true, false>(output, current, end);
-		}
-
-		[[nodiscard]] auto write_utf8_correct_le(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::UTF8_CHAR, false, true>(output, current, end);
-		}
-
-		[[nodiscard]] auto write_utf8_le(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::UTF8, false, false>(output, current, end);
-		}
-
-		[[nodiscard]] auto write_utf8_pure_le(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::UTF8, true, false>(output, current, end);
-		}
-
-		[[nodiscard]] auto write_utf8_correct_le(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::UTF8, false, true>(output, current, end);
-		}
-
-		[[nodiscard]] auto write_utf32_le(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::UTF32, false, false>(output, current, end);
-		}
-
-		[[nodiscard]] auto write_utf32_pure_le(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::UTF32, true, false>(output, current, end);
-		}
-
-		[[nodiscard]] auto write_utf32_correct_le(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_LE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_write<CharsType::UTF16_LE, CharsType::UTF32, false, true>(output, current, end);
-		}
-
-		[[nodiscard]] auto validate_be(
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
-		{
-			return ::utf16::do_validate<std::endian::big>(current, end);
+			return ::utf16::write_latin<CharsType::UTF16_LE, CharsType::LATIN, false, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_latin_be(
 			output_type_of<CharsType::LATIN>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::LATIN, false, false>(output, current, end);
+			return ::utf16::write_latin<CharsType::UTF16_BE, CharsType::LATIN, false, false>(output, current, end);
+		}
+
+		[[nodiscard]] auto write_latin_pure_le(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			const pointer_type current,
+			const pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::write_latin<CharsType::UTF16_LE, CharsType::LATIN, true, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_latin_pure_be(
 			output_type_of<CharsType::LATIN>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::LATIN, true, false>(output, current, end);
+			return ::utf16::write_latin<CharsType::UTF16_BE, CharsType::LATIN, true, false>(output, current, end);
+		}
+
+		[[nodiscard]] auto write_latin_correct_le(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			const pointer_type current,
+			const pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::write_latin<CharsType::UTF16_LE, CharsType::LATIN, false, true>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_latin_correct_be(
 			output_type_of<CharsType::LATIN>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::LATIN, false, true>(output, current, end);
+			return ::utf16::write_latin<CharsType::UTF16_BE, CharsType::LATIN, false, true>(output, current, end);
+		}
+
+		[[nodiscard]] auto write_utf8_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			const pointer_type current,
+			const pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::write_utf8<CharsType::UTF16_LE, CharsType::UTF8_CHAR, false, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8_be(
 			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::UTF8_CHAR, false, false>(output, current, end);
+			return ::utf16::write_utf8<CharsType::UTF16_BE, CharsType::UTF8_CHAR, false, false>(output, current, end);
+		}
+
+		[[nodiscard]] auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			const pointer_type current,
+			const pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::write_utf8<CharsType::UTF16_LE, CharsType::UTF8_CHAR, true, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8_pure_be(
 			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::UTF8_CHAR, true, false>(output, current, end);
+			return ::utf16::write_utf8<CharsType::UTF16_BE, CharsType::UTF8_CHAR, true, false>(output, current, end);
+		}
+
+		[[nodiscard]] auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			const pointer_type current,
+			const pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::write_utf8<CharsType::UTF16_LE, CharsType::UTF8_CHAR, false, true>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8_correct_be(
 			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::UTF8_CHAR, false, true>(output, current, end);
+			return ::utf16::write_utf8<CharsType::UTF16_BE, CharsType::UTF8_CHAR, false, true>(output, current, end);
+		}
+
+		[[nodiscard]] auto write_utf8_le(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			const pointer_type current,
+			const pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::write_utf8<CharsType::UTF16_LE, CharsType::UTF8, false, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8_be(
 			output_type_of<CharsType::UTF8>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::UTF8, false, false>(output, current, end);
+			return ::utf16::write_utf8<CharsType::UTF16_BE, CharsType::UTF8, false, false>(output, current, end);
+		}
+
+		[[nodiscard]] auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			const pointer_type current,
+			const pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::write_utf8<CharsType::UTF16_LE, CharsType::UTF8, true, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8_pure_be(
 			output_type_of<CharsType::UTF8>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::UTF8, true, false>(output, current, end);
+			return ::utf16::write_utf8<CharsType::UTF16_BE, CharsType::UTF8, true, false>(output, current, end);
+		}
+
+		[[nodiscard]] auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			const pointer_type current,
+			const pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::write_utf8<CharsType::UTF16_LE, CharsType::UTF8, false, true>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8_correct_be(
 			output_type_of<CharsType::UTF8>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::UTF8, false, true>(output, current, end);
+			return ::utf16::write_utf8<CharsType::UTF16_BE, CharsType::UTF8, false, true>(output, current, end);
+		}
+
+		[[nodiscard]] auto write_utf32_le(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			const pointer_type current,
+			const pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::write_utf32<CharsType::UTF16_LE, CharsType::UTF32, false, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf32_be(
 			output_type_of<CharsType::UTF32>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::UTF32, false, false>(output, current, end);
+			return ::utf16::write_utf32<CharsType::UTF16_BE, CharsType::UTF32, false, false>(output, current, end);
+		}
+
+		[[nodiscard]] auto write_utf32_pure_le(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			const pointer_type current,
+			const pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::write_utf32<CharsType::UTF16_LE, CharsType::UTF32, true, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf32_pure_be(
 			output_type_of<CharsType::UTF32>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::UTF32, true, false>(output, current, end);
+			return ::utf16::write_utf32<CharsType::UTF16_BE, CharsType::UTF32, true, false>(output, current, end);
+		}
+
+		[[nodiscard]] auto write_utf32_correct_le(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			const pointer_type current,
+			const pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		{
+			return ::utf16::write_utf32<CharsType::UTF16_LE, CharsType::UTF32, false, true>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf32_correct_be(
 			output_type_of<CharsType::UTF32>::pointer& output,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer current,
-			const input_type_of<CharsType::UTF16_BE>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf16::do_write<CharsType::UTF16_BE, CharsType::UTF32, false, true>(output, current, end);
+			return ::utf16::write_utf32<CharsType::UTF16_BE, CharsType::UTF32, false, true>(output, current, end);
+		}
+
+		namespace scalar
+		{
+			[[nodiscard]] auto validate_le(const input_type input) noexcept -> result_error_input_type
+			{
+				return ::utf16::scalar::validate<CharsType::UTF16_LE>(input);
+			}
+
+			[[nodiscard]] auto validate_le(const pointer_type input) noexcept -> result_error_input_type
+			{
+				return validate_le({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto validate_be(const input_type input) noexcept -> result_error_input_type
+			{
+				return ::utf16::scalar::validate<CharsType::UTF16_BE>(input);
+			}
+
+			[[nodiscard]] auto validate_be(const pointer_type input) noexcept -> result_error_input_type
+			{
+				return validate_be({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto length_le_for_latin(const input_type input) noexcept -> size_type
+			{
+				return ::utf16::scalar::length<CharsType::UTF16_LE, CharsType::LATIN>(input);
+			}
+
+			[[nodiscard]] auto length_le_for_latin(const pointer_type input) noexcept -> size_type
+			{
+				return length_le_for_latin({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto length_be_for_latin(const input_type input) noexcept -> size_type
+			{
+				return ::utf16::scalar::length<CharsType::UTF16_BE, CharsType::LATIN>(input);
+			}
+
+			[[nodiscard]] auto length_be_for_latin(const pointer_type input) noexcept -> size_type
+			{
+				return length_be_for_latin({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto length_le_for_utf8(const input_type input) noexcept -> size_type
+			{
+				return ::utf16::scalar::length<CharsType::UTF16_LE, CharsType::UTF8_CHAR>(input);
+			}
+
+			[[nodiscard]] auto length_le_for_utf8(const pointer_type input) noexcept -> size_type
+			{
+				return length_le_for_utf8({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto length_be_for_utf8(const input_type input) noexcept -> size_type
+			{
+				return ::utf16::scalar::length<CharsType::UTF16_BE, CharsType::UTF8_CHAR>(input);
+			}
+
+			[[nodiscard]] auto length_be_for_utf8(const pointer_type input) noexcept -> size_type
+			{
+				return length_be_for_utf8({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto length_for_utf16(const input_type input) noexcept -> size_type
+			{
+				return input.size();
+			}
+
+			[[nodiscard]] auto length_for_utf16(const pointer_type input) noexcept -> size_type
+			{
+				return length_for_utf16({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto length_le_for_utf32(const input_type input) noexcept -> size_type
+			{
+				return ::utf16::scalar::length<CharsType::UTF16_LE, CharsType::UTF32>(input);
+			}
+
+			[[nodiscard]] auto length_le_for_utf32(const pointer_type input) noexcept -> size_type
+			{
+				return length_le_for_utf32({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto length_be_for_utf32(const input_type input) noexcept -> size_type
+			{
+				return ::utf16::scalar::length<CharsType::UTF16_BE, CharsType::UTF32>(input);
+			}
+
+			[[nodiscard]] auto length_be_for_utf32(const pointer_type input) noexcept -> size_type
+			{
+				return length_be_for_utf32({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_latin_le(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf16::scalar::write_latin<CharsType::UTF16_LE, CharsType::LATIN, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_latin_le(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_latin_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_latin_be(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf16::scalar::write_latin<CharsType::UTF16_BE, CharsType::LATIN, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_latin_be(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_latin_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_latin_pure_le(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf16::scalar::write_latin<CharsType::UTF16_LE, CharsType::LATIN, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_latin_pure_le(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_latin_pure_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_latin_pure_be(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf16::scalar::write_latin<CharsType::UTF16_BE, CharsType::LATIN, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_latin_pure_be(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_latin_pure_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_latin_correct_le(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf16::scalar::write_latin<CharsType::UTF16_LE, CharsType::LATIN, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_latin_correct_le(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_latin_correct_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_latin_correct_be(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf16::scalar::write_latin<CharsType::UTF16_BE, CharsType::LATIN, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_latin_correct_be(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_latin_correct_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf8_le(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf16::scalar::write_utf8<CharsType::UTF16_LE, CharsType::UTF8_CHAR, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf8_le(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_utf8_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf8_be(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf16::scalar::write_utf8<CharsType::UTF16_BE, CharsType::UTF8_CHAR, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf8_be(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_utf8_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_pure_le(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf16::scalar::write_utf8<CharsType::UTF16_LE, CharsType::UTF8_CHAR, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_utf8_pure_le(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf8_pure_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_pure_be(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf16::scalar::write_utf8<CharsType::UTF16_BE, CharsType::UTF8_CHAR, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_utf8_pure_be(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf8_pure_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_correct_le(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf16::scalar::write_utf8<CharsType::UTF16_LE, CharsType::UTF8_CHAR, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_utf8_correct_le(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_utf8_correct_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_correct_be(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf16::scalar::write_utf8<CharsType::UTF16_BE, CharsType::UTF8_CHAR, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_utf8_correct_be(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_utf8_correct_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf8_le(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf16::scalar::write_utf8<CharsType::UTF16_LE, CharsType::UTF8, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf8_le(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_utf8_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf8_be(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf16::scalar::write_utf8<CharsType::UTF16_BE, CharsType::UTF8, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf8_be(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_utf8_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_pure_le(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf16::scalar::write_utf8<CharsType::UTF16_LE, CharsType::UTF8, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_utf8_pure_le(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf8_pure_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_pure_be(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf16::scalar::write_utf8<CharsType::UTF16_BE, CharsType::UTF8, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_utf8_pure_be(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf8_pure_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_correct_le(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf16::scalar::write_utf8<CharsType::UTF16_LE, CharsType::UTF8, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_utf8_correct_le(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_utf8_correct_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_correct_be(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf16::scalar::write_utf8<CharsType::UTF16_BE, CharsType::UTF8, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_utf8_correct_be(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_utf8_correct_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf32_le(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf16::scalar::write_utf32<CharsType::UTF16_LE, CharsType::UTF32, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf32_le(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_utf32_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf32_be(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf16::scalar::write_utf32<CharsType::UTF16_BE, CharsType::UTF32, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf32_be(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_utf32_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf32_pure_le(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf16::scalar::write_utf32<CharsType::UTF16_LE, CharsType::UTF32, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_utf32_pure_le(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf32_pure_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf32_pure_be(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf16::scalar::write_utf32<CharsType::UTF16_BE, CharsType::UTF32, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_utf32_pure_be(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf32_pure_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf32_correct_le(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf16::scalar::write_utf32<CharsType::UTF16_LE, CharsType::UTF32, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_utf32_correct_le(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_utf32_correct_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf32_correct_be(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf16::scalar::write_utf32<CharsType::UTF16_BE, CharsType::UTF32, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_utf32_correct_be(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_utf32_correct_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf16_le(
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				return ::utf16::scalar::transform<CharsType::UTF16_LE, CharsType::UTF16_BE>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf16_le(
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf16_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf16_be(
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				return ::utf16::scalar::transform<CharsType::UTF16_BE, CharsType::UTF16_LE>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf16_be(
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf16_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto flip(
+				const output_type_of<CharsType::UTF16>::pointer output,
+				const input_type input
+			) noexcept -> void
+			{
+				return ::utf16::scalar::flip(output, input);
+			}
+
+			auto flip(
+				const output_type_of<CharsType::UTF16>::pointer output,
+				const pointer_type input
+			) noexcept -> void
+			{
+				return flip(output, {input, std::char_traits<char_type>::length(input)});
+			}
 		}
 	}
 
 	namespace utf32
 	{
-		[[nodiscard]] auto validate(
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
+		[[nodiscard]] auto validate(const pointer_type current, const pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_validate(current, end);
+			return ::utf32::validate(current, end);
 		}
 
 		[[nodiscard]] auto write_latin(
 			output_type_of<CharsType::LATIN>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::LATIN, false, false>(output, current, end);
+			return ::utf32::write_latin<CharsType::LATIN, false, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_latin_pure(
 			output_type_of<CharsType::LATIN>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::LATIN, true, false>(output, current, end);
+			return ::utf32::write_latin<CharsType::LATIN, true, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_latin_correct(
 			output_type_of<CharsType::LATIN>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::LATIN, false, true>(output, current, end);
+			return ::utf32::write_latin<CharsType::LATIN, false, true>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8(
 			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF8_CHAR, false, false>(output, current, end);
+			return ::utf32::write_utf8<CharsType::UTF8_CHAR, false, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8_pure(
 			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF8_CHAR, true, false>(output, current, end);
+			return ::utf32::write_utf8<CharsType::UTF8_CHAR, true, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8_correct(
 			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF8_CHAR, false, true>(output, current, end);
+			return ::utf32::write_utf8<CharsType::UTF8_CHAR, false, true>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8(
 			output_type_of<CharsType::UTF8>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF8, false, false>(output, current, end);
+			return ::utf32::write_utf8<CharsType::UTF8, false, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8_pure(
 			output_type_of<CharsType::UTF8>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF8, true, false>(output, current, end);
+			return ::utf32::write_utf8<CharsType::UTF8, true, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf8_correct(
 			output_type_of<CharsType::UTF8>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF8, false, true>(output, current, end);
+			return ::utf32::write_utf8<CharsType::UTF8, false, true>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf16_le(
 			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF16_LE, false, false>(output, current, end);
+			return ::utf32::write_utf16<CharsType::UTF16_LE, false, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf16_le_pure(
 			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF16_LE, true, false>(output, current, end);
+			return ::utf32::write_utf16<CharsType::UTF16_LE, true, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf16_le_correct(
 			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF16_LE, false, true>(output, current, end);
+			return ::utf32::write_utf16<CharsType::UTF16_LE, false, true>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf16_be(
 			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF16_BE, false, false>(output, current, end);
+			return ::utf32::write_utf16<CharsType::UTF16_BE, false, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf16_be_pure(
 			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF16_BE, true, false>(output, current, end);
+			return ::utf32::write_utf16<CharsType::UTF16_BE, true, false>(output, current, end);
 		}
 
 		[[nodiscard]] auto write_utf16_be_correct(
 			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			const input_type_of<CharsType::UTF32>::const_pointer current,
-			const input_type_of<CharsType::UTF32>::const_pointer end
+			const pointer_type current,
+			const pointer_type end
 		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
 		{
-			return ::utf32::do_write<CharsType::UTF16_BE, false, true>(output, current, end);
+			return ::utf32::write_utf16<CharsType::UTF16_BE, false, true>(output, current, end);
+		}
+
+		namespace scalar
+		{
+			[[nodiscard]] auto validate(const input_type input) noexcept -> result_error_input_type
+			{
+				return ::utf32::scalar::validate(input);
+			}
+
+			[[nodiscard]] auto validate(const pointer_type input) noexcept -> result_error_input_type
+			{
+				return validate({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto length_for_latin(const input_type input) noexcept -> size_type
+			{
+				return ::utf32::scalar::length<CharsType::LATIN>(input);
+			}
+
+			[[nodiscard]] auto length_for_latin(const pointer_type input) noexcept -> size_type
+			{
+				return length_for_latin({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto length_for_utf8(const input_type input) noexcept -> size_type
+			{
+				const auto length = ::utf32::scalar::length<CharsType::UTF8_CHAR>(input);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(length == ::utf32::scalar::length<CharsType::UTF8>(input));
+
+				return length;
+			}
+
+			[[nodiscard]] auto length_for_utf8(const pointer_type input) noexcept -> size_type
+			{
+				return length_for_utf8({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto length_for_utf16(const input_type input) noexcept -> size_type
+			{
+				const auto length = ::utf32::scalar::length<CharsType::UTF16>(input);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(length == ::utf32::scalar::length<CharsType::UTF16_LE>(input));
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(length == ::utf32::scalar::length<CharsType::UTF16_BE>(input));
+
+				return length;
+			}
+
+			[[nodiscard]] auto length_for_utf16(const pointer_type input) noexcept -> size_type
+			{
+				return length_for_utf16({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto length_for_utf32(const input_type input) noexcept -> size_type
+			{
+				return input.size();
+			}
+
+			[[nodiscard]] auto length_for_utf32(const pointer_type input) noexcept -> size_type
+			{
+				return length_for_utf32({input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_latin(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf32::scalar::write_latin<CharsType::LATIN, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_latin(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_latin(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_latin_pure(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf32::scalar::write_latin<CharsType::LATIN, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_latin_pure(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_latin_pure(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_latin_correct(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf32::scalar::write_latin<CharsType::LATIN, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_latin_correct(
+				const output_type_of<CharsType::LATIN>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_latin_correct(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf8(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf32::scalar::write_utf8<CharsType::UTF8_CHAR, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf8(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_utf8(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_pure(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf32::scalar::write_utf8<CharsType::UTF8_CHAR, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_utf8_pure(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf8_pure(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_correct(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf32::scalar::write_utf8<CharsType::UTF8_CHAR, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_utf8_correct(
+				const output_type_of<CharsType::UTF8_CHAR>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_utf8_correct(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf8(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf32::scalar::write_utf8<CharsType::UTF8, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf8(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_utf8(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_pure(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf32::scalar::write_utf8<CharsType::UTF8, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_utf8_pure(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf8_pure(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf8_correct(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf32::scalar::write_utf8<CharsType::UTF8, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_utf8_correct(
+				const output_type_of<CharsType::UTF8>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_utf8_correct(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf16_le(
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf32::scalar::write_utf16<CharsType::UTF16_LE, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf16_le(
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_utf16_le(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf16_le_pure(
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf32::scalar::write_utf16<CharsType::UTF16_LE, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_utf16_le_pure(
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf16_le_pure(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf16_le_correct(
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf32::scalar::write_utf16<CharsType::UTF16_LE, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_utf16_le_correct(
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_utf16_le_correct(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			[[nodiscard]] auto write_utf16_be(
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf32::scalar::write_utf16<CharsType::UTF16_BE, false, false>(output, input);
+			}
+
+			[[nodiscard]] auto write_utf16_be(
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return write_utf16_be(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf16_be_pure(
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const input_type input
+			) noexcept -> result_error_input_type
+			{
+				const auto result = ::utf32::scalar::write_utf16<CharsType::UTF16_BE, true, false>(output, input);
+				return {.error = result.error, .input = result.input};
+			}
+
+			auto write_utf16_be_pure(
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const pointer_type input
+			) noexcept -> result_error_input_type
+			{
+				return write_utf16_be_pure(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto write_utf16_be_correct(
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const input_type input
+			) noexcept -> result_output_type
+			{
+				const auto result = ::utf32::scalar::write_utf16<CharsType::UTF16_BE, false, true>(output, input);
+				return {.output = result.output};
+			}
+
+			auto write_utf16_be_correct(
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const pointer_type input
+			) noexcept -> result_output_type
+			{
+				return write_utf16_be_correct(output, {input, std::char_traits<char_type>::length(input)});
+			}
 		}
 	}
 }
