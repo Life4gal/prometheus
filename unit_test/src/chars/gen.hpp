@@ -6,6 +6,8 @@
 #include <i18n/i18n.hpp>
 // unit_test
 #include <unit_test/unit_test.hpp>
+// chars
+#include <chars/def.hpp>
 
 using namespace gal::prometheus; // NOLINT(clang-diagnostic-header-hygiene)
 
@@ -418,100 +420,121 @@ namespace gen_detail
 	return gen_detail::make_random_utf32_string<true>(min_length, max_length);
 }
 
+using chars::CharsType;
+using chars::ErrorCode;
+using chars::input_type_of;
+using chars::output_type_of;
+
 template<
-	typename From,
-	typename To,
-	// Xxx<"latin">::validate(source) ==> PURE ASCII ONLY
-	bool ValidateSource = true,
-	typename Source
+	CharsType InputType,
+	CharsType OutputType,
+	typename Impl,
+	// LATIN ==> PURE ASCII ONLY
+	bool ValidateSource = true
 >
-constexpr auto make_test(const Source& source) noexcept -> void
+constexpr auto make_test(
+	const input_type_of<InputType> source
+) noexcept -> void
 {
 	using namespace gal::prometheus::unit_test;
 
-	using out_char_type = typename To::char_type;
-	using out_type = std::basic_string<out_char_type>;
-	constexpr auto out_chars_type = To::chars_type;
+	using output_type = output_type_of<OutputType>;
+	using output_char_type = typename output_type::value_type;
+	using output_string_type = std::basic_string<output_char_type>;
 
 	if constexpr (ValidateSource)
 	{
-		expect(From::template validate<true>(source) == "valid source string"_b) << fatal;
+		expect(Impl::template validate<InputType>(source) == "valid source string"_b) << fatal;
 	}
 
-	const auto source_length = From::template length<From::chars_type>(source);
-	const auto output_length = From::template length<out_chars_type>(source);
+	const auto source_length = source.size();
+	const auto output_length = Impl::template length<InputType, OutputType>(source);
 
 	{
-		out_type dest{};
+		output_string_type dest{};
 		dest.resize(output_length);
 
-		const auto convert_result = From::template convert<out_chars_type, chars::InputProcessPolicy::DEFAULT>(source, dest.data());
+		const auto convert_result = Impl::template convert<InputType, OutputType>(dest.data(), source);
 		expect(convert_result.has_error() != "valid source string"_b) << fatal;
 		expect(convert_result.input == value(source_length)) << fatal;
+		if constexpr (requires { convert_result.output; })
+		{
+			expect(convert_result.output == value(output_length)) << fatal;
+		}
 
-		const auto validate_output_result = To::template validate<true>(dest);
-		expect(validate_output_result == "valid output string"_b) << fatal;
+		const auto validate_output_result = Impl::template validate<OutputType>(dest);
+		expect(validate_output_result.has_error() != "valid output string"_b) << fatal;
+		expect(validate_output_result.input == value(output_length)) << fatal;
 
-		const auto result = From::template convert<out_type, out_chars_type, chars::InputProcessPolicy::DEFAULT>(source);
+		const auto result = Impl::template convert<InputType, OutputType>(source);
 		expect(dest == ref(result)) << fatal;
 	}
 
 	if constexpr (ValidateSource)
 	{
-		out_type dest{};
+		output_string_type dest{};
 		dest.resize(output_length);
 
-		const auto convert_output_length = From::template convert<out_chars_type, chars::InputProcessPolicy::ASSUME_ALL_CORRECT>(source, dest.data());
-		expect(convert_output_length == value(dest.size())) << fatal;
+		const auto convert_result = Impl::template convert<InputType, OutputType, false, true>(dest.data(), source);
+		if constexpr (requires { convert_result.error; })
+		{
+			expect(convert_result.has_error() != "valid output string"_b) << fatal;
+			expect(convert_result.input == value(output_length)) << fatal;
+		}
+		if constexpr (requires { convert_result.output; })
+		{
+			expect(convert_result.output == value(output_length)) << fatal;
+		}
 
-		const auto validate_output_result = To::template validate<true>(dest);
-		expect(validate_output_result == "valid output string"_b) << fatal;
+		const auto validate_output_result = Impl::template validate<OutputType>(dest);
+		expect(validate_output_result.has_error() != "valid output string"_b) << fatal;
+		expect(validate_output_result.input == value(output_length)) << fatal;
 
-		const auto result = From::template convert<out_type, out_chars_type, chars::InputProcessPolicy::ASSUME_ALL_CORRECT>(source);
+		const auto result = Impl::template convert<InputType, OutputType, false, true>(source);
 		expect(dest == ref(result)) << fatal;
 	}
 }
 
 template<
-	typename From,
-	typename To,
-	// Xxx<"latin">::validate(source) ==> PURE ASCII ONLY
-	bool ValidateSourceOnly = false,
-	typename Source
+	CharsType InputType,
+	CharsType OutputType,
+	typename Impl,
+	// LATIN ==> PURE ASCII ONLY
+	bool ValidateSourceOnly = false
 >
 constexpr auto make_test(
-	const Source& source,
-	const chars::ErrorCode expected_error,
-	const std::size_t expected_in
+	const input_type_of<InputType> source,
+	const ErrorCode expected_error,
+	const std::size_t expected_validate_input
 ) noexcept -> void
 {
 	using namespace gal::prometheus::unit_test;
 
-	using out_char_type = typename To::char_type;
-	using out_type = std::basic_string<out_char_type>;
-	constexpr auto out_chars_type = To::chars_type;
+	using output_type = output_type_of<OutputType>;
+	using output_char_type = typename output_type::value_type;
+	using output_string_type = std::basic_string<output_char_type>;
 
-	const auto output_length = From::template length<out_chars_type>(source);
+	const auto output_length = Impl::template length<InputType, OutputType>(source);
 
-	const auto validate_source_result = From::template validate<true>(source);
+	const auto validate_source_result = Impl::template validate<InputType>(source);
 	expect(validate_source_result.has_error() == "invalid source string"_b) << fatal;
 	expect(validate_source_result.error == value(expected_error)) << fatal;
-	expect(validate_source_result.input == value(expected_in)) << fatal;
+	expect(validate_source_result.input == value(expected_validate_input)) << fatal;
 
 	if constexpr (not ValidateSourceOnly)
 	{
-		out_type dest{};
+		output_string_type dest{};
 		dest.resize(output_length);
 
-		const auto convert_result = From::template convert<out_chars_type, chars::InputProcessPolicy::DEFAULT>(source, dest.data());
+		const auto convert_result = Impl::template convert<InputType, OutputType>(dest.data(), source);
 		expect(convert_result.has_error() == "invalid source string"_b) << fatal;
 		expect(convert_result.error == value(expected_error)) << fatal;
-		expect(convert_result.input == value(expected_in)) << fatal;
+		expect(convert_result.input == value(expected_validate_input)) << fatal;
 
-		const auto validate_output_result = To::template validate<true>(dest);
-		expect(validate_output_result == "valid output string"_b) << fatal;
+		const auto validate_output_result = Impl::template validate<OutputType>(dest);
+		expect(validate_output_result.has_error() != "valid output string"_b) << fatal;
 
-		const auto result = From::template convert<out_chars_type, chars::InputProcessPolicy::DEFAULT>(source);
+		const auto result = Impl::template convert<InputType, OutputType>(source);
 		expect(dest == ref(result)) << fatal;
 	}
 }
@@ -519,7 +542,7 @@ constexpr auto make_test(
 // ==============================
 // LATIN
 
-template<typename From>
+template<typename Impl>
 constexpr auto make_test_latin_error() noexcept -> void
 {
 	using namespace gal::prometheus::unit_test;
@@ -571,19 +594,17 @@ constexpr auto make_test_latin_error() noexcept -> void
 		constexpr auto source_length = std::ranges::size(source_u8);
 		const auto source = std::span{reinterpret_cast<const char*>(source_u8), source_length};
 
-		make_test<From, From, true>(source, chars::ErrorCode::TOO_LARGE, 10);
+		make_test<CharsType::LATIN, CharsType::LATIN, Impl, true>(source, ErrorCode::TOO_LARGE, 10);
 	};
 }
 
 // ==============================
 // UTF8/UTF8_CHAR
 
-template<typename From>
+template<typename Impl>
 constexpr auto make_test_utf8_error() noexcept -> void
 {
 	using namespace gal::prometheus::unit_test;
-
-	using char_type = typename From::char_type;
 
 	"overlong"_test = []
 	{
@@ -629,9 +650,17 @@ constexpr auto make_test_utf8_error() noexcept -> void
 		};
 
 		constexpr auto source_length = std::ranges::size(source_u8);
-		const auto source = std::span{reinterpret_cast<const char_type*>(source_u8), source_length};
 
-		make_test<From, From>(source, chars::ErrorCode::OVERLONG, 10);
+		// UTF8_CHAR
+		{
+			const auto source = std::span{reinterpret_cast<const char*>(source_u8), source_length};
+			make_test<CharsType::UTF8_CHAR, CharsType::UTF8, Impl>(source, ErrorCode::OVERLONG, 10);
+		}
+		// UTF8
+		{
+			const auto source = std::span{reinterpret_cast<const char8_t*>(source_u8), source_length};
+			make_test<CharsType::UTF8, CharsType::UTF8_CHAR, Impl>(source, ErrorCode::OVERLONG, 10);
+		}
 	};
 
 	"surrogate"_test = []
@@ -677,9 +706,17 @@ constexpr auto make_test_utf8_error() noexcept -> void
 		};
 
 		constexpr auto source_length = std::ranges::size(source_u8);
-		const auto source = std::span{reinterpret_cast<const char_type*>(source_u8), source_length};
 
-		make_test<From, From>(source, chars::ErrorCode::SURROGATE, 10);
+		// UTF8_CHAR
+		{
+			const auto source = std::span{reinterpret_cast<const char*>(source_u8), source_length};
+			make_test<CharsType::UTF8_CHAR, CharsType::UTF8, Impl>(source, ErrorCode::SURROGATE, 10);
+		}
+		// UTF8
+		{
+			const auto source = std::span{reinterpret_cast<const char8_t*>(source_u8), source_length};
+			make_test<CharsType::UTF8, CharsType::UTF8_CHAR, Impl>(source, ErrorCode::SURROGATE, 10);
+		}
 	};
 
 	"bad continuation byte"_test = []
@@ -727,9 +764,17 @@ constexpr auto make_test_utf8_error() noexcept -> void
 		};
 
 		constexpr auto source_length = std::ranges::size(source_u8);
-		const auto source = std::span{reinterpret_cast<const char_type*>(source_u8), source_length};
 
-		make_test<From, From>(source, chars::ErrorCode::TOO_SHORT, 10);
+		// UTF8_CHAR
+		{
+			const auto source = std::span{reinterpret_cast<const char*>(source_u8), source_length};
+			make_test<CharsType::UTF8_CHAR, CharsType::UTF8, Impl>(source, ErrorCode::TOO_SHORT, 10);
+		}
+		// UTF8
+		{
+			const auto source = std::span{reinterpret_cast<const char8_t*>(source_u8), source_length};
+			make_test<CharsType::UTF8, CharsType::UTF8_CHAR, Impl>(source, ErrorCode::TOO_SHORT, 10);
+		}
 	};
 
 	"too many continuation bytes"_test = []
@@ -776,9 +821,17 @@ constexpr auto make_test_utf8_error() noexcept -> void
 		};
 
 		constexpr auto source_length = std::ranges::size(source_u8);
-		const auto source = std::span{reinterpret_cast<const char_type*>(source_u8), source_length};
 
-		make_test<From, From>(source, chars::ErrorCode::TOO_LONG, 10);
+		// UTF8_CHAR
+		{
+			const auto source = std::span{reinterpret_cast<const char*>(source_u8), source_length};
+			make_test<CharsType::UTF8_CHAR, CharsType::UTF8, Impl>(source, ErrorCode::TOO_LONG, 10);
+		}
+		// UTF8
+		{
+			const auto source = std::span{reinterpret_cast<const char8_t*>(source_u8), source_length};
+			make_test<CharsType::UTF8, CharsType::UTF8_CHAR, Impl>(source, ErrorCode::TOO_LONG, 10);
+		}
 	};
 
 	"header bits"_test = []
@@ -822,9 +875,17 @@ constexpr auto make_test_utf8_error() noexcept -> void
 		};
 
 		constexpr auto source_length = std::ranges::size(source_u8);
-		const auto source = std::span{reinterpret_cast<const char_type*>(source_u8), source_length};
 
-		make_test<From, From>(source, chars::ErrorCode::HEADER_BITS, 10);
+		// UTF8_CHAR
+		{
+			const auto source = std::span{reinterpret_cast<const char*>(source_u8), source_length};
+			make_test<CharsType::UTF8_CHAR, CharsType::UTF8, Impl>(source, ErrorCode::HEADER_BITS, 10);
+		}
+		// UTF8
+		{
+			const auto source = std::span{reinterpret_cast<const char8_t*>(source_u8), source_length};
+			make_test<CharsType::UTF8, CharsType::UTF8_CHAR, Impl>(source, ErrorCode::HEADER_BITS, 10);
+		}
 	};
 
 	"too large"_test = []
@@ -869,9 +930,17 @@ constexpr auto make_test_utf8_error() noexcept -> void
 		};
 
 		constexpr auto source_length = std::ranges::size(source_u8);
-		const auto source = std::span{reinterpret_cast<const char_type*>(source_u8), source_length};
 
-		make_test<From, From>(source, chars::ErrorCode::TOO_LARGE, 10);
+		// UTF8_CHAR
+		{
+			const auto source = std::span{reinterpret_cast<const char*>(source_u8), source_length};
+			make_test<CharsType::UTF8_CHAR, CharsType::UTF8, Impl>(source, ErrorCode::TOO_LARGE, 10);
+		}
+		// UTF8
+		{
+			const auto source = std::span{reinterpret_cast<const char8_t*>(source_u8), source_length};
+			make_test<CharsType::UTF8, CharsType::UTF8_CHAR, Impl>(source, ErrorCode::TOO_LARGE, 10);
+		}
 	};
 
 	"truncated"_test = []
@@ -917,16 +986,24 @@ constexpr auto make_test_utf8_error() noexcept -> void
 		};
 
 		constexpr auto source_length = std::ranges::size(source_u8);
-		const auto source = std::span{reinterpret_cast<const char_type*>(source_u8), source_length};
 
-		make_test<From, From>(source, chars::ErrorCode::TOO_SHORT, 10);
+		// UTF8_CHAR
+		{
+			const auto source = std::span{reinterpret_cast<const char*>(source_u8), source_length};
+			make_test<CharsType::UTF8_CHAR, CharsType::UTF8, Impl>(source, ErrorCode::TOO_SHORT, 10);
+		}
+		// UTF8
+		{
+			const auto source = std::span{reinterpret_cast<const char8_t*>(source_u8), source_length};
+			make_test<CharsType::UTF8, CharsType::UTF8_CHAR, Impl>(source, ErrorCode::TOO_SHORT, 10);
+		}
 	};
 }
 
 // ==============================
 // UTF16_LE/UTF16_BE
 
-template<typename From>
+template<typename Impl>
 constexpr auto make_test_utf16_error() noexcept -> void
 {
 	using namespace gal::prometheus::unit_test;
@@ -979,7 +1056,7 @@ constexpr auto make_test_utf16_error() noexcept -> void
 		constexpr auto source_length = std::ranges::size(source_u8) / 2;
 		const auto source = std::span{reinterpret_cast<const char16_t*>(source_u8), source_length};
 
-		make_test<From, From>(source, chars::ErrorCode::SURROGATE, 10);
+		make_test<CharsType::UTF16_LE, CharsType::UTF16_BE, Impl>(source, ErrorCode::SURROGATE, 10);
 	};
 
 	// ? + low
@@ -1030,7 +1107,7 @@ constexpr auto make_test_utf16_error() noexcept -> void
 		constexpr auto source_length = std::ranges::size(source_u8) / 2;
 		const auto source = std::span{reinterpret_cast<const char16_t*>(source_u8), source_length};
 
-		make_test<From, From>(source, chars::ErrorCode::SURROGATE, 10);
+		make_test<CharsType::UTF16_LE, CharsType::UTF16_BE, Impl>(source, ErrorCode::SURROGATE, 10);
 	};
 
 	// high + high
@@ -1080,7 +1157,7 @@ constexpr auto make_test_utf16_error() noexcept -> void
 		constexpr auto source_length = std::ranges::size(source_u8) / 2;
 		const auto source = std::span{reinterpret_cast<const char16_t*>(source_u8), source_length};
 
-		make_test<From, From, true>(source, chars::ErrorCode::SURROGATE, 10);
+		make_test<CharsType::UTF16_LE, CharsType::UTF16_BE, Impl>(source, ErrorCode::SURROGATE, 10);
 	};
 
 	// low + low
@@ -1130,14 +1207,14 @@ constexpr auto make_test_utf16_error() noexcept -> void
 		constexpr auto source_length = std::ranges::size(source_u8) / 2;
 		const auto source = std::span{reinterpret_cast<const char16_t*>(source_u8), source_length};
 
-		make_test<From, From, true>(source, chars::ErrorCode::SURROGATE, 10);
+		make_test<CharsType::UTF16_LE, CharsType::UTF16_BE, Impl>(source, ErrorCode::SURROGATE, 10);
 	};
 }
 
 // ==============================
 // UTF32
 
-template<typename From>
+template<typename Impl>
 constexpr auto make_test_utf32_error() noexcept -> void
 {
 	using namespace gal::prometheus::unit_test;
@@ -1189,7 +1266,7 @@ constexpr auto make_test_utf32_error() noexcept -> void
 		constexpr auto source_length = std::ranges::size(source_u8) / 4;
 		const auto source = std::span{reinterpret_cast<const char32_t*>(source_u8), source_length};
 
-		make_test<From, From>(source, chars::ErrorCode::SURROGATE, 10);
+		make_test<CharsType::UTF32, CharsType::UTF32, Impl, true>(source, ErrorCode::SURROGATE, 10);
 	};
 
 	"too large"_test = []
@@ -1239,6 +1316,6 @@ constexpr auto make_test_utf32_error() noexcept -> void
 		constexpr auto source_length = std::ranges::size(source_u8) / 4;
 		const auto source = std::span{reinterpret_cast<const char32_t*>(source_u8), source_length};
 
-		make_test<From, From>(source, chars::ErrorCode::TOO_LARGE, 10);
+		make_test<CharsType::UTF32, CharsType::UTF32, Impl, true>(source, ErrorCode::TOO_LARGE, 10);
 	};
 }

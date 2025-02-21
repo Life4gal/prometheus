@@ -27,11 +27,13 @@ add_executable(
 		# CHARS
 		# =================================
 		
-		${PROJECT_SOURCE_DIR}/src/chars/latin.scalar.cpp
-		${PROJECT_SOURCE_DIR}/src/chars/utf8.char.scalar.cpp
-		${PROJECT_SOURCE_DIR}/src/chars/utf8.scalar.cpp
-		${PROJECT_SOURCE_DIR}/src/chars/utf16.scalar.cpp
-		${PROJECT_SOURCE_DIR}/src/chars/utf32.scalar.cpp
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.cpp
+
+		#${PROJECT_SOURCE_DIR}/src/chars/latin.icelake.cpp
+		#${PROJECT_SOURCE_DIR}/src/chars/utf8.char.icelake.cpp
+		#${PROJECT_SOURCE_DIR}/src/chars/utf8.icelake.cpp
+		#${PROJECT_SOURCE_DIR}/src/chars/utf16.icelake.cpp
+		#${PROJECT_SOURCE_DIR}/src/chars/utf32.icelake.cpp
 
 		# =================================
 		# CONCURRENCY
