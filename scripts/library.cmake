@@ -314,22 +314,18 @@ set(
 		# CHARS
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/chars/encoding.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/def.hpp
 
-		${PROJECT_SOURCE_DIR}/src/chars/scalar.common.hpp
-		${PROJECT_SOURCE_DIR}/src/chars/scalar.latin.hpp
-		${PROJECT_SOURCE_DIR}/src/chars/scalar.utf8.hpp
-		${PROJECT_SOURCE_DIR}/src/chars/scalar.utf16.hpp
-		${PROJECT_SOURCE_DIR}/src/chars/scalar.utf32.hpp
 		${PROJECT_SOURCE_DIR}/src/chars/scalar.hpp
 
+		#${PROJECT_SOURCE_DIR}/src/chars/icelake.common.hpp
 		#${PROJECT_SOURCE_DIR}/src/chars/icelake.latin.hpp
 		#${PROJECT_SOURCE_DIR}/src/chars/icelake.utf8.hpp
 		#${PROJECT_SOURCE_DIR}/src/chars/icelake.utf16.hpp
 		#${PROJECT_SOURCE_DIR}/src/chars/icelake.utf32.hpp
 		#${PROJECT_SOURCE_DIR}/src/chars/icelake.hpp
 
-		${PROJECT_SOURCE_DIR}/src/chars/chars.hpp
+		#${PROJECT_SOURCE_DIR}/src/chars/chars.hpp
 
 		# =========================
 		# COMMAND_LINE_PARSER
@@ -372,6 +368,12 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/i18n/range.cpp
+
+		# =========================
+		# CHARS
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/chars/scalar.cpp
 )
 
 set_source_files_properties(
