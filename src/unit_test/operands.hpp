@@ -372,10 +372,12 @@ namespace gal::prometheus::unit_test::operands
 	class GAL_PROMETHEUS_COMPILER_EMPTY_BASE OperandIdentityString final : public Operand
 	{
 	public:
+		using identity_type = std::string_view;
+
 		// explicit unique type
 		struct value_type
 		{
-			std::string_view string;
+			identity_type string;
 		};
 
 	private:
@@ -385,9 +387,24 @@ namespace gal::prometheus::unit_test::operands
 		constexpr explicit OperandIdentityString(const value_type value) noexcept
 			: value_{value} {}
 
-		[[nodiscard]] constexpr auto value() const noexcept -> std::string_view
+		template<typename StringType>
+		[[nodiscard]] friend constexpr auto operator==(const OperandIdentityString& identity, StringType&& string) noexcept -> decltype(auto) //
+			requires requires
+			{
+				identity.value_.string == std::forward<StringType>(string);
+			}
 		{
-			return value_.string;
+			return identity.value_.string == std::forward<StringType>(string);
+		}
+
+		template<typename StringType>
+		[[nodiscard]] friend constexpr auto operator==(StringType&& string, const OperandIdentityString& identity) noexcept -> decltype(auto) //
+			requires requires
+			{
+				std::forward<StringType>(string) == identity.value_.string;
+			}
+		{
+			return std::forward<StringType>(string) == identity.value_.string;
 		}
 
 		template<std::ranges::output_range<char> StringType>
@@ -589,8 +606,14 @@ namespace gal::prometheus::unit_test::operands
 					using std::operator<=;
 					return left <= right;
 				}
-				else if constexpr (category == ExpressionCategory::LOGICAL_AND) { return static_cast<bool>(left) and static_cast<bool>(right); }
-				else if constexpr (category == ExpressionCategory::LOGICAL_OR) { return static_cast<bool>(left) or static_cast<bool>(right); }
+				else if constexpr (category == ExpressionCategory::LOGICAL_AND)
+				{
+					return static_cast<bool>(left) and static_cast<bool>(right);
+				}
+				else if constexpr (category == ExpressionCategory::LOGICAL_OR)
+				{
+					return static_cast<bool>(left) or static_cast<bool>(right);
+				}
 				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 			};
 
