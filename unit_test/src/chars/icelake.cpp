@@ -61,6 +61,59 @@ namespace
 			}
 		};
 	};
+
+	[[maybe_unused]] GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"chars.utf32.icelake"> utf32 = []
+	{
+		using namespace unit_test;
+		using namespace chars;
+
+		"error"_test = []
+		{
+			make_test_utf32_error<Icelake>();
+		};
+
+		constexpr std::size_t trials = 1000;
+
+		"to_latin"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF32, CharsType::LATIN, Icelake>(make_random_utf32_string_ascii_only());
+			}
+		};
+
+		"to_utf8_char"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF32, CharsType::UTF8_CHAR, Icelake>(make_random_utf32_string());
+			}
+		};
+
+		"to_utf8"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF32, CharsType::UTF8, Icelake>(make_random_utf32_string());
+			}
+		};
+
+		"to_utf16_le"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF32, CharsType::UTF16_LE, Icelake>(make_random_utf32_string());
+			}
+		};
+
+		"to_utf16_be"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF32, CharsType::UTF16_BE, Icelake>(make_random_utf32_string());
+			}
+		};
+	};
 }
 
 #endif
