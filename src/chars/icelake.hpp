@@ -2307,7 +2307,2181 @@ namespace gal::prometheus::chars
 
 	namespace utf16::icelake
 	{
-		// todo
+		/**
+		 * @brief Checks if there are all valid `UTF16 (little-endian)` code point in the range of @c input.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto validate_le(input_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Checks if there are all valid `UTF16 (little-endian)` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto validate_le(pointer_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Checks if there are all valid `UTF16 (big-endian)` code point in the range of @c input.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto validate_be(input_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Checks if there are all valid `UTF16 (big-endian)` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto validate_be(pointer_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_latin(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_latin(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_latin(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_latin(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_utf8(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_utf8(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_utf8(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_utf8(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_utf32(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_utf32(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_utf32(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_utf32(pointer_type input) noexcept -> size_type;
+
+		// =======================================================
+		// UTF16 => LATIN
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_latin_le(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_latin_le(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_latin(input));
+
+			std::ignore = icelake::write_latin_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_latin_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_le<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_latin_be(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_latin_be(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_latin(input));
+
+			std::ignore = icelake::write_latin_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_latin_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_be<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure_le(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure_le(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_le_for_latin(input) ==> input.size()
+			string.resize(length_le_for_latin(input));
+
+			std::ignore = icelake::write_latin_pure_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_latin_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_pure_le<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_pure_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure_be(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure_be(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_be_for_latin(input) ==> input.size()
+			string.resize(length_be_for_latin(input));
+
+			std::ignore = icelake::write_latin_pure_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_latin_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_pure_be<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_pure_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct_le(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct_le(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_latin(input));
+
+			std::ignore = icelake::write_latin_correct_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_latin_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_correct_le<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_correct_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct_be(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct_be(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_latin(input));
+
+			std::ignore = icelake::write_latin_correct_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_latin_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_correct_be<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return icelake::write_latin_correct_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		// =======================================================
+		// UTF16 => UTF8_CHAR
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf8_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf8_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_le<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_char_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf8_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf8_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_be<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_char_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_le_for_utf8(input) ==> input.size()
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_pure_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_pure_le<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_char_pure_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_be_for_utf8(input) ==> input.size()
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_pure_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_pure_be<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_char_pure_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_correct_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_correct_le<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_char_correct_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_correct_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_correct_be<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return icelake::write_utf8_char_correct_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		// =======================================================
+		// UTF16 => UTF8
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf8_le(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf8_le(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_le<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf8_be(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf8_be(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_be<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_le_for_utf8(input) ==> input.size()
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_pure_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_pure_le<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_pure_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_be(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_be(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_be_for_utf8(input) ==> input.size()
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_pure_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_pure_be<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_pure_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_correct_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_correct_le<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_correct_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_be(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_be(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = icelake::write_utf8_correct_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf8_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_correct_be<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return icelake::write_utf8_correct_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		// =======================================================
+		// UTF16 => UTF32
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf32_le(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf32_le(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf32(input));
+
+			std::ignore = icelake::write_utf32_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf32_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_le<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf32_be(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf32_be(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_utf32(input));
+
+			std::ignore = icelake::write_utf32_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf32_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_be<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure_le(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure_le(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_pure_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_le_for_utf32(input) ==> input.size()
+			string.resize(length_le_for_utf32(input));
+
+			std::ignore = icelake::write_utf32_pure_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_pure_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf32_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_pure_le<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_pure_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure_be(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure_be(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_pure_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_be_for_utf32(input) ==> input.size()
+			string.resize(length_be_for_utf32(input));
+
+			std::ignore = icelake::write_utf32_pure_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_pure_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf32_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_pure_be<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_pure_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct_le(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct_le(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_correct_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf32(input));
+
+			std::ignore = icelake::write_utf32_correct_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_correct_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf32_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_correct_le<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_correct_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct_be(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct_be(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_correct_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_utf32(input));
+
+			std::ignore = icelake::write_utf32_correct_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_correct_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf32_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_correct_be<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return icelake::write_utf32_correct_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		// =======================================================
+		// UTF16_LE => UTF16_LE
+		// UTF16_BE => UTF16_BE
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_to_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
+
+			std::ignore = icelake::write_utf16_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_to_be(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf16_le_to_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_to_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return icelake::write_utf16_le_to_be<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_to_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return icelake::write_utf16_le_to_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_to_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
+
+			std::ignore = icelake::write_utf16_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_to_le(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::write_utf16_be_to_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_to_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return icelake::write_utf16_be_to_le<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_to_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return icelake::write_utf16_be_to_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		// =======================================================
+		// UTF16_LE => UTF16_BE
+		// UTF16_BE => UTF16_LE
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		auto flip(
+			output_type_of<CharsType::UTF16>::pointer output,
+			input_type input
+		) noexcept -> void;
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		auto flip(
+			output_type_of<CharsType::UTF16>::pointer output,
+			pointer_type input
+		) noexcept -> void;
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16>::pointer>;
+			}
+		[[nodiscard]] auto flip(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
+
+			icelake::flip(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16>::pointer>;
+			}
+		[[nodiscard]] auto flip(const pointer_type input) noexcept -> StringType
+		{
+			return icelake::flip<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		[[nodiscard]] inline auto flip(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16>::value_type>
+		{
+			return icelake::flip<std::basic_string<output_type_of<CharsType::UTF16>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		[[nodiscard]] inline auto flip(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16>::value_type>
+		{
+			return icelake::flip({input, std::char_traits<char_type>::length(input)});
+		}
 	}
 
 	namespace utf32::icelake
@@ -3567,13 +5741,11 @@ namespace gal::prometheus::chars
 			}
 			else if constexpr (InputType == CharsType::UTF16_LE)
 			{
-				// todo
-				return utf16::scalar::validate_le(input);
+				return utf16::icelake::validate_le(input);
 			}
 			else if constexpr (InputType == CharsType::UTF16_BE)
 			{
-				// todo
-				return utf16::scalar::validate_be(input);
+				return utf16::icelake::validate_be(input);
 			}
 			else if constexpr (InputType == CharsType::UTF32)
 			{
@@ -3637,19 +5809,19 @@ namespace gal::prometheus::chars
 
 				if constexpr (OutputType == CharsType::LATIN)
 				{
-					return scalar::length_for_latin(input);
+					return icelake::length_for_latin(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 				{
-					return scalar::length_for_utf8(input);
+					return icelake::length_for_utf8(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE or OutputType == CharsType::UTF16)
 				{
-					return scalar::length_for_utf16(input);
+					return icelake::length_for_utf16(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
-					return scalar::length_for_utf32(input);
+					return icelake::length_for_utf32(input);
 				}
 				else
 				{
@@ -3682,52 +5854,50 @@ namespace gal::prometheus::chars
 					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 				}
 			}
-			// todo
 			else if constexpr (InputType == CharsType::UTF16_LE)
 			{
 				using namespace utf16;
 
 				if constexpr (OutputType == CharsType::LATIN)
 				{
-					return scalar::length_le_for_latin(input);
+					return icelake::length_le_for_latin(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 				{
-					return scalar::length_le_for_utf8(input);
+					return icelake::length_le_for_utf8(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE or OutputType == CharsType::UTF16)
 				{
-					return scalar::length_for_utf16(input);
+					return icelake::length_for_utf16(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
-					return scalar::length_le_for_utf32(input);
+					return icelake::length_le_for_utf32(input);
 				}
 				else
 				{
 					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 				}
 			}
-			// todo
 			else if constexpr (InputType == CharsType::UTF16_BE)
 			{
 				using namespace utf16;
 
 				if constexpr (OutputType == CharsType::LATIN)
 				{
-					return scalar::length_be_for_latin(input);
+					return icelake::length_be_for_latin(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 				{
-					return scalar::length_be_for_utf8(input);
+					return icelake::length_be_for_utf8(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF16_LE or OutputType == CharsType::UTF16_BE or OutputType == CharsType::UTF16)
 				{
-					return scalar::length_for_utf16(input);
+					return icelake::length_for_utf16(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
-					return scalar::length_be_for_utf32(input);
+					return icelake::length_be_for_utf32(input);
 				}
 				else
 				{
@@ -3880,64 +6050,64 @@ namespace gal::prometheus::chars
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_latin_pure(output, input);
+						return icelake::write_latin_pure(output, input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_latin_correct(output, input);
+						return icelake::write_latin_correct(output, input);
 					}
 					else
 					{
-						return scalar::write_latin(output, input);
+						return icelake::write_latin(output, input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF8)
 				{
-					return scalar::write_utf8(output, input);
+					return icelake::write_utf8(output, input);
 				}
 				else if constexpr (OutputType == CharsType::UTF16_LE)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf16_le_pure(output, input);
+						return icelake::write_utf16_le_pure(output, input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf16_le_correct(output, input);
+						return icelake::write_utf16_le_correct(output, input);
 					}
 					else
 					{
-						return scalar::write_utf16_le(output, input);
+						return icelake::write_utf16_le(output, input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF16_BE)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf16_be_pure(output, input);
+						return icelake::write_utf16_be_pure(output, input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf16_be_correct(output, input);
+						return icelake::write_utf16_be_correct(output, input);
 					}
 					else
 					{
-						return scalar::write_utf16_be(output, input);
+						return icelake::write_utf16_be(output, input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf32_pure(output, input);
+						return icelake::write_utf32_pure(output, input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf32_correct(output, input);
+						return icelake::write_utf32_correct(output, input);
 					}
 					else
 					{
-						return scalar::write_utf32(output, input);
+						return icelake::write_utf32(output, input);
 					}
 				}
 				else
@@ -4019,7 +6189,6 @@ namespace gal::prometheus::chars
 					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 				}
 			}
-			// todo
 			else if constexpr (InputType == CharsType::UTF16_LE)
 			{
 				using namespace utf16;
@@ -4028,49 +6197,49 @@ namespace gal::prometheus::chars
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_latin_pure_le(output, input);
+						return icelake::write_latin_pure_le(output, input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_latin_correct_le(output, input);
+						return icelake::write_latin_correct_le(output, input);
 					}
 					else
 					{
-						return scalar::write_latin_le(output, input);
+						return icelake::write_latin_le(output, input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf8_pure_le(output, input);
+						return icelake::write_utf8_pure_le(output, input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf8_correct_le(output, input);
+						return icelake::write_utf8_correct_le(output, input);
 					}
 					else
 					{
-						return scalar::write_utf8_le(output, input);
+						return icelake::write_utf8_le(output, input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF16_BE)
 				{
-					return scalar::write_utf16_le(output, input);
+					return icelake::write_utf16_le(output, input);
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf32_pure_le(output, input);
+						return icelake::write_utf32_pure_le(output, input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf32_correct_le(output, input);
+						return icelake::write_utf32_correct_le(output, input);
 					}
 					else
 					{
-						return scalar::write_utf32_le(output, input);
+						return icelake::write_utf32_le(output, input);
 					}
 				}
 				else
@@ -4078,7 +6247,6 @@ namespace gal::prometheus::chars
 					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 				}
 			}
-			// todo
 			else if constexpr (InputType == CharsType::UTF16_BE)
 			{
 				using namespace utf16;
@@ -4087,49 +6255,49 @@ namespace gal::prometheus::chars
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_latin_pure_be(output, input);
+						return icelake::write_latin_pure_be(output, input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_latin_correct_be(output, input);
+						return icelake::write_latin_correct_be(output, input);
 					}
 					else
 					{
-						return scalar::write_latin_be(output, input);
+						return icelake::write_latin_be(output, input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf8_pure_be(output, input);
+						return icelake::write_utf8_pure_be(output, input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf8_correct_be(output, input);
+						return icelake::write_utf8_correct_be(output, input);
 					}
 					else
 					{
-						return scalar::write_utf8_be(output, input);
+						return icelake::write_utf8_be(output, input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF16_LE)
 				{
-					return scalar::write_utf16_be(output, input);
+					return icelake::write_utf16_be(output, input);
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf32_pure_be(output, input);
+						return icelake::write_utf32_pure_be(output, input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf32_correct_be(output, input);
+						return icelake::write_utf32_correct_be(output, input);
 					}
 					else
 					{
-						return scalar::write_utf32_be(output, input);
+						return icelake::write_utf32_be(output, input);
 					}
 				}
 				else
@@ -4313,64 +6481,64 @@ namespace gal::prometheus::chars
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_latin_pure<StringType>(input);
+						return icelake::write_latin_pure<StringType>(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_latin_correct<StringType>(input);
+						return icelake::write_latin_correct<StringType>(input);
 					}
 					else
 					{
-						return scalar::write_latin<StringType>(input);
+						return icelake::write_latin<StringType>(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF8)
 				{
-					return scalar::write_utf8<StringType>(input);
+					return icelake::write_utf8<StringType>(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF16_LE)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf16_le_pure<StringType>(input);
+						return icelake::write_utf16_le_pure<StringType>(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf16_le_correct<StringType>(input);
+						return icelake::write_utf16_le_correct<StringType>(input);
 					}
 					else
 					{
-						return scalar::write_utf16_le<StringType>(input);
+						return icelake::write_utf16_le<StringType>(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF16_BE)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf16_be_pure<StringType>(input);
+						return icelake::write_utf16_be_pure<StringType>(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf16_be_correct<StringType>(input);
+						return icelake::write_utf16_be_correct<StringType>(input);
 					}
 					else
 					{
-						return scalar::write_utf16_be<StringType>(input);
+						return icelake::write_utf16_be<StringType>(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf32_pure<StringType>(input);
+						return icelake::write_utf32_pure<StringType>(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf32_correct<StringType>(input);
+						return icelake::write_utf32_correct<StringType>(input);
 					}
 					else
 					{
-						return scalar::write_utf32<StringType>(input);
+						return icelake::write_utf32<StringType>(input);
 					}
 				}
 				else
@@ -4452,7 +6620,6 @@ namespace gal::prometheus::chars
 					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 				}
 			}
-			// todo
 			else if constexpr (InputType == CharsType::UTF16_LE)
 			{
 				using namespace utf16;
@@ -4461,45 +6628,45 @@ namespace gal::prometheus::chars
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_latin_pure_le<StringType>(input);
+						return icelake::write_latin_pure_le<StringType>(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_latin_correct_le<StringType>(input);
+						return icelake::write_latin_correct_le<StringType>(input);
 					}
 					else
 					{
-						return scalar::write_latin_le<StringType>(input);
+						return icelake::write_latin_le<StringType>(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf8_pure_le<StringType>(input);
+						return icelake::write_utf8_pure_le<StringType>(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf8_correct_le<StringType>(input);
+						return icelake::write_utf8_correct_le<StringType>(input);
 					}
 					else
 					{
-						return scalar::write_utf8_le<StringType>(input);
+						return icelake::write_utf8_le<StringType>(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf32_pure_le<StringType>(input);
+						return icelake::write_utf32_pure_le<StringType>(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf32_correct_le<StringType>(input);
+						return icelake::write_utf32_correct_le<StringType>(input);
 					}
 					else
 					{
-						return scalar::write_utf32_le<StringType>(input);
+						return icelake::write_utf32_le<StringType>(input);
 					}
 				}
 				else
@@ -4507,7 +6674,6 @@ namespace gal::prometheus::chars
 					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 				}
 			}
-			// todo
 			else if constexpr (InputType == CharsType::UTF16_BE)
 			{
 				using namespace utf16;
@@ -4516,45 +6682,45 @@ namespace gal::prometheus::chars
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_latin_pure_be<StringType>(input);
+						return icelake::write_latin_pure_be<StringType>(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_latin_correct_be<StringType>(input);
+						return icelake::write_latin_correct_be<StringType>(input);
 					}
 					else
 					{
-						return scalar::write_latin_be<StringType>(input);
+						return icelake::write_latin_be<StringType>(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF8_CHAR or OutputType == CharsType::UTF8)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf8_pure_be<StringType>(input);
+						return icelake::write_utf8_pure_be<StringType>(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf8_correct_be<StringType>(input);
+						return icelake::write_utf8_correct_be<StringType>(input);
 					}
 					else
 					{
-						return scalar::write_utf8_be<StringType>(input);
+						return icelake::write_utf8_be<StringType>(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf32_pure_be<StringType>(input);
+						return icelake::write_utf32_pure_be<StringType>(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf32_correct_be<StringType>(input);
+						return icelake::write_utf32_correct_be<StringType>(input);
 					}
 					else
 					{
-						return scalar::write_utf32_be<StringType>(input);
+						return icelake::write_utf32_be<StringType>(input);
 					}
 				}
 				else
@@ -4747,64 +6913,64 @@ namespace gal::prometheus::chars
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_latin_pure(input);
+						return icelake::write_latin_pure(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_latin_correct(input);
+						return icelake::write_latin_correct(input);
 					}
 					else
 					{
-						return scalar::write_latin(input);
+						return icelake::write_latin(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF8)
 				{
-					return scalar::write_utf8(input);
+					return icelake::write_utf8(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF16_LE)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf16_le_pure(input);
+						return icelake::write_utf16_le_pure(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf16_le_correct(input);
+						return icelake::write_utf16_le_correct(input);
 					}
 					else
 					{
-						return scalar::write_utf16_le(input);
+						return icelake::write_utf16_le(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF16_BE)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf16_be_pure(input);
+						return icelake::write_utf16_be_pure(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf16_be_correct(input);
+						return icelake::write_utf16_be_correct(input);
 					}
 					else
 					{
-						return scalar::write_utf16_be(input);
+						return icelake::write_utf16_be(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf32_pure(input);
+						return icelake::write_utf32_pure(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf32_correct(input);
+						return icelake::write_utf32_correct(input);
 					}
 					else
 					{
-						return scalar::write_utf32(input);
+						return icelake::write_utf32(input);
 					}
 				}
 				else
@@ -4886,7 +7052,6 @@ namespace gal::prometheus::chars
 					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 				}
 			}
-			// todo
 			else if constexpr (InputType == CharsType::UTF16_LE)
 			{
 				using namespace utf16;
@@ -4895,64 +7060,64 @@ namespace gal::prometheus::chars
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_latin_pure_le(input);
+						return icelake::write_latin_pure_le(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_latin_correct_le(input);
+						return icelake::write_latin_correct_le(input);
 					}
 					else
 					{
-						return scalar::write_latin_le(input);
+						return icelake::write_latin_le(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF8_CHAR)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf8_char_pure_le(input);
+						return icelake::write_utf8_char_pure_le(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf8_char_correct_le(input);
+						return icelake::write_utf8_char_correct_le(input);
 					}
 					else
 					{
-						return scalar::write_utf8_char_le(input);
+						return icelake::write_utf8_char_le(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF8)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf8_pure_le(input);
+						return icelake::write_utf8_pure_le(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf8_correct_le(input);
+						return icelake::write_utf8_correct_le(input);
 					}
 					else
 					{
-						return scalar::write_utf8_le(input);
+						return icelake::write_utf8_le(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF16_BE)
 				{
-					return scalar::write_utf16_le_to_be(input);
+					return icelake::write_utf16_le_to_be(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf32_pure_le(input);
+						return icelake::write_utf32_pure_le(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf32_correct_le(input);
+						return icelake::write_utf32_correct_le(input);
 					}
 					else
 					{
-						return scalar::write_utf32_le(input);
+						return icelake::write_utf32_le(input);
 					}
 				}
 				else
@@ -4960,7 +7125,6 @@ namespace gal::prometheus::chars
 					GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
 				}
 			}
-			// todo
 			else if constexpr (InputType == CharsType::UTF16_BE)
 			{
 				using namespace utf16;
@@ -4969,64 +7133,64 @@ namespace gal::prometheus::chars
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_latin_pure_be(input);
+						return icelake::write_latin_pure_be(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_latin_correct_be(input);
+						return icelake::write_latin_correct_be(input);
 					}
 					else
 					{
-						return scalar::write_latin_be(input);
+						return icelake::write_latin_be(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF8_CHAR)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf8_char_pure_be(input);
+						return icelake::write_utf8_char_pure_be(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf8_char_correct_be(input);
+						return icelake::write_utf8_char_correct_be(input);
 					}
 					else
 					{
-						return scalar::write_utf8_char_be(input);
+						return icelake::write_utf8_char_be(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF8)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf8_pure_be(input);
+						return icelake::write_utf8_pure_be(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf8_correct_be(input);
+						return icelake::write_utf8_correct_be(input);
 					}
 					else
 					{
-						return scalar::write_utf8_be(input);
+						return icelake::write_utf8_be(input);
 					}
 				}
 				else if constexpr (OutputType == CharsType::UTF16_LE)
 				{
-					return scalar::write_utf16_be_to_le(input);
+					return icelake::write_utf16_be_to_le(input);
 				}
 				else if constexpr (OutputType == CharsType::UTF32)
 				{
 					if constexpr (Pure)
 					{
-						return scalar::write_utf32_pure_be(input);
+						return icelake::write_utf32_pure_be(input);
 					}
 					else if constexpr (Correct)
 					{
-						return scalar::write_utf32_correct_be(input);
+						return icelake::write_utf32_correct_be(input);
 					}
 					else
 					{
-						return scalar::write_utf32_be(input);
+						return icelake::write_utf32_be(input);
 					}
 				}
 				else
@@ -5146,8 +7310,7 @@ namespace gal::prometheus::chars
 		{
 			using namespace utf16;
 
-			// todo
-			scalar::flip(output, input);
+			icelake::flip(output, input);
 		}
 
 	public:
@@ -5173,8 +7336,7 @@ namespace gal::prometheus::chars
 		{
 			using namespace utf16;
 
-			// todo
-			return scalar::flip<StringType>(input);
+			return icelake::flip<StringType>(input);
 		}
 
 	public:
@@ -5196,8 +7358,7 @@ namespace gal::prometheus::chars
 		{
 			using namespace utf16;
 
-			// todo
-			return scalar::flip(input);
+			return icelake::flip(input);
 		}
 
 	public:
