@@ -317,6 +317,9 @@ set(
 		${PROJECT_SOURCE_DIR}/src/chars/def.hpp
 
 		${PROJECT_SOURCE_DIR}/src/chars/scalar.hpp
+
+		${PROJECT_SOURCE_DIR}/src/chars/detail/icelake.utf8.hpp
+		${PROJECT_SOURCE_DIR}/src/chars/detail/icelake.utf32.hpp
 		${PROJECT_SOURCE_DIR}/src/chars/icelake.hpp
 
 		${PROJECT_SOURCE_DIR}/src/chars/chars.hpp

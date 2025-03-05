@@ -1055,25 +1055,25 @@ namespace
 				// we have an invalid leading byte
 				return {length, ErrorCode::HEADER_BITS};
 			}
+		}
 
-			template<CharsType InputType>
-				requires (
-					InputType == CharsType::UTF8_CHAR or
-					InputType == CharsType::UTF8
-				)
-			[[nodiscard]] constexpr auto code_points(const input_type_of<InputType> input) noexcept -> std::size_t
-			{
-				return std::ranges::count_if(
-					input,
-					[](const auto byte) noexcept -> bool
-					{
-						const auto b = static_cast<std::int8_t>(byte);
+		template<CharsType InputType>
+			requires (
+				InputType == CharsType::UTF8_CHAR or
+				InputType == CharsType::UTF8
+			)
+		[[nodiscard]] constexpr auto code_points(const input_type_of<InputType> input) noexcept -> std::size_t
+		{
+			return std::ranges::count_if(
+				input,
+				[](const auto byte) noexcept -> bool
+				{
+					const auto b = static_cast<std::int8_t>(byte);
 
-						// -65 is 0b10111111, anything larger in two-complement's should start a new code point.
-						return b > -65;
-					}
-				);
-			}
+					// -65 is 0b10111111, anything larger in two-complement's should start a new code point.
+					return b > -65;
+				}
+			);
 		}
 
 		template<CharsType InputType>
@@ -1612,6 +1612,52 @@ namespace
 				return {.error = ErrorCode::NONE, .input = current_input_length};
 			}
 
+			template<CharsType InputType>
+				requires (
+					InputType == CharsType::UTF8_CHAR or
+					InputType == CharsType::UTF8
+				)
+			[[nodiscard]] constexpr auto rewind_and_validate(
+				const typename input_type_of<InputType>::const_pointer begin,
+				const typename input_type_of<InputType>::const_pointer current,
+				const typename input_type_of<InputType>::const_pointer end
+			) noexcept -> result_error_input_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(begin != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(end >= current);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current >= begin);
+
+				using input_type = input_type_of<InputType>;
+				using pointer_type = typename input_type::const_pointer;
+				using size_type = typename input_type::size_type;
+
+				// First check that we start with a leading byte
+				if ((begin[0] & 0b1100'0000) == 0b1000'0000)
+				{
+					return {.error = ErrorCode::TOO_LONG, .input = 0};
+				}
+
+				std::size_t extra_count = 0;
+				// A leading byte cannot be further than 4 bytes away
+				for (std::ptrdiff_t i = 0; i < 5; ++i)
+				{
+					if (const auto byte = static_cast<std::uint8_t>(current[-i]);
+						(byte & 0b1100'0000) == 0b1000'0000)
+					{
+						break;
+					}
+					extra_count += 1;
+				}
+
+				const pointer_type it_current = current - extra_count;
+				const auto length = static_cast<size_type>(end - begin + extra_count);
+
+				auto result = scalar::validate<InputType>({it_current, length});
+				result.input -= extra_count;
+				return result;
+			}
+
 			template<CharsType InputType, CharsType OutputType>
 				requires (
 					InputType == CharsType::UTF8_CHAR or
@@ -1630,7 +1676,7 @@ namespace
 					OutputType == CharsType::LATIN
 				)
 				{
-					return detail::code_points<InputType>(input);
+					return utf8::code_points<InputType>(input);
 				}
 				// ReSharper restore CppClangTidyBugproneBranchClone
 				else if constexpr (
@@ -1660,7 +1706,7 @@ namespace
 					OutputType == CharsType::UTF32
 				)
 				{
-					return detail::code_points<InputType>(input);
+					return utf8::code_points<InputType>(input);
 				}
 				// ReSharper restore CppClangTidyBugproneBranchClone
 				else
@@ -2022,6 +2068,64 @@ namespace
 				const auto current_input_length = static_cast<std::size_t>(input_length);
 				const auto current_output_length = static_cast<std::size_t>(it_output_current - it_output_begin);
 				return {.error = ErrorCode::NONE, .input = current_input_length, .output = current_output_length};
+			}
+
+			template<CharsType InputType, CharsType OutputType>
+				requires (
+					InputType == CharsType::UTF8_CHAR or
+					InputType == CharsType::UTF8
+				)
+			[[nodiscard]] constexpr auto rewind_and_convert(
+				typename output_type_of<OutputType>::pointer output,
+				const typename input_type_of<InputType>::const_pointer furthest_possible_begin,
+				const input_type_of<InputType> input
+			) noexcept -> result_error_input_output_type
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(furthest_possible_begin != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() >= furthest_possible_begin);
+				// fixme
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(furthest_possible_begin - input.data() <= 3);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(output != nullptr);
+
+				using input_type = input_type_of<InputType>;
+				using pointer_type = typename input_type::const_pointer;
+				// using size_type = typename input_type::size_type;
+
+				// using output_pointer_type = typename output_type<OutputType>::pointer;
+				// using output_char_type = typename output_type<OutputType>::value_type;
+
+				const auto input_length = input.size();
+
+				const pointer_type it_input_begin = input.data();
+				// pointer_type it_input_current = it_input_begin;
+				// const pointer_type it_input_end = it_input_begin + input_length;
+
+				// const output_pointer_type it_output_begin = output;
+				// output_pointer_type it_output_current = it_output_begin;
+
+				// const auto range = std::ranges::subrange{std::make_reverse_iterator(it_input_current), std::make_reverse_iterator(furthest_possible_begin)};
+				const auto range = std::ranges::subrange{furthest_possible_begin, it_input_begin} | std::views::reverse;
+				// fixme: no leading bytes?
+				const auto extra_count = std::ranges::distance(
+					range |
+					std::views::take_while(
+						[](const auto c) noexcept -> bool
+						{
+							return (c & 0b1100'0000) != 0b1000'0000;
+						}
+					)
+				);
+
+				const auto it_current = it_input_begin - extra_count;
+
+				auto result = Scalar::convert<InputType, OutputType>(output, {it_current, input_length + extra_count});
+				if (result.has_error())
+				{
+					result.input -= extra_count;
+				}
+
+				return result;
 			}
 
 			// UTF8_CHAR => UTF8
@@ -3740,6 +3844,11 @@ namespace gal::prometheus::chars
 				return validate({input, std::char_traits<char_type>::length(input)});
 			}
 
+			auto rewind_and_validate(const pointer_type begin, const pointer_type current, const pointer_type end) noexcept -> result_error_input_type
+			{
+				return ::utf8::scalar::rewind_and_validate<CharsType::UTF8_CHAR>(begin, current, end);
+			}
+
 			auto length_for_latin(const input_type input) noexcept -> size_type
 			{
 				return ::utf8::scalar::length<CharsType::UTF8_CHAR, CharsType::LATIN>(input);
@@ -3884,6 +3993,15 @@ namespace gal::prometheus::chars
 				return write_utf16_le_correct(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
+			auto rewind_and_write_utf16_le(
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const pointer_type furthest_possible_begin,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf8::scalar::rewind_and_convert<CharsType::UTF8_CHAR, CharsType::UTF16_LE>(output, furthest_possible_begin, input);
+			}
+
 			auto write_utf16_be(
 				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const input_type input
@@ -3934,6 +4052,15 @@ namespace gal::prometheus::chars
 				return write_utf16_be_correct(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
+			auto rewind_and_write_utf16_be(
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const pointer_type furthest_possible_begin,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf8::scalar::rewind_and_convert<CharsType::UTF8_CHAR, CharsType::UTF16_BE>(output, furthest_possible_begin, input);
+			}
+
 			auto write_utf32(
 				const output_type_of<CharsType::UTF32>::pointer output,
 				const input_type input
@@ -3982,6 +4109,15 @@ namespace gal::prometheus::chars
 			) noexcept -> result_output_type
 			{
 				return write_utf32_correct(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto rewind_and_write_utf32(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const pointer_type furthest_possible_begin,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf8::scalar::rewind_and_convert<CharsType::UTF8_CHAR, CharsType::UTF32>(output, furthest_possible_begin, input);
 			}
 
 			auto write_utf8(
@@ -4156,6 +4292,11 @@ namespace gal::prometheus::chars
 				return validate({input, std::char_traits<char_type>::length(input)});
 			}
 
+			auto rewind_and_validate(const pointer_type begin, const pointer_type current, const pointer_type end) noexcept -> result_error_input_type
+			{
+				return ::utf8::scalar::rewind_and_validate<CharsType::UTF8>(begin, current, end);
+			}
+
 			auto length_for_latin(const input_type input) noexcept -> size_type
 			{
 				return ::utf8::scalar::length<CharsType::UTF8, CharsType::LATIN>(input);
@@ -4300,6 +4441,15 @@ namespace gal::prometheus::chars
 				return write_utf16_le_correct(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
+			auto rewind_and_write_utf16_le(
+				const output_type_of<CharsType::UTF16_LE>::pointer output,
+				const pointer_type furthest_possible_begin,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf8::scalar::rewind_and_convert<CharsType::UTF8, CharsType::UTF16_LE>(output, furthest_possible_begin, input);
+			}
+
 			auto write_utf16_be(
 				const output_type_of<CharsType::UTF16_BE>::pointer output,
 				const input_type input
@@ -4350,6 +4500,15 @@ namespace gal::prometheus::chars
 				return write_utf16_be_correct(output, {input, std::char_traits<char_type>::length(input)});
 			}
 
+			auto rewind_and_write_utf16_be(
+				const output_type_of<CharsType::UTF16_BE>::pointer output,
+				const pointer_type furthest_possible_begin,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf8::scalar::rewind_and_convert<CharsType::UTF8, CharsType::UTF16_BE>(output, furthest_possible_begin, input);
+			}
+
 			auto write_utf32(
 				const output_type_of<CharsType::UTF32>::pointer output,
 				const input_type input
@@ -4398,6 +4557,15 @@ namespace gal::prometheus::chars
 			) noexcept -> result_output_type
 			{
 				return write_utf32_correct(output, {input, std::char_traits<char_type>::length(input)});
+			}
+
+			auto rewind_and_write_utf32(
+				const output_type_of<CharsType::UTF32>::pointer output,
+				const pointer_type furthest_possible_begin,
+				const input_type input
+			) noexcept -> result_error_input_output_type
+			{
+				return ::utf8::scalar::rewind_and_convert<CharsType::UTF8, CharsType::UTF32>(output, furthest_possible_begin, input);
 			}
 
 			auto write_utf8(

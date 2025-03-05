@@ -9,7778 +9,6813 @@
 
 namespace gal::prometheus::chars
 {
-	namespace latin
+	namespace latin::scalar
 	{
 		/**
-		 * @brief Checks if there is at least one valid `ASCII` code point in the range of [@c current, @c end].
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Checks if there are all valid `ASCII` code point in the range of @c input.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
 		 */
-		[[nodiscard]] auto validate(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto validate(input_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Checks if there are all valid `ASCII` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto validate(pointer_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_latin(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_latin(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf8(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf8(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf32(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf32(pointer_type input) noexcept -> size_type;
 
 		// =======================================================
 		// LATIN => UTF8_CHAR
 
 		/**
-		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf8(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf8_pure(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
 		 */
-		[[nodiscard]] auto write_utf8_correct(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf8(input) ==> input.size()
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_pure<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_correct<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char_correct({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// LATIN => UTF8
 
 		/**
-		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf8(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf8_pure(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
 		 */
-		[[nodiscard]] auto write_utf8_correct(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf8(input) ==> input.size()
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_pure<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_correct<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_correct({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// LATIN => UTF16_LE
 
 		/**
-		 * @brief If there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf16_le(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf16_le_pure(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
 		 */
-		[[nodiscard]] auto write_utf16_le_correct(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_pure<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_correct<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_correct({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// LATIN => UTF16_BE
 
 		/**
-		 * @brief If there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf16_be(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf16_be_pure(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
 		 */
-		[[nodiscard]] auto write_utf16_be_correct(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_be_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_pure<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_be_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_correct<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_correct({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// LATIN => UTF32
 
 		/**
-		 * @brief If there is at least one valid `UTF32` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf32(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf32_pure(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf32(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
 		 */
-		[[nodiscard]] auto write_utf32_correct(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
-
-		namespace scalar
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32(const input_type input) noexcept -> StringType
 		{
-			/**
-			 * @brief Checks if there are all valid `ASCII` code point in the range of @c input.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate(input_type input) noexcept -> result_error_input_type;
+			StringType string{};
+			string.resize(length_for_utf32(input));
 
-			/**
-			 * @brief Checks if there are all valid `ASCII` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate(pointer_type input) noexcept -> result_error_input_type;
+			std::ignore = scalar::write_utf32(string.data(), input);
 
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_latin(input_type input) noexcept -> size_type;
+			return string;
+		}
 
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_latin(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf8(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf8(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf16(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf16(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf32(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf32(pointer_type input) noexcept -> size_type;
-
-			// =======================================================
-			// LATIN => UTF8_CHAR
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf32(input) ==> input.size()
+			string.resize(length_for_utf32(input));
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+			std::ignore = scalar::write_utf32_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
 			{
-				return scalar::write_utf8<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf8(input) ==> input.size()
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_pure(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_pure<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf32(input));
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+			std::ignore = scalar::write_utf32_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
 			{
-				return scalar::write_utf8_pure<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_correct(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_correct<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// LATIN => UTF8
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf8(input) ==> input.size()
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_pure<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_correct<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// LATIN => UTF16_LE
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf16(input) ==> input.size()
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_pure<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_correct<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// LATIN => UTF16_BE
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf16(input) ==> input.size()
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_pure<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_correct<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// LATIN => UTF32
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf32(input));
-
-				std::ignore = scalar::write_utf32(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf32(input) ==> input.size()
-				string.resize(length_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_pure<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all valid `UTF32`.
-			 * @return {@c length_for_utf32(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all valid `UTF32`.
-			 * @return {@c length_for_utf32(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_correct<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_correct({input, std::char_traits<char_type>::length(input)});
-			}
+		[[nodiscard]] auto write_utf32_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_correct<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_correct({input, std::char_traits<char_type>::length(input)});
 		}
 	}
 
-	namespace utf8_char
+	namespace utf8_char::scalar
 	{
 		/**
-		 * @brief Checks if there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Checks if there are all valid `UTF8` code point in the range of @c input.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
 		 */
-		[[nodiscard]] auto validate(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto validate(input_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Checks if there are all valid `UTF8` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto validate(pointer_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Finds the previous leading byte starting backward from @c current and validates from there.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note Used to pinpoint the location of an error when an invalid chunk is detected.
+		 * @note We assume that the stream starts with a leading byte, and to check that it is the case,
+		 * we ask that you pass a pointer to the start of the stream (@c begin).
+		 */
+		[[nodiscard]] auto rewind_and_validate(pointer_type begin, pointer_type current, pointer_type end) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_latin(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_latin(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf8(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf8(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf32(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf32(pointer_type input) noexcept -> size_type;
 
 		// =======================================================
 		// UTF8 => LATIN
 
 		/**
-		 * @brief If there is at least one valid `LATIN` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_latin(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_latin_pure(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_latin(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
 		 */
-		[[nodiscard]] auto write_latin_correct(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_latin(input));
+
+			std::ignore = scalar::write_latin(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_latin(input) ==> input.size()
+			string.resize(length_for_latin(input));
+
+			std::ignore = scalar::write_latin_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_pure<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_latin(input));
+
+			std::ignore = scalar::write_latin_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_correct<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_correct({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// UTF8 => UTF16_LE
 
 		/**
-		 * @brief If there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf16_le(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf16_le_pure(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
 		 */
-		[[nodiscard]] auto write_utf16_le_correct(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_pure<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_correct<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_correct({input, std::char_traits<char_type>::length(input)});
+		}
+
+		[[nodiscard]] auto rewind_and_write_utf16_le(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type furthest_possible_begin,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		// =======================================================
 		// UTF8 => UTF16_BE
 
 		/**
-		 * @brief If there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf16_be(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf16_be_pure(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
 		 */
-		[[nodiscard]] auto write_utf16_be_correct(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_be_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_pure<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_be_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_correct<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_correct({input, std::char_traits<char_type>::length(input)});
+		}
+
+		[[nodiscard]] auto rewind_and_write_utf16_be(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type furthest_possible_begin,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		// =======================================================
 		// UTF8 => UTF32
 
 		/**
-		 * @brief If there is at least one valid `UTF32` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf32(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf32_pure(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf32(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
 		 */
-		[[nodiscard]] auto write_utf32_correct(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf32(input));
+
+			std::ignore = scalar::write_utf32(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf32(input) ==> input.size()
+			string.resize(length_for_utf32(input));
+
+			std::ignore = scalar::write_utf32_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_pure<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf32(input));
+
+			std::ignore = scalar::write_utf32_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_correct<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_correct({input, std::char_traits<char_type>::length(input)});
+		}
+
+		[[nodiscard]] auto rewind_and_write_utf32(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type furthest_possible_begin,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		// =======================================================
 		// UTF8_CHAR => UTF8
 
 		/**
-		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
 		 */
 		[[nodiscard]] auto write_utf8(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
 		 */
-		[[nodiscard]] auto write_utf8_pure(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
-
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
 		 */
-		[[nodiscard]] auto write_utf8_correct(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
-
-		namespace scalar
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
 		{
-			/**
-			 * @brief Checks if there are all valid `UTF8` code point in the range of @c input.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate(input_type input) noexcept -> result_error_input_type;
+			StringType string{};
+			// OPT: length_for_utf8(input) ==> input.size()
+			string.resize(length_for_utf8(input));
 
-			/**
-			 * @brief Checks if there are all valid `UTF8` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate(pointer_type input) noexcept -> result_error_input_type;
+			std::ignore = scalar::write_utf8(string.data(), input);
 
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_latin(input_type input) noexcept -> size_type;
+			return string;
+		}
 
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_latin(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf8(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf8(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf16(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf16(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf32(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf32(pointer_type input) noexcept -> size_type;
-
-			// =======================================================
-			// UTF8 => LATIN
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_latin(input));
-
-				std::ignore = scalar::write_latin(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
 			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_latin(input) ==> input.size()
-				string.resize(length_for_latin(input));
-
-				std::ignore = scalar::write_latin_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_pure<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all valid `LATIN`.
-			 * @return {@c length_for_latin(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all valid `LATIN`.
-			 * @return {@c length_for_latin(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_latin(input));
-
-				std::ignore = scalar::write_latin_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_correct<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF8 => UTF16_LE
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf16(input) ==> input.size()
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_pure<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_correct<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF8 => UTF16_BE
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf16(input) ==> input.size()
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_pure<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_correct<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF8 => UTF32
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf32(input));
-
-				std::ignore = scalar::write_utf32(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf32(input) ==> input.size()
-				string.resize(length_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_pure<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all valid `UTF32`.
-			 * @return {@c length_for_utf32(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all valid `UTF32`.
-			 * @return {@c length_for_utf32(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_correct<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF8_CHAR => UTF8
-
-			/**
-			 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf8(input) ==> input.size()
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
-			 */
-			[[nodiscard]] inline auto write_utf8(const input_type input) noexcept -> std::basic_string<utf8::char_type>
-			{
-				return scalar::write_utf8<std::basic_string<utf8::char_type>>(input);
-			}
-
-			/**
-			 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
-			 */
-			[[nodiscard]] inline auto write_utf8(const pointer_type input) noexcept -> std::basic_string<utf8::char_type>
-			{
-				return scalar::write_utf8({input, std::char_traits<char_type>::length(input)});
-			}
+		[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
+		 */
+		[[nodiscard]] inline auto write_utf8(const input_type input) noexcept -> std::basic_string<utf8::char_type>
+		{
+			return scalar::write_utf8<std::basic_string<utf8::char_type>>(input);
+		}
+
+		/**
+		 * @brief Convert UTF8_CHAR string to UTF8 string up to the first invalid UTF8 code point.
+		 */
+		[[nodiscard]] inline auto write_utf8(const pointer_type input) noexcept -> std::basic_string<utf8::char_type>
+		{
+			return scalar::write_utf8({input, std::char_traits<char_type>::length(input)});
 		}
 	}
 
-	namespace utf8
+	namespace utf8::scalar
 	{
 		/**
-		 * @brief Checks if there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Checks if there are all valid `UTF8` code point in the range of @c input.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
 		 */
-		[[nodiscard]] auto validate(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto validate(input_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Checks if there are all valid `UTF8` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto validate(pointer_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Finds the previous leading byte starting backward from @c current and validates from there.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note Used to pinpoint the location of an error when an invalid chunk is detected.
+		 * @note We assume that the stream starts with a leading byte, and to check that it is the case,
+		 * we ask that you pass a pointer to the start of the stream (@c begin).
+		 */
+		[[nodiscard]] auto rewind_and_validate(pointer_type begin, pointer_type current, pointer_type end) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_latin(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_latin(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf8(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf8(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf32(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf32(pointer_type input) noexcept -> size_type;
 
 		// =======================================================
 		// UTF8 => LATIN
 
 		/**
-		 * @brief If there is at least one valid `LATIN` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_latin(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_latin_pure(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_latin(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
 		 */
-		[[nodiscard]] auto write_latin_correct(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_latin(input));
+
+			std::ignore = scalar::write_latin(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_latin(input) ==> input.size()
+			string.resize(length_for_latin(input));
+
+			std::ignore = scalar::write_latin_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_pure<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_latin(input));
+
+			std::ignore = scalar::write_latin_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_correct<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_correct({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// UTF8 => UTF16_LE
 
 		/**
-		 * @brief If there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf16_le(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf16_le_pure(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
 		 */
-		[[nodiscard]] auto write_utf16_le_correct(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_pure<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_correct<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_correct({input, std::char_traits<char_type>::length(input)});
+		}
+
+		[[nodiscard]] auto rewind_and_write_utf16_le(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type furthest_possible_begin,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		// =======================================================
 		// UTF8 => UTF16_BE
 
 		/**
-		 * @brief If there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf16_be(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf16_be_pure(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
 		 */
-		[[nodiscard]] auto write_utf16_be_correct(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_be_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_pure<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_be_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_correct<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_correct({input, std::char_traits<char_type>::length(input)});
+		}
+
+		[[nodiscard]] auto rewind_and_write_utf16_be(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type furthest_possible_begin,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		// =======================================================
 		// UTF8 => UTF32
 
 		/**
-		 * @brief If there is at least one valid `UTF32` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf32(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf32_pure(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf32(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
 		 */
-		[[nodiscard]] auto write_utf32_correct(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf32(input));
+
+			std::ignore = scalar::write_utf32(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf32(input) ==> input.size()
+			string.resize(length_for_utf32(input));
+
+			std::ignore = scalar::write_utf32_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_pure<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf32(input));
+
+			std::ignore = scalar::write_utf32_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_correct<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_correct({input, std::char_traits<char_type>::length(input)});
+		}
+
+		[[nodiscard]] auto rewind_and_write_utf32(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type furthest_possible_begin,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		// =======================================================
-		// UTF8_CHAR => UTF8
+		// UTF8 => UTF8_CHAR
 
 		/**
-		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
 		 */
 		[[nodiscard]] auto write_utf8(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
 		 */
-		[[nodiscard]] auto write_utf8_pure(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
-
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
 		 */
-		[[nodiscard]] auto write_utf8_correct(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
-
-		namespace scalar
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
 		{
-			/**
-			 * @brief Checks if there are all valid `UTF8` code point in the range of @c input.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate(input_type input) noexcept -> result_error_input_type;
+			StringType string{};
+			string.resize(length_for_utf8(input));
 
-			/**
-			 * @brief Checks if there are all valid `UTF8` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate(pointer_type input) noexcept -> result_error_input_type;
+			std::ignore = scalar::write_utf8(string.data(), input);
 
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_latin(input_type input) noexcept -> size_type;
+			return string;
+		}
 
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_latin(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf8(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf8(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf16(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf16(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf32(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf32(pointer_type input) noexcept -> size_type;
-
-			// =======================================================
-			// UTF8 => LATIN
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_latin(input));
-
-				std::ignore = scalar::write_latin(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
 			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_latin(input) ==> input.size()
-				string.resize(length_for_latin(input));
-
-				std::ignore = scalar::write_latin_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_pure<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all valid `LATIN`.
-			 * @return {@c length_for_latin(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all valid `LATIN`.
-			 * @return {@c length_for_latin(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_latin(input));
-
-				std::ignore = scalar::write_latin_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_correct<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF8 => UTF16_LE
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf16(input) ==> input.size()
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_pure<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_correct<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF8 => UTF16_BE
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf16(input) ==> input.size()
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_pure<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_correct<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF8 => UTF32
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf32(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf32(input));
-
-				std::ignore = scalar::write_utf32(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf32_pure(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf32(input) ==> input.size()
-				string.resize(length_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_pure<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all valid `UTF32`.
-			 * @return {@c length_for_utf32(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all valid `UTF32`.
-			 * @return {@c length_for_utf32(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf32_correct(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_correct<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF8 => UTF8_CHAR
-
-			/**
-			 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
-			 */
-			[[nodiscard]] inline auto write_utf8(const input_type input) noexcept -> std::basic_string<utf8_char::char_type>
-			{
-				return scalar::write_utf8<std::basic_string<utf8_char::char_type>>(input);
-			}
-
-			/**
-			 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
-			 */
-			[[nodiscard]] inline auto write_utf8(const pointer_type input) noexcept -> std::basic_string<utf8_char::char_type>
-			{
-				return scalar::write_utf8({input, std::char_traits<char_type>::length(input)});
-			}
+		[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
+		 */
+		[[nodiscard]] inline auto write_utf8(const input_type input) noexcept -> std::basic_string<utf8_char::char_type>
+		{
+			return scalar::write_utf8<std::basic_string<utf8_char::char_type>>(input);
+		}
+
+		/**
+		 * @brief Convert UTF8 string to UTF8_CHAR string up to the first invalid UTF8 code point.
+		 */
+		[[nodiscard]] inline auto write_utf8(const pointer_type input) noexcept -> std::basic_string<utf8_char::char_type>
+		{
+			return scalar::write_utf8({input, std::char_traits<char_type>::length(input)});
 		}
 	}
 
-	namespace utf16
+	namespace utf16::scalar
 	{
 		/**
-		 * @brief Checks if there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end].
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Checks if there are all valid `UTF16 (little-endian)` code point in the range of @c input.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
 		 */
-		[[nodiscard]] auto validate_le(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto validate_le(input_type input) noexcept -> result_error_input_type;
 
 		/**
-		 * @brief Checks if there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end].
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Checks if there are all valid `UTF16 (little-endian)` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
 		 */
-		[[nodiscard]] auto validate_be(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto validate_le(pointer_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Checks if there are all valid `UTF16 (big-endian)` code point in the range of @c input.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto validate_be(input_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Checks if there are all valid `UTF16 (big-endian)` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto validate_be(pointer_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_latin(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_latin(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_latin(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_latin(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_utf8(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_utf8(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_utf8(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_utf8(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_utf32(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_le_for_utf32(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_utf32(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_be_for_utf32(pointer_type input) noexcept -> size_type;
 
 		// =======================================================
 		// UTF16 => LATIN
 
 		/**
-		 * @brief If there is at least one valid `LATIN` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_latin_le(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief If there is at least one valid `LATIN` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_latin_le(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_latin(input));
+
+			std::ignore = scalar::write_latin_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_le<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_latin_be(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_latin_pure_le(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_latin_be(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
 		 */
-		[[nodiscard]] auto write_latin_pure_be(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_latin(input));
+
+			std::ignore = scalar::write_latin_be(string.data(), input);
+
+			return string;
+		}
 
 		/**
-		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
 		 */
-		[[nodiscard]] auto write_latin_correct_le(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
 		/**
-		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
 		 */
-		[[nodiscard]] auto write_latin_correct_be(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] inline auto write_latin_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_be<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure_le(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure_le(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_le_for_latin(input) ==> input.size()
+			string.resize(length_le_for_latin(input));
+
+			std::ignore = scalar::write_latin_pure_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_pure_le<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_pure_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure_be(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure_be(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_be_for_latin(input) ==> input.size()
+			string.resize(length_be_for_latin(input));
+
+			std::ignore = scalar::write_latin_pure_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_pure_be<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_pure_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct_le(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct_le(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_latin(input));
+
+			std::ignore = scalar::write_latin_correct_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_correct_le<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_correct_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct_be(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct_be(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_latin(input));
+
+			std::ignore = scalar::write_latin_correct_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_correct_be<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_correct_be({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// UTF16 => UTF8_CHAR
 
 		/**
-		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf8_le(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf8_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_le<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf8_be(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf8_pure_le(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf8_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
 		 */
-		[[nodiscard]] auto write_utf8_pure_be(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_be(string.data(), input);
+
+			return string;
+		}
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
 		 */
-		[[nodiscard]] auto write_utf8_correct_le(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
 		 */
-		[[nodiscard]] auto write_utf8_correct_be(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] inline auto write_utf8_char_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_be<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_le_for_utf8(input) ==> input.size()
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_pure_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_pure_le<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char_pure_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_be_for_utf8(input) ==> input.size()
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_pure_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_pure_be<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char_pure_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_correct_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_correct_le<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char_correct_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_correct_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_correct_be<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char_correct_be({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// UTF16 => UTF8
 
 		/**
-		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf8_le(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf8_le(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_le<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf8_be(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf8_pure_le(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf8_be(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
 		 */
-		[[nodiscard]] auto write_utf8_pure_be(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_be(string.data(), input);
+
+			return string;
+		}
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
 		 */
-		[[nodiscard]] auto write_utf8_correct_le(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
 		 */
-		[[nodiscard]] auto write_utf8_correct_be(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] inline auto write_utf8_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_be<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_le_for_utf8(input) ==> input.size()
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_pure_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_pure_le<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_pure_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_be(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure_be(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_be_for_utf8(input) ==> input.size()
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_pure_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_pure_be<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_pure_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_correct_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_correct_le<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_correct_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_be(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct_be(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_correct_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_correct_be<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_correct_be({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// UTF16 => UTF32
 
 		/**
-		 * @brief If there is at least one valid `UTF32` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf32_le(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief If there is at least one valid `UTF32` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf32_le(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf32(input));
+
+			std::ignore = scalar::write_utf32_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_le<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf32_be(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf32_pure_le(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf32_be(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
 		 */
-		[[nodiscard]] auto write_utf32_pure_be(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
-
-		/**
-		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
-		 */
-		[[nodiscard]] auto write_utf32_correct_le(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
-
-		/**
-		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
-		 */
-		[[nodiscard]] auto write_utf32_correct_be(
-			output_type_of<CharsType::UTF32>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
-
-		namespace scalar
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
+			}
+		[[nodiscard]] auto write_utf32_be(const input_type input) noexcept -> StringType
 		{
-			/**
-			 * @brief Checks if there are all valid `UTF16 (little-endian)` code point in the range of @c input.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate_le(input_type input) noexcept -> result_error_input_type;
+			StringType string{};
+			string.resize(length_be_for_utf32(input));
 
-			/**
-			 * @brief Checks if there are all valid `UTF16 (little-endian)` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate_le(pointer_type input) noexcept -> result_error_input_type;
+			std::ignore = scalar::write_utf32_be(string.data(), input);
 
-			/**
-			 * @brief Checks if there are all valid `UTF16 (big-endian)` code point in the range of @c input.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate_be(input_type input) noexcept -> result_error_input_type;
+			return string;
+		}
 
-			/**
-			 * @brief Checks if there are all valid `UTF16 (big-endian)` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate_be(pointer_type input) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_le_for_latin(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_le_for_latin(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_be_for_latin(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_be_for_latin(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_le_for_utf8(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_le_for_utf8(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_be_for_utf8(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_be_for_utf8(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf16(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf16(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_le_for_utf32(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_le_for_utf32(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_be_for_utf32(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_be_for_utf32(pointer_type input) noexcept -> size_type;
-
-			// =======================================================
-			// UTF16 => LATIN
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_latin_le(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_latin_le(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_le_for_latin(input));
-
-				std::ignore = scalar::write_latin_le(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_be<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure_le(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure_le(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_le<StringType>({input, std::char_traits<char_type>::length(input)});
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_pure_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_le_for_utf32(input) ==> input.size()
+			string.resize(length_le_for_utf32(input));
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+			std::ignore = scalar::write_utf32_pure_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
 			{
-				return scalar::write_latin_le<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_latin_be(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_latin_be(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_be_for_latin(input));
-
-				std::ignore = scalar::write_latin_be(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_pure_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_pure_le<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_pure_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure_be(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf32_pure_be(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_be<StringType>({input, std::char_traits<char_type>::length(input)});
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_pure_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_be_for_utf32(input) ==> input.size()
+			string.resize(length_be_for_utf32(input));
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+			std::ignore = scalar::write_utf32_pure_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
 			{
-				return scalar::write_latin_be<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_latin_pure_le(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_latin_pure_le(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_pure_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_le_for_latin(input) ==> input.size()
-				string.resize(length_le_for_latin(input));
-
-				std::ignore = scalar::write_latin_pure_le(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_pure_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_pure_be<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_pure_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct_le(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct_le(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_pure_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_correct_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_le_for_utf32(input));
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+			std::ignore = scalar::write_utf32_correct_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
 			{
-				return scalar::write_latin_pure_le<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_pure_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_latin_pure_be(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_latin_pure_be(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_pure_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_be_for_latin(input) ==> input.size()
-				string.resize(length_be_for_latin(input));
-
-				std::ignore = scalar::write_latin_pure_be(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_correct_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_correct_le<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_correct_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct_be(
+			output_type_of<CharsType::UTF32>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
+		 * assume that the @c input string is all valid `UTF32`.
+		 * @return {@c length_for_utf32(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf32_correct_be(
+			output_type_of<CharsType::UTF32>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_pure_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_correct_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_be_for_utf32(input));
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+			std::ignore = scalar::write_utf32_correct_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
 			{
-				return scalar::write_latin_pure_be<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_pure_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all valid `LATIN`.
-			 * @return {@c length_for_latin(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_latin_correct_le(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all valid `LATIN`.
-			 * @return {@c length_for_latin(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_latin_correct_le(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_correct_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_le_for_latin(input));
-
-				std::ignore = scalar::write_latin_correct_le(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
 			}
+		[[nodiscard]] auto write_utf32_correct_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf32_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_correct_be<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
+		 */
+		[[nodiscard]] inline auto write_utf32_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
+		{
+			return scalar::write_utf32_correct_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		// =======================================================
+		// UTF16_LE => UTF16_LE
+		// UTF16_BE => UTF16_BE
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_correct_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
 			}
+		[[nodiscard]] auto write_utf16_le_to_be(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+			std::ignore = scalar::write_utf16_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
 			{
-				return scalar::write_latin_correct_le<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_correct_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all valid `LATIN`.
-			 * @return {@c length_for_latin(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_latin_correct_be(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all valid `LATIN`.
-			 * @return {@c length_for_latin(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_latin_correct_be(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_correct_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_be_for_latin(input));
-
-				std::ignore = scalar::write_latin_correct_be(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
 			}
+		[[nodiscard]] auto write_utf16_le_to_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le_to_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_to_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_le_to_be<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_to_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_le_to_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
+		 */
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_correct_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
 			}
+		[[nodiscard]] auto write_utf16_be_to_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+			std::ignore = scalar::write_utf16_be(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
 			{
-				return scalar::write_latin_correct_be<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_correct_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF16 => UTF8_CHAR
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8_le(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8_le(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_le_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_le(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
 			}
+		[[nodiscard]] auto write_utf16_be_to_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be_to_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_to_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_be_to_le<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_to_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_be_to_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		// =======================================================
+		// UTF16_LE => UTF16_BE
+		// UTF16_BE => UTF16_LE
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		auto flip(
+			output_type_of<CharsType::UTF16>::pointer output,
+			input_type input
+		) noexcept -> void;
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		auto flip(
+			output_type_of<CharsType::UTF16>::pointer output,
+			pointer_type input
+		) noexcept -> void;
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_le<StringType>({input, std::char_traits<char_type>::length(input)});
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16>::pointer>;
 			}
+		[[nodiscard]] auto flip(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+			scalar::flip(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
 			{
-				return scalar::write_utf8_le<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8_be(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8_be(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_be_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_be<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure_le(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure_le(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_le_for_utf8(input) ==> input.size()
-				string.resize(length_le_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_pure_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_pure_le<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char_pure_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure_be(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure_be(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_be_for_utf8(input) ==> input.size()
-				string.resize(length_be_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_pure_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_pure_be<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char_pure_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct_le(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct_le(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_le_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_correct_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_correct_le<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char_correct_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct_be(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct_be(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_be_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_correct_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_correct_be<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char_correct_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF16 => UTF8
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8_le(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8_le(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_le_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_le<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8_be(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8_be(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_be_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_be<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure_le(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure_le(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_le_for_utf8(input) ==> input.size()
-				string.resize(length_le_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_pure_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_pure_le<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_pure_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure_be(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure_be(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_be_for_utf8(input) ==> input.size()
-				string.resize(length_be_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_pure_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_pure_be<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_pure_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct_le(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct_le(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_le_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_correct_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_correct_le<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_correct_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct_be(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct_be(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_be_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_correct_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_correct_be<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_correct_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF16 => UTF32
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf32_le(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf32_le(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_le_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_le<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf32(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf32_be(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf32(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf32_be(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_be_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_be<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf32_pure_le(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf32_pure_le(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_pure_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_le_for_utf32(input) ==> input.size()
-				string.resize(length_le_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_pure_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_pure_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_pure_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_pure_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_pure_le<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_pure_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_pure_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf32_pure_be(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf32_pure_be(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_pure_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_be_for_utf32(input) ==> input.size()
-				string.resize(length_be_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_pure_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_pure_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_pure_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_pure_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_pure_be<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_pure_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_pure_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all valid `UTF32`.
-			 * @return {@c length_for_utf32(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf32_correct_le(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all valid `UTF32`.
-			 * @return {@c length_for_utf32(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf32_correct_le(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_correct_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_le_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_correct_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_correct_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_correct_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_correct_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_correct_le<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_correct_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_correct_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all valid `UTF32`.
-			 * @return {@c length_for_utf32(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf32_correct_be(
-				output_type_of<CharsType::UTF32>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string,
-			 * assume that the @c input string is all valid `UTF32`.
-			 * @return {@c length_for_utf32(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf32_correct_be(
-				output_type_of<CharsType::UTF32>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_correct_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_be_for_utf32(input));
-
-				std::ignore = scalar::write_utf32_correct_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF32>::pointer>;
-				}
-			[[nodiscard]] auto write_utf32_correct_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf32_correct_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_correct_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_correct_be<std::basic_string<output_type_of<CharsType::UTF32>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF32` string.
-			 */
-			[[nodiscard]] inline auto write_utf32_correct_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF32>::value_type>
-			{
-				return scalar::write_utf32_correct_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF16_LE => UTF16_LE
-			// UTF16_BE => UTF16_BE
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto write_utf16_le(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_le(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_to_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf16(input) ==> input.size()
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_to_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le_to_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_to_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_le_to_be<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string up to the first invalid UTF16_LE code point.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_to_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_le_to_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_be(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_be(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_to_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf16(input) ==> input.size()
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_to_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be_to_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_to_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_be_to_le<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Convert UTF16_BE string to UTF16_LE string up to the first invalid UTF16_BE code point.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_to_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_be_to_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF16_LE => UTF16_BE
-			// UTF16_BE => UTF16_LE
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
-			 */
-			auto flip(
-				output_type_of<CharsType::UTF16>::pointer output,
-				input_type input
-			) noexcept -> void;
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
-			 */
-			auto flip(
-				output_type_of<CharsType::UTF16>::pointer output,
-				pointer_type input
-			) noexcept -> void;
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16>::pointer>;
-				}
-			[[nodiscard]] auto flip(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf16(input) ==> input.size()
-				string.resize(length_for_utf16(input));
-
-				scalar::flip(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16>::pointer>;
-				}
-			[[nodiscard]] auto flip(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::flip<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
-			 */
-			[[nodiscard]] inline auto flip(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16>::value_type>
-			{
-				return scalar::flip<std::basic_string<output_type_of<CharsType::UTF16>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
-			 */
-			[[nodiscard]] inline auto flip(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16>::value_type>
-			{
-				return scalar::flip({input, std::char_traits<char_type>::length(input)});
-			}
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16>::pointer>;
+			}
+		[[nodiscard]] auto flip(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::flip<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		[[nodiscard]] inline auto flip(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16>::value_type>
+		{
+			return scalar::flip<std::basic_string<output_type_of<CharsType::UTF16>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Convert UTF16_LE string to UTF16_BE string (or vice versa), assuming the input string is valid.
+		 */
+		[[nodiscard]] inline auto flip(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16>::value_type>
+		{
+			return scalar::flip({input, std::char_traits<char_type>::length(input)});
 		}
 	}
 
-	namespace utf32
+	namespace utf32::scalar
 	{
 		/**
-		 * @brief Checks if there is at least one valid `UTF32` code point in the range of [@c current, @c end].
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Checks if there are all valid `UTF32` code point in the range of @c input.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
 		 */
-		[[nodiscard]] auto validate(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto validate(input_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Checks if there are all valid `UTF32` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 */
+		[[nodiscard]] auto validate(pointer_type input) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_latin(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_latin(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf8(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf8(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf16(pointer_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf32(input_type input) noexcept -> size_type;
+
+		/**
+		 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
+		 */
+		[[nodiscard]] auto length_for_utf32(pointer_type input) noexcept -> size_type;
 
 		// =======================================================
 		// UTF32 => LATIN
 
 		/**
-		 * @brief If there is at least one valid `LATIN` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_latin(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_latin_pure(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_latin(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
 		 */
-		[[nodiscard]] auto write_latin_correct(
-			output_type_of<CharsType::LATIN>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_latin(input));
+
+			std::ignore = scalar::write_latin(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_latin_pure(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_latin(input) ==> input.size()
+			string.resize(length_for_latin(input));
+
+			std::ignore = scalar::write_latin_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_pure<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct(
+			output_type_of<CharsType::LATIN>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
+		 * assume that the @c input string is all valid `LATIN`.
+		 * @return {@c length_for_latin(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_latin_correct(
+			output_type_of<CharsType::LATIN>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_latin(input));
+
+			std::ignore = scalar::write_latin_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
+			}
+		[[nodiscard]] auto write_latin_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_latin_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_correct<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
+		 */
+		[[nodiscard]] inline auto write_latin_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+		{
+			return scalar::write_latin_correct({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// UTF32 => UTF8_CHAR
 
 		/**
-		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf8(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf8_pure(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
 		 */
-		[[nodiscard]] auto write_utf8_correct(
-			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf8(input) ==> input.size()
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_pure<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct(
+			output_type_of<CharsType::UTF8_CHAR>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_correct<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_char_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
+		{
+			return scalar::write_utf8_char_correct({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// UTF32 => UTF8
 
 		/**
-		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf8(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf8_pure(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
 		 */
-		[[nodiscard]] auto write_utf8_correct(
-			output_type_of<CharsType::UTF8>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf8_pure(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf8(input) ==> input.size()
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_pure<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct(
+			output_type_of<CharsType::UTF8>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
+		 * assume that the @c input string is all valid `UTF8`.
+		 * @return {@c length_for_utf8(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf8_correct(
+			output_type_of<CharsType::UTF8>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf8(input));
+
+			std::ignore = scalar::write_utf8_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
+			}
+		[[nodiscard]] auto write_utf8_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf8_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_correct<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
+		 */
+		[[nodiscard]] inline auto write_utf8_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
+		{
+			return scalar::write_utf8_correct({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// UTF32 => UTF16_LE
 
 		/**
-		 * @brief If there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf16_le(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf16_le_pure(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
 		 */
-		[[nodiscard]] auto write_utf16_le_correct(
-			output_type_of<CharsType::UTF16_LE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_pure<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
+
+			std::ignore = scalar::write_utf16_le_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_le_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_le_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_correct<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_le_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
+		{
+			return scalar::write_utf16_le_correct({input, std::char_traits<char_type>::length(input)});
+		}
 
 		// =======================================================
 		// UTF32 => UTF16_BE
 
 		/**
-		 * @brief If there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
-		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
-		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
 		[[nodiscard]] auto write_utf16_be(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
-		 * and it is ASCII.
-		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
+		 * @return {(error code), (the first invalid code point location), (how many code points are output)}
 		 */
-		[[nodiscard]] auto write_utf16_be_pure(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_output_type;
 
 		/**
-		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end].
-		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
 		 */
-		[[nodiscard]] auto write_utf16_be_correct(
-			output_type_of<CharsType::UTF16_BE>::pointer& output,
-			pointer_type current,
-			pointer_type end
-		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
-
-		namespace scalar
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
+				{
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
+			}
+		[[nodiscard]] auto write_utf16_be(const input_type input) noexcept -> StringType
 		{
-			/**
-			 * @brief Checks if there are all valid `UTF32` code point in the range of @c input.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate(input_type input) noexcept -> result_error_input_type;
+			StringType string{};
+			string.resize(length_for_utf16(input));
 
-			/**
-			 * @brief Checks if there are all valid `UTF32` code point in the range of [@c input, @c input+std::char_traits<char_type>::length(input)].
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 */
-			[[nodiscard]] auto validate(pointer_type input) noexcept -> result_error_input_type;
+			std::ignore = scalar::write_utf16_be(string.data(), input);
 
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_latin(input_type input) noexcept -> size_type;
+			return string;
+		}
 
-			/**
-			 * @brief If @c input string is converted to a `LATIN` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_latin(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf8(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF8` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf8(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf16(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF16` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf16(pointer_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf32(input_type input) noexcept -> size_type;
-
-			/**
-			 * @brief If @c input string is converted to a `UTF32` string, how many code points are output.
-			 */
-			[[nodiscard]] auto length_for_utf32(pointer_type input) noexcept -> size_type;
-
-			// =======================================================
-			// UTF32 => LATIN
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_latin(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_latin(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_latin(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_latin(input));
-
-				std::ignore = scalar::write_latin(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
 			}
+		[[nodiscard]] auto write_utf16_be(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c input.size()}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all `ASCII`.
+		 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
+		 * @return {(error code), (the first invalid code point location)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 * @note Each input `ASCII` code always outputs an `ASCII` code,
+		 * so the number of outputs is always equal to the number of inputs.
+		 */
+		auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_error_input_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin<StringType>({input, std::char_traits<char_type>::length(input)});
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
 			}
+		[[nodiscard]] auto write_utf16_be_pure(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			// OPT: length_for_utf16(input) ==> input.size()
+			string.resize(length_for_utf16(input));
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+			std::ignore = scalar::write_utf16_be_pure(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
 			{
-				return scalar::write_latin<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_latin_pure(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_latin(input) ==> input.size()
-				string.resize(length_for_latin(input));
-
-				std::ignore = scalar::write_latin_pure(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
 			}
+		[[nodiscard]] auto write_utf16_be_pure(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_pure<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_pure({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			input_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
+		 * assume that the @c input string is all valid `UTF16`.
+		 * @return {@c length_for_utf16(input)}
+		 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
+		 */
+		auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer output,
+			pointer_type input
+		) noexcept -> result_output_type;
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
+			{
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_pure<StringType>({input, std::char_traits<char_type>::length(input)});
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
 			}
+		[[nodiscard]] auto write_utf16_be_correct(const input_type input) noexcept -> StringType
+		{
+			StringType string{};
+			string.resize(length_for_utf16(input));
 
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
+			std::ignore = scalar::write_utf16_be_correct(string.data(), input);
+
+			return string;
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		template<typename StringType>
+			requires requires(StringType& string)
 			{
-				return scalar::write_latin_pure<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all valid `LATIN`.
-			 * @return {@c length_for_latin(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string,
-			 * assume that the @c input string is all valid `LATIN`.
-			 * @return {@c length_for_latin(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_latin_correct(
-				output_type_of<CharsType::LATIN>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
+				string.resize(std::declval<size_type>());
 				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_latin(input));
-
-				std::ignore = scalar::write_latin_correct(string.data(), input);
-
-				return string;
+					string.data()
+				} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
 			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::LATIN>::pointer>;
-				}
-			[[nodiscard]] auto write_latin_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_latin_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_correct<std::basic_string<output_type_of<CharsType::LATIN>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `LATIN` string.
-			 */
-			[[nodiscard]] inline auto write_latin_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::LATIN>::value_type>
-			{
-				return scalar::write_latin_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF32 => UTF8_CHAR
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf8(input) ==> input.size()
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_pure<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8_CHAR>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8_CHAR>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_correct<std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_char_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8_CHAR>::value_type>
-			{
-				return scalar::write_utf8_char_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF32 => UTF8
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf8(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf8(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf8_pure(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf8(input) ==> input.size()
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_pure<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string,
-			 * assume that the @c input string is all valid `UTF8`.
-			 * @return {@c length_for_utf8(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf8_correct(
-				output_type_of<CharsType::UTF8>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf8(input));
-
-				std::ignore = scalar::write_utf8_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF8>::pointer>;
-				}
-			[[nodiscard]] auto write_utf8_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf8_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_correct<std::basic_string<output_type_of<CharsType::UTF8>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF8` string.
-			 */
-			[[nodiscard]] inline auto write_utf8_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF8>::value_type>
-			{
-				return scalar::write_utf8_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF32 => UTF16_LE
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_le(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_le_pure(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf16(input) ==> input.size()
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_pure<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_le_correct(
-				output_type_of<CharsType::UTF16_LE>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_le_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_LE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_le_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_le_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_correct<std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_le_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_LE>::value_type>
-			{
-				return scalar::write_utf16_le_correct({input, std::char_traits<char_type>::length(input)});
-			}
-
-			// =======================================================
-			// UTF32 => UTF16_BE
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c input.size(), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input), @c length_for_utf16(input)}
-			 * @return {(error code), (the first invalid code point location), (how many code points are output)}
-			 */
-			[[nodiscard]] auto write_utf16_be(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c input.size()}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all `ASCII`.
-			 * @return {@c ErrorCode::NONE, @c std::char_traits<char_type>::length(input)}
-			 * @return {(error code), (the first invalid code point location)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 * @note Each input `ASCII` code always outputs an `ASCII` code,
-			 * so the number of outputs is always equal to the number of inputs.
-			 */
-			auto write_utf16_be_pure(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_error_input_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_pure(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				// OPT: length_for_utf16(input) ==> input.size()
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be_pure(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_pure(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be_pure<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_pure(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_pure<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_pure(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_pure({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				input_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string,
-			 * assume that the @c input string is all valid `UTF16`.
-			 * @return {@c length_for_utf16(input)}
-			 * @note You can expect this function to always succeed (so the function is not marked `nodiscard`).
-			 */
-			auto write_utf16_be_correct(
-				output_type_of<CharsType::UTF16_BE>::pointer output,
-				pointer_type input
-			) noexcept -> result_output_type;
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_correct(const input_type input) noexcept -> StringType
-			{
-				StringType string{};
-				string.resize(length_for_utf16(input));
-
-				std::ignore = scalar::write_utf16_be_correct(string.data(), input);
-
-				return string;
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			template<typename StringType>
-				requires requires(StringType& string)
-				{
-					string.resize(std::declval<size_type>());
-					{
-						string.data()
-					} -> std::convertible_to<output_type_of<CharsType::UTF16_BE>::pointer>;
-				}
-			[[nodiscard]] auto write_utf16_be_correct(const pointer_type input) noexcept -> StringType
-			{
-				return scalar::write_utf16_be_correct<StringType>({input, std::char_traits<char_type>::length(input)});
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_correct<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
-			}
-
-			/**
-			 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
-			 */
-			[[nodiscard]] inline auto write_utf16_be_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
-			{
-				return scalar::write_utf16_be_correct({input, std::char_traits<char_type>::length(input)});
-			}
+		[[nodiscard]] auto write_utf16_be_correct(const pointer_type input) noexcept -> StringType
+		{
+			return scalar::write_utf16_be_correct<StringType>({input, std::char_traits<char_type>::length(input)});
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_correct(const input_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_correct<std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>>(input);
+		}
+
+		/**
+		 * @brief Converts the @c input string `as far as possible` to a `UTF16` string.
+		 */
+		[[nodiscard]] inline auto write_utf16_be_correct(const pointer_type input) noexcept -> std::basic_string<output_type_of<CharsType::UTF16_BE>::value_type>
+		{
+			return scalar::write_utf16_be_correct({input, std::char_traits<char_type>::length(input)});
 		}
 	}
 

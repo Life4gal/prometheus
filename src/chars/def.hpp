@@ -226,6 +226,187 @@ namespace gal::prometheus::chars
 		using char_type = input_type::value_type;
 		using size_type = input_type::size_type;
 		using pointer_type = input_type::const_pointer;
+
+		/**
+		 * @brief Checks if there is at least one valid `ASCII` code point in the range of [@c current, @c end].
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto validate(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// LATIN => UTF8_CHAR
+
+		/**
+		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf8_pure(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf8_correct(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// LATIN => UTF8
+
+		/**
+		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf8_pure(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf8_correct(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// LATIN => UTF16_LE
+
+		/**
+		 * @brief If there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// LATIN => UTF16_BE
+
+		/**
+		 * @brief If there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// LATIN => UTF32
+
+		/**
+		 * @brief If there is at least one valid `UTF32` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf32(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf32_pure(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf32_correct(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
 	}
 
 	namespace utf8_char
@@ -234,6 +415,187 @@ namespace gal::prometheus::chars
 		using char_type = input_type::value_type;
 		using size_type = input_type::size_type;
 		using pointer_type = input_type::const_pointer;
+
+		/**
+		 * @brief Checks if there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto validate(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF8 => LATIN
+
+		/**
+		 * @brief If there is at least one valid `LATIN` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_latin(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_latin_pure(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_latin_correct(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF8 => UTF16_LE
+
+		/**
+		 * @brief If there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF8 => UTF16_BE
+
+		/**
+		 * @brief If there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF8 => UTF32
+
+		/**
+		 * @brief If there is at least one valid `UTF32` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf32(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf32_pure(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf32_correct(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF8_CHAR => UTF8
+
+		/**
+		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf8_pure(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf8_correct(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
 	}
 
 	namespace utf8
@@ -242,6 +604,187 @@ namespace gal::prometheus::chars
 		using char_type = input_type::value_type;
 		using size_type = input_type::size_type;
 		using pointer_type = input_type::const_pointer;
+
+		/**
+		 * @brief Checks if there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto validate(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF8 => LATIN
+
+		/**
+		 * @brief If there is at least one valid `LATIN` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_latin(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_latin_pure(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_latin_correct(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF8 => UTF16_LE
+
+		/**
+		 * @brief If there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF8 => UTF16_BE
+
+		/**
+		 * @brief If there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF8 => UTF32
+
+		/**
+		 * @brief If there is at least one valid `UTF32` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf32(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf32_pure(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf32_correct(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF8_CHAR => UTF8
+
+		/**
+		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf8_pure(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf8_correct(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
 	}
 
 	namespace utf16
@@ -253,6 +796,286 @@ namespace gal::prometheus::chars
 		using char_type = input_type::value_type;
 		using size_type = input_type::size_type;
 		using pointer_type = input_type::const_pointer;
+
+		/**
+		 * @brief Checks if there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end].
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto validate_le(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Checks if there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end].
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto validate_be(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF16 => LATIN
+
+		/**
+		 * @brief If there is at least one valid `LATIN` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_latin_le(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief If there is at least one valid `LATIN` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_latin_be(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_latin_pure_le(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_latin_pure_be(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_latin_correct_le(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_latin_correct_be(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF16 => UTF8_CHAR
+
+		/**
+		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf8_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf8_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf8_pure_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf8_correct_be(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF16 => UTF8
+
+		/**
+		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf8_le(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf8_be(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf8_pure_le(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf8_pure_be(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf8_correct_le(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf8_correct_be(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF16 => UTF32
+
+		/**
+		 * @brief If there is at least one valid `UTF32` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf32_le(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief If there is at least one valid `UTF32` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf32_be(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf32_pure_le(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf32_pure_be(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf32_correct_le(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF32` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf32_correct_be(
+			output_type_of<CharsType::UTF32>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
 	}
 
 	namespace utf32
@@ -261,5 +1084,186 @@ namespace gal::prometheus::chars
 		using char_type = input_type::value_type;
 		using size_type = input_type::size_type;
 		using pointer_type = input_type::const_pointer;
+
+		/**
+		 * @brief Checks if there is at least one valid `UTF32` code point in the range of [@c current, @c end].
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto validate(pointer_type current, pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF32 => LATIN
+
+		/**
+		 * @brief If there is at least one valid `LATIN` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_latin(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_latin_pure(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `LATIN` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_latin_correct(
+			output_type_of<CharsType::LATIN>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF32 => UTF8_CHAR
+
+		/**
+		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf8_pure(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf8_correct(
+			output_type_of<CharsType::UTF8_CHAR>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF32 => UTF8
+
+		/**
+		 * @brief If there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf8(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf8_pure(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF8` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf8_correct(
+			output_type_of<CharsType::UTF8>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF32 => UTF16_LE
+
+		/**
+		 * @brief If there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf16_le(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf16_le_pure(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (little-endian)` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf16_le_correct(
+			output_type_of<CharsType::UTF16_LE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		// =======================================================
+		// UTF32 => UTF16_BE
+
+		/**
+		 * @brief If there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
+		 * write that code point to @c output and iterate the @c output pointer (according to the number of code points actually written).
+		 * @return {(how many iterations of the input pointer are required for the code point processed), (is the code point valid)}
+		 */
+		[[nodiscard]] auto write_utf16_be(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end],
+		 * and it is ASCII.
+		 * @return You can assume that this function always returns {1, @c ErrorCode::NONE}
+		 */
+		[[nodiscard]] auto write_utf16_be_pure(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
+
+		/**
+		 * @brief Assume that there is at least one valid `UTF16 (big-endian)` code point in the range of [@c current, @c end].
+		 * @return You can assume that this function always returns {N, @c ErrorCode::NONE}, the value of N depends on the code point.
+		 */
+		[[nodiscard]] auto write_utf16_be_correct(
+			output_type_of<CharsType::UTF16_BE>::pointer& output,
+			pointer_type current,
+			pointer_type end
+		) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>;
 	}
 }
