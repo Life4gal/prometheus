@@ -62,6 +62,112 @@ namespace
 		};
 	};
 
+	[[maybe_unused]] GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"chars.utf8.char.icelake"> utf8_char = []
+	{
+		using namespace unit_test;
+		using namespace chars;
+
+		"error"_test = []
+		{
+			make_test_utf8_error<Icelake>();
+		};
+
+		constexpr std::size_t trials = 1000;
+
+		"to_latin"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF8_CHAR, CharsType::LATIN, Icelake>(make_random_utf8_char_string_ascii_only());
+			}
+		};
+
+		"to_utf8"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF8_CHAR, CharsType::UTF8, Icelake>(make_random_utf8_char_string());
+			}
+		};
+
+		"to_utf16_le"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF8_CHAR, CharsType::UTF16_LE, Icelake>(make_random_utf8_char_string());
+			}
+		};
+
+		"to_utf16_be"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF8_CHAR, CharsType::UTF16_BE, Icelake>(make_random_utf8_char_string());
+			}
+		};
+
+		"to_utf32"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF8_CHAR, CharsType::UTF32, Icelake>(make_random_utf8_char_string());
+			}
+		};
+	};
+
+	[[maybe_unused]] GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"chars.utf8.icelake"> utf8 = []
+	{
+		using namespace unit_test;
+		using namespace chars;
+
+		"error"_test = []
+		{
+			make_test_utf8_error<Icelake>();
+		};
+
+		constexpr std::size_t trials = 1000;
+
+		"to_latin"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF8, CharsType::LATIN, Icelake>(make_random_utf8_string_ascii_only());
+			}
+		};
+
+		"to_utf8_char"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF8, CharsType::UTF8_CHAR, Icelake>(make_random_utf8_string());
+			}
+		};
+
+		"to_utf16_le"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF8, CharsType::UTF16_LE, Icelake>(make_random_utf8_string());
+			}
+		};
+
+		"to_utf16_be"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF8, CharsType::UTF16_BE, Icelake>(make_random_utf8_string());
+			}
+		};
+
+		"to_utf32"_test = []
+		{
+			for (std::size_t i = 0; i < trials; ++i)
+			{
+				make_test<CharsType::UTF8, CharsType::UTF32, Icelake>(make_random_utf8_string());
+			}
+		};
+	};
+
 	[[maybe_unused]] GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"chars.utf16.le.icelake"> utf16_le = []
 	{
 		using namespace unit_test;
