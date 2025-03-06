@@ -9,6 +9,13 @@ using namespace gal::prometheus;
 
 namespace
 {
+	[[maybe_unused]] GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"chars.detect_encoding.icelake"> detect_encoding = []
+	{
+		using namespace chars;
+
+		make_test_detect_encoding<Icelake>();
+	};
+
 	[[maybe_unused]] GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"chars.latin.icelake"> latin = []
 	{
 		using namespace unit_test;

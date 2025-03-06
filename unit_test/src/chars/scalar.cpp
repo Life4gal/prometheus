@@ -7,6 +7,13 @@ using namespace gal::prometheus;
 
 namespace
 {
+	[[maybe_unused]] GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"chars.detect_encoding.scalar"> detect_encoding = []
+	{
+		using namespace chars;
+
+		make_test_detect_encoding<Scalar>();
+	};
+
 	[[maybe_unused]] GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"chars.latin.scalar"> latin = []
 	{
 		using namespace unit_test;
