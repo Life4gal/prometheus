@@ -328,6 +328,10 @@ set(
 		# COMMAND_LINE_PARSER
 		# =========================
 
+		${PROJECT_SOURCE_DIR}/src/command_line_parser/error.hpp
+		${PROJECT_SOURCE_DIR}/src/command_line_parser/regex.hpp
+		${PROJECT_SOURCE_DIR}/src/command_line_parser/option.hpp
+		${PROJECT_SOURCE_DIR}/src/command_line_parser/parser.hpp
 		${PROJECT_SOURCE_DIR}/src/command_line_parser/command_line_parser.hpp
 
 		# =========================
