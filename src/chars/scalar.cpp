@@ -3237,6 +3237,78 @@ namespace
 
 namespace gal::prometheus::chars
 {
+	[[nodiscard]] auto width_of(const EncodingType type) noexcept -> std::size_t
+	{
+		switch (type)
+		{
+			case EncodingType::UNKNOWN:
+			{
+				return 0;
+			}
+			case EncodingType::UTF8:
+			{
+				return 3;
+			}
+			case EncodingType::UTF16_LE:
+			case EncodingType::UTF16_BE:
+			{
+				return 2;
+			}
+			case EncodingType::UTF32_LE:
+			case EncodingType::UTF32_BE:
+			{
+				return 4;
+			}
+			default: { GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE(); } // NOLINT(clang-diagnostic-covered-switch-default)
+		}
+	}
+
+	[[nodiscard]] auto bom_of(const std::span<const char8_t> string) noexcept -> EncodingType
+	{
+		// https://en.wikipedia.org/wiki/Byte_order_mark#Byte-order_marks_by_encoding
+
+		const auto length = string.size();
+
+		if (length < 2)
+		{
+			return EncodingType::UNKNOWN;
+		}
+
+		if (string[0] == 0xff and string[1] == 0xfe)
+		{
+			if (length >= 4 and string[2] == 0x00 and string[3] == 0x00)
+			{
+				return EncodingType::UTF32_LE;
+			}
+			return EncodingType::UTF16_LE;
+		}
+
+		if (string[0] == 0xfe and string[1] == 0xff)
+		{
+			return EncodingType::UTF16_BE;
+		}
+
+		if (length >= 4 and string[0] == 0x00 and string[1] == 0x00 and string[2] == 0xfe and string[3] == 0xff)
+		{
+			return EncodingType::UTF32_BE;
+		}
+
+		if (length >= 3 and string[0] == 0xef and string[1] == 0xbb and string[2] == 0xbf)
+		{
+			return EncodingType::UTF8;
+		}
+
+		return EncodingType::UNKNOWN;
+	}
+
+	[[nodiscard]] auto bom_of(const std::span<const char> string) noexcept -> EncodingType
+	{
+		static_assert(sizeof(char) == sizeof(char8_t));
+
+		const auto* char8_string = GAL_PROMETHEUS_SEMANTIC_UNRESTRICTED_CHAR_POINTER_CAST(char8_t, string.data());
+		return bom_of({char8_string, string.size()});
+	}
+
 	namespace latin
 	{
 		auto validate(const pointer_type current, const pointer_type end) noexcept -> std::pair<std::ptrdiff_t, ErrorCode>
@@ -5807,5 +5879,76 @@ namespace gal::prometheus::chars
 				return write_utf16_be_correct(output, {input, std::char_traits<char_type>::length(input)});
 			}
 		}
+	}
+
+	[[nodiscard]] auto Scalar::encoding_of(const std::span<const char8_t> input) noexcept -> EncodingType
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+
+		if (const auto bom = bom_of(input);
+			bom != EncodingType::UNKNOWN)
+		{
+			return bom;
+		}
+
+		const auto input_length = input.size();
+
+		const auto it_input_begin = input.data();
+		// auto it_input_current = it_input_begin;
+		// const auto it_input_end = it_input_begin + input_length;
+
+		// utf8
+		bool utf8 = true;
+		// utf16
+		bool utf16 = (input_length % 2) == 0;
+		// utf32
+		bool utf32 = (input_length % 4) == 0;
+
+		// UTF8
+		if (utf8)
+		{
+			utf8 = not validate<CharsType::UTF8>(input).has_error();
+		}
+
+		// UTF16
+		if (utf16)
+		{
+			const auto* p16 = GAL_PROMETHEUS_SEMANTIC_UNRESTRICTED_CHAR_POINTER_CAST(utf16::char_type, it_input_begin);
+			utf16 = not validate<CharsType::UTF16_LE>({p16, input_length / 2}).has_error();
+		}
+
+		// UTF32
+		if (utf32)
+		{
+			const auto p32 = GAL_PROMETHEUS_SEMANTIC_UNRESTRICTED_CHAR_POINTER_CAST(utf32::char_type, it_input_begin);
+			utf32 = not validate<CharsType::UTF32>({p32, input_length / 4}).has_error();
+		}
+
+		auto all_possible = std::to_underlying(EncodingType::UNKNOWN);
+
+		if (utf8)
+		{
+			all_possible |= std::to_underlying(EncodingType::UTF8);
+		}
+
+		if (utf16)
+		{
+			all_possible |= std::to_underlying(EncodingType::UTF16_LE);
+		}
+
+		if (utf32)
+		{
+			all_possible |= std::to_underlying(EncodingType::UTF32_LE);
+		}
+
+		return static_cast<EncodingType>(all_possible);
+	}
+
+	[[nodiscard]] auto Scalar::encoding_of(const std::span<const char> input) noexcept -> EncodingType
+	{
+		static_assert(sizeof(char) == sizeof(char8_t));
+
+		const auto* char8_string = GAL_PROMETHEUS_SEMANTIC_UNRESTRICTED_CHAR_POINTER_CAST(char8_t, input.data());
+		return encoding_of({char8_string, input.size()});
 	}
 }

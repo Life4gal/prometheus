@@ -6767,7 +6767,14 @@ namespace gal::prometheus::chars
 
 	class Icelake
 	{
-		// public:
+	public:
+		// ===================================================
+		// encoding
+
+		[[nodiscard]] static auto encoding_of(std::span<const char8_t> input) noexcept -> EncodingType;
+
+		[[nodiscard]] static auto encoding_of(std::span<const char> input) noexcept -> EncodingType;
+
 		// 	// ===================================================
 		// 	// validate
 		//

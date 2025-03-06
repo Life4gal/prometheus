@@ -220,6 +220,10 @@ namespace gal::prometheus::chars
 		std::size_t output;
 	};
 
+	[[nodiscard]] auto width_of(EncodingType type) noexcept -> std::size_t;
+	[[nodiscard]] auto bom_of(std::span<const char8_t> string) noexcept -> EncodingType;
+	[[nodiscard]] auto bom_of(std::span<const char> string) noexcept -> EncodingType;
+
 	namespace latin
 	{
 		using input_type = input_type_of<CharsType::LATIN>;

@@ -117,8 +117,6 @@ namespace
 #include <chars/detail/icelake.utf8.hpp>
 #include <chars/detail/icelake.utf32.hpp>
 
-// #include <chars/deprecated/icelake.utf8.hpp>
-
 namespace
 {
 	namespace latin
@@ -6162,6 +6160,155 @@ namespace gal::prometheus::chars
 		{
 			return write_utf16_be_correct(output, {input, std::char_traits<char_type>::length(input)});
 		}
+	}
+
+	[[nodiscard]] auto Icelake::encoding_of(const std::span<const char8_t> input) noexcept -> EncodingType
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(input.data() != nullptr);
+
+		if (const auto bom = bom_of(input);
+			bom != EncodingType::UNKNOWN)
+		{
+			return bom;
+		}
+
+		const auto input_length = input.size();
+
+		const auto it_input_begin = input.data();
+		auto it_input_current = it_input_begin;
+		const auto it_input_end = it_input_begin + input_length;
+
+		// utf8
+		bool utf8 = true;
+		detail::utf8::icelake::avx512_utf8_checker checker{};
+		// utf16
+		bool utf16 = (input_length % 2) == 0;
+		bool utf16_ends_with_high = false;
+		// utf32
+		bool utf32 = (input_length % 4) == 0;
+
+		const auto do_check = [&]<bool Tail>(const data_type data) noexcept -> void
+		{
+			// utf8
+			const auto offset = _mm512_set1_epi32(static_cast<int>(0xffff'2000));
+			// utf16
+			const auto v_d800 = _mm512_set1_epi16(static_cast<short>(0xd800));
+			const auto v_0800 = _mm512_set1_epi16(0x0800);
+			const auto v_0400 = _mm512_set1_epi16(0x0400);
+			// utf32
+			// const auto offset = _mm512_set1_epi32(static_cast<int>(0xffff'2000));
+			const auto standard_max = _mm512_set1_epi32(0x0010'ffff);
+			const auto standard_offset_max = _mm512_set1_epi32(static_cast<int>(0xffff'f7ff));
+
+			// ::utf8::icelake::validate()
+			if (utf8)
+			{
+				if (not checker.check_data(data))
+				{
+					if constexpr (Tail)
+					{
+						checker.check_eof();
+					}
+
+					if (checker.has_error())
+					{
+						utf8 = false;
+					}
+				}
+			}
+
+			// ::utf16::icelake::validate()
+			if (utf16)
+			{
+				const auto diff = _mm512_sub_epi16(data, v_d800);
+				if (const auto surrogates = _mm512_cmplt_epu16_mask(diff, v_0800);
+					surrogates)
+				{
+					const auto high_surrogates = _mm512_cmplt_epu16_mask(diff, v_0400);
+					const auto low_surrogates = surrogates ^ high_surrogates;
+
+					if (((high_surrogates << 1) | +utf16_ends_with_high) != low_surrogates)
+					{
+						utf16 = false;
+					}
+					utf16_ends_with_high = (high_surrogates & 0x8000'0000) != 0;
+				}
+			}
+
+			// ::utf32::icelake::validate()
+			if (utf32)
+			{
+				const auto value_offset = _mm512_add_epi32(data, offset);
+
+				const auto outside_range = _mm512_cmpgt_epu32_mask(data, standard_max);
+				const auto surrogate_range = _mm512_cmpgt_epu32_mask(value_offset, standard_offset_max);
+
+				if (outside_range | surrogate_range)
+				{
+					utf32 = false;
+				}
+			}
+		};
+
+		while (it_input_current + ::utf8::advance_of_utf8 <= it_input_end)
+		{
+			#if GAL_PROMETHEUS_COMPILER_DEBUG
+			[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, it_input_current + ::utf8::advance_of_utf8};
+			#endif
+
+			const auto data = _mm512_loadu_si512(it_input_current);
+
+			do_check.operator()<false>(data);
+
+			it_input_current += ::utf8::advance_of_utf8;
+		}
+
+		const auto remaining = it_input_end - it_input_current;
+		GAL_PROMETHEUS_ERROR_ASSUME(remaining < ::utf8::advance_of_utf8);
+
+		if (remaining != 0)
+		{
+			#if GAL_PROMETHEUS_COMPILER_DEBUG
+			[[maybe_unused]] const auto debug_input_data = std::span{it_input_current, it_input_current + remaining};
+			#endif
+
+			const auto mask = _bzhi_u64(~static_cast<unsigned long long>(0), static_cast<unsigned int>(remaining));
+			const auto data = _mm512_maskz_loadu_epi8(mask, it_input_current);
+
+			do_check.operator()<true>(data);
+
+			it_input_current += remaining;
+		}
+
+		// ==================================================
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it_input_current == it_input_end);
+
+		auto all_possible = std::to_underlying(EncodingType::UNKNOWN);
+
+		if (utf8)
+		{
+			all_possible |= std::to_underlying(EncodingType::UTF8);
+		}
+
+		if (utf16)
+		{
+			all_possible |= std::to_underlying(EncodingType::UTF16_LE);
+		}
+
+		if (utf32)
+		{
+			all_possible |= std::to_underlying(EncodingType::UTF32_LE);
+		}
+
+		return static_cast<EncodingType>(all_possible);
+	}
+
+	[[nodiscard]] auto Icelake::encoding_of(const std::span<const char> input) noexcept -> EncodingType
+	{
+		static_assert(sizeof(char) == sizeof(char8_t));
+
+		const auto* char8_string = GAL_PROMETHEUS_SEMANTIC_UNRESTRICTED_CHAR_POINTER_CAST(char8_t, input.data());
+		return encoding_of({char8_string, input.size()});
 	}
 }
 
