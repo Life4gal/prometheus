@@ -11,7 +11,7 @@
 
 #include <prometheus/macro.hpp>
 
-#if __cpp_static_call_operator >= 202207L
+#if defined(__cpp_static_call_operator) and __cpp_static_call_operator >= 202207L
 #define FUNCTOR_WORKAROUND_OPERATOR_STATIC static
 #define FUNCTOR_WORKAROUND_OPERATOR_CONST
 #define FUNCTOR_WORKAROUND_OPERATOR_THIS(type) type::
@@ -152,6 +152,9 @@ namespace gal::prometheus::functional
 	{
 		constexpr explicit overloaded(Ts&&... ts) noexcept((std::is_nothrow_constructible_v<Ts, decltype(ts)> and ...))
 			: Ts{std::forward<Ts>(ts)}... {}
+
+		// This makes all overloads viable to participate in the resolution
+		using Ts::operator()...;
 	};
 
 	namespace functor

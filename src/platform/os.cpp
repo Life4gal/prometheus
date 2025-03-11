@@ -4,11 +4,15 @@
 // found in the top-level directory of this distribution.
 
 #include <string>
-#include <print>
-#include <format>
 #include <system_error>
 
-#include <prometheus/macro.hpp>
+// fixme
+#if __has_include(<print>)
+#include <print>
+#else
+#include <format>
+#include <cstdio>
+#endif
 
 #include <platform/os.hpp>
 
@@ -73,9 +77,10 @@ namespace gal::prometheus::platform
 				{
 					return true;
 				}
-				return false;
 			}
 		}
+
+		return false;
 
 		#elif defined(GAL_PROMETHEUS_PLATFORM_DARWIN)
 
@@ -88,7 +93,8 @@ namespace gal::prometheus::platform
 	    mib[2] = KERN_PROC_PID;
 	    mib[3] = getpid();
 
-	    if (sysctl(mib, 4, &info, &size, NULL, 0) == -1) {
+	    if (sysctl(mib, 4, &info, &size, NULL, 0) == -1)
+	    {
 	        return false;
 	    }
 
@@ -101,6 +107,12 @@ namespace gal::prometheus::platform
 
 	auto breakpoint_message(std::string_view message) noexcept -> void
 	{
+		#if __has_include(<print>)
 		std::println(stderr, "BREAKPOINT: {}", message);
+		#else
+		const auto output = std::format("BREAKPOINT: {}", message);
+		std::fputs(output.c_str(), stderr);
+		std::putc('\n', stderr);
+		#endif
 	}
 }

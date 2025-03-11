@@ -15,7 +15,7 @@
 
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
-#if __cpp_static_call_operator >= 202207L
+#if defined(__cpp_static_call_operator) and __cpp_static_call_operator >= 202207L
 #define RANDOM_WORKAROUND_OPERATOR_STATIC static
 #define RANDOM_WORKAROUND_OPERATOR_CONST
 #define RANDOM_WORKAROUND_OPERATOR_THIS(type) type::

@@ -165,8 +165,10 @@ namespace gal::prometheus::meta
 		template<std::size_t N>
 		constexpr auto nth_element_impl = []<std::size_t... Index>(std::index_sequence<Index...>) noexcept -> decltype(auto)
 		{
-			return []<typename NthType>(placeholder<Index>&&..., NthType&& nth, auto&&...) noexcept -> decltype(auto)
+			return []<typename NthType>(placeholder<Index>&&... p, NthType&& nth, auto&&...) noexcept -> decltype(auto)
 			{
+				((std::ignore = std::move(p)), ...);
+
 				return std::forward<NthType>(nth);
 			};
 		}(std::make_index_sequence<N>{});
@@ -352,7 +354,17 @@ namespace gal::prometheus::meta
 				};
 
 				std::size_t index;
+
+				// warning : expression result unused [-Wunused-value]
+				// (((index = f.template operator()<Index>()) == member_index_unknown) and ...);
+				//  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~     ^
+				GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+				GAL_PROMETHEUS_COMPILER_DISABLE_CLANG_WARNING(-Wunused-value)
+
 				(((index = f.template operator()<Index>()) == member_index_unknown) and ...);
+
+				GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
+
 				return index;
 			}(std::make_index_sequence<member_size<T>()>{});
 		}
@@ -373,7 +385,17 @@ namespace gal::prometheus::meta
 				};
 
 				std::size_t index;
+
+				// warning : expression result unused [-Wunused-value]
+				// (((index = f.template operator()<Index>()) == member_index_unknown) and ...);
+				//  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~     ^
+				GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+				GAL_PROMETHEUS_COMPILER_DISABLE_CLANG_WARNING(-Wunused-value)
+
 				(((index = f.template operator()<Index>()) == member_index_unknown) and ...);
+
+				GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
+
 				return index;
 			}(std::make_index_sequence<member_size<T>()>{});
 		}

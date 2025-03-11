@@ -2859,13 +2859,25 @@ namespace gal::prometheus::unit_test::dispatcher
 			// const vector<string>&
 			constexpr auto do_push(const test_categories_view_type categories) noexcept -> void
 			{
+				#if __has_cpp_attribute(cpp_lib_containers_ranges) and cpp_lib_containers_ranges >= 202202L
 				categories_.append_range(categories.get());
+				#else
+				categories_.reserve(categories_.size() + categories.get().size());
+				categories_.insert(categories_.end(), categories.get().begin(), categories.get().end());
+				#endif
 			}
 
 			// vector<string>&&
 			constexpr auto do_push(test_categories_type&& categories) noexcept -> void
 			{
+				#if __has_cpp_attribute(cpp_lib_containers_ranges) and cpp_lib_containers_ranges >= 202202L
 				categories_.append_range(std::move(categories));
+				#else
+				categories_.reserve(categories_.size() + categories.size());
+				categories_.insert(categories_.end(), std::make_move_iterator(categories.begin()), std::make_move_iterator(categories.end()));
+				// silence warning
+				(void)std::move(categories);
+				#endif
 			}
 
 			[[nodiscard]] constexpr auto do_move() && noexcept -> D&&

@@ -30,11 +30,23 @@ namespace gal::prometheus::i18n
 		ranges_type ranges_;
 
 	public:
+		#if defined(__cpp_explicit_this_parameter) and __cpp_explicit_this_parameter >= 202110L
 		template<typename Self>
 		[[nodiscard]] auto range(this Self&& self) noexcept -> decltype(auto)
 		{
 			return std::forward<Self>(self).ranges_;
 		}
+		#else
+		[[nodiscard]] auto range() const & noexcept -> const ranges_type&
+		{
+			return ranges_;
+		}
+
+		[[nodiscard]] auto range() && noexcept -> ranges_type&&
+		{
+			return std::move(ranges_);
+		}
+		#endif
 
 		// ASCII
 		auto ascii() & noexcept -> RangeBuilder&;

@@ -195,7 +195,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_latin);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_latin);
 
 				if (remaining != 0)
 				{
@@ -265,7 +265,7 @@ namespace
 					}
 
 					const auto remaining = it_input_end - it_input_current;
-					GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf8);
+					GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf8);
 
 					if (remaining != 0)
 					{
@@ -448,17 +448,6 @@ namespace
 					it_input_current += data_length;
 					it_output_current += length_total;
 				};
-				const auto write_pure = functional::overloaded{
-						[&](const data_type data) noexcept -> void
-						{
-							_mm512_storeu_si512(it_output_current, data);
-						},
-						[&](const data_type data, const std::size_t data_length) noexcept -> void
-						{
-							const auto mask = _bzhi_u64(~static_cast<unsigned long long>(0), static_cast<unsigned int>(data_length));
-							_mm512_mask_storeu_epi8(it_output_current, mask, data);
-						}
-				};
 
 				// if there's at least 128 bytes remaining, we don't need to mask the output
 				while (it_input_current + 2 * advance_of_utf8 <= it_input_end)
@@ -471,7 +460,7 @@ namespace
 
 					if constexpr (Pure)
 					{
-						write_pure(data);
+						_mm512_storeu_si512(it_output_current, data);
 
 						it_input_current += advance_of_utf8;
 						it_output_current += advance_of_utf8;
@@ -481,7 +470,7 @@ namespace
 						if (const auto sign = common::sign_of<CharsType::LATIN>(data);
 							sign.pure())
 						{
-							write_pure(data);
+							_mm512_storeu_si512(it_output_current, data);
 
 							it_input_current += advance_of_utf8;
 							it_output_current += advance_of_utf8;
@@ -504,7 +493,7 @@ namespace
 
 					if constexpr (Pure)
 					{
-						write_pure(data);
+						_mm512_storeu_si512(it_output_current, data);
 
 						it_input_current += advance_of_utf8;
 						it_output_current += advance_of_utf8;
@@ -516,7 +505,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf8);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf8);
 
 				// with the last 64 bytes, the input also needs to be masked
 				if (remaining != 0)
@@ -530,7 +519,8 @@ namespace
 
 					if constexpr (Pure)
 					{
-						write_pure(data, static_cast<std::size_t>(remaining));
+						const auto out_mask = _bzhi_u64(~static_cast<unsigned long long>(0), static_cast<unsigned int>(remaining));
+						_mm512_mask_storeu_epi8(it_output_current, out_mask, data);
 
 						it_input_current += remaining;
 						it_output_current += remaining;
@@ -600,7 +590,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf16);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf16);
 
 				if (remaining != 0)
 				{
@@ -677,7 +667,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf32);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf32);
 
 				if (remaining != 0)
 				{
@@ -811,7 +801,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf8);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf8);
 
 				if (remaining != 0)
 				{
@@ -914,7 +904,7 @@ namespace
 					result_length -= _mm512_reduce_add_epi64(unrolled_length);
 
 					const auto remaining = it_input_end - it_input_current;
-					GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance);
+					GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance);
 
 					if (remaining != 0)
 					{
@@ -945,7 +935,7 @@ namespace
 					}
 
 					const auto remaining = it_input_end - it_input_current;
-					GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance);
+					GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance);
 
 					if (remaining != 0)
 					{
@@ -1028,6 +1018,11 @@ namespace
 						{
 							return _mm512_loadu_si512(current);
 						}
+
+						// warning: no return statement in function returning non-void [-Wreturn-type]
+						#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+						GAL_PROMETHEUS_ERROR_UNREACHABLE();
+						#endif
 					}();
 
 					const auto write_pure = [&]() noexcept -> void
@@ -1139,7 +1134,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_latin);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_latin);
 
 				if (remaining != 0)
 				{
@@ -1267,6 +1262,11 @@ namespace
 						{
 							return _mm512_loadu_si512(it_input_current);
 						}
+
+						// warning: no return statement in function returning non-void [-Wreturn-type]
+						#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+						GAL_PROMETHEUS_ERROR_UNREACHABLE();
+						#endif
 					}();
 
 					const auto write_pure = [&]() noexcept -> void
@@ -1372,6 +1372,11 @@ namespace
 								{
 									return out;
 								}
+
+								// warning: no return statement in function returning non-void [-Wreturn-type]
+								#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+								GAL_PROMETHEUS_ERROR_UNREACHABLE();
+								#endif
 							}();
 
 							const auto mask_pattern_1 = _kshiftli_mask64(mask_byte_234, 1);
@@ -1482,6 +1487,11 @@ namespace
 									{
 										return _pdep_u64(0xffff'ffff, mend);
 									}
+
+									// warning: no return statement in function returning non-void [-Wreturn-type]
+									#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+									GAL_PROMETHEUS_ERROR_UNREACHABLE();
+									#endif
 								}();
 
 								const auto num_out = std::popcount(mask_processed);
@@ -1513,6 +1523,11 @@ namespace
 								{
 									return out;
 								}
+
+								// warning: no return statement in function returning non-void [-Wreturn-type]
+								#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+								GAL_PROMETHEUS_ERROR_UNREACHABLE();
+								#endif
 							}();
 
 							const auto last_and_third = _mm512_maskz_compress_epi8(mend, mask_identity);
@@ -1612,6 +1627,11 @@ namespace
 								{
 									return _pdep_u64(m, mend);
 								}
+
+								// warning: no return statement in function returning non-void [-Wreturn-type]
+								#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+								GAL_PROMETHEUS_ERROR_UNREACHABLE();
+								#endif
 							}();
 
 							const auto num_out = std::popcount(mask_processed);
@@ -1636,6 +1656,11 @@ namespace
 							{
 								return _knot_mask64(mask_byte_234);
 							}
+
+							// warning: no return statement in function returning non-void [-Wreturn-type]
+							#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+							GAL_PROMETHEUS_ERROR_UNREACHABLE();
+							#endif
 						}();
 
 						// on top of -0xc0 we subtract -2 which we get back later of the continuation byte tags
@@ -1807,7 +1832,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance);
 
 				if (remaining != 0)
 				{
@@ -2074,7 +2099,7 @@ namespace
 
 				{
 					const auto remaining = it_input_end - it_valid_input_current;
-					GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance);
+					GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance);
 
 					if (remaining != 0)
 					{
@@ -2108,7 +2133,7 @@ namespace
 					);
 
 					const auto remaining = it_input_end - it_input_current;
-					GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance);
+					GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance);
 
 					if (remaining != 0)
 					{
@@ -2320,7 +2345,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf16);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf16);
 
 				if (remaining != 0)
 				{
@@ -2420,7 +2445,7 @@ namespace
 					}
 
 					const auto remaining = it_input_end - it_input_current;
-					GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf8);
+					GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf8);
 
 					if (remaining != 0)
 					{
@@ -2460,7 +2485,7 @@ namespace
 					}
 
 					const auto remaining = it_input_end - it_input_current;
-					GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf32);
+					GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf32);
 
 					if (remaining != 0)
 					{
@@ -2573,7 +2598,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_latin);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_latin);
 
 				if (remaining != 0)
 				{
@@ -2918,7 +2943,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf8);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf8);
 
 				if (remaining != 0)
 				{
@@ -3048,6 +3073,8 @@ namespace
 						}
 						else
 						{
+							std::ignore = data_mask;
+
 							const auto high = _mm512_cmpeq_epi16_mask(v, v_0000_d800);
 
 							return std::make_pair(high, low);
@@ -3260,7 +3287,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf32);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf32);
 
 				if (remaining != 0)
 				{
@@ -3334,7 +3361,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf16);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf16);
 
 				if (remaining != 0)
 				{
@@ -3446,7 +3473,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf32);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf32);
 
 				if (remaining != 0)
 				{
@@ -3538,7 +3565,7 @@ namespace
 					}
 
 					const auto remaining = it_input_end - it_input_current;
-					GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf8);
+					GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf8);
 
 					if (remaining != 0)
 					{
@@ -3578,7 +3605,7 @@ namespace
 					}
 
 					const auto remaining = it_input_end - it_input_current;
-					GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf16);
+					GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf16);
 
 					if (remaining != 0)
 					{
@@ -3691,7 +3718,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_latin);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_latin);
 
 				if (remaining != 0)
 				{
@@ -4087,7 +4114,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf8);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf8);
 
 				if (remaining != 0)
 				{
@@ -4345,7 +4372,7 @@ namespace
 				}
 
 				const auto remaining = it_input_end - it_input_current;
-				GAL_PROMETHEUS_ERROR_ASSUME(remaining < advance_of_utf16);
+				GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < advance_of_utf16);
 
 				if (remaining != 0)
 				{
@@ -6264,7 +6291,7 @@ namespace gal::prometheus::chars
 		}
 
 		const auto remaining = it_input_end - it_input_current;
-		GAL_PROMETHEUS_ERROR_ASSUME(remaining < ::utf8::advance_of_utf8);
+		GAL_PROMETHEUS_ERROR_ASSUME(static_cast<std::size_t>(remaining) < ::utf8::advance_of_utf8);
 
 		if (remaining != 0)
 		{

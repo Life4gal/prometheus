@@ -263,7 +263,11 @@ namespace gal::prometheus::string
 				}
 				else
 				{
+					#if __has_cpp_attribute(cpp_lib_containers_ranges) and cpp_lib_containers_ranges >= 202202L
 					pool_.insert_range(pool_.end(), p.pool_);
+					#else
+					pool_.insert(pool_.end(), p.pool_.begin(), p.pool_.end());
+					#endif
 				}
 
 				std::ranges::inplace_merge(

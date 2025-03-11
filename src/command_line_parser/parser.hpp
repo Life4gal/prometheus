@@ -8,7 +8,14 @@
 #include <algorithm>
 #include <memory>
 #include <unordered_map>
+
+// fixme
+#if __has_include(<print>)
 #include <print>
+#else
+#include <format>
+#include <cstdio>
+#endif
 
 #include <platform/environment.hpp>
 #include <string/string_pool.hpp>
@@ -237,7 +244,13 @@ namespace gal::prometheus::clp
 					CommandLineOptionUnrecognizedError::panic(options);
 				}
 
+				#if __has_include(<print>)
 				std::println(stderr, "Unrecognized option:\n {}", options);
+				#else
+				const auto output = std::format("Unrecognized option:\n {}", options);
+				std::fputs(output.c_str(), stderr);
+				std::putc('\n', stderr);
+				#endif
 			}
 		}
 

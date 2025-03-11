@@ -8,6 +8,9 @@
 #include <regex>
 #include <ranges>
 #include <type_traits>
+#include <charconv>
+#include <cstdint>
+#include <algorithm>
 
 #if CLP_USE_EXPECTED
 #include <expected>
@@ -15,7 +18,11 @@
 #include <optional>
 #endif
 
+#include <prometheus/macro.hpp>
+
+#if CLP_USE_EXPECTED
 #include <meta/name.hpp>
+#endif
 
 namespace gal::prometheus::clp::regex
 {
@@ -369,8 +376,7 @@ namespace gal::prometheus::clp::regex
 	struct parser
 	{
 		// boolean
-		template<typename T, string_type Range>
-			requires std::is_same_v<T, bool>
+		template<std::same_as<bool>, string_type Range>
 		[[nodiscard]] constexpr static auto parse(const Range& range) ->
 			#if CLP_USE_EXPECTED
 			std::expected<bool, std::string>
@@ -467,6 +473,33 @@ namespace gal::prometheus::clp::regex
 			#endif
 		}
 
+		/**
+		 * @note MSVC is more permissive in how it handles two-phase lookup and constraint satisfaction,
+		 * it effectively defers or relaxes some aspects of template instantiation until it sees the exact call.
+		 * In contrast, Clang (and GCC) more strictly follows the standard rules for two-phase lookup and concepts.
+		 * Consequently, when Clang sees the requires-expression involving something like(parser::parse):
+		 * @code
+		 * parser::parse<std::ranges::range_value_t<OutRange>>(
+		 *		std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(
+		 *			regex::parse_list(range).value()
+		 *		)>>>()
+		 * );
+		 * @endcode
+		 * it attempts to instantiate and check this call immediately during constraint checks.
+		 * If no matching function was found (see no valid definition for that template function yet), Clang flags it as an error.
+		 * MSVC, on the other hand, either does not perform this check as strictly or delays it,
+		 * thus allowing the code to compile successfully in scenarios where Clang (and GCC) would reject it.
+		 */
+
+		// string / construct from string
+		// not list, avoid ambiguous
+		template<typename T, string_type Range>
+			requires std::is_constructible_v<T, Range>
+		[[nodiscard]] constexpr static auto parse(const Range& range) noexcept(std::is_nothrow_constructible_v<T, Range>) -> T
+		{
+			return T{range};
+		}
+
 		// list
 		// not string, avoid ambiguous
 		template<std::ranges::range OutRange, string_type Range>
@@ -487,10 +520,13 @@ namespace gal::prometheus::clp::regex
 				return;
 			}
 
-			if constexpr (const auto view = *list;
+			if constexpr (const auto& view = list.value();
 				std::is_same_v<
-					std::remove_cvref_t<decltype(parser::parse<std::ranges::range_value_t<OutRange>>(
-						std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(view)>>>()))>, //
+					std::remove_cvref_t<decltype(
+						parser::parse<std::ranges::range_value_t<OutRange>>(
+							std::declval<std::ranges::range_const_reference_t<std::remove_cvref_t<decltype(view)>>>()
+						)
+					)>, //
 					std::ranges::range_value_t<OutRange>
 				> //
 			)
@@ -550,7 +586,7 @@ namespace gal::prometheus::clp::regex
 			requires(not std::is_constructible_v<OutRange, Range>) and
 			        requires
 			        {
-				        parser::parse(std::declval<const Range&>(), std::declval<OutRange&>());
+				        parser::parse<OutRange, Range>(std::declval<const Range&>(), std::declval<OutRange&>());
 			        }
 		[[nodiscard]] constexpr static auto parse(const Range& range) -> OutRange
 		{
@@ -559,15 +595,6 @@ namespace gal::prometheus::clp::regex
 			parser::parse(range, result);
 
 			return result;
-		}
-
-		// string / construct from string
-		// not list, avoid ambiguous
-		template<typename T, string_type Range>
-			requires std::is_constructible_v<T, Range>
-		[[nodiscard]] constexpr static auto parse(const Range& range) noexcept(std::is_nothrow_constructible_v<T, Range>) -> T
-		{
-			return T{range};
 		}
 	};
 }

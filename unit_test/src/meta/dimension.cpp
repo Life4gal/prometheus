@@ -5,6 +5,11 @@ using namespace gal::prometheus;
 
 namespace
 {
+	GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+	// warning: missing initializer for member ‘{anonymous}::Type::<anonymous>’ [-Wmissing-field-initializers]
+	// constexpr Type value{.x = 42, .y = 1337};
+	GAL_PROMETHEUS_COMPILER_DISABLE_GNU_WARNING(-Wmissing-field-initializers)
+
 	namespace from
 	{
 		struct point_float
@@ -1710,4 +1715,6 @@ namespace
 		// point_x <= value
 		static_assert(std::ranges::all_of(do_x(px1, 13579), std::identity{}));
 	}
+
+	GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
 }

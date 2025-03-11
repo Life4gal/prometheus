@@ -1,6 +1,10 @@
 // meta::member
 #include <meta/meta.hpp>
 
+#if not(defined(GAL_PROMETHEUS_COMPILER_MSVC) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL))
+#include <unit_test/unit_test.hpp>
+#endif
+
 #include <string>
 
 using namespace gal::prometheus;
@@ -51,7 +55,10 @@ namespace
 		std::string c_;
 
 		friend struct meta::extern_accessor<MyTupleLike>;
-		constexpr MyTupleLike() noexcept = default;
+
+		constexpr MyTupleLike() noexcept
+			: a_{},
+			  b_{} {}
 
 	public:
 		constexpr explicit MyTupleLike(const const_left_reference a, const right_reference b, std::string c) noexcept
@@ -193,6 +200,8 @@ namespace
 		}
 	}
 
+	#if defined(GAL_PROMETHEUS_COMPILER_MSVC) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
+
 	static_assert(test_clr<MyTupleLike, 0>() == true);
 	static_assert(test_clr<MyTupleLike, 1>() == false);
 	static_assert(test_clr<MyTupleLike, 2>() == true);
@@ -206,6 +215,41 @@ namespace
 	static_assert(test_rr<my_aggregate, 0>() == false);
 	static_assert(test_rr<my_aggregate, 1>() == true);
 	static_assert(test_rr<my_aggregate, 2>() == true);
+
+	#else
+
+	// error: non-constant condition for static assertion
+	// static_assert(test_clr<MyTupleLike, N>() == true);
+	// ~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~
+	// error: accessing ‘std::__cxx11::basic_string<char>::<unnamed union>::_M_allocated_capacity’ member instead of initialized ‘std::__cxx11::basic_string<char>::<unnamed union>::_M_local_buf’ member in constant expression
+	// error: non-constant condition for static assertion
+
+	[[maybe_unused]] GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"meta.member.member_of_index"> member_of_index = []
+	{
+		using namespace unit_test;
+
+		"MyTupleLike"_test = []
+		{
+			expect(test_clr<MyTupleLike, 0>() == "equal"_b) << fatal;
+			expect(test_clr<MyTupleLike, 1>() != "not equal"_b) << fatal;
+			expect(test_clr<MyTupleLike, 2>() == "equal"_b) << fatal;
+			expect(test_rr<MyTupleLike, 0>() != "not equal"_b) << fatal;
+			expect(test_rr<MyTupleLike, 1>() == "equal"_b) << fatal;
+			expect(test_rr<MyTupleLike, 2>() == "equal"_b) << fatal;
+		};
+
+		"my_aggregate"_test = []
+		{
+			expect(test_clr<my_aggregate, 0>() == "equal"_b) << fatal;
+			expect(test_clr<my_aggregate, 1>() != "not equal"_b) << fatal;
+			expect(test_clr<my_aggregate, 2>() == "equal"_b) << fatal;
+			expect(test_rr<my_aggregate, 0>() != "not equal"_b) << fatal;
+			expect(test_rr<my_aggregate, 1>() == "equal"_b) << fatal;
+			expect(test_rr<my_aggregate, 2>() == "equal"_b) << fatal;
+		};
+	};
+
+	#endif
 
 	static_assert(meta::name_of_member<0, MyTupleLike>() == "a_");
 	static_assert(meta::name_of_member<1, MyTupleLike>() == "b_");
@@ -259,9 +303,11 @@ namespace
 				{
 					// std::string
 					o.append("-");
-					o.append_range(o1);
+					// o.append_range(o1);
+					o.insert(o.end(), o1.begin(), o1.end());
 					o.append("-");
-					o.append_range(o2);
+					// o.append_range(o2);
+					o.insert(o.end(), o2.begin(), o2.end());
 				}
 				else
 				{
@@ -276,9 +322,11 @@ namespace
 		const auto& [o_a, o_b, o_c] = object;
 		std::string s{c};
 		s.append("-");
-		s.append_range(c);
+		// s.append_range(c);
+		s.insert(s.end(), c.begin(), c.end());
 		s.append("-");
-		s.append_range(c);
+		// s.append_range(c);
+		s.insert(s.end(), c.begin(), c.end());
 
 		return //
 				o_a.id == a.id + (a.id + a.id) and
@@ -286,8 +334,35 @@ namespace
 				o_c == s;
 	}
 
+	#if defined(GAL_PROMETHEUS_COMPILER_MSVC) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
+
 	static_assert(test_walk<MyTupleLike>() == true);
 	static_assert(test_walk<my_aggregate>() == true);
+
+	#else
+
+	// error: non-constant condition for static assertion
+	// static_assert(test_walk<MyTupleLike>() == true);
+	// ~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~
+	// error: accessing ‘std::__cxx11::basic_string<char>::<unnamed union>::_M_allocated_capacity’ member instead of initialized ‘std::__cxx11::basic_string<char>::<unnamed union>::_M_local_buf’ member in constant expression
+	// error: non-constant condition for static assertion
+
+	[[maybe_unused]] GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"meta.member.member_walk"> member_walk = []
+	{
+		using namespace unit_test;
+
+		"MyTupleLike"_test = []
+		{
+			expect(test_walk<MyTupleLike>() == "equal"_b) << fatal;
+		};
+
+		"my_aggregate"_test = []
+		{
+			expect(test_walk<my_aggregate>() == "equal"_b) << fatal;
+		};
+	};
+
+	#endif
 
 	template<typename T>
 	[[nodiscard]] constexpr auto test_walk_until() noexcept -> bool
@@ -319,9 +394,11 @@ namespace
 				{
 					// std::string
 					o.append("-");
-					o.append_range(o1);
+					// o.append_range(o1);
+					o.insert(o.end(), o1.begin(), o1.end());
 					o.append("-");
-					o.append_range(o2);
+					// o.append_range(o2);
+					o.insert(o.end(), o2.begin(), o2.end());
 					return true;
 				}
 				else
@@ -342,6 +419,33 @@ namespace
 				o_c == c;
 	}
 
+	#if defined(GAL_PROMETHEUS_COMPILER_MSVC) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
+
 	static_assert(test_walk_until<MyTupleLike>() == true);
 	static_assert(test_walk_until<my_aggregate>() == true);
+
+	#else
+
+	// error: non-constant condition for static assertion
+	// static_assert(test_walk_until<MyTupleLike>() == true);
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~
+	// error: accessing ‘std::__cxx11::basic_string<char>::<unnamed union>::_M_allocated_capacity’ member instead of initialized ‘std::__cxx11::basic_string<char>::<unnamed union>::_M_local_buf’ member in constant expression
+	// error: non-constant condition for static assertion
+
+	[[maybe_unused]] GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"meta.member.member_walk_until"> member_walk_until = []
+	{
+		using namespace unit_test;
+
+		"MyTupleLike"_test = []
+		{
+			expect(test_walk_until<MyTupleLike>() == "equal"_b) << fatal;
+		};
+
+		"my_aggregate"_test = []
+		{
+			expect(test_walk_until<my_aggregate>() == "equal"_b) << fatal;
+		};
+	};
+
+	#endif
 }

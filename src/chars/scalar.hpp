@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 #include <chars/def.hpp>
 
 namespace gal::prometheus::chars

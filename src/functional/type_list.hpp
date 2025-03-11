@@ -225,7 +225,7 @@ namespace gal::prometheus::functional
 			}
 
 			template<template<typename> typename Prediction>
-				requires(list{}.any<Prediction>())
+				requires(list::any<Prediction>())
 			[[nodiscard]] constexpr static auto index_of() noexcept -> std::size_t
 			{
 				return index_of_impl<0, Prediction, Ts...>::value;

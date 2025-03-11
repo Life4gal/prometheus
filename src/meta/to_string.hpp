@@ -34,12 +34,19 @@ namespace gal::prometheus::meta
 			if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}({})", meta::name_of<type>(), t); }
 			else { std::format_to(std::back_inserter(out), "{}", t); }
 		}
-		// appendable
-		// note: prefer formattable than appendable
-		else if constexpr (requires { out.append(t); }) { out.append(t); }
-		else if constexpr (requires { out.emplace_back(t); }) { out.emplace_back(t); }
-		else if constexpr (requires { out.push_back(t); }) { out.push_back(t); }
-		else if constexpr (requires { out += t; }) { out += t; }
+		// // appendable
+		// // note: prefer formattable than appendable
+		// else if constexpr (requires { out.append(t); }) { out.append(t); }
+		// else if constexpr (requires { out.emplace_back(t); }) { out.emplace_back(t); }
+		//
+		// GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
+		// GAL_PROMETHEUS_COMPILER_DISABLE_MSVC_WARNING(4244)
+		//
+		// else if constexpr (requires { out.push_back(t); }) { out.push_back(t); }
+		//
+		// GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
+		//
+		// else if constexpr (requires { out += t; }) { out += t; }
 		// construct from T
 		else if constexpr (std::is_constructible_v<StringType, type>)
 		{
@@ -80,7 +87,7 @@ namespace gal::prometheus::meta
 			if constexpr (ContainsTypeName) { std::format_to(std::back_inserter(out), "{}(", meta::name_of<type>()); }
 			// address
 			std::format_to(std::back_inserter(out), "0x{:x} => ", reinterpret_cast<std::uintptr_t>(t));
-			// sub-element does not contains type name.
+			// sub-element does not contain type name.
 			meta::to_string<StringType, false>(*t, out);
 			if constexpr (ContainsTypeName) { out.push_back(')'); }
 			// }
@@ -95,7 +102,7 @@ namespace gal::prometheus::meta
 				t,
 				[&out]<typename E>(const E& element) noexcept -> decltype(auto)
 				{
-					// sub-element does not contains type name.
+					// sub-element does not contain type name.
 					meta::to_string<StringType, false>(element, out);
 					out.push_back(',');
 				});
@@ -115,7 +122,7 @@ namespace gal::prometheus::meta
 					[&out]<std::size_t Index, typename E>(const E& element) noexcept -> void
 					{
 						std::format_to(std::back_inserter(out), ".{} = ", meta::name_of_member<type, Index>());
-						// sub-element does not contains type name.
+						// sub-element does not contain type name.
 						meta::to_string<StringType, false>(element, out);
 						out.push_back(',');
 					},

@@ -3,10 +3,13 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
+// fixme
+#if __has_include(<print>)
 #include <print>
+#else
 #include <format>
-
-#include <prometheus/macro.hpp>
+#include <cstdio>
+#endif
 
 #include <platform/exception.hpp>
 
@@ -18,6 +21,7 @@ namespace gal::prometheus::platform
 		const auto& location = where();
 		const auto& stacktrace = when();
 
+		#if __has_include(<print>)
 		std::println(
 			stderr,
 			"Error occurs while invoke function:\n{}\nat {}:{}\nReason:\n{}\nStack trace:\n{}",
@@ -27,5 +31,16 @@ namespace gal::prometheus::platform
 			message,
 			stacktrace
 		);
+		#else
+		const auto output = std::format(
+			"Error occurs while invoke function:\n{}\nat {}:{}\nReason:\n{}\nStack trace:\n{}",
+			location.function_name(),
+			location.file_name(),
+			location.line(),
+			message,
+			stacktrace
+		);
+		std::fputs(output.c_str(), stderr);
+		#endif
 	}
 }

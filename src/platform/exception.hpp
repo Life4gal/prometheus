@@ -7,10 +7,52 @@
 
 #include <string>
 #include <source_location>
-#include <stacktrace>
 #include <utility>
 
 #include <prometheus/macro.hpp>
+
+// todo
+#if (defined(GAL_PROMETHEUS_COMPILER_GNU) or defined(GAL_PROMETHEUS_COMPILER_CLANG)) and (not defined(_GLIBCXX_HAVE_STACKTRACE) or not _GLIBCXX_HAVE_STACKTRACE)
+#include <format>
+
+namespace std
+{
+	class stacktrace // NOLINT(*-dcl58-cpp)
+	{
+	public:
+		[[nodiscard]] static auto current() noexcept -> stacktrace
+		{
+			return {};
+		}
+
+		stacktrace() noexcept = default;
+		~stacktrace() noexcept = default;
+		stacktrace(const stacktrace&) noexcept = default;
+		auto operator=(const stacktrace&) noexcept -> stacktrace& = default;
+		stacktrace(stacktrace&&) noexcept = default;
+		auto operator=(stacktrace&&) noexcept -> stacktrace& = default;
+	};
+
+	template<>
+	struct formatter<stacktrace> // NOLINT(cert-dcl58-cpp)
+	{
+		template<typename ParseContext>
+		constexpr auto parse(ParseContext& context) const noexcept -> auto
+		{
+			(void)this;
+			return context.begin();
+		}
+
+		template<typename FormatContext>
+		auto format(const stacktrace&, FormatContext& context) const noexcept -> auto
+		{
+			return std::format_to(context.out(), "std::stacktrace not supported yet");
+		}
+	};
+}
+#else
+#include <stacktrace>
+#endif
 
 namespace gal::prometheus::platform
 {

@@ -6,8 +6,9 @@
 #pragma once
 
 #include <type_traits>
-#include <concepts>
+#include <ranges>
 #include <functional>
+#include <format>
 
 #include <prometheus/macro.hpp>
 
@@ -387,25 +388,93 @@ namespace gal::prometheus::unit_test::operands
 		constexpr explicit OperandIdentityString(const value_type value) noexcept
 			: value_{value} {}
 
-		template<typename StringType>
-		[[nodiscard]] friend constexpr auto operator==(const OperandIdentityString& identity, StringType&& string) noexcept -> decltype(auto) //
-			requires requires
-			{
-				identity.value_.string == std::forward<StringType>(string);
-			}
+		// error : member access into incomplete type 'const OperandIdentityString'
+		// identity.value_.string == std::forward<StringType>(string);
+		//             ^
+		#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+
+		[[nodiscard]] constexpr auto identity() const noexcept -> identity_type
 		{
-			return identity.value_.string == std::forward<StringType>(string);
+			return value_.string;
+		}
+
+		#else
+
+		// recursively required by substitution of ‘template<class T> constexpr bool operands::operator==(const OperandIdentityString&, const T&) [with T = operands::OperandIdentityString]’
+		// error: satisfaction of atomic constraint ‘requires{identity->value_.string == string;} [with StringType = StringType]’ depends on itself
+		// requires requires
+		//              ^~~~~~
+		// {
+		// ~
+		//         identity.value_.string == string;
+		//         ~~~~~~~~~~~~~~~~~~~~
+		// }
+		// ~
+		#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+
+		template<typename StringType>
+		requires (not std::is_same_v<StringType, OperandIdentityString>)
+		[[nodiscard]] friend constexpr auto operator==(const OperandIdentityString& identity, const StringType& string) noexcept -> bool //
+		{
+			if constexpr (
+				requires(const std::string_view lhs, const StringType& rhs)
+				{
+					{lhs == rhs} -> std::convertible_to<bool>;
+				}
+			)
+			{
+				return identity.value_.string == string;
+			}
+			else
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("In one of your `\"xxx\"_b == xxx` expressions, xxx does not support `operator==(std::string_view)`.");
+			}
 		}
 
 		template<typename StringType>
-		[[nodiscard]] friend constexpr auto operator==(StringType&& string, const OperandIdentityString& identity) noexcept -> decltype(auto) //
-			requires requires
-			{
-				std::forward<StringType>(string) == identity.value_.string;
-			}
+		requires (not std::is_same_v<StringType, OperandIdentityString>)
+		[[nodiscard]] friend constexpr auto operator==(const StringType& string, const OperandIdentityString& identity) noexcept -> bool //
 		{
-			return std::forward<StringType>(string) == identity.value_.string;
+			if constexpr (
+				requires(const StringType& lhs, const std::string_view rhs)
+				{
+					{lhs == rhs} -> std::convertible_to<bool>;
+				}
+			)
+			{
+				return string == identity.value_.string;
+			}
+			else
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("In one of your `xxx == \"xxx\"_b` expressions, xxx does not support `operator==(std::string_view)`.");
+			}
 		}
+
+		#else
+
+		template<typename StringType>
+			requires requires(const std::string_view lhs, const StringType& rhs)
+			{
+				{ lhs == rhs } -> std::convertible_to<bool>;
+			}
+		[[nodiscard]] friend constexpr auto operator==(const OperandIdentityString& identity, const StringType& string) noexcept -> bool //
+		{
+			return identity.value_.string == string;
+		}
+
+		template<typename StringType>
+			requires requires(const StringType& lhs, const std::string_view rhs)
+			{
+				{ lhs == rhs } -> std::convertible_to<bool>;
+			}
+		[[nodiscard]] friend constexpr auto operator==(const StringType& string, const OperandIdentityString& identity) noexcept -> bool //
+		{
+			return string == identity.value_.string;
+		}
+
+		#endif
+
+		#endif
 
 		template<std::ranges::output_range<char> StringType>
 			requires std::ranges::contiguous_range<StringType>
@@ -414,6 +483,28 @@ namespace gal::prometheus::unit_test::operands
 			std::format_to(std::back_inserter(out), "\"{}\"", value_.string);
 		}
 	};
+
+	#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+	template<typename StringType>
+	[[nodiscard]] constexpr auto operator==(const OperandIdentityString& identity, const StringType& string) noexcept -> bool //
+		requires requires
+		{
+			identity.identity() == string;
+		}
+	{
+		return identity.identity() == string;
+	}
+
+	template<typename StringType>
+	[[nodiscard]] constexpr auto operator==(const StringType& string, const OperandIdentityString& identity) noexcept -> bool //
+		requires requires
+		{
+			string == identity.identity();
+		}
+	{
+		return string == identity.identity();
+	}
+	#endif
 
 	// ========================
 	// identity boolean
@@ -490,7 +581,11 @@ namespace gal::prometheus::unit_test::operands
 
 		[[nodiscard]] constexpr auto do_check() const noexcept -> bool
 		{
-			const auto do_compare = [](const auto& left, const auto& right, const auto& epsilon) noexcept -> bool
+			const auto do_compare = []<typename L, typename R, typename E>(
+				const L& left,
+				const R& right,
+				const E& epsilon
+			) noexcept -> bool
 			{
 				if constexpr (category == ExpressionCategory::EQUAL)
 				{

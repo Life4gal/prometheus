@@ -9,9 +9,19 @@
 #include <mutex>
 #include <vector>
 
+#if __has_include(<print>)
+#include <print>
+#else
+#include <format>
+#include <cstdio>
+#endif
+
 #include <prometheus/macro.hpp>
 
 #include <functional/enumeration.hpp>
+#if not(__has_cpp_attribute(__cpp_explicit_this_parameter) and __cpp_explicit_this_parameter >= 202110L)
+#include <functional/functor.hpp>
+#endif
 #include <platform/os.hpp>
 
 #include <unit_test/def.hpp>
@@ -210,43 +220,59 @@ namespace gal::prometheus::unit_test::executor
 				}
 			};
 
-			const auto get_result_of_test = [](this const auto& self, const test_result_type& test_result) noexcept -> total_result
-			{
-				const auto passed = static_cast<std::size_t>(
-					+(
-						test_result.status == test_result_type::Status::PASSED
-					)
-				);
-				const auto failed = static_cast<std::size_t>(
-					+(
-						test_result.status == test_result_type::Status::FAILED or
-						test_result.status == test_result_type::Status::INTERRUPTED or
-						test_result.status == test_result_type::Status::TERMINATED
-					)
-				);
-				const auto skipped = static_cast<std::size_t>(
-					+(
-						test_result.status == test_result_type::Status::SKIPPED_NO_ASSERTION or
-						test_result.status == test_result_type::Status::SKIPPED_FILTERED
-					)
-				);
+			#define GET_RESULT_OF_TEST_FUNCTION_BODY \
+			const auto passed = static_cast<std::size_t>(\
+				+(\
+					test_result.status == test_result_type::Status::PASSED\
+				)\
+			);\
+			const auto failed = static_cast<std::size_t>(\
+				+(\
+					test_result.status == test_result_type::Status::FAILED or\
+					test_result.status == test_result_type::Status::INTERRUPTED or\
+					test_result.status == test_result_type::Status::TERMINATED\
+				)\
+			);\
+			const auto skipped = static_cast<std::size_t>(\
+				+(\
+					test_result.status == test_result_type::Status::SKIPPED_NO_ASSERTION or\
+					test_result.status == test_result_type::Status::SKIPPED_FILTERED\
+				)\
+			);\
+			\
+			return std::ranges::fold_left(\
+				test_result.children,\
+				total_result\
+				{\
+					.test_passed = passed,\
+					.test_failed = failed,\
+					.test_skipped = skipped,\
+					.assertion_passed = test_result.total_assertions_passed,\
+					.assertion_failed = test_result.total_assertions_failed\
+				},\
+				[self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result\
+				{\
+					return total + self(nested_test_result);\
+				}\
+			);
 
-				return std::ranges::fold_left(
-					test_result.children,
-					total_result
-					{
-							.test_passed = passed,
-							.test_failed = failed,
-							.test_skipped = skipped,
-							.assertion_passed = test_result.total_assertions_passed,
-							.assertion_failed = test_result.total_assertions_failed
-					},
-					[self](const total_result& total, const test_result_type& nested_test_result) noexcept -> total_result
-					{
-						return total + self(nested_test_result);
-					}
-				);
+
+			#if __has_cpp_attribute(__cpp_explicit_this_parameter) and __cpp_explicit_this_parameter >= 202110L
+			constexpr auto get_result_of_test = [](this const auto& self, const test_result_type& test_result) noexcept -> total_result
+			{
+				GET_RESULT_OF_TEST_FUNCTION_BODY
 			};
+			#else
+			constexpr auto get_result_of_test = functional::y_combinator
+			{
+					[](const auto& self, const test_result_type& test_result) noexcept -> total_result
+					{
+						GET_RESULT_OF_TEST_FUNCTION_BODY
+					}
+			};
+			#endif
+
+			#undef GET_RESULT_OF_TEST_FUNCTION_BODY
 
 			constexpr auto get_result_of_suite = [get_result_of_test](const suite_result_type& suite_result) noexcept -> total_result
 			{
@@ -512,7 +538,13 @@ namespace gal::prometheus::unit_test::executor
 									current_infos,
 									[](const info_type& info) noexcept -> void
 									{
+										#if __has_include(<print>)
 										std::println(stdout, "{}", info.message);
+										#else
+										const auto output = std::format("{}", info.message);
+										std::fputs(output.c_str(), stdout);
+										std::putc('\n', stdout);
+										#endif
 									}
 								);
 
@@ -593,7 +625,12 @@ namespace gal::prometheus::unit_test::executor
 		using test_results_iterator_type = test_results_type::pointer;
 
 	private:
-		constexpr static auto worker_off_work = reinterpret_cast<test_results_iterator_type>(0xbad'c0ffee);
+		#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+		constexpr
+		#else
+		inline const
+		#endif
+		static auto worker_off_work = reinterpret_cast<test_results_iterator_type>(0xbad'c0ffee);
 
 		suite_result_type* suite_;
 
@@ -1122,7 +1159,7 @@ namespace gal::prometheus::unit_test::executor
 			check_total_failures();
 		}
 
-		auto on(const events::EventAssertionFatal& assertion_fatal, internal_tag) noexcept(false) -> void
+		[[noreturn]] auto on(const events::EventAssertionFatal& assertion_fatal, internal_tag) noexcept(false) -> void
 		{
 			GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(executor().config_check_break_point<config_type::BreakPointLevel::FATAL>(), "EventAssertionFatal");
 

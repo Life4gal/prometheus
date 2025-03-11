@@ -5,6 +5,32 @@
 
 #pragma once
 
+#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+// return requires
+// {
+// 	{
+// 		meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
+// 		std::declval<const T&>()
+// 	} -> std::convertible_to<bool>;
+// };
+//
+// error: expected ‘}’ before ‘>’ token
+// meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
+// note: to match this ‘{’
+// {
+// ^
+// error: expected ‘;’ before ‘}’ token
+//         std::declval<const T&>()
+//                                 ^
+//                                 ;
+// } -> std::convertible_to<bool>;
+// ~
+// error: wrong number of template arguments (1, should be 2)
+// } -> std::convertible_to<bool>;
+//           ^~~~~~~~~~~~~~~~~~~~
+#define WORKAROUND_REQUIRES_EXPRESSION
+#endif
+
 namespace gal::prometheus::meta::dimension_detail
 {
 	// ===========================================================================
@@ -894,8 +920,14 @@ namespace gal::prometheus::meta::dimension_detail
 						return requires
 						{
 							{
+								#if defined(WORKAROUND_REQUIRES_EXPRESSION)
+								(
+								#endif
 								meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
 								meta::member_of_index<I>(std::declval<const OtherDimension&>())
+								#if defined(WORKAROUND_REQUIRES_EXPRESSION)
+								)
+								#endif
 							} -> std::convertible_to<bool>;
 						};
 					};
@@ -915,8 +947,14 @@ namespace gal::prometheus::meta::dimension_detail
 						return requires
 						{
 							{
+								#if defined(WORKAROUND_REQUIRES_EXPRESSION)
+								(
+								#endif
 								meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
 								std::declval<const T&>()
+								#if defined(WORKAROUND_REQUIRES_EXPRESSION)
+								)
+								#endif
 							} -> std::convertible_to<bool>;
 						};
 					};
@@ -1060,3 +1098,5 @@ namespace gal::prometheus::meta::dimension_detail
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
 			> {};
 }
+
+#undef WORKAROUND_REQUIRES_EXPRESSION

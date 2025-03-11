@@ -10,8 +10,15 @@
 #include <vector>
 #include <memory>
 #include <functional>
-#include <print>
+
 #include <algorithm>
+
+// fixme
+#if __has_include(<print>)
+#include <print>
+#else
+#include <cstdio>
+#endif
 
 namespace gal::prometheus::unit_test
 {
@@ -202,7 +209,12 @@ namespace gal::prometheus::unit_test
 				results,
 				[](const suite_result_type& result) noexcept -> void
 				{
+					#if __has_include(<print>)
 					std::println(stdout, "{}", result.report_string);
+					#else
+					std::fputs(result.report_string.c_str(), stdout);
+					std::putc('\n', stdout);
+					#endif
 				}
 			);
 		};

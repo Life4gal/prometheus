@@ -5,7 +5,10 @@
 
 #pragma once
 
+// __cpp_lib_xxx
 #include <version>
+// std::unreachable()
+#include <utility>
 
 // =========================================================
 // COMPILER
@@ -77,6 +80,24 @@
 #endif
 
 #if defined(GAL_PROMETHEUS_COMPILER_MSVC)
+#define GAL_PROMETHEUS_COMPILER_DISABLE_MSVC_WARNING(warningNumber) GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(warningNumber)
+#else
+#define GAL_PROMETHEUS_COMPILER_DISABLE_MSVC_WARNING(warningNumber)
+#endif
+
+#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+#define GAL_PROMETHEUS_COMPILER_DISABLE_GNU_WARNING(warningName) GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(warningName)
+#else
+#define GAL_PROMETHEUS_COMPILER_DISABLE_GNU_WARNING(warningName)
+#endif
+
+#if defined(GAL_PROMETHEUS_COMPILER_APPLE_CLANG) or defined(GAL_PROMETHEUS_COMPILER_CLANG_CL) or defined(GAL_PROMETHEUS_COMPILER_CLANG)
+#define GAL_PROMETHEUS_COMPILER_DISABLE_CLANG_WARNING(warningName) GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(warningName)
+#else
+#define GAL_PROMETHEUS_COMPILER_DISABLE_CLANG_WARNING(warningName)
+#endif
+
+#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 #define GAL_PROMETHEUS_COMPILER_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #elif defined(GAL_PROMETHEUS_COMPILER_CLANG_CL)
 #if __clang_major__ >= 18
@@ -131,63 +152,63 @@
 	[]<bool AlwaysFalse = false>() { static_assert(AlwaysFalse, "[UNREACHABLE BRANCH]" __VA_OPT__(":\"") __VA_ARGS__ __VA_OPT__("\"")); }(); \
 	GAL_PROMETHEUS_COMPILER_UNREACHABLE()
 
-#if defined(__cpp_if_consteval)
-#define GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED if consteval
-#define GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED if not consteval
-#else
+// #if defined(__cpp_if_consteval) and __cpp_if_consteval >= 202106L
+// #define GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED if consteval
+// #define GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED if not consteval
+// #else
 #define GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED if (std::is_constant_evaluated())
 #define GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED if (not std::is_constant_evaluated())
-#endif
+// #endif
 
 // fixme
-#if defined(__cpp_lib_is_implicit_lifetime)
+#if defined(__cpp_lib_is_implicit_lifetime) and __cpp_lib_is_implicit_lifetime >= 202302L
 #define GAL_PROMETHEUS_SEMANTIC_IS_IMPLICIT_LIFETIME_V(type) std::is_implicit_lifetime_v<type>
 #else
 #define GAL_PROMETHEUS_SEMANTIC_IS_IMPLICIT_LIFETIME_V(type) std::is_standard_layout_v<type> and std::is_trivial_v<type>
 #endif
 
-#if defined(__cpp_lib_start_lifetime_as)
+#if defined(__cpp_lib_start_lifetime_as) and __cpp_lib_start_lifetime_as >= 202207L
 #define GAL_PROMETHEUS_SEMANTIC_START_LIFETIME_AS(type, ptr) std::start_lifetime_as<type>(ptr)
 #define GAL_PROMETHEUS_SEMANTIC_START_LIFETIME_AS_ARRAY(type, ptr) std::start_lifetime_as_array<type>(ptr)
 #else
 #define GAL_PROMETHEUS_SEMANTIC_START_LIFETIME_AS(type, ptr) \
-				[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>(GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE gal_prometheus_start_lifetime_as_p)                                                                           \
-					requires(std::is_trivially_copyable_v<type> && GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(type)) \
-				{                                                                                                                           \
-					if constexpr (std::is_const_v<std::remove_pointer_t<GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>>) \
-					{ \
-						return reinterpret_cast<std::add_pointer_t<std::add_const_t<type>>>(gal_prometheus_start_lifetime_as_p); \
-					} \
-					else \
-					{ \
-						auto*		gal_prometheus_start_lifetime_as_dest	= gal_prometheus_start_lifetime_as_p;         \
-						const auto* gal_prometheus_start_lifetime_as_source = gal_prometheus_start_lifetime_as_p;                                                                                                                                    \
-						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_dest);                                                                                                                       \
-						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_source);                                                                                                                     \
-						auto* gal_prometheus_start_lifetime_as_moved = static_cast<std::add_pointer_t<type>>(std::memmove(gal_prometheus_start_lifetime_as_dest, gal_prometheus_start_lifetime_as_source, sizeof(type)));                                                         \
-						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_moved); \
-						return std::launder(gal_prometheus_start_lifetime_as_moved); \
-					}                                                          \
-				}(ptr)
-#define GAL_PROMETHEUS_SEMANTIC_START_LIFETIME_AS_ARRAY(type, ptr, size)                                                                                                                           \
-				[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>(GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE gal_prometheus_start_lifetime_as_p, const std::size_t s)                                                                                                                                                      \
-					requires(std::is_trivially_copyable_v<type> && GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(type))                                                                                                                                                      \
-				{                                                                                                                                                                                                                                          \
-					if constexpr (std::is_const_v<std::remove_pointer_t<GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>>) \
-					{ \
-						return reinterpret_cast<std::add_pointer_t<std::add_const_t<type>>>(gal_prometheus_start_lifetime_as_p);                                                   \
-					} \
-					else \
-					{ \
-						auto*		gal_prometheus_start_lifetime_as_dest	= gal_prometheus_start_lifetime_as_p;                                                                                                                                   \
-						const auto* gal_prometheus_start_lifetime_as_source = gal_prometheus_start_lifetime_as_p;                                                                                                                                   \
-						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_dest);                                                                                                                                                       \
-						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_source);                                                                                                                   \
-						auto* gal_prometheus_start_lifetime_as_moved = static_cast<std::add_pointer_t<type>>(std::memmove(gal_prometheus_start_lifetime_as_dest, gal_prometheus_start_lifetime_as_source, sizeof(type) * s));                                                                  \
-						GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_moved); \
-						return std::launder(gal_prometheus_start_lifetime_as_moved);                                                                     \
-					}                                                                                                                                 \
-				}(ptr, size)
+[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>(GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE gal_prometheus_start_lifetime_as_p)                                                                           \
+	requires(std::is_trivially_copyable_v<type> && GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(type)) \
+	{                                                                                                                           \
+		if constexpr (std::is_const_v<std::remove_pointer_t<GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>>) \
+		{ \
+			return reinterpret_cast<std::add_pointer_t<std::add_const_t<type>>>(gal_prometheus_start_lifetime_as_p); \
+		} \
+		else \
+		{ \
+			auto*		gal_prometheus_start_lifetime_as_dest	= gal_prometheus_start_lifetime_as_p;         \
+			const auto* gal_prometheus_start_lifetime_as_source = gal_prometheus_start_lifetime_as_p;                                                                                                                                    \
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_dest);                                                                                                                       \
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_source);                                                                                                                     \
+			auto* gal_prometheus_start_lifetime_as_moved = static_cast<std::add_pointer_t<type>>(std::memmove(gal_prometheus_start_lifetime_as_dest, gal_prometheus_start_lifetime_as_source, sizeof(type)));                                                         \
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_moved); \
+			return std::launder(gal_prometheus_start_lifetime_as_moved); \
+		}                                                          \
+	}(ptr)
+#define GAL_PROMETHEUS_SEMANTIC_START_LIFETIME_AS_ARRAY(type, ptr, size) \
+	[]<typename GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>(GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE gal_prometheus_start_lifetime_as_p, const std::size_t s)                                                                                                                                                      \
+		requires(std::is_trivially_copyable_v<type> && GAL_PROMETHEUS_IS_IMPLICIT_LIFETIME_V(type))                                                                                                                                                      \
+	{                                                                                                                                                                                                                                          \
+		if constexpr (std::is_const_v<std::remove_pointer_t<GAL_PROMETHEUS_START_LIFETIME_AS_POINTER_TYPE>>) \
+		{ \
+			return reinterpret_cast<std::add_pointer_t<std::add_const_t<type>>>(gal_prometheus_start_lifetime_as_p);                                                   \
+		} \
+		else \
+		{ \
+			auto*		gal_prometheus_start_lifetime_as_dest	= gal_prometheus_start_lifetime_as_p;                                                                                                                                   \
+			const auto* gal_prometheus_start_lifetime_as_source = gal_prometheus_start_lifetime_as_p;                                                                                                                                   \
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_dest);                                                                                                                                                       \
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_source);                                                                                                                   \
+			auto* gal_prometheus_start_lifetime_as_moved = static_cast<std::add_pointer_t<type>>(std::memmove(gal_prometheus_start_lifetime_as_dest, gal_prometheus_start_lifetime_as_source, sizeof(type) * s));                                                                  \
+			GAL_PROMETHEUS_DEBUG_NOT_NULL(gal_prometheus_start_lifetime_as_moved); \
+			return std::launder(gal_prometheus_start_lifetime_as_moved);                                                                     \
+		}                                                                                                                                 \
+	}(ptr, size)
 #endif
 
 // fixme: UB
@@ -292,12 +313,14 @@
 // =========================================================
 
 #define GAL_PROMETHEUS_META_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(string_type, this_string, string_length, begin_index) \
-	[]<std::size_t... Index>(std::index_sequence<Index...>) constexpr noexcept                       \
-			 { return ::gal::prometheus::meta::string_type<                                                       \
-					   [](std::size_t index) constexpr noexcept                                               \
-					   {                                                                                      \
-						   return (this_string)[(begin_index) + index];                                            \
-					   }(Index)...>{}; }(std::make_index_sequence<string_length>{})
+[]<std::size_t... Index>(std::index_sequence<Index...>) constexpr noexcept                       \
+	{ \
+		return ::gal::prometheus::meta::string_type<                                                       \
+			[](std::size_t index) constexpr noexcept                                               \
+			{                                                                                      \
+				return (this_string)[(begin_index) + index];                                            \
+			}(Index)...>{};\
+	}(std::make_index_sequence<string_length>{})
 
 #define GAL_PROMETHEUS_META_PRIVATE_STRING_CHAR_ARRAY(string_type, string) GAL_PROMETHEUS_META_PRIVATE_DO_GENERATE_STRING_CHAR_ARRAY(string_type, string, sizeof(string) / sizeof((string)[0]), 0)
 #define GAL_PROMETHEUS_META_PRIVATE_STRING_CHAR_BILATERAL_ARRAY(string_type, inner_string_type, left_string, right_string) ::gal::prometheus::meta::string_type<GAL_PROMETHEUS_META_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, left_string), GAL_PROMETHEUS_META_PRIVATE_STRING_CHAR_ARRAY(inner_string_type, right_string)>
@@ -321,28 +344,6 @@
 #else
 #define GAL_PROMETHEUS_ERROR_DEBUG_MODULE <prometheus/macro.hpp>
 #endif
-
-// #define GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(expression, message) \
-// 	do {                                                                                                                                                \
-// 		GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED                                                                                                           \
-// 		{                                                                                                                                               \
-// 			if (static_cast<bool>(expression))                                                                                                      \
-// 			{                                                                                                                                           \
-// 				::gal::prometheus::platform::breakpoint_if_debugging("[" __FILE__ ":" GAL_PROMETHEUS_UTILITY_TO_STRING(__LINE__) "] -> " message); \
-// 			}                                                                                                                                           \
-// 		}                                                                                                                                               \
-// 	} while (false)
-//
-// #define GAL_PROMETHEUS_ERROR_BREAKPOINT_OR_TERMINATE_IF(expression, message) \
-// 	do {                                                                                                                                                \
-// 		GAL_PROMETHEUS_SEMANTIC_IF_NOT_CONSTANT_EVALUATED                                                                                                           \
-// 		{                                                                                                                                               \
-// 			if (static_cast<bool>(expression))                                                                                                      \
-// 			{                                                                                                                                           \
-// 				::gal::prometheus::platform::breakpoint_or_terminate("[" __FILE__ ":" GAL_PROMETHEUS_UTILITY_TO_STRING(__LINE__) "] -> " message); \
-// 			}                                                                                                                                           \
-// 		}                                                                                                                                               \
-// 	} while (false)
 
 // INLINE breakpoint_if_debugging
 #define GAL_PROMETHEUS_ERROR_BREAKPOINT_IF(expression, message) \

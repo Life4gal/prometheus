@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <span>
+
 #include <meta/string.hpp>
 
 namespace gal::prometheus::chars
