@@ -5,34 +5,190 @@
 
 #pragma once
 
-#if defined(GAL_PROMETHEUS_COMPILER_GNU)
-// return requires
-// {
-// 	{
-// 		meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
-// 		std::declval<const T&>()
-// 	} -> std::convertible_to<bool>;
-// };
-//
-// error: expected ‘}’ before ‘>’ token
-// meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
-// note: to match this ‘{’
-// {
-// ^
-// error: expected ‘;’ before ‘}’ token
-//         std::declval<const T&>()
-//                                 ^
-//                                 ;
-// } -> std::convertible_to<bool>;
-// ~
-// error: wrong number of template arguments (1, should be 2)
-// } -> std::convertible_to<bool>;
-//           ^~~~~~~~~~~~~~~~~~~~
-#define WORKAROUND_REQUIRES_EXPRESSION
-#endif
-
 namespace gal::prometheus::meta::dimension_detail
 {
+	// ===========================================================================
+	// CODE GEN MACRO
+	// ===========================================================================
+
+	#if defined(GAL_PROMETHEUS_COMPILER_GNU)
+	// return requires
+	// {
+	// 	{
+	// 		meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
+	// 		std::declval<const T&>()
+	// 	} -> std::convertible_to<bool>;
+	// };
+	//
+	// error: expected ‘}’ before ‘>’ token
+	// meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
+	// note: to match this ‘{’
+	// {
+	// ^
+	// error: expected ‘;’ before ‘}’ token
+	//         std::declval<const T&>()
+	//                                 ^
+	//                                 ;
+	// } -> std::convertible_to<bool>;
+	// ~
+	// error: wrong number of template arguments (1, should be 2)
+	// } -> std::convertible_to<bool>;
+	//           ^~~~~~~~~~~~~~~~~~~~
+
+	// before: requires { L > R } -> std::convertible_to<bool>;
+	// after:  requires { (L > R) } -> std::convertible_to<bool>;
+	#endif
+
+	#define DIMENSION_CACHE_GEN_FUNCTION_DIMENSION(operation, op) \
+	constexpr auto f = []<std::size_t I>() noexcept -> bool\
+	{\
+		if constexpr (\
+			requires\
+			{\
+				{(\
+					meta::member_of_index<I>(std::declval<const ThisDimension&>()) op\
+					meta::member_of_index<I>(std::declval<const OtherDimension&>())\
+				)} -> std::convertible_to<bool>;\
+			}\
+		)\
+		{\
+			return true;\
+		}\
+		else \
+		{\
+			if constexpr ([[maybe_unused]] constexpr auto value = dimension_folder<ThisDimension, operation>::value;\
+				value == DimensionFoldCategory::ANY)\
+			{\
+				return requires\
+				{\
+					{\
+						std::ranges::any_of(\
+							meta::member_of_index<I>(std::declval<const ThisDimension&>()) op\
+							meta::member_of_index<I>(std::declval<const OtherDimension&>()),\
+							std::identity{}\
+						)\
+					} -> std::convertible_to<bool>;\
+				};\
+			}\
+			else if constexpr (value == DimensionFoldCategory::ALL)\
+			{\
+				return requires\
+				{\
+					{\
+						std::ranges::all_of(\
+							meta::member_of_index<I>(std::declval<const ThisDimension&>()) op\
+							meta::member_of_index<I>(std::declval<const OtherDimension&>()),\
+							std::identity{}\
+						)\
+					} -> std::convertible_to<bool>;\
+				};\
+			}\
+			else\
+			{\
+				return false;\
+			}\
+		}\
+	}
+
+	#define DIMENSION_CACHE_GEN_FUNCTION_VALUE(operation, op) \
+	constexpr auto f = []<std::size_t I>() noexcept -> bool\
+	{\
+		if constexpr (\
+			requires\
+			{\
+				{(\
+					meta::member_of_index<I>(std::declval<const ThisDimension&>()) op\
+					std::declval<const T&>()\
+				)} -> std::convertible_to<bool>;\
+			}\
+		)\
+		{\
+			return true;\
+		}\
+		else \
+		{\
+			if constexpr ([[maybe_unused]] constexpr auto value = dimension_folder<ThisDimension, operation>::value;\
+				value == DimensionFoldCategory::ANY)\
+			{\
+				return requires\
+				{\
+					{\
+						std::ranges::any_of(\
+							meta::member_of_index<I>(std::declval<const ThisDimension&>()) op\
+							std::declval<const T&>(),\
+							std::identity{}\
+						)\
+					} -> std::convertible_to<bool>;\
+				};\
+			}\
+			else if constexpr (value == DimensionFoldCategory::ALL)\
+			{\
+				return requires\
+				{\
+					{\
+						std::ranges::all_of(\
+							meta::member_of_index<I>(std::declval<const ThisDimension&>()) op\
+							std::declval<const T&>(),\
+							std::identity{}\
+						)\
+					} -> std::convertible_to<bool>;\
+				};\
+			}\
+			else\
+			{\
+				return false;\
+			}\
+		}\
+	}
+
+	#define DIMENSION_CACHE_GEN_FUNCTION_SELF(operation, op) \
+	constexpr auto f = []<std::size_t I>() noexcept -> bool\
+	{\
+		if constexpr (\
+			requires\
+			{\
+				{\
+					op meta::member_of_index<I>(std::declval<const ThisDimension&>())\
+				} -> std::convertible_to<bool>;\
+			}\
+		)\
+		{\
+			return true;\
+		}\
+		else \
+		{\
+			if constexpr ([[maybe_unused]] constexpr auto value = dimension_folder<ThisDimension, operation>::value;\
+				value == DimensionFoldCategory::ANY)\
+			{\
+				return requires\
+				{\
+					{\
+						std::ranges::any_of(\
+							op meta::member_of_index<I>(std::declval<const ThisDimension&>()),\
+							std::identity{}\
+						)\
+					} -> std::convertible_to<bool>;\
+				};\
+			}\
+			else if constexpr (value == DimensionFoldCategory::ALL)\
+			{\
+				return requires\
+				{\
+					{\
+						std::ranges::all_of(\
+							op meta::member_of_index<I>(std::declval<const ThisDimension&>()),\
+							std::identity{}\
+						)\
+					} -> std::convertible_to<bool>;\
+				};\
+			}\
+			else\
+			{\
+				return false;\
+			}\
+		}\
+	}
+
 	// ===========================================================================
 	// operator+= / operator+
 
@@ -711,17 +867,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs and rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) and
-								meta::member_of_index<I>(std::declval<const OtherDimension&>())
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_DIMENSION(DimensionFoldOperation::LOGICAL_AND, and);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -732,17 +878,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs and rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) and
-								std::declval<const T&>()
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_VALUE(DimensionFoldOperation::LOGICAL_AND, and);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -756,17 +892,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs or rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) or
-								meta::member_of_index<I>(std::declval<const OtherDimension&>())
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_DIMENSION(DimensionFoldOperation::LOGICAL_OR, or);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -777,17 +903,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs or rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) or
-								std::declval<const T&>()
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_VALUE(DimensionFoldOperation::LOGICAL_OR, or);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -801,16 +917,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// not (self)
-						return requires
-						{
-							{
-								not meta::member_of_index<I>(std::declval<const ThisDimension&>())
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_SELF(DimensionFoldOperation::LOGICAL_NOT, not);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -824,17 +931,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs == rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) ==
-								meta::member_of_index<I>(std::declval<const OtherDimension&>())
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_DIMENSION(DimensionFoldOperation::EQUAL, ==);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -845,17 +942,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs == rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) ==
-								std::declval<const T&>()
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_VALUE(DimensionFoldOperation::EQUAL, ==);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -869,17 +956,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs != rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) !=
-								meta::member_of_index<I>(std::declval<const OtherDimension&>())
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_DIMENSION(DimensionFoldOperation::NOT_EQUAL, !=);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -890,17 +967,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs != rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) !=
-								std::declval<const T&>()
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_VALUE(DimensionFoldOperation::NOT_EQUAL, !=);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -914,23 +981,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs > rhs
-						return requires
-						{
-							{
-								#if defined(WORKAROUND_REQUIRES_EXPRESSION)
-								(
-								#endif
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
-								meta::member_of_index<I>(std::declval<const OtherDimension&>())
-								#if defined(WORKAROUND_REQUIRES_EXPRESSION)
-								)
-								#endif
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_DIMENSION(DimensionFoldOperation::GREATER_THAN, >);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -941,23 +992,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs > rhs
-						return requires
-						{
-							{
-								#if defined(WORKAROUND_REQUIRES_EXPRESSION)
-								(
-								#endif
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) >
-								std::declval<const T&>()
-								#if defined(WORKAROUND_REQUIRES_EXPRESSION)
-								)
-								#endif
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_VALUE(DimensionFoldOperation::GREATER_THAN, >);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -971,17 +1006,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs >= rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) >=
-								meta::member_of_index<I>(std::declval<const OtherDimension&>())
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_DIMENSION(DimensionFoldOperation::GREATER_EQUAL, >=);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -992,17 +1017,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs >= rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) >=
-								std::declval<const T&>()
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_VALUE(DimensionFoldOperation::GREATER_EQUAL, >=);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -1016,17 +1031,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs < rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) <
-								meta::member_of_index<I>(std::declval<const OtherDimension&>())
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_DIMENSION(DimensionFoldOperation::LESS_THAN, <);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -1037,17 +1042,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs < rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) <
-								std::declval<const T&>()
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_VALUE(DimensionFoldOperation::LESS_THAN, <);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -1061,17 +1056,7 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs <= rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) <=
-								meta::member_of_index<I>(std::declval<const OtherDimension&>())
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_DIMENSION(DimensionFoldOperation::LESS_EQUAL, <=);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
@@ -1082,21 +1067,13 @@ namespace gal::prometheus::meta::dimension_detail
 				// manually member_walk
 				[]<std::size_t... Index>(std::index_sequence<Index...>) consteval noexcept -> bool
 				{
-					constexpr auto f = []<std::size_t I>() noexcept -> bool
-					{
-						// lhs <= rhs
-						return requires
-						{
-							{
-								meta::member_of_index<I>(std::declval<const ThisDimension&>()) <=
-								std::declval<const T&>()
-							} -> std::convertible_to<bool>;
-						};
-					};
+					DIMENSION_CACHE_GEN_FUNCTION_VALUE(DimensionFoldOperation::LESS_EQUAL, <=);
 
 					return (f.template operator()<Index>() and ...);
 				}(std::make_index_sequence<member_size<ThisDimension>()>{})
 			> {};
-}
 
-#undef WORKAROUND_REQUIRES_EXPRESSION
+	#undef DIMENSION_CACHE_GEN_FUNCTION_DIMENSION
+	#undef DIMENSION_CACHE_GEN_FUNCTION_VALUE
+	#undef DIMENSION_CACHE_GEN_FUNCTION_SELF
+}

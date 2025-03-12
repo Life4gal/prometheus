@@ -25,6 +25,50 @@ namespace gal::prometheus::meta
 	template<typename Dimension>
 	struct dimension;
 
+	enum class DimensionFoldCategory : std::uint8_t
+	{
+		NONE,
+		ANY,
+		ALL,
+	};
+
+	enum class DimensionFoldOperation : std::uint8_t
+	{
+		LOGICAL_AND,
+		LOGICAL_OR,
+		LOGICAL_NOT,
+		EQUAL,
+		NOT_EQUAL,
+		GREATER_THAN,
+		GREATER_EQUAL,
+		LESS_THAN,
+		LESS_EQUAL,
+	};
+
+	/**
+	 * @brief Specify how the dimension should be folded
+	 * @code
+	 * template<>
+	 * struct dimension_folder<MyDimension, DimensionFoldOperation::LOGICAL_AND>
+	 * {
+	 *	constexpr static auto value = DimensionFoldCategory::ALL;
+	 * };
+	 *
+	 * MyDimension d1{...};
+	 * MyDimension d2{...};
+	 * const auto logical_or = d1 or d2; // boolean_result_type<MyDimension> (aka std::array<bool, member_size<MyDimension>()>)
+	 * const auto logical_and = d1 and d2; // bool
+	 * @endcode
+	 */
+	template<typename Dimension, DimensionFoldOperation Operation>
+	struct dimension_folder
+	{
+		using dimension_type = Dimension;
+		constexpr static auto operation = Operation;
+
+		constexpr static auto value = DimensionFoldCategory::NONE;
+	};
+
 	namespace dimension_detail
 	{
 		template<typename>
@@ -125,6 +169,33 @@ namespace gal::prometheus::meta
 		template<typename T, typename ThisDimension>
 		concept compatible_value_type_t = is_compatible_value_type<T, ThisDimension>();
 
+		template<typename Dimension>
+		using boolean_result_type = std::array<bool, member_size<Dimension>()>;
+
+		template<typename Dimension, DimensionFoldOperation Operation, typename Result>
+			requires (std::is_same_v<Result, bool> or std::is_same_v<Result, boolean_result_type<Dimension>>)
+		[[nodiscard]] constexpr auto do_fold(const Result result) noexcept -> auto
+		{
+			if constexpr (constexpr auto value = dimension_folder<Dimension, Operation>::value;
+				value == DimensionFoldCategory::NONE)
+			{
+				return result;
+			}
+			else if constexpr (value == DimensionFoldCategory::ANY)
+			{
+				return std::ranges::any_of(result, std::identity{});
+			}
+			else if constexpr (value == DimensionFoldCategory::ALL)
+			{
+				return std::ranges::all_of(result, std::identity{});
+			}
+			else
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+			}
+		}
+
+		// Tag, ThisDimension, T
 		template<typename, typename, typename>
 		struct cache : std::false_type {};
 
@@ -187,9 +258,6 @@ namespace gal::prometheus::meta
 
 		template<typename T, typename ThisDimension, typename Tag>
 		concept operation_supported_t = is_operation_supported_v<T, ThisDimension, Tag>;
-
-		template<typename Dimension>
-		using boolean_result_type = std::array<bool, member_size<Dimension>()>;
 
 		// Disguises type T as an N-dimensional structure, but actually returns the same object in all dimensions
 		template<typename T, std::size_t>
@@ -1133,7 +1201,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_logical_and, Dimensions::ALL>(result, rep(), other);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::LOGICAL_AND>(result);
 		}
 
 		// dimension and value
@@ -1150,7 +1218,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_logical_and, Dimensions::ALL>(result, rep(), wrapper);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::LOGICAL_AND>(result);
 		}
 
 		// ===========================================================================
@@ -1167,7 +1235,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_logical_or, Dimensions::ALL>(result, rep(), other);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::LOGICAL_OR>(result);
 		}
 
 		// dimension or value
@@ -1184,7 +1252,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_logical_or, Dimensions::ALL>(result, rep(), wrapper);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::LOGICAL_OR>(result);
 		}
 
 		// ===========================================================================
@@ -1199,7 +1267,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_logical_not, Dimensions::ALL>(result, rep());
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::LOGICAL_NOT>(result);
 		}
 
 		// ===========================================================================
@@ -1216,7 +1284,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_equal, Dimensions::ALL>(result, rep(), other);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::EQUAL>(result);
 		}
 
 		// dimension == value
@@ -1233,7 +1301,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_equal, Dimensions::ALL>(result, rep(), wrapper);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::EQUAL>(result);
 		}
 
 		// ===========================================================================
@@ -1250,7 +1318,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_not_equal, Dimensions::ALL>(result, rep(), other);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::NOT_EQUAL>(result);
 		}
 
 		// dimension != value
@@ -1267,7 +1335,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_not_equal, Dimensions::ALL>(result, rep(), wrapper);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::NOT_EQUAL>(result);
 		}
 
 		// ===========================================================================
@@ -1284,7 +1352,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_greater_than, Dimensions::ALL>(result, rep(), other);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::GREATER_THAN>(result);
 		}
 
 		// dimension > value
@@ -1301,7 +1369,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_greater_than, Dimensions::ALL>(result, rep(), wrapper);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::GREATER_THAN>(result);
 		}
 
 		// ===========================================================================
@@ -1318,7 +1386,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_greater_equal, Dimensions::ALL>(result, rep(), other);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::GREATER_EQUAL>(result);
 		}
 
 		// dimension >= value
@@ -1335,7 +1403,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_greater_equal, Dimensions::ALL>(result, rep(), wrapper);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::GREATER_EQUAL>(result);
 		}
 
 		// ===========================================================================
@@ -1352,7 +1420,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_less_than, Dimensions::ALL>(result, rep(), other);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::LESS_THAN>(result);
 		}
 
 		// dimension < value
@@ -1369,7 +1437,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_less_than, Dimensions::ALL>(result, rep(), wrapper);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::LESS_THAN>(result);
 		}
 
 		// ===========================================================================
@@ -1386,7 +1454,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_less_equal, Dimensions::ALL>(result, rep(), other);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::LESS_EQUAL>(result);
 		}
 
 		// dimension <= value
@@ -1403,7 +1471,7 @@ namespace gal::prometheus::meta
 			dimension_detail::boolean_result_type<dimension_type> result{};
 			dimension::walk<dimension_detail::tag_compare_less_equal, Dimensions::ALL>(result, rep(), wrapper);
 
-			return result;
+			return dimension_detail::do_fold<dimension_type, DimensionFoldOperation::LESS_EQUAL>(result);
 		}
 	};
 
