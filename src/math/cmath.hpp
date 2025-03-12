@@ -14,13 +14,6 @@
 
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
-#if __has_include(<intrin.h>)
-#include <intrin.h>
-#endif
-#if __has_include(<x86intrin.h>)
-#include <x86intrin.h>
-#endif
-
 #if not defined(__cpp_lib_constexpr_cmath) or __cpp_lib_constexpr_cmath < 202306L
 #define CMATH_WORKAROUND_REQUIRED
 #endif
