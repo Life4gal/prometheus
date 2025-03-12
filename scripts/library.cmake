@@ -89,6 +89,12 @@ elseif (${PROJECT_NAME_PREFIX}COMPILER_GNU)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-Werror")
 	endif (${PROJECT_NAME_PREFIX}WERROR)
 	# ====================
+	# <stacktrace>
+	# https://gcc.gnu.org/onlinedocs/gcc-12.3.0/libstdc++/manual/manual/using.html#manual.intro.using.flags
+	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-lstdc++_libbacktrace")
+	# https://gcc.gnu.org/onlinedocs/libstdc++/manual/using.html#manual.intro.using.flags
+	list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-lstdc++exp")
+	# ====================
 	# ASAN
 	if (${PROJECT_NAME_PREFIX}ASAN)
 		list(APPEND ${PROJECT_NAME_PREFIX}COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
@@ -332,6 +338,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/command_line_parser/regex.hpp
 		${PROJECT_SOURCE_DIR}/src/command_line_parser/option.hpp
 		${PROJECT_SOURCE_DIR}/src/command_line_parser/parser.hpp
+
 		${PROJECT_SOURCE_DIR}/src/command_line_parser/command_line_parser.hpp
 
 		# =========================
@@ -343,7 +350,21 @@ set(
 		${PROJECT_SOURCE_DIR}/src/unit_test/operands.hpp
 		${PROJECT_SOURCE_DIR}/src/unit_test/executor.hpp
 		${PROJECT_SOURCE_DIR}/src/unit_test/dispatcher.hpp
+
 		${PROJECT_SOURCE_DIR}/src/unit_test/unit_test.hpp
+
+		# =========================
+		# DRAW
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/draw/flag.hpp
+		${PROJECT_SOURCE_DIR}/src/draw/def.hpp
+		${PROJECT_SOURCE_DIR}/src/draw/font.hpp
+		${PROJECT_SOURCE_DIR}/src/draw/shared_data.hpp
+		${PROJECT_SOURCE_DIR}/src/draw/draw_list.hpp
+		${PROJECT_SOURCE_DIR}/src/draw/context.hpp
+		
+		${PROJECT_SOURCE_DIR}/src/draw/draw.hpp
 )
 
 set(
@@ -376,6 +397,15 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/chars/scalar.cpp
 		${PROJECT_SOURCE_DIR}/src/chars/icelake.cpp
+
+		# =========================
+		# DRAW
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/draw/font.cpp
+		${PROJECT_SOURCE_DIR}/src/draw/shared_data.cpp
+		${PROJECT_SOURCE_DIR}/src/draw/draw_list.cpp
+		${PROJECT_SOURCE_DIR}/src/draw/context.cpp
 )
 
 set_source_files_properties(
