@@ -581,10 +581,19 @@ namespace gal::prometheus::unit_test::operands
 
 		[[nodiscard]] constexpr auto do_check() const noexcept -> bool
 		{
-			const auto do_compare = []<typename L, typename R, typename E>(
-				const L& left,
-				const R& right,
-				const E& epsilon
+			// fixme:
+			// Explicitly specifying the parameter type would help us get better compiler diagnostics,
+			// but it seems that the compiler refuses to accept this code :(
+
+			// const auto do_compare = []<typename L, typename R, typename E>(
+			// 	const L& left,
+			// 	const R& right,
+			// 	const E& epsilon
+			// ) noexcept -> bool
+			const auto do_compare = [](
+				const auto& left,
+				const auto& right,
+				const auto& epsilon
 			) noexcept -> bool
 			{
 				if constexpr (category == ExpressionCategory::EQUAL)
