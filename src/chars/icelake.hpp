@@ -7863,13 +7863,13 @@ namespace gal::prometheus::chars
 
 	public:
 		template<CharsType InputType, CharsType OutputType, typename StringType, bool Pure = false, bool Correct = false>
-		[[nodiscard]] constexpr static auto convert(const input_type_of<InputType> input) noexcept -> result_error_input_type
+		[[nodiscard]] constexpr static auto convert(const input_type_of<InputType> input) noexcept -> StringType
 		{
 			return Icelake::do_convert<InputType, OutputType, StringType, Pure, Correct>(input);
 		}
 
 		template<CharsType InputType, CharsType OutputType, typename StringType, bool Pure = false, bool Correct = false>
-		[[nodiscard]] constexpr static auto convert(const typename input_type_of<InputType>::const_pointer input) noexcept -> result_error_input_type
+		[[nodiscard]] constexpr static auto convert(const typename input_type_of<InputType>::const_pointer input) noexcept -> StringType
 		{
 			return Icelake::do_convert<InputType, OutputType, StringType, Pure, Correct>(input);
 		}
