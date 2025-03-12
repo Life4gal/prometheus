@@ -18,174 +18,206 @@
 
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
-namespace gal::prometheus::primitive
+namespace gal::prometheus
 {
-	template<std::size_t N, typename PointValueType, typename RadiusValueType>
-		requires(std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<RadiusValueType>)
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_circle final : meta::dimension<basic_circle<N, PointValueType, RadiusValueType>>
+	namespace primitive
 	{
-		using point_value_type = PointValueType;
-		using radius_value_type = RadiusValueType;
-
-		using point_type = basic_point<N, point_value_type>;
-
-		template<std::size_t Index>
-			requires (Index < 2)
-		using element_type = std::conditional_t<Index == 0, point_type, radius_value_type>;
-
-		point_type point;
-		radius_value_type radius;
-
-		template<std::size_t Index>
-			requires(Index < 2)
-		[[nodiscard]] constexpr auto get() const noexcept -> const element_type<Index>&
+		template<std::size_t N, typename PointValueType, typename RadiusValueType>
+			requires(std::is_arithmetic_v<PointValueType> and std::is_arithmetic_v<RadiusValueType>)
+		struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_circle final : meta::dimension<basic_circle<N, PointValueType, RadiusValueType>>
 		{
-			if constexpr (Index == 0) { return point; }
-			else if constexpr (Index == 1) { return radius; }
+			using point_value_type = PointValueType;
+			using radius_value_type = RadiusValueType;
+
+			using point_type = basic_point<N, point_value_type>;
+
+			template<std::size_t Index>
+				requires (Index < 2)
+			using element_type = std::conditional_t<Index == 0, point_type, radius_value_type>;
+
+			point_type point;
+			radius_value_type radius;
+
+			// warning: missing initializer for member ‘gal::prometheus::primitive::basic_circle<2, float>::<anonymous>’ [-Wmissing-field-initializers]
+			// {.point = point, .radius = radius};
+			//                                                  ^
+			// No initialization value specified for base class `meta::dimension`
+			constexpr basic_circle() noexcept
+				: point{},
+				  radius{} {}
+
+			constexpr basic_circle(const point_type point, const radius_value_type radius) noexcept
+				: point{point},
+				  radius{radius} {}
+
+			template<std::size_t Index>
+				requires(Index < 2)
+			[[nodiscard]] constexpr auto get() const noexcept -> const element_type<Index>&
+			{
+				if constexpr (Index == 0) { return point; }
+				else if constexpr (Index == 1) { return radius; }
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			}
+
+			template<std::size_t Index>
+				requires(Index < 2)
+			[[nodiscard]] constexpr auto get() noexcept -> element_type<Index>&
+			{
+				if constexpr (Index == 0) { return point; }
+				else if constexpr (Index == 1) { return radius; }
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			}
+
+			[[nodiscard]] constexpr auto center() const noexcept -> point_type
+			{
+				return point;
+			}
+
+			[[nodiscard]] constexpr auto empty() const noexcept -> bool
+			{
+				return radius == 0;
+			}
+
+			[[nodiscard]] constexpr auto valid() const noexcept -> bool
+			{
+				return radius >= 0;
+			}
+
+			[[nodiscard]] constexpr auto includes(const point_type& p) const noexcept -> bool
+			{
+				return point.distance(p) <= radius;
+			}
+
+			[[nodiscard]] constexpr auto includes(const basic_circle& circle) const noexcept -> bool
+			{
+				if (radius < circle.radius) { return false; }
+
+				return point.distance(circle.center()) <= (radius - circle.radius);
+			}
+		};
+
+		template<std::size_t N, typename PointValueType, typename RadiusValueType>
+		[[nodiscard]] constexpr auto inscribed_rect(
+			const basic_circle<N, PointValueType, RadiusValueType>& circle
+		) noexcept -> basic_rect<N, PointValueType, RadiusValueType>
+		{
+			const auto radius = [r = circle.radius]
+			{
+				if constexpr (std::is_floating_point_v<RadiusValueType>) { return r * std::numbers::sqrt2_v<RadiusValueType>; }
+				else if constexpr (sizeof(RadiusValueType) == sizeof(float)) { return static_cast<RadiusValueType>(static_cast<float>(r) * std::numbers::sqrt2_v<float>); }
+				else { return static_cast<RadiusValueType>(static_cast<double>(r) * std::numbers::sqrt2_v<double>); }
+			}();
+
+			using rect_type = basic_rect<N, PointValueType, RadiusValueType>;
+			using extent_type = typename rect_type::extent_type;
+
+			if constexpr (N == 2)
+			{
+				const auto extent = extent_type{radius, radius};
+				const auto offset = extent / 2;
+				const auto left_top = circle.center - offset;
+
+				return {.point = left_top, .extent = extent};
+			}
+			else if constexpr (N == 3)
+			{
+				const auto extent = extent_type{radius, radius, radius};
+				const auto offset = extent / 2;
+				const auto left_top_near = circle.center - offset;
+
+				return {.point = left_top_near, .extent = extent};
+			}
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
-		template<std::size_t Index>
-			requires(Index < 2)
-		[[nodiscard]] constexpr auto get() noexcept -> element_type<Index>&
+		template<std::size_t N, typename PointValueType, typename RadiusValueType>
+		[[nodiscard]] constexpr auto circumscribed_rect(
+			const basic_circle<N, PointValueType, RadiusValueType>& circle
+		) noexcept -> basic_rect<N, PointValueType, RadiusValueType>
 		{
-			if constexpr (Index == 0) { return point; }
-			else if constexpr (Index == 1) { return radius; }
+			using rect_type = basic_rect<N, PointValueType, RadiusValueType>;
+			using point_type = typename rect_type::point_type;
+			using extent_type = typename rect_type::extent_type;
+
+			if constexpr (N == 2)
+			{
+				const point_type left_top{circle.center.x - circle.radius, circle.center.y - circle.radius};
+				const extent_type extent{circle.radius * 2, circle.radius * 2};
+
+				return {.point = left_top, .extent = extent};
+			}
+			else if constexpr (N == 3)
+			{
+				const point_type left_top_near{circle.center.x - circle.radius, circle.center.y - circle.radius, circle.center.z - circle.radius};
+				const extent_type extent{circle.radius * 2, circle.radius * 2, circle.radius * 2};
+
+				return {.point = left_top_near, .extent = extent};
+			}
 			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
-		[[nodiscard]] constexpr auto center() const noexcept -> point_type
+		template<std::size_t N, typename PointValueType, typename RadiusType>
+		[[nodiscard]] constexpr auto inscribed_circle(const basic_rect<N, PointValueType, RadiusType>& rect) noexcept -> basic_circle<N, PointValueType, RadiusType>
 		{
-			return point;
+			if constexpr (N == 2)
+			{
+				const auto radius = std::ranges::min(rect.width(), rect.height()) / 2;
+				const auto center = rect.center();
+				return {.point = center, .radius = radius};
+			}
+			else if constexpr (N == 3)
+			{
+				const auto radius = std::ranges::min(rect.width(), rect.height(), rect.depth()) / 2;
+				const auto center = rect.center();
+				return {.point = center, .radius = radius};
+			}
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
-		[[nodiscard]] constexpr auto empty() const noexcept -> bool
+		template<std::size_t N, typename PointValueType, typename RadiusType>
+		[[nodiscard]] constexpr auto circumscribed_circle(const basic_rect<N, PointValueType, RadiusType>& rect) noexcept -> basic_circle<N, PointValueType, RadiusType>
 		{
-			return radius == 0;
+			using rect_type = basic_rect<N, PointValueType, RadiusType>;
+			using point_type = typename rect_type::point_type;
+
+			if constexpr (N == 2)
+			{
+				const auto radius = rect.size().template to<point_type>().distance({0, 0}) / 2;
+				const auto center = rect.center();
+				return {center, radius};
+			}
+			else if constexpr (N == 3)
+			{
+				const auto radius = rect.size().template to<point_type>().distance({0, 0, 0}) / 2;
+				const auto center = rect.center();
+				return {center, radius};
+			}
+			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
 		}
 
-		[[nodiscard]] constexpr auto valid() const noexcept -> bool
-		{
-			return radius >= 0;
-		}
+		template<typename PointValueType, typename RadiusValueType = PointValueType>
+		using basic_circle_2d = basic_circle<2, PointValueType, RadiusValueType>;
 
-		[[nodiscard]] constexpr auto includes(const point_type& p) const noexcept -> bool
-		{
-			return point.distance(p) <= radius;
-		}
-
-		[[nodiscard]] constexpr auto includes(const basic_circle& circle) const noexcept -> bool
-		{
-			if (radius < circle.radius) { return false; }
-
-			return point.distance(circle.center) <= (radius - circle.radius);
-		}
-	};
-
-	template<std::size_t N, typename PointValueType, typename RadiusValueType>
-	[[nodiscard]] constexpr auto inscribed_rect(
-		const basic_circle<N, PointValueType, RadiusValueType>& circle
-	) noexcept -> basic_rect<N, PointValueType, RadiusValueType>
-	{
-		const auto radius = [r = circle.radius]
-		{
-			if constexpr (std::is_floating_point_v<RadiusValueType>) { return r * std::numbers::sqrt2_v<RadiusValueType>; }
-			else if constexpr (sizeof(RadiusValueType) == sizeof(float)) { return static_cast<RadiusValueType>(static_cast<float>(r) * std::numbers::sqrt2_v<float>); }
-			else { return static_cast<RadiusValueType>(static_cast<double>(r) * std::numbers::sqrt2_v<double>); }
-		}();
-
-		using rect_type = basic_rect<N, PointValueType, RadiusValueType>;
-		using extent_type = typename rect_type::extent_type;
-
-		if constexpr (N == 2)
-		{
-			const auto extent = extent_type{radius, radius};
-			const auto offset = extent / 2;
-			const auto left_top = circle.center - offset;
-
-			return {.point = left_top, .extent = extent};
-		}
-		else if constexpr (N == 3)
-		{
-			const auto extent = extent_type{radius, radius, radius};
-			const auto offset = extent / 2;
-			const auto left_top_near = circle.center - offset;
-
-			return {.point = left_top_near, .extent = extent};
-		}
-		else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+		template<typename PointValueType, typename RadiusValueType = PointValueType>
+		using basic_circle_3d = basic_circle<3, PointValueType, RadiusValueType>;
 	}
 
-	template<std::size_t N, typename PointValueType, typename RadiusValueType>
-	[[nodiscard]] constexpr auto circumscribed_rect(
-		const basic_circle<N, PointValueType, RadiusValueType>& circle
-	) noexcept -> basic_rect<N, PointValueType, RadiusValueType>
+	namespace meta
 	{
-		using rect_type = basic_rect<N, PointValueType, RadiusValueType>;
-		using point_type = typename rect_type::point_type;
-		using extent_type = typename rect_type::extent_type;
-
-		if constexpr (N == 2)
+		// This makes `circle1 == circle2` return a boolean instead of array<bool, N>
+		template<std::size_t N, typename PointValueType, typename RadiusValueType>
+		struct dimension_folder<primitive::basic_circle<N, PointValueType, RadiusValueType>, DimensionFoldOperation::EQUAL>
 		{
-			const point_type left_top{circle.center.x - circle.radius, circle.center.y - circle.radius};
-			const extent_type extent{circle.radius * 2, circle.radius * 2};
+			constexpr static auto value = DimensionFoldCategory::ALL;
+		};
 
-			return {.point = left_top, .extent = extent};
-		}
-		else if constexpr (N == 3)
+		// This makes `circle1 != circle2` return a boolean instead of array<bool, N>
+		template<std::size_t N, typename PointValueType, typename RadiusValueType>
+		struct dimension_folder<primitive::basic_circle<N, PointValueType, RadiusValueType>, DimensionFoldOperation::NOT_EQUAL>
 		{
-			const point_type left_top_near{circle.center.x - circle.radius, circle.center.y - circle.radius, circle.center.z - circle.radius};
-			const extent_type extent{circle.radius * 2, circle.radius * 2, circle.radius * 2};
-
-			return {.point = left_top_near, .extent = extent};
-		}
-		else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			constexpr static auto value = DimensionFoldCategory::ANY;
+		};
 	}
-
-	template<std::size_t N, typename PointValueType, typename RadiusType>
-	[[nodiscard]] constexpr auto inscribed_circle(const basic_rect<N, PointValueType, RadiusType>& rect) noexcept -> basic_circle<N, PointValueType, RadiusType>
-	{
-		if constexpr (N == 2)
-		{
-			const auto radius = std::ranges::min(rect.width(), rect.height()) / 2;
-			const auto center = rect.center();
-			return {.point = center, .radius = radius};
-		}
-		else if constexpr (N == 3)
-		{
-			const auto radius = std::ranges::min(rect.width(), rect.height(), rect.depth()) / 2;
-			const auto center = rect.center();
-			return {.point = center, .radius = radius};
-		}
-		else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-	}
-
-	template<std::size_t N, typename PointValueType, typename RadiusType>
-	[[nodiscard]] constexpr auto circumscribed_circle(const basic_rect<N, PointValueType, RadiusType>& rect) noexcept -> basic_circle<N, PointValueType, RadiusType>
-	{
-		using rect_type = basic_rect<N, PointValueType, RadiusType>;
-		using point_type = typename rect_type::point_type;
-
-		if constexpr (N == 2)
-		{
-			const auto radius = rect.size().template to<point_type>().distance({0, 0}) / 2;
-			const auto center = rect.center();
-			return {center, radius};
-		}
-		else if constexpr (N == 3)
-		{
-			const auto radius = rect.size().template to<point_type>().distance({0, 0, 0}) / 2;
-			const auto center = rect.center();
-			return {center, radius};
-		}
-		else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-	}
-
-	template<typename PointValueType, typename RadiusValueType = PointValueType>
-	using basic_circle_2d = basic_circle<2, PointValueType, RadiusValueType>;
-
-	template<typename PointValueType, typename RadiusValueType = PointValueType>
-	using basic_circle_3d = basic_circle<3, PointValueType, RadiusValueType>;
 }
 
 namespace std

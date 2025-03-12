@@ -15,85 +15,140 @@
 
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
-namespace gal::prometheus::primitive
+namespace gal::prometheus
 {
-	template<std::size_t, typename>
-	struct basic_extent;
-
-	template<typename T>
-		requires(std::is_arithmetic_v<T>)
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent<2, T> final : meta::dimension<basic_extent<2, T>>
+	namespace primitive
 	{
-		using value_type = T;
+		template<std::size_t, typename>
+		struct basic_extent;
 
-		value_type width;
-		value_type height;
-
-		template<std::size_t Index>
-			requires(Index < 2)
-		[[nodiscard]] constexpr auto get() const noexcept -> value_type
+		template<typename T>
+			requires(std::is_arithmetic_v<T>)
+		struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent<2, T> final : meta::dimension<basic_extent<2, T>>
 		{
-			if constexpr (Index == 0) { return width; }
-			else if constexpr (Index == 1) { return height; }
-			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-		}
+			using value_type = T;
 
-		template<std::size_t Index>
-			requires(Index < 2)
-		[[nodiscard]] constexpr auto get() noexcept -> value_type&
+			value_type width;
+			value_type height;
+
+			// warning: missing initializer for member ‘gal::prometheus::primitive::basic_extent<2, float>::<anonymous>’ [-Wmissing-field-initializers]
+			// {.width = width, .height = height};
+			//                                                     ^
+			// No initialization value specified for base class `meta::dimension`
+			constexpr basic_extent() noexcept
+				: width{},
+				  height{} {}
+
+			constexpr basic_extent(const value_type width, const value_type height) noexcept
+				: width{width},
+				  height{height} {}
+
+			constexpr explicit basic_extent(const value_type value) noexcept
+				: width{value},
+				  height{value} {}
+
+			template<std::size_t Index>
+				requires(Index < 2)
+			[[nodiscard]] constexpr auto get() const noexcept -> value_type
+			{
+				if constexpr (Index == 0) { return width; }
+				else if constexpr (Index == 1) { return height; }
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			}
+
+			template<std::size_t Index>
+				requires(Index < 2)
+			[[nodiscard]] constexpr auto get() noexcept -> value_type&
+			{
+				if constexpr (Index == 0) { return width; }
+				else if constexpr (Index == 1) { return height; }
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			}
+
+			[[nodiscard]] constexpr explicit operator basic_extent<3, value_type>() const noexcept
+			{
+				return {.width = width, .height = height, .depth = value_type{0}};
+			}
+		};
+
+		template<typename T>
+			requires std::is_arithmetic_v<T>
+		struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent<3, T> final : meta::dimension<basic_extent<3, T>>
 		{
-			if constexpr (Index == 0) { return width; }
-			else if constexpr (Index == 1) { return height; }
-			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-		}
+			using value_type = T;
 
-		[[nodiscard]] constexpr explicit operator basic_extent<3, value_type>() const noexcept
-		{
-			return {.width = width, .height = height, .depth = value_type{0}};
-		}
-	};
+			value_type width;
+			value_type height;
+			value_type depth;
 
-	template<typename T>
-		requires std::is_arithmetic_v<T>
-	struct [[nodiscard]] GAL_PROMETHEUS_COMPILER_EMPTY_BASE basic_extent<3, T> final : meta::dimension<basic_extent<3, T>>
+			// warning: missing initializer for member ‘gal::prometheus::primitive::basic_extent<3, float>::<anonymous>’ [-Wmissing-field-initializers]
+			// {.width = width, .height = height, .depth = depth};
+			//                                                                               ^
+			// No initialization value specified for base class `meta::dimension`
+			constexpr basic_extent() noexcept
+				: width{},
+				  height{},
+				  depth{} {}
+
+			constexpr basic_extent(const value_type width, const value_type height, const value_type depth) noexcept
+				: width{width},
+				  height{height},
+				  depth{depth} {}
+
+			constexpr explicit basic_extent(const value_type value) noexcept
+				: width{value},
+				  height{value},
+				  depth{value} {}
+
+			template<std::size_t Index>
+				requires(Index < 3)
+			[[nodiscard]] constexpr auto get() const noexcept -> value_type
+			{
+				if constexpr (Index == 0) { return width; }
+				else if constexpr (Index == 1) { return height; }
+				else if constexpr (Index == 2) { return depth; }
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			}
+
+			template<std::size_t Index>
+				requires(Index < 3)
+			[[nodiscard]] constexpr auto get() noexcept -> value_type&
+			{
+				if constexpr (Index == 0) { return width; }
+				else if constexpr (Index == 1) { return height; }
+				else if constexpr (Index == 2) { return depth; }
+				else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
+			}
+
+			[[nodiscard]] constexpr explicit operator basic_extent<2, value_type>() const noexcept
+			{
+				return {.width = width, .height = height};
+			}
+		};
+
+		template<typename T>
+		using basic_extent_2d = basic_extent<2, T>;
+
+		template<typename T>
+		using basic_extent_3d = basic_extent<3, T>;
+	}
+
+	namespace meta
 	{
-		using value_type = T;
-
-		value_type width;
-		value_type height;
-		value_type depth;
-
-		template<std::size_t Index>
-			requires(Index < 3)
-		[[nodiscard]] constexpr auto get() const noexcept -> value_type
+		// This makes `extent1 == extent2` return boolean instead of array<bool, N>
+		template<std::size_t N, typename T>
+		struct dimension_folder<primitive::basic_extent<N, T>, DimensionFoldOperation::EQUAL>
 		{
-			if constexpr (Index == 0) { return width; }
-			else if constexpr (Index == 1) { return height; }
-			else if constexpr (Index == 2) { return depth; }
-			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-		}
+			constexpr static auto value = DimensionFoldCategory::ALL;
+		};
 
-		template<std::size_t Index>
-			requires(Index < 3)
-		[[nodiscard]] constexpr auto get() noexcept -> value_type&
+		// This makes `extent1 != extent2` return boolean instead of array<bool, N>
+		template<std::size_t N, typename T>
+		struct dimension_folder<primitive::basic_extent<N, T>, DimensionFoldOperation::NOT_EQUAL>
 		{
-			if constexpr (Index == 0) { return width; }
-			else if constexpr (Index == 1) { return height; }
-			else if constexpr (Index == 2) { return depth; }
-			else { GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE(); }
-		}
-
-		[[nodiscard]] constexpr explicit operator basic_extent<2, value_type>() const noexcept
-		{
-			return {.width = width, .height = height};
-		}
-	};
-
-	template<typename T>
-	using basic_extent_2d = basic_extent<2, T>;
-
-	template<typename T>
-	using basic_extent_3d = basic_extent<3, T>;
+			constexpr static auto value = DimensionFoldCategory::ANY;
+		};
+	}
 }
 
 namespace std
