@@ -1,5 +1,5 @@
-#include "def.hpp"
-#include "dx_error_handler.hpp"
+#include "../win/def.hpp"
+#include "../common/print_time.hpp"
 
 #include <d3d11.h>
 #include <d3dcompiler.h>

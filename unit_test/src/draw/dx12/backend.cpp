@@ -1,5 +1,5 @@
-#include "def.hpp"
-#include "dx_error_handler.hpp"
+#include "../win/def.hpp"
+#include "../common/print_time.hpp"
 
 #include <d3d12.h>
 #include <d3dcompiler.h>
@@ -8,6 +8,8 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+
+#include <i18n/i18n.hpp>
 
 using Microsoft::WRL::ComPtr;
 using namespace gal::prometheus;
@@ -24,7 +26,7 @@ extern double g_last_time;
 extern std::uint64_t g_frame_count;
 extern float g_fps;
 
-extern io::DeviceEventQueue g_device_event_queue;
+// extern io::DeviceEventQueue g_device_event_queue;
 
 namespace
 {
@@ -55,7 +57,6 @@ namespace
 	ComPtr<ID3D12Resource> g_additional_picture_resource = nullptr;
 	D3D12_GPU_DESCRIPTOR_HANDLE g_additional_picture_handle = {.ptr = 0};
 
-	auto g_draw_list_shared_data = std::make_shared<draw::DrawListSharedData>();
 	draw::DrawList g_draw_list;
 
 	[[nodiscard]] auto load_texture(
@@ -276,12 +277,19 @@ auto prometheus_init() -> void
 {
 	print_time();
 
-	const auto glyph_range = draw::glyph_range_simplified_chinese_common();
-	auto [font_size, font_data, font_texture_id] = g_draw_list_shared_data->load_default_font(R"(C:\Windows\Fonts\msyh.ttc)", 18, glyph_range);
+	const auto glyph_range = i18n::RangeBuilder{}.simplified_chinese_common().range();
+	const auto font_option =
+			draw::Font::option()
+			.path(R"(C:\Windows\Fonts\msyh.ttc)")
+			.glyph_ranges(i18n::RangeBuilder{}.simplified_chinese_common().range())
+			.pixel_height(18);
 
-	using functional::operators::operator|;
+	auto font = std::make_shared<draw::Font>();
+	auto font_texture = font->load(font_option);
+
+	draw::Context::instance().set_default_font(font);
+
 	g_draw_list.draw_list_flag(draw::DrawListFlag::ANTI_ALIASED_LINE | draw::DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE | draw::DrawListFlag::ANTI_ALIASED_FILL);
-	g_draw_list.shared_data(g_draw_list_shared_data);
 
 	// Create the root signature
 	{
@@ -560,11 +568,10 @@ auto prometheus_init() -> void
 
 	// Load default font texture
 	{
-		const auto [font_width, font_height] = font_size;
 		[[maybe_unused]] const auto load_font_texture_result = load_texture(
-			reinterpret_cast<const std::uint8_t*>(font_data.get()),
-			font_width,
-			font_height,
+			reinterpret_cast<const std::uint8_t*>(font_texture.data().get()),
+			font_texture.width(),
+			font_texture.height(),
 			g_shader_resource_view_descriptor_heap,
 			0,
 			g_font_handle,
@@ -572,7 +579,7 @@ auto prometheus_init() -> void
 		);
 		assert(load_font_texture_result);
 
-		font_texture_id = static_cast<draw::Font::texture_id_type>(g_font_handle.ptr);
+		font_texture.bind(static_cast<draw::Font::texture_id_type>(g_font_handle.ptr));
 	}
 
 	// Load additional picture texture
@@ -675,11 +682,10 @@ auto prometheus_render() -> void
 
 	g_draw_list.triangle_filled({800, 450}, {700, 750}, {850, 800}, primitive::colors::gold);
 
-	// font texture
-	g_draw_list.image(g_draw_list_shared_data->get_default_font().texture_id(), {900, 20, 1200, 320});
-	g_draw_list.image_rounded(static_cast<draw::DrawList::texture_id_type>(g_additional_picture_handle.ptr), {900, 350, 1200, 650}, 10);
-
-	g_draw_list.bind_debug_info();
+	// font
+	g_draw_list.image(draw::Context::instance().font().texture_id(), {900, 20, 300, 300});
+	// image
+	g_draw_list.image_rounded(static_cast<draw::DrawList::texture_id_type>(g_additional_picture_handle.ptr), {900, 350, 300, 300}, 10);
 }
 
 auto prometheus_draw() -> void

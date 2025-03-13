@@ -1,13 +1,9 @@
-#if GAL_PROMETHEUS_USE_MODULE
-import gal.prometheus;
-#else
-#include <prometheus.ixx>
-#endif
+#include <print>
+#include <cstdio>
 
 #include <GLFW/glfw3.h>
 
-#include <print>
-#include <cstdio>
+#include <meta/meta.hpp>
 
 namespace
 {
@@ -143,7 +139,7 @@ struct meta::user_defined::enum_name_policy<KeyboardMod>
 	constexpr static auto value = EnumNamePolicy::WITH_SCOPED_NAME;
 };
 
-io::DeviceEventQueue g_device_event_queue;
+// io::DeviceEventQueue g_device_event_queue;
 
 auto glfw_callback_setup(GLFWwindow& w) -> void
 {
@@ -174,7 +170,7 @@ auto glfw_callback_setup(GLFWwindow& w) -> void
 	{
 		std::println(stdout, "[CURSOR]: window: 0x{:x}, x: {}, y: {}", reinterpret_cast<std::uintptr_t>(window), x, y);
 
-		g_device_event_queue.mouse_move(static_cast<float>(x), static_cast<float>(y));
+		// g_device_event_queue.mouse_move(static_cast<float>(x), static_cast<float>(y));
 
 		if (g_glfw_callback_window_cursor_position)
 		{
@@ -192,39 +188,39 @@ auto glfw_callback_setup(GLFWwindow& w) -> void
 			meta::to_string(static_cast<MouseMod>(mods))
 		);
 
-		const auto status = static_cast<MouseAction>(action) == MouseAction::PRESS ? io::MouseButtonStatus::PRESS : io::MouseButtonStatus::RELEASE;
-		switch (static_cast<MouseButton>(button))
-		{
-			case MouseButton::LEFT:
-			{
-				g_device_event_queue.mouse_button(io::MouseButton::LEFT, status);
-				break;
-			}
-			case MouseButton::MIDDLE:
-			{
-				g_device_event_queue.mouse_button(io::MouseButton::MIDDLE, status);
-				break;
-			}
-			case MouseButton::RIGHT:
-			{
-				g_device_event_queue.mouse_button(io::MouseButton::RIGHT, status);
-				break;
-			}
-			case MouseButton::X1:
-			{
-				g_device_event_queue.mouse_button(io::MouseButton::X1, status);
-				break;
-			}
-			case MouseButton::X2:
-			{
-				g_device_event_queue.mouse_button(io::MouseButton::X2, status);
-				break;
-			}
-			default:
-			{
-				break;
-			}
-		}
+		// const auto status = static_cast<MouseAction>(action) == MouseAction::PRESS ? io::MouseButtonStatus::PRESS : io::MouseButtonStatus::RELEASE;
+		// switch (static_cast<MouseButton>(button))
+		// {
+		// 	case MouseButton::LEFT:
+		// 	{
+		// 		g_device_event_queue.mouse_button(io::MouseButton::LEFT, status);
+		// 		break;
+		// 	}
+		// 	case MouseButton::MIDDLE:
+		// 	{
+		// 		g_device_event_queue.mouse_button(io::MouseButton::MIDDLE, status);
+		// 		break;
+		// 	}
+		// 	case MouseButton::RIGHT:
+		// 	{
+		// 		g_device_event_queue.mouse_button(io::MouseButton::RIGHT, status);
+		// 		break;
+		// 	}
+		// 	case MouseButton::X1:
+		// 	{
+		// 		g_device_event_queue.mouse_button(io::MouseButton::X1, status);
+		// 		break;
+		// 	}
+		// 	case MouseButton::X2:
+		// 	{
+		// 		g_device_event_queue.mouse_button(io::MouseButton::X2, status);
+		// 		break;
+		// 	}
+		// 	default:
+		// 	{
+		// 		break;
+		// 	}
+		// }
 
 		if (g_glfw_callback_window_mouse_button)
 		{
@@ -235,7 +231,7 @@ auto glfw_callback_setup(GLFWwindow& w) -> void
 	{
 		std::println(stdout, "[MOUSE SCROLL]: window: 0x{:x}, x: {}, y: {}", reinterpret_cast<std::uintptr_t>(window), x, y);
 
-		g_device_event_queue.mouse_wheel(static_cast<float>(x), static_cast<float>(y));
+		// g_device_event_queue.mouse_wheel(static_cast<float>(x), static_cast<float>(y));
 
 		if (g_glfw_callback_window_scroll)
 		{

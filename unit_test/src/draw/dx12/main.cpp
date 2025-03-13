@@ -1,5 +1,5 @@
-#include "def.hpp"
-#include "dx_error_handler.hpp"
+#include "../win/def.hpp"
+#include "../common/print_time.hpp"
 
 #include <d3d12.h>
 #include <d3dcompiler.h>
@@ -82,7 +82,7 @@ namespace
 
 	auto glfw_error_callback(const int error, const char* description) -> void
 	{
-		std::println("GLFW ERROR({}): {}", error, description);
+		std::println(stderr, "GLFW ERROR({}): {}", error, description);
 	}
 
 	auto create_device(GLFWwindow& window) -> bool;
@@ -272,7 +272,7 @@ namespace
 				(void)info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
 			}
 
-			// todo: cannot run program normally
+			// todo
 			// `g_device->CreateDescriptorHeap` failed
 			// D3D12: Removing Device.
 			// D3D12 MESSAGE:
