@@ -216,23 +216,17 @@ namespace gal::prometheus::draw
 		) noexcept -> void;
 
 	public:
-		constexpr DrawList() noexcept
-			: draw_list_flag_{DrawListFlag::NONE},
-			  this_command_clip_rect_{0, 0, 0, 0},
-			  this_command_texture_id_{0} {}
+		/**
+		 * @note The default font may not be set at this point, so we must manually call @c reset before using it.
+		 */
+		DrawList() noexcept;
 
 		// ----------------------------------------------------------------------------
 		// FLAG
 
-		constexpr auto draw_list_flag(const DrawListFlag flag) noexcept -> void
-		{
-			draw_list_flag_ = flag;
-		}
+		auto draw_list_flag(DrawListFlag flag) noexcept -> void;
 
-		constexpr auto draw_list_flag(const std::underlying_type_t<DrawListFlag> flag) noexcept -> void
-		{
-			draw_list_flag(static_cast<DrawListFlag>(flag));
-		}
+		auto draw_list_flag(std::underlying_type_t<DrawListFlag> flag) noexcept -> void;
 
 		// ----------------------------------------------------------------------------
 		// RESET

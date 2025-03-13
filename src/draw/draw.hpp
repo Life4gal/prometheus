@@ -9,5 +9,6 @@
 #include <draw/flag.hpp>
 #include <draw/font.hpp>
 #include <draw/shared_data.hpp>
+#include <draw/theme.hpp>
 #include <draw/draw_list.hpp>
 #include <draw/context.hpp>

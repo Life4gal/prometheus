@@ -363,7 +363,10 @@ set(
 		${PROJECT_SOURCE_DIR}/src/draw/def.hpp
 		${PROJECT_SOURCE_DIR}/src/draw/font.hpp
 		${PROJECT_SOURCE_DIR}/src/draw/shared_data.hpp
+		${PROJECT_SOURCE_DIR}/src/draw/theme.hpp
+		${PROJECT_SOURCE_DIR}/src/draw/mouse.hpp
 		${PROJECT_SOURCE_DIR}/src/draw/draw_list.hpp
+		${PROJECT_SOURCE_DIR}/src/draw/window.hpp
 		${PROJECT_SOURCE_DIR}/src/draw/context.hpp
 		
 		${PROJECT_SOURCE_DIR}/src/draw/draw.hpp
@@ -406,7 +409,10 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/draw/font.cpp
 		${PROJECT_SOURCE_DIR}/src/draw/shared_data.cpp
+		${PROJECT_SOURCE_DIR}/src/draw/theme.cpp
+		${PROJECT_SOURCE_DIR}/src/draw/mouse.cpp
 		${PROJECT_SOURCE_DIR}/src/draw/draw_list.cpp
+		${PROJECT_SOURCE_DIR}/src/draw/window.cpp
 		${PROJECT_SOURCE_DIR}/src/draw/context.cpp
 )
 

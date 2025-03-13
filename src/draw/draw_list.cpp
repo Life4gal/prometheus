@@ -114,7 +114,7 @@ namespace gal::prometheus::draw
 		// fixme: If the window boundary is smaller than the rect boundary, the rect will no longer be valid.
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not this_command_clip_rect_.empty() and this_command_clip_rect_.valid());
 
-		auto& [command_list, vertex_list, index_list] = private_data_;
+		auto& [command_list, _, index_list] = private_data_;
 
 		command_list.emplace_back(
 			command_type
@@ -1163,6 +1163,24 @@ namespace gal::prometheus::draw
 		}
 	}
 
+	DrawList::DrawList() noexcept
+		: draw_list_flag_{DrawListFlag::NONE},
+		  this_command_clip_rect_{0, 0, 0, 0},
+		  this_command_texture_id_{0}
+	{
+		// reset();
+	}
+
+	auto DrawList::draw_list_flag(const DrawListFlag flag) noexcept -> void
+	{
+		draw_list_flag_ = flag;
+	}
+
+	auto DrawList::draw_list_flag(const std::underlying_type_t<DrawListFlag> flag) noexcept -> void
+	{
+		draw_list_flag(static_cast<DrawListFlag>(flag));
+	}
+
 	auto DrawList::reset() noexcept -> void
 	{
 		const auto& font = Context::instance().font();
@@ -1216,7 +1234,7 @@ namespace gal::prometheus::draw
 
 	auto DrawList::pop_clip_rect() noexcept -> void
 	{
-		auto& [command_list, _1, _2] = private_data_;
+		const auto& [command_list, _1, _2] = private_data_;
 
 		// at least one command
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(command_list.size() > 1);
@@ -1234,7 +1252,7 @@ namespace gal::prometheus::draw
 
 	auto DrawList::pop_texture_id() noexcept -> void
 	{
-		auto& [command_list, _1, _2] = private_data_;
+		const auto& [command_list, _1, _2] = private_data_;
 
 		// at least one command
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(command_list.size() > 1);
