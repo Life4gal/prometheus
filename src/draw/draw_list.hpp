@@ -92,6 +92,9 @@ namespace gal::prometheus::draw
 
 		auto on_element_changed(ChangedElement element) noexcept -> void;
 
+		// ----------------------------------------------------------------------------
+		// DRAW
+
 		auto draw_polygon_line(const color_type& color, DrawFlag draw_flag, float thickness) noexcept -> void;
 
 		auto draw_polygon_line_aa(const color_type& color, DrawFlag draw_flag, float thickness) noexcept -> void;
@@ -138,6 +141,9 @@ namespace gal::prometheus::draw
 			float rounding,
 			DrawFlag flag
 		) noexcept -> void;
+
+		// ----------------------------------------------------------------------------
+		// PATH
 
 		constexpr auto path_clear() noexcept -> void
 		{
@@ -215,6 +221,9 @@ namespace gal::prometheus::draw
 			  this_command_clip_rect_{0, 0, 0, 0},
 			  this_command_texture_id_{0} {}
 
+		// ----------------------------------------------------------------------------
+		// FLAG
+
 		constexpr auto draw_list_flag(const DrawListFlag flag) noexcept -> void
 		{
 			draw_list_flag_ = flag;
@@ -225,7 +234,13 @@ namespace gal::prometheus::draw
 			draw_list_flag(static_cast<DrawListFlag>(flag));
 		}
 
+		// ----------------------------------------------------------------------------
+		// RESET
+
 		auto reset() noexcept -> void;
+
+		// ----------------------------------------------------------------------------
+		// DRAW DATA
 
 		[[nodiscard]] constexpr auto command_list() const noexcept -> auto
 		{
@@ -242,6 +257,9 @@ namespace gal::prometheus::draw
 			return private_data_.index_list | std::views::all;
 		}
 
+		// ----------------------------------------------------------------------------
+		// CLIP RECT & TEXTURE
+
 		auto push_clip_rect(const rect_type& rect, bool intersect_with_current_clip_rect) noexcept -> rect_type&;
 
 		auto push_clip_rect(const point_type& left_top, const point_type& right_bottom, bool intersect_with_current_clip_rect) noexcept -> rect_type&;
@@ -251,6 +269,9 @@ namespace gal::prometheus::draw
 		auto push_texture_id(texture_id_type texture) noexcept -> void;
 
 		auto pop_texture_id() noexcept -> void;
+
+		// ----------------------------------------------------------------------------
+		// PRIMITIVE
 
 		auto line(
 			const point_type& from,
@@ -475,6 +496,9 @@ namespace gal::prometheus::draw
 			float thickness = 1.f
 		) noexcept -> void;
 
+		// ----------------------------------------------------------------------------
+		// TEXT
+
 		auto text(
 			const Font& font,
 			float font_size,
@@ -491,6 +515,9 @@ namespace gal::prometheus::draw
 			std::string_view utf8_text,
 			float wrap_width = std::numeric_limits<float>::max()
 		) noexcept -> void;
+
+		// ----------------------------------------------------------------------------
+		// IMAGE
 
 		// p1________ p2
 		//     |           |

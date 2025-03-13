@@ -97,24 +97,6 @@ namespace
 
 namespace gal::prometheus::draw
 {
-	#if GAL_PROMETHEUS_DRAW_LIST_DEBUG
-
-	DrawListDef::Accessor::~Accessor() noexcept
-	{
-		const auto& vertex = vertex_list_.get();
-		const auto& index = index_list_.get();
-
-		// fixme: this assumes that the container growth capacity is always exactly equal to the value we specify
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(vertex.size() == vertex.capacity(), "vertex_list size mismatch!");
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(index.size() == index.capacity(), "index_list size mismatch!");
-	}
-
-	#else
-
-	DrawListDef::Accessor::~Accessor() noexcept = default;
-
-	#endif
-
 	auto DrawList::make_accessor() noexcept -> DrawListDef::Accessor
 	{
 		auto& [command_list, vertex_list, index_list] = private_data_;

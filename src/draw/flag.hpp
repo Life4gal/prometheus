@@ -10,6 +10,8 @@
 #include <utility>
 #include <limits>
 
+#include <functional/enumeration.hpp>
+
 namespace gal::prometheus::draw
 {
 	enum class DrawFlag : std::uint8_t

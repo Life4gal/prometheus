@@ -5,14 +5,6 @@
 
 #pragma once
 
-#if not defined(GAL_PROMETHEUS_DRAW_LIST_DEBUG)
-#if defined(DEBUG) or defined(_DEBUG)
-#define GAL_PROMETHEUS_DRAW_LIST_DEBUG 1
-#else
-#define GAL_PROMETHEUS_DRAW_LIST_DEBUG 0
-#endif
-#endif
-
 #include <primitive/rect.hpp>
 #include <primitive/circle.hpp>
 #include <primitive/ellipse.hpp>
@@ -93,7 +85,7 @@ namespace gal::prometheus::draw
 			auto operator=(const Accessor& other) -> Accessor& = delete;
 			auto operator=(Accessor&& other) noexcept -> Accessor& = delete;
 
-			~Accessor() noexcept;
+			~Accessor() noexcept = default;
 
 			constexpr auto reserve(const size_type vertex_count, const size_type index_count) const noexcept -> void
 			{

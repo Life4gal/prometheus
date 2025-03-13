@@ -63,14 +63,48 @@ namespace gal::prometheus::draw
 		// todo
 		constexpr static std::uint32_t default_baked_line_max_width = 63;
 
-		struct option_type
+		class Option
 		{
-			std::string font_path;
-			glyph_ranges_type glyph_ranges;
+			friend Font;
 
-			std::uint32_t pixel_height;
-			// 0 => default_baked_line_max_width
-			std::uint32_t baked_line_max_width;
+			std::string font_path_;
+			glyph_ranges_type glyph_ranges_;
+
+			std::uint32_t pixel_height_;
+			std::uint32_t baked_line_max_width_;
+
+			Option() noexcept
+				: pixel_height_{18},
+				  baked_line_max_width_{default_baked_line_max_width} {}
+
+		public:
+			constexpr auto path(const std::string_view path) noexcept -> Option&
+			{
+				font_path_ = path;
+
+				return *this;
+			}
+
+			constexpr auto glyph_ranges(glyph_ranges_type&& ranges) noexcept -> Option&
+			{
+				glyph_ranges_ = std::move(ranges);
+
+				return *this;
+			}
+
+			constexpr auto pixel_height(const std::uint32_t height) noexcept -> Option&
+			{
+				pixel_height_ = height;
+
+				return *this;
+			}
+
+			constexpr auto baked_line_max_width(const std::uint32_t width) noexcept -> Option&
+			{
+				baked_line_max_width_ = width;
+
+				return *this;
+			}
 		};
 
 		class Texture final
@@ -78,22 +112,26 @@ namespace gal::prometheus::draw
 			friend Font;
 
 		public:
+			using size_type = std::uint32_t;
 			// size.width * size.height (RGBA)
 			using data_type = std::unique_ptr<std::uint32_t[]>;
 
 		private:
-			extent_type size_;
+			size_type width_;
+			size_type height_;
 			data_type data_;
 			std::reference_wrapper<texture_id_type> id_;
 
 			explicit Texture(texture_id_type& id) noexcept
-				: size_{},
+				: width_{0},
+				  height_{0},
 				  data_{nullptr},
 				  id_{id} {}
 
-			constexpr auto set_size(const extent_type size) noexcept -> void
+			constexpr auto set_size(const size_type width, const size_type height) noexcept -> void
 			{
-				size_ = size;
+				width_ = width;
+				height_ = height;
 			}
 
 			constexpr auto set_data(data_type&& data) noexcept -> void
@@ -114,9 +152,14 @@ namespace gal::prometheus::draw
 				return data_ != nullptr;
 			}
 
-			[[nodiscard]] constexpr auto size() const noexcept -> extent_type
+			[[nodiscard]] constexpr auto width() const noexcept -> size_type
 			{
-				return size_;
+				return width_;
+			}
+
+			[[nodiscard]] constexpr auto height() const noexcept -> size_type
+			{
+				return height_;
 			}
 
 			[[nodiscard]] constexpr auto data() const & noexcept -> const data_type&
@@ -157,7 +200,9 @@ namespace gal::prometheus::draw
 
 		virtual ~Font() noexcept;
 
-		auto load(const option_type& option) noexcept -> Texture;
+		[[nodiscard]] static auto option() noexcept -> Option;
+
+		[[nodiscard]] auto load(const Option& option) noexcept -> Texture;
 
 		// ---------------------------------------------------------
 

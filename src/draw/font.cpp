@@ -7,7 +7,6 @@
 
 #include <algorithm>
 #include <ranges>
-#include <numeric>
 #include <vector>
 #include <cmath>
 #include <memory>
@@ -104,13 +103,30 @@ namespace gal::prometheus::draw
 
 	Font::~Font() noexcept = default;
 
-	auto Font::load(const option_type& option) noexcept -> Texture
+	auto Font::option() noexcept -> Option
+	{
+		return {};
+	}
+
+	auto Font::load(const Option& option) noexcept -> Texture
 	{
 		reset();
 
+		font_path_ = std::format("{}-{}px", option.font_path_, option.pixel_height_);
+		pixel_height_ = option.pixel_height_;
+
+		if (option.baked_line_max_width_ == 0 or option.baked_line_max_width_ > default_baked_line_max_width)
+		{
+			baked_line_max_width_ = default_baked_line_max_width;
+		}
+		else
+		{
+			baked_line_max_width_ = option.baked_line_max_width_;
+		}
+
 		Texture texture{texture_id_};
 
-		auto ft = create_ft(option.font_path, option.pixel_height);
+		auto ft = create_ft(option.font_path_, option.pixel_height_);
 		if (not ft.valid())
 		{
 			return texture;
@@ -125,13 +141,17 @@ namespace gal::prometheus::draw
 		// baked line
 		constexpr auto id_baked_line = std::numeric_limits<int>::min() + 0;
 		{
-			baked_line_uv_.reserve(baked_line_max_width_);
+			const auto baked_line_uv_width = baked_line_max_width_ + 1;
+			const auto baked_line_uv_height = baked_line_max_width_ + 2;
+
+			baked_line_uv_.reserve(baked_line_uv_height);
+
 			rects.emplace_back(
 				stbrp_rect
 				{
 						.id = id_baked_line,
-						.w = static_cast<stbrp_coord>(baked_line_max_width_) + 1,
-						.h = static_cast<stbrp_coord>(baked_line_max_width_) + 2,
+						.w = static_cast<stbrp_coord>(baked_line_uv_width),
+						.h = static_cast<stbrp_coord>(baked_line_uv_height),
 						.x = 0,
 						.y = 0,
 						.was_packed = 0
@@ -142,12 +162,12 @@ namespace gal::prometheus::draw
 		// ===============================
 
 		std::ranges::for_each(
-			option.glyph_ranges,
+			option.glyph_ranges_,
 			[&face, &rects](const auto& pair) noexcept -> void
 			{
-				const auto [first, second] = pair;
+				const auto [from, to] = pair;
 
-				for (auto c = first; c <= second; ++c)
+				for (auto c = from; c <= to; ++c)
 				{
 					if (FT_Load_Char(face, c, FT_LOAD_RENDER))
 					{
@@ -175,18 +195,18 @@ namespace gal::prometheus::draw
 		// todo: texture size?
 		const auto size = [&rects]()
 		{
-			std::uint32_t total_area = 0;
-			std::uint32_t max_width = 0;
-			std::uint32_t max_height = 0;
+			Texture::size_type total_area = 0;
+			Texture::size_type max_width = 0;
+			Texture::size_type max_height = 0;
 
 			for (const auto& [id, w, h, x, y, was_packed]: rects)
 			{
 				total_area += w * h;
-				max_width = std::ranges::max(max_width, static_cast<std::uint32_t>(w));
-				max_height = std::ranges::max(max_height, static_cast<std::uint32_t>(h));
+				max_width = std::ranges::max(max_width, static_cast<Texture::size_type>(w));
+				max_height = std::ranges::max(max_height, static_cast<Texture::size_type>(h));
 			}
 
-			const auto min_side = static_cast<std::uint32_t>(std::sqrt(total_area));
+			const auto min_side = static_cast<Texture::size_type>(std::sqrt(total_area));
 			const auto max_side = std::ranges::max(max_width, max_height);
 
 			return std::bit_ceil(std::ranges::max(min_side, max_side));
@@ -211,12 +231,11 @@ namespace gal::prometheus::draw
 
 		// ===============================
 
-		const extent_type texture_size{static_cast<extent_type::value_type>(atlas_width), static_cast<extent_type::value_type>(atlas_height)};
 		// note: We don't necessarily overwrite all the memory, but it doesn't matter.
 		// auto texture_data = std::make_unique<std::uint32_t[]>(static_cast<std::size_t>(atlas_width * atlas_height));
 		auto texture_data = std::make_unique_for_overwrite<std::uint32_t[]>(static_cast<std::size_t>(atlas_width * atlas_height));
 
-		const uv_extent_type texture_uv_scale{1.f / static_cast<float>(texture_size.width), 1.f / static_cast<float>(texture_size.height)};
+		const uv_extent_type texture_uv_scale{1.f / static_cast<float>(atlas_width), 1.f / static_cast<float>(atlas_height)};
 
 		// ===============================
 
@@ -251,15 +270,17 @@ namespace gal::prometheus::draw
 						texture_data[index] = white_color;
 					}
 
-					const auto begin_x = rect_x + (rect_width - line_width);
-					const auto end_x = rect_x + rect_width;
-					const auto begin_y = rect_y + y;
+					const auto p_x = rect_x + (rect_width - line_width);
+					const auto p_y = rect_y + y;
+					const auto width = line_width;
+					constexpr auto height = .5f;
 
-					const auto uv0_x = static_cast<value_type>(begin_x) * texture_uv_scale.width;
-					const auto uv1_x = static_cast<value_type>(end_x) * texture_uv_scale.width;
-					const auto uv_y = static_cast<value_type>((static_cast<float>(begin_y) + .5f) * texture_uv_scale.height);
+					const auto uv_x = static_cast<value_type>(p_x) * texture_uv_scale.width;
+					const auto uv_y = static_cast<value_type>(p_y) * texture_uv_scale.height;
+					const auto uv_width = static_cast<value_type>(width) * texture_uv_scale.width;
+					const auto uv_height = static_cast<value_type>(height) * texture_uv_scale.height;
 
-					baked_line_uv_.emplace_back(uv0_x, uv_y, uv1_x, uv_y);
+					baked_line_uv_.emplace_back(uv_x, uv_y, uv_width, uv_height);
 				}
 
 				continue;
@@ -296,35 +317,23 @@ namespace gal::prometheus::draw
 				}
 			}
 
-			const auto p0_x = static_cast<point_type::value_type>(g->bitmap_left);
-			const auto p0_y = static_cast<point_type::value_type>(g->bitmap_top);
-			const auto p1_x = p0_x + static_cast<point_type::value_type>(g->bitmap.width);
-			const auto p1_y = p0_y + static_cast<point_type::value_type>(g->bitmap.rows);
+			const auto p_x = static_cast<point_type::value_type>(g->bitmap_left);
+			const auto p_y = static_cast<point_type::value_type>(g->bitmap_top);
+			const auto p_width = static_cast<point_type::value_type>(g->bitmap.width);
+			const auto p_height = static_cast<point_type::value_type>(g->bitmap.rows);
 
-			const auto uv0_x = static_cast<uv_point_type::value_type>(rect_x) * texture_uv_scale.width;
-			const auto uv0_y = static_cast<uv_point_type::value_type>(rect_y) * texture_uv_scale.height;
-			const auto uv1_x = uv0_x + static_cast<uv_extent_type::value_type>(g->bitmap.width) * texture_uv_scale.width;
-			const auto uv1_y = uv0_y + static_cast<uv_extent_type::value_type>(g->bitmap.rows) * texture_uv_scale.height;
+			const auto uv_x = static_cast<uv_point_type::value_type>(rect_x) * texture_uv_scale.width;
+			const auto uv_y = static_cast<uv_point_type::value_type>(rect_y) * texture_uv_scale.height;
+			const auto uv_width = static_cast<uv_extent_type::value_type>(g->bitmap.width) * texture_uv_scale.width;
+			const auto uv_height = static_cast<uv_extent_type::value_type>(g->bitmap.rows) * texture_uv_scale.height;
 
 			const glyph_type glyph{
-					.rect = {p0_x, p0_y, p1_x, p1_y},
-					.uv = {uv0_x, uv0_y, uv1_x, uv1_y},
+					.rect = {p_x, p_y, p_width, p_height},
+					.uv = {uv_x, uv_y, uv_width, uv_height},
 					.advance_x = static_cast<float>(g->advance.x) / 64.f
 			};
 
 			glyphs_.insert_or_assign(static_cast<char_type>(c), glyph);
-		}
-
-		font_path_ = std::format("{}-{}px", option.font_path, option.pixel_height);
-		pixel_height_ = option.pixel_height;
-
-		if (option.baked_line_max_width == 0 or option.baked_line_max_width > default_baked_line_max_width)
-		{
-			baked_line_max_width_ = default_baked_line_max_width;
-		}
-		else if (option.baked_line_max_width > default_baked_line_max_width)
-		{
-			baked_line_max_width_ = option.baked_line_max_width;
 		}
 
 		fallback_glyph_ = glyphs_[static_cast<char_type>('?')];
@@ -333,7 +342,7 @@ namespace gal::prometheus::draw
 
 		destroy_ft(ft);
 
-		texture.set_size(texture_size);
+		texture.set_size(atlas_width, atlas_height);
 		texture.set_data(std::move(texture_data));
 		return texture;
 	}
@@ -484,7 +493,7 @@ namespace gal::prometheus::draw
 		const auto& glyphs = glyphs_;
 		const auto& fallback_glyph = fallback_glyph_;
 
-		auto cursor = point + point_type{0, font_size};
+		auto cursor = point + point_type{0, line_height};
 
 		auto it_input_current = utf16_text.begin();
 		const auto it_input_end = utf16_text.end();
@@ -512,7 +521,7 @@ namespace gal::prometheus::draw
 			}(this_char);
 
 			const auto advance_x = glyph_advance_x * scale;
-			if (cursor.x + advance_x > wrap_width)
+			if (cursor.x + advance_x > point.x + wrap_width)
 			{
 				cursor.x = point.x;
 				cursor.y += line_height;
@@ -520,8 +529,8 @@ namespace gal::prometheus::draw
 
 			const rect_type char_rect
 			{
-					cursor + point_type{static_cast<point_type::value_type>(glyph_rect.left_top().x), -static_cast<point_type::value_type>(glyph_rect.left_top().y)} * scale,
-					static_cast<extent_type>(glyph_rect.size()) * scale
+					cursor + point_type{glyph_rect.left_top().x, -glyph_rect.left_top().y} * scale,
+					glyph_rect.size() * scale
 			};
 			cursor.x += advance_x;
 
