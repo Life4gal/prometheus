@@ -212,8 +212,10 @@ set(
 		${PROJECT_SOURCE_DIR}/src/meta/string.hpp
 		${PROJECT_SOURCE_DIR}/src/meta/enumeration.hpp
 		${PROJECT_SOURCE_DIR}/src/meta/member.hpp
+		${PROJECT_SOURCE_DIR}/src/meta/member.visit.inl
 		${PROJECT_SOURCE_DIR}/src/meta/to_string.hpp
 		${PROJECT_SOURCE_DIR}/src/meta/dimension.hpp
+		${PROJECT_SOURCE_DIR}/src/meta/dimension.cache.inl
 
 		${PROJECT_SOURCE_DIR}/src/meta/meta.hpp
 
