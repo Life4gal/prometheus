@@ -22,15 +22,31 @@ namespace gal::prometheus::draw
 		using color_type = DrawListDef::color_type;
 		using colors_type = std::array<color_type, theme_category_count>;
 
+		// -----------------------------------------------
+		// FONT
+
 		std::string font_path;
 		value_type font_size;
+
+		// -----------------------------------------------
+		// WINDOW
+
 		value_type title_bar_height;
 		value_type window_rounding;
 		extent_type window_padding;
 		extent_type window_min_size;
 		extent_type resize_grip_size;
+
+		// -----------------------------------------------
+		// WINDOW CANVAS LAYOUT
+
+		extent_type frame_padding;
 		extent_type item_spacing;
 		extent_type item_inner_spacing;
+
+		// -----------------------------------------------
+		// WINDOW WIDGET COLOR
+
 		colors_type colors;
 
 		template<ThemeCategory Category>

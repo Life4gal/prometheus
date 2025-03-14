@@ -410,7 +410,7 @@ namespace gal::prometheus::draw
 
 		float max_width = 0;
 		float current_width = 0;
-		float total_height = 0;
+		float total_height = line_height;
 
 		auto it_input_current = utf16_text.begin();
 		const auto it_input_end = utf16_text.end();

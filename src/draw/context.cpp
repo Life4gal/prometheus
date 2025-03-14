@@ -76,6 +76,7 @@ namespace gal::prometheus::draw
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(draw_list_shared_data_current_ != stack_use_default, "Unable to popup the default DrawListSharedData!");
 
+		draw_list_shared_data_stack_[draw_list_shared_data_current_] = nullptr;
 		if (draw_list_shared_data_current_ == 0)
 		{
 			draw_list_shared_data_current_ = stack_use_default;
@@ -104,6 +105,7 @@ namespace gal::prometheus::draw
 
 		const auto* p = font_stack_[font_current_];
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(p != nullptr);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(p->get() != nullptr);
 
 		return **p;
 	}
@@ -121,6 +123,7 @@ namespace gal::prometheus::draw
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(font_current_ != stack_use_default, "Unable to popup the default Font!");
 
+		font_stack_[font_current_] = nullptr;
 		if (font_current_ == 0)
 		{
 			font_current_ = stack_use_default;
@@ -156,6 +159,7 @@ namespace gal::prometheus::draw
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(theme_current_ != stack_use_default, "Unable to popup the default Theme!");
 
+		theme_stack_[theme_current_] = nullptr;
 		if (theme_current_ == 0)
 		{
 			theme_current_ = stack_use_default;
@@ -193,8 +197,10 @@ namespace gal::prometheus::draw
 		#endif
 	) noexcept -> void
 	{
+		#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
 		(void)reason;
 		(void)location;
+		#endif
 
 		widget_id_hovered_ = Window::invalid_id;
 	}
@@ -206,8 +212,10 @@ namespace gal::prometheus::draw
 		#endif
 	) noexcept -> void
 	{
+		#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
 		(void)reason;
 		(void)location;
+		#endif
 
 		widget_id_activated_ = Window::invalid_id;
 	}

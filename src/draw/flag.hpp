@@ -150,9 +150,12 @@ namespace gal::prometheus::draw
 		NONE = 0,
 
 		BORDERED = 1 << 0,
+
 		NO_TITLE_BAR = 1 << 1,
-		NO_RESIZE = 1 << 2,
-		NO_MOVE = 1 << 3,
+		// Meaningful if and only if NO_TITLE_BAR is not set
+		NO_CLOSE = 1 << 2,
+		NO_RESIZE = 1 << 3,
+		NO_MOVE = 1 << 4,
 
 		PROMETHEUS_MAGIC_ENUM_FLAG = std::numeric_limits<std::uint8_t>::max(),
 	};

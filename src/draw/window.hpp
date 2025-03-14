@@ -37,8 +37,10 @@ namespace gal::prometheus::draw
 			point_type cursor_start_line{0};
 			point_type cursor_current_line{0};
 			point_type cursor_previous_line{0};
+
 			value_type height_current_line{0};
 			value_type height_previous_line{0};
+
 			container_type<value_type> item_width{};
 		};
 
@@ -66,16 +68,24 @@ namespace gal::prometheus::draw
 
 		[[nodiscard]] auto rect_of_title_bar() const noexcept -> rect_type;
 
+		[[nodiscard]] auto rect_of_close_button() const noexcept -> rect_type;
+
 		[[nodiscard]] auto rect_of_resize_grip() const noexcept -> rect_type;
 
 		[[nodiscard]] auto rect_of_canvas() const noexcept -> rect_type;
 
-		auto make_canvas() noexcept -> void;
+		[[nodiscard]] auto make_canvas() noexcept -> bool;
 
 		// -----------------------------------
 		// CANVAS CONTEXT
 
+		[[nodiscard]] auto cursor_abs_position() const noexcept -> point_type;
+
+		[[nodiscard]] auto cursor_remaining_width() const noexcept -> value_type;
+
 		auto adjust_item_size(const extent_type& size) noexcept -> void;
+
+		auto draw_widget_frame(const rect_type& rect, const color_type& color) noexcept -> void;
 
 		// -----------------------------------
 		// INITIALIZE
@@ -86,20 +96,39 @@ namespace gal::prometheus::draw
 		static auto make(std::string_view name, WindowFlag flag, const rect_type& rect) noexcept -> Window;
 
 		// ---------------------------------------------
+		// INFO
 
 		[[nodiscard]] auto name() const noexcept -> std::string_view;
 
 		[[nodiscard]] auto rect() const noexcept -> const rect_type&;
 
 		// ---------------------------------------------
+		// STATUS
 
 		[[nodiscard]] auto hovered(point_type mouse) const noexcept -> bool;
 
 		// ---------------------------------------------
+		// LAYOUT
 
-		auto draw_text(std::string_view text) noexcept -> void;
+		auto layout_same_line(value_type column_width = 0, value_type spacing_width = 0) noexcept -> void;
 
 		// ---------------------------------------------
+		// WIDGET
+
+		auto draw_text(std::string_view utf8_text) noexcept -> void;
+
+		/**
+		 * @return Whether the button is pressed or not.
+		 */
+		[[nodiscard]] auto draw_button(std::string_view utf8_text, extent_type size = {0, 0}) noexcept -> bool;
+
+		/**
+		 * @return Whether the checkbox state is toggled (checked to unchecked, or vice versa)
+		 */
+		[[nodiscard]] auto draw_checkbox(std::string_view utf8_text, bool checked, extent_type size = {0, 0}) noexcept -> bool;
+
+		// ---------------------------------------------
+		// RENDER
 
 		auto render() noexcept -> DrawList&;
 
@@ -111,7 +140,7 @@ namespace gal::prometheus::draw
 
 		auto test_init() noexcept -> void
 		{
-			make_canvas();
+			std::ignore = make_canvas();
 		}
 
 		[[nodiscard]] auto test_draw_list() noexcept -> DrawList&

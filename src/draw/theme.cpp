@@ -95,6 +95,7 @@ namespace gal::prometheus::draw
 				.window_padding = {8, 8},
 				.window_min_size = {640, 480},
 				.resize_grip_size = {20, 20},
+				.frame_padding = {4, 4},
 				.item_spacing = {10, 5},
 				.item_inner_spacing = {5, 5},
 				.colors = default_colors()
@@ -116,6 +117,7 @@ namespace gal::prometheus::draw
 				.window_padding = {15, 15},
 				.window_min_size = {1280, 960},
 				.resize_grip_size = {40, 40},
+				.frame_padding = {8, 8},
 				.item_spacing = {20, 10},
 				.item_inner_spacing = {10, 10},
 				.colors = another_colors_for_test()
