@@ -53,7 +53,7 @@ namespace
 
 	ComPtr<ID3D11ShaderResourceView> g_additional_picture_texture = nullptr;
 
-	draw::DrawList g_draw_list;
+	draw::Window g_window{"Window 1", {100, 100, 640, 480}};
 
 	[[nodiscard]] auto load_texture(
 		const std::uint8_t* texture_data,
@@ -118,10 +118,6 @@ auto prometheus_init() -> void //
 
 	auto font = std::make_shared<draw::Font>();
 	auto font_texture = font->load(font_option);
-
-	draw::Context::instance().set_default_font(font);
-
-	g_draw_list.draw_list_flag(draw::DrawListFlag::ANTI_ALIASED_LINE | draw::DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE | draw::DrawListFlag::ANTI_ALIASED_FILL);
 
 	// Create the blending setup
 	{
@@ -413,98 +409,147 @@ auto prometheus_init() -> void //
 	}
 
 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(font->loaded());
+
+	auto& context = draw::Context::instance();
+	auto& draw_list = g_window.test_draw_list();
+
+	context.set_default_font(font);
+	context.test_set_window(g_window);
+
+	draw_list.draw_list_flag(draw::DrawListFlag::ANTI_ALIASED_LINE | draw::DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE | draw::DrawListFlag::ANTI_ALIASED_FILL);
+	draw_list.reset();
+
+	g_window.test_init();
 }
 
 auto prometheus_new_frame() -> void //
 {
-	g_draw_list.reset();
-	g_draw_list.push_clip_rect({0, 0}, {static_cast<float>(g_window_width), static_cast<float>(g_window_height)}, false);
+	auto& draw_list = g_window.test_draw_list();
+
+	draw_list.reset();
+	draw_list.push_clip_rect({0, 0}, {static_cast<float>(g_window_width), static_cast<float>(g_window_height)}, false);
 }
 
 auto prometheus_render() -> void
 {
-	g_draw_list.text(24.f, {10, 10}, primitive::colors::blue, std::format("FPS: {:.3f}", g_fps));
+	g_window.test_init();
+	if (g_window.draw_button("Button"))
+	{
+		std::println(stdout, "Button!");
+	}
 
-	g_draw_list.text(18.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n");
+	g_window.draw_text("Hello1");
+	g_window.draw_text("World1");
 
-	g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
-	g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
+	g_window.draw_text("Hello2");
+	g_window.layout_same_line();
+	g_window.draw_text("World2");
 
-	g_draw_list.rect({100, 100}, {300, 300}, primitive::colors::blue);
-	g_draw_list.rect({150, 150}, {250, 250}, primitive::colors::blue, 30);
+	{
+		static bool checked = false;
+		if (const auto new_status = g_window.draw_checkbox("Checkbox1", checked);
+			new_status != checked)
+		{
+			checked = new_status;
+			std::println(stdout, "Checkbox1!");
+		}
+	}
+	{
+		static bool checked = true;
+		if (const auto new_status = g_window.draw_checkbox("Checkbox2", checked);
+			new_status != checked)
+		{
+			checked = new_status;
+			std::println(stdout, "Checkbox2!");
+		}
+	}
 
-	g_draw_list.triangle({120, 120}, {120, 150}, {150, 120}, primitive::colors::green);
-	g_draw_list.triangle_filled({130, 130}, {130, 150}, {150, 130}, primitive::colors::red);
+	// auto& draw_list = g_window.test_draw_list();
 
-	g_draw_list.rect_filled({300, 100}, {400, 200}, primitive::colors::pink);
-	g_draw_list.rect_filled({300, 200}, {400, 300}, primitive::colors::pink, 20);
-	g_draw_list.rect_filled({300, 300}, {400, 400}, primitive::colors::pink, primitive::colors::gold, primitive::colors::azure, primitive::colors::lavender);
+	// draw_list.text(24.f, {10, 10}, primitive::colors::blue, std::format("FPS: {:.3f}", g_fps));
+	//
+	// draw_list.text(18.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n");
 
-	g_draw_list.quadrilateral({100, 500}, {200, 500}, {250, 550}, {50, 550}, primitive::colors::red);
-	g_draw_list.quadrilateral_filled({100, 500}, {200, 500}, {250, 450}, {50, 450}, primitive::colors::red);
-
-	g_draw_list.circle({100, 600}, 50, primitive::colors::green);
-	g_draw_list.circle({200, 600}, 50, primitive::colors::red, 8);
-	g_draw_list.circle_filled({100, 700}, 50, primitive::colors::green);
-	g_draw_list.circle_filled({200, 700}, 50, primitive::colors::red, 8);
-
-	g_draw_list.ellipse({500, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 8);
-	g_draw_list.ellipse_filled({500, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 8);
-	g_draw_list.ellipse({600, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 16);
-	g_draw_list.ellipse_filled({600, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 16);
-	g_draw_list.ellipse({700, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 24);
-	g_draw_list.ellipse_filled({700, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 24);
-	g_draw_list.ellipse({800, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red);
-	g_draw_list.ellipse_filled({800, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red);
-
-	g_draw_list.circle_filled({500, 300}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({600, 350}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({450, 500}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({550, 550}, 5, primitive::colors::red);
-	g_draw_list.bezier_cubic({500, 300}, {600, 350}, {450, 500}, {550, 550}, primitive::colors::green);
-
-	g_draw_list.circle_filled({600, 300}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({700, 350}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({550, 500}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({650, 550}, 5, primitive::colors::red);
-	g_draw_list.bezier_cubic({600, 300}, {700, 350}, {550, 500}, {650, 550}, primitive::colors::green, 5);
-
-	g_draw_list.circle_filled({500, 600}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({600, 650}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({450, 800}, 5, primitive::colors::red);
-	g_draw_list.bezier_quadratic({500, 600}, {600, 650}, {450, 800}, primitive::colors::green);
-
-	g_draw_list.circle_filled({600, 600}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({700, 650}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({550, 800}, 5, primitive::colors::red);
-	g_draw_list.bezier_quadratic({600, 600}, {700, 650}, {550, 800}, primitive::colors::green, 5);
-
-	// push bound
-	// [800,350] => [1000, 550] (200 x 200)
-	g_draw_list.push_clip_rect({800, 350}, {1000, 550}, true);
-	g_draw_list.rect({800, 350}, {1000, 550}, primitive::colors::red);
-	// out-of-bound
-	g_draw_list.triangle_filled({700, 250}, {900, 400}, {850, 450}, primitive::colors::green);
-	// in-bound
-	g_draw_list.triangle_filled({900, 450}, {1000, 450}, {950, 550}, primitive::colors::blue);
-	// pop bound
-	g_draw_list.pop_clip_rect();
-
-	g_draw_list.triangle_filled({800, 450}, {700, 750}, {850, 800}, primitive::colors::gold);
-
-	// font
-	g_draw_list.image(draw::Context::instance().font().texture_id(), {900, 20, 300, 300});
-	// image
-	g_draw_list.image_rounded(reinterpret_cast<draw::DrawList::texture_id_type>(g_additional_picture_texture.Get()), {900, 350, 300, 300}, 10);
+	// draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
+	// draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
+	//
+	// draw_list.rect({100, 100}, {300, 300}, primitive::colors::blue);
+	// draw_list.rect({150, 150}, {250, 250}, primitive::colors::blue, 30);
+	//
+	// draw_list.triangle({120, 120}, {120, 150}, {150, 120}, primitive::colors::green);
+	// draw_list.triangle_filled({130, 130}, {130, 150}, {150, 130}, primitive::colors::red);
+	//
+	// draw_list.rect_filled({300, 100}, {400, 200}, primitive::colors::pink);
+	// draw_list.rect_filled({300, 200}, {400, 300}, primitive::colors::pink, 20);
+	// draw_list.rect_filled({300, 300}, {400, 400}, primitive::colors::pink, primitive::colors::gold, primitive::colors::azure, primitive::colors::lavender);
+	//
+	// draw_list.quadrilateral({100, 500}, {200, 500}, {250, 550}, {50, 550}, primitive::colors::red);
+	// draw_list.quadrilateral_filled({100, 500}, {200, 500}, {250, 450}, {50, 450}, primitive::colors::red);
+	//
+	// draw_list.circle({100, 600}, 50, primitive::colors::green);
+	// draw_list.circle({200, 600}, 50, primitive::colors::red, 8);
+	// draw_list.circle_filled({100, 700}, 50, primitive::colors::green);
+	// draw_list.circle_filled({200, 700}, 50, primitive::colors::red, 8);
+	//
+	// draw_list.ellipse({500, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 8);
+	// draw_list.ellipse_filled({500, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 8);
+	// draw_list.ellipse({600, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 16);
+	// draw_list.ellipse_filled({600, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 16);
+	// draw_list.ellipse({700, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 24);
+	// draw_list.ellipse_filled({700, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 24);
+	// draw_list.ellipse({800, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red);
+	// draw_list.ellipse_filled({800, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red);
+	//
+	// draw_list.circle_filled({500, 300}, 5, primitive::colors::red);
+	// draw_list.circle_filled({600, 350}, 5, primitive::colors::red);
+	// draw_list.circle_filled({450, 500}, 5, primitive::colors::red);
+	// draw_list.circle_filled({550, 550}, 5, primitive::colors::red);
+	// draw_list.bezier_cubic({500, 300}, {600, 350}, {450, 500}, {550, 550}, primitive::colors::green);
+	//
+	// draw_list.circle_filled({600, 300}, 5, primitive::colors::red);
+	// draw_list.circle_filled({700, 350}, 5, primitive::colors::red);
+	// draw_list.circle_filled({550, 500}, 5, primitive::colors::red);
+	// draw_list.circle_filled({650, 550}, 5, primitive::colors::red);
+	// draw_list.bezier_cubic({600, 300}, {700, 350}, {550, 500}, {650, 550}, primitive::colors::green, 5);
+	//
+	// draw_list.circle_filled({500, 600}, 5, primitive::colors::red);
+	// draw_list.circle_filled({600, 650}, 5, primitive::colors::red);
+	// draw_list.circle_filled({450, 800}, 5, primitive::colors::red);
+	// draw_list.bezier_quadratic({500, 600}, {600, 650}, {450, 800}, primitive::colors::green);
+	//
+	// draw_list.circle_filled({600, 600}, 5, primitive::colors::red);
+	// draw_list.circle_filled({700, 650}, 5, primitive::colors::red);
+	// draw_list.circle_filled({550, 800}, 5, primitive::colors::red);
+	// draw_list.bezier_quadratic({600, 600}, {700, 650}, {550, 800}, primitive::colors::green, 5);
+	//
+	// // push bound
+	// // [800,350] => [1000, 550] (200 x 200)
+	// draw_list.push_clip_rect({800, 350}, {1000, 550}, true);
+	// draw_list.rect({800, 350}, {1000, 550}, primitive::colors::red);
+	// // out-of-bound
+	// draw_list.triangle_filled({700, 250}, {900, 400}, {850, 450}, primitive::colors::green);
+	// // in-bound
+	// draw_list.triangle_filled({900, 450}, {1000, 450}, {950, 550}, primitive::colors::blue);
+	// // pop bound
+	// draw_list.pop_clip_rect();
+	//
+	// draw_list.triangle_filled({800, 450}, {700, 750}, {850, 800}, primitive::colors::gold);
+	//
+	// // font
+	// draw_list.image(draw::Context::instance().font().texture_id(), {900, 20, 300, 300});
+	// // image
+	// draw_list.image_rounded(reinterpret_cast<draw::DrawList::texture_id_type>(g_additional_picture_texture.Get()), {900, 350, 300, 300}, 10);
 }
 
 auto prometheus_draw() -> void
 {
+	auto& draw_list = g_window.test_draw_list();
+
 	auto& [this_frame_index_buffer, this_frame_index_count, this_frame_vertex_buffer, this_frame_vertex_count] = render_buffer;
 
-	const auto command_list = g_draw_list.command_list();
-	const auto vertex_list = g_draw_list.vertex_list();
-	const auto index_list = g_draw_list.index_list();
+	const auto command_list = draw_list.command_list();
+	const auto vertex_list = draw_list.vertex_list();
+	const auto index_list = draw_list.index_list();
 
 	if (not this_frame_vertex_buffer or vertex_list.size() > this_frame_vertex_count)
 	{
