@@ -14,7 +14,7 @@ namespace gal::prometheus::chars
 {
 	namespace chars_detail
 	{
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 		constexpr std::uint32_t icelake_required =
 				static_cast<std::uint32_t>(platform::InstructionSet::BMI1) |
 				static_cast<std::uint32_t>(platform::InstructionSet::AVX2) |
@@ -30,7 +30,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -48,7 +48,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -67,7 +67,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -86,7 +86,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -105,7 +105,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -124,7 +124,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -146,7 +146,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -168,7 +168,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -187,7 +187,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -206,7 +206,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -225,7 +225,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -244,7 +244,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -265,7 +265,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -286,7 +286,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -305,7 +305,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -324,7 +324,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -342,7 +342,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{
@@ -360,7 +360,7 @@ namespace gal::prometheus::chars
 	{
 		[[maybe_unused]] const auto supported = platform::detect_supported_instruction();
 
-		#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+		#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 		if ((supported & chars_detail::icelake_required) == chars_detail::icelake_required)
 		{

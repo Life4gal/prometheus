@@ -5,7 +5,7 @@
 
 #pragma once
 
-#if defined(GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED)
+#if GAL_PROMETHEUS_CPU_FEATURES_ICELAKE_SUPPORTED
 
 #include <chars/def.hpp>
 
