@@ -3,31 +3,40 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.concurrency:unfair_mutex;
+export module gal.prometheus:concurrency.unfair_mutex;
 
 import std;
-import gal.prometheus.meta;
 
-import :thread;
+import :meta;
 
-#else
+import :concurrency.thread;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <format>
 #include <atomic>
 
 #include <prometheus/macro.hpp>
-#include <concurrency/thread.ixx>
+
 #include <meta/meta.ixx>
+
+#include <concurrency/thread.ixx>
 
 #endif
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::concurrency)
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: concurrency
+#else
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(concurrency)
+#endif
 {
 	class UnfairMutex final
 	{
@@ -112,7 +121,7 @@ GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE(gal::prometheus::concurrency)
 	};
 } // namespace gal::prometheus::concurrency
 
-GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_NAMESPACE_STD
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_STD
 {
 	template<>
 	struct formatter<gal::prometheus::concurrency::UnfairMutex>

@@ -1,31 +1,32 @@
-#include <prometheus/macro.hpp>
+#include <utility>
+#include <coroutine>
 
-import std;
-import gal.prometheus.test;
-import gal.prometheus.coroutine;
+#include <unit_test/unit_test.hpp>
+// coroutine::generator
+#include <coroutine/coroutine.hpp>
+
+using namespace gal::prometheus;
 
 namespace
 {
-	using namespace gal::prometheus;
-	using namespace coroutine;
-
-	GAL_PROMETHEUS_NO_DESTROY test::suite<"coroutine.generator"> _ = []
+	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"coroutine.generator"> _ = []
 	{
-		using namespace test;
+		using namespace unit_test;
+		using namespace coroutine;
 
-		ignore_pass / "0~10"_test = []
+		"0~10"_test = []
 		{
 			auto generator = []() -> Generator<int> { for (int i = 0; i <= 10; ++i) { co_yield i; } }();
 
-			for (int        i = 0;
+			for (int i = 0;
 			     const auto each: generator)
 			{
-				expect(each == as_i{i}) << fatal;
+				expect(each == value(i)) << fatal;
 				++i;
 			}
 		};
 
-		"0~10 with exception"_test / ignore_pass = []
+		"0~10 with exception"_test = []
 		{
 			auto generator = []() -> Generator<int>
 			{
@@ -39,10 +40,10 @@ namespace
 
 			try
 			{
-				for (int        i = 0;
+				for (int i = 0;
 				     const auto each: generator)
 				{
-					expect(each == as_i{i}) << fatal;
+					expect(each == value(i)) << fatal;
 					++i;
 				}
 			}
@@ -55,10 +56,10 @@ namespace
 			{
 				auto generator = []() -> Generator<std::unique_ptr<int>> { for (int i = 0; i <= 10; ++i) { co_yield std::make_unique<int>(i); } }();
 
-				for (int         i = 0;
+				for (int i = 0;
 				     const auto& each: generator)
 				{
-					expect(ignore_pass % *each == as_i{i}) << fatal;
+					expect(*each == value(i)) << fatal;
 					++i;
 				}
 			}
@@ -67,10 +68,10 @@ namespace
 			{
 				auto generator = []() -> Generator<std::unique_ptr<int>> { for (int i = 0; i <= 10; ++i) { co_yield std::make_unique<int>(i); } }();
 
-				for (int    i = 0;
+				for (int i = 0;
 				     auto&& each: generator)
 				{
-					expect(ignore_pass % *each == as_i{i}) << fatal;
+					expect(*each == value(i)) << fatal;
 					++i;
 				}
 			}
@@ -88,16 +89,15 @@ namespace
 				}
 			}();
 
-			for (int        current = 0;
+			for (unsigned int i = 0;
 			     const auto each: generator)
 			{
-				// silence -> avoid spam
-				expect(silence % each == as_i{current}) << fatal;
-				++current;
+				expect(each == value(i)) << fatal;
+				++i;
 
-				if (constexpr int max = 1024;
-					current > max) { break; }
+				if (constexpr unsigned int max = 1024;
+					i > max) { break; }
 			}
 		};
 	};
-}// namespace
+} // namespace

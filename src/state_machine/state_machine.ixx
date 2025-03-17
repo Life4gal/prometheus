@@ -3,24 +3,28 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.state_machine;
+export module gal.prometheus:state_machine;
 
 import std;
-import gal.prometheus.functional;
-import gal.prometheus.meta;
 
-#else
+import :functional;
+import :meta;
+
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <type_traits>
 #include <utility>
 
 #include <prometheus/macro.hpp>
+
 #include <functional/functional.ixx>
 #include <meta/meta.ixx>
 
@@ -33,10 +37,8 @@ import gal.prometheus.meta;
 #define STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE state
 #endif
 
-namespace gal::prometheus::infrastructure
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(sm)
 {
-	namespace state_machine_detail
-	{
 		template<typename>
 		class StateMachine;
 
@@ -170,7 +172,7 @@ namespace gal::prometheus::infrastructure
 					is_entry_point,
 					from,
 					to,
-					functional::type_list_type<functional::type_list<Event...>>,
+					functional::type_list_type<Event...>,
 					guard_type,
 					action_type,
 					sentry_entry_type,
@@ -186,7 +188,7 @@ namespace gal::prometheus::infrastructure
 					is_entry_point,
 					from,
 					to,
-					functional::type_list_type<functional::type_list<Event...>>,
+					functional::type_list_type<Event...>,
 					guard_type,
 					action_type,
 					sentry_entry_type,
@@ -390,15 +392,15 @@ namespace gal::prometheus::infrastructure
 				requires(event_type{}.template any<Event>())
 			[[nodiscard]] constexpr auto operator()(StateMachine& state_machine, const Event& event, Args&&... args) -> bool
 			{
-				if (state_machine_detail::invoke(guard, event, std::forward<Args>(args)...))
+				if (GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::invoke(guard, event, std::forward<Args>(args)...))
 				{
-					state_machine_detail::invoke(action, event, std::forward<Args>(args)...);
+					GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::invoke(action, event, std::forward<Args>(args)...);
 
 					if constexpr (to != state_continue)
 					{
 						if constexpr (not std::is_same_v<sentry_exit_type, ignore_type>) //
 						{
-							state_machine_detail::invoke(sentry_exit, event, std::forward<Args>(args)...);
+							GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::invoke(sentry_exit, event, std::forward<Args>(args)...);
 						}
 						state_machine.template transform<EntryIndex, to_type>();
 
@@ -411,7 +413,7 @@ namespace gal::prometheus::infrastructure
 								if constexpr (not std::is_same_v<to_transition_sentry_entry_type, ignore_type>) //
 								{
 									auto& to_sentry_entry = state_machine.template get_transition<T>().sentry_entry;
-									state_machine_detail::invoke(to_sentry_entry, event, std::forward<Args>(args)...);
+									GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::invoke(to_sentry_entry, event, std::forward<Args>(args)...);
 								}
 							};
 
@@ -479,23 +481,23 @@ namespace gal::prometheus::infrastructure
 
 		public:
 			constexpr static auto transitions_list = list;
-			using transitions_list_type = functional::type_list_type<transitions_list>;
+			using transitions_list_type = std::decay_t<decltype(transitions_list)>;
 
 			constexpr static auto entry_point_list = list.template sub_list<is_entry_point>();
-			using entry_point_list_type = functional::type_list_type<entry_point_list>;
+			using entry_point_list_type = std::decay_t<decltype(entry_point_list)>;
 
 			constexpr static auto state_list = list.template projection<projection_from>().unique();
-			using state_list_type = functional::type_list_type<state_list>;
+			using state_list_type = std::decay_t<decltype(state_list)>;
 
 			template<typename State>
 			constexpr static auto state_to_transitions_list = list.template sub_list<State, contains_state>();
 			template<typename State>
-			using state_to_transitions_list_type = functional::type_list_type<state_to_transitions_list<State>>;
+			using state_to_transitions_list_type = std::decay_t<decltype(state_to_transitions_list<State>)>;
 
 			template<typename EventType>
 			constexpr static auto event_to_transitions_list = list.template sub_list<EventType, contains_event>();
 			template<typename EventType>
-			using event_to_transitions_list_type = functional::type_list_type<event_to_transitions_list<EventType>>;
+			using event_to_transitions_list_type = std::decay_t<decltype(event_to_transitions_list<EventType>)>;
 		};
 
 		template<template<typename...> typename List, typename... Transitions>
@@ -671,10 +673,18 @@ namespace gal::prometheus::infrastructure
 		};
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: sm
+#else
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(sm)
+#endif
+{
 		template<meta::basic_fixed_string State>
 		[[nodiscard]] constexpr auto operator""_s() noexcept
-			-> state_machine_detail::transition<false, meta::to_char_array<State>(), state_machine_detail::state_continue> { return {}; }
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::transition<false, meta::to_char_array<State>(), GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::state_continue>
+		{
+			return {};
+		}
 
 		// note: `any_state` will only change the state of the first entry_point when an event is processed.
 		// transition_list{
@@ -687,33 +697,36 @@ namespace gal::prometheus::infrastructure
 		// state_machine.is(s1, s2);
 		// state_machine.process(e{});
 		// state_machine.is(s4, s2); // <== only the first entry_point changes state.
-		constexpr auto any_state = state_machine_detail::transition<false, state_machine_detail::state_any, state_machine_detail::state_continue>{};
+		constexpr auto any_state = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::transition<
+			false,
+			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::state_any,
+			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::state_continue
+		>{};
 
-		template<state_machine_detail::transition_t... Transitions>
+		template<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::transition_t... Transitions>
 			requires((Transitions::is_entry_point + ...) >= 1)
 		#if defined(STATE_MACHINE_WORKAROUND_REQUIRED)
-		struct transition_list : state_machine_detail::transition_list_type<Transitions...>
+		struct transition_list : GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::transition_list_type<Transitions...>
 		{
-			using state_machine_detail::transition_list_type<Transitions...>::transition_list_type;
+			using GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::transition_list_type<Transitions...>::transition_list_type;
 		};
 
-		template<state_machine_detail::transition_t... Transitions>
+		template<GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::transition_t... Transitions>
 		transition_list(Transitions && ...) -> transition_list<Transitions...>;
 		#else
-		using transition_list = state_machine_detail::transition_list_type<Transitions...>;
+		using transition_list = GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::transition_list_type<Transitions...>;
 		#endif
 
 		template<typename Invocable>
-			requires std::is_invocable_v<Invocable> and state_machine_detail::is_transition_list_v<decltype(std::declval<Invocable>()())>
-		struct state_machine final : state_machine_detail::StateMachine<decltype(std::declval<Invocable>()())>
+			requires std::is_invocable_v<Invocable> and GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::is_transition_list_v<decltype(std::declval<Invocable>()())>
+		struct state_machine final : GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::StateMachine<decltype(std::declval<Invocable>()())>
 		{
 			constexpr explicit(false) state_machine(Invocable function) noexcept // NOLINT(*-explicit-constructor)
-				: state_machine_detail::StateMachine<decltype(std::declval<Invocable>()())>{function()} {}
+				: GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::StateMachine<decltype(std::declval<Invocable>()())>{function()} {}
 		};
 
 		template<typename Invocable>
 		state_machine(Invocable) -> state_machine<Invocable>;
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
 
 #undef STATE_MACHINE_WORKAROUND_TEMPLATE_STATE_TYPE

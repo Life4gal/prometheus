@@ -1,11 +1,12 @@
 #include <prometheus/macro.hpp>
 
 #if GAL_PROMETHEUS_USE_MODULE
-import std;
 import gal.prometheus;
 #else
 #include <prometheus.ixx>
 #endif
+
+#include <array>
 
 using namespace gal::prometheus;
 
@@ -55,7 +56,6 @@ namespace
 	GAL_PROMETHEUS_COMPILER_NO_DESTROY unit_test::suite<"wildcard.wildcard"> _ = []
 	{
 		using namespace unit_test;
-		using namespace literals;
 
 		"basic_test"_test = []
 		{

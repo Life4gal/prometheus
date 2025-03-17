@@ -3,16 +3,18 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#if GAL_PROMETHEUS_USE_MODULE
-module;
+#if not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
 
 #include <prometheus/macro.hpp>
 
-export module gal.prometheus.wildcard;
+export module gal.prometheus:wildcard;
 
 import std;
 
-#else
+#endif not GAL_PROMETHEUS_MODULE_FRAGMENT_DEFINED
+
+#if not GAL_PROMETHEUS_USE_MODULE
+
 #pragma once
 
 #include <string>
@@ -24,33 +26,36 @@ import std;
 
 #endif
 
-namespace gal::prometheus::wildcard
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: wildcard
+#else
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(wildcard)
+#endif
 {
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
 	// https://en.cppreference.com/w/cpp/language/string_literal
 	/**
-		* default wildcard:
-		*
-		* basic part:
-		* anything -> *
-		* single -> ?
-		* escape -> \
-		*
-		* extend part:
-		*
-		* [] + ! -> the content in [] must appear (at least one) or not appear at all, depending on whether it has `!`
-		* example:
-		*		[abc] means that one of `abc` appears at least once
-		*		[!def] means that none of `def` appears
-		*
-		* () + | -> the content in () must appear (at least one of all the alternatives)
-		* example:
-		*		(a|b|c) means that one of `a`, `b`, `c` appears
-		*		(|d|e|f) means that one of ``, `d`, `e`, `f` appears (`` is means empty, which means empty is acceptable)
-		*
-		*
-		* users can specialize the template type they need, as long as the specified wildcards have operator==
-		*/
+	* default wildcard:
+	*
+	* basic part:
+	* anything -> *
+	* single -> ?
+	* escape -> \
+	*
+	* extend part:
+	*
+	* [] + ! -> the content in [] must appear (at least one) or not appear at all, depending on whether it has `!`
+	* example:
+	*		[abc] means that one of `abc` appears at least once
+	*		[!def] means that none of `def` appears
+	*
+	* () + | -> the content in () must appear (at least one of all the alternatives)
+	* example:
+	*		(a|b|c) means that one of `a`, `b`, `c` appears
+	*		(|d|e|f) means that one of ``, `d`, `e`, `f` appears (`` is means empty, which means empty is acceptable)
+	*
+	*
+	* users can specialize the template type they need, as long as the specified wildcards have operator==
+	*/
 	template<typename T>
 	struct wildcard_type;
 
@@ -173,11 +178,10 @@ namespace gal::prometheus::wildcard
 		value_type alt_close{U')'};
 		value_type alt_or{U'|'};
 	};
+}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
-
-	namespace wildcard_detail
-	{
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_INTERNAL(wildcard)
+{
 		enum class ResultDetail : std::uint8_t
 		{
 			SUCCESS,
@@ -265,7 +269,7 @@ namespace gal::prometheus::wildcard
 		template<std::input_iterator Iterator>
 		[[nodiscard]] constexpr auto is_invalid_sentinel_for(const Iterator begin, const Iterator end, const Iterator current) noexcept -> bool
 		{
-			return wildcard_detail::make_invalid_sentinel_for(begin, end) == current;
+			return make_invalid_sentinel_for(begin, end) == current;
 		}
 
 		enum class CheckSetState : std::uint8_t
@@ -373,7 +377,7 @@ namespace gal::prometheus::wildcard
 					{
 						if (*current != wildcard.set_open)
 						{
-							return wildcard_detail::make_invalid_sentinel_for(begin, end);
+							return make_invalid_sentinel_for(begin, end);
 						}
 
 						// `[` is detected, then the next character should be `!` or the first option
@@ -417,7 +421,7 @@ namespace gal::prometheus::wildcard
 				std::ranges::advance(current, 1);
 			}
 
-			return wildcard_detail::make_invalid_sentinel_for(begin, end);
+			return make_invalid_sentinel_for(begin, end);
 		}
 
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator>
@@ -440,7 +444,7 @@ namespace gal::prometheus::wildcard
 					{
 						if (*pattern_current != wildcard.set_open)
 						{
-							return wildcard_detail::make_match_result(
+							return make_match_result(
 								ResultDetail::ERROR,
 								sequence_begin,
 								pattern_current
@@ -465,7 +469,7 @@ namespace gal::prometheus::wildcard
 							if (sequence_begin == sequence_end)
 							{
 								// just return match failed
-								return wildcard_detail::make_match_result(
+								return make_match_result(
 									ResultDetail::MISMATCH,
 									sequence_begin,
 									pattern_current
@@ -474,7 +478,7 @@ namespace gal::prometheus::wildcard
 							// match succeed
 							if (comparator(*sequence_begin, *pattern_current))
 							{
-								return wildcard_detail::make_match_result(
+								return make_match_result(
 									ResultDetail::SUCCESS,
 									sequence_begin,
 									pattern_current
@@ -495,7 +499,7 @@ namespace gal::prometheus::wildcard
 							comparator(*sequence_begin, *pattern_current)
 						)
 						{
-							return wildcard_detail::make_match_result(
+							return make_match_result(
 								ResultDetail::MISMATCH,
 								sequence_begin,
 								pattern_current
@@ -514,7 +518,7 @@ namespace gal::prometheus::wildcard
 							*pattern_current == wildcard.set_close
 						)
 						{
-							return wildcard_detail::make_match_result(
+							return make_match_result(
 								ResultDetail::MISMATCH,
 								sequence_begin,
 								pattern_current
@@ -523,7 +527,7 @@ namespace gal::prometheus::wildcard
 						// match succeed
 						if (comparator(*sequence_begin, *pattern_current))
 						{
-							return wildcard_detail::make_match_result(
+							return make_match_result(
 								ResultDetail::SUCCESS,
 								sequence_begin,
 								pattern_current
@@ -536,7 +540,7 @@ namespace gal::prometheus::wildcard
 						// pattern just ended
 						if (*pattern_current == wildcard.set_close)
 						{
-							return wildcard_detail::make_match_result(
+							return make_match_result(
 								ResultDetail::SUCCESS,
 								sequence_begin,
 								pattern_current
@@ -549,7 +553,7 @@ namespace gal::prometheus::wildcard
 							comparator(*sequence_begin, *pattern_current)
 						)
 						{
-							return wildcard_detail::make_match_result(
+							return make_match_result(
 								ResultDetail::MISMATCH,
 								sequence_begin,
 								pattern_current
@@ -566,7 +570,7 @@ namespace gal::prometheus::wildcard
 				std::ranges::advance(pattern_current, 1);
 			}
 
-			return wildcard_detail::make_match_result(
+			return make_match_result(
 				ResultDetail::ERROR,
 				sequence_begin,
 				pattern_current
@@ -625,7 +629,7 @@ namespace gal::prometheus::wildcard
 						}
 						else if (
 							*current == wildcard.set_open and
-							wildcard_detail::check_set_exist(
+							check_set_exist(
 								std::ranges::next(current),
 								end,
 								wildcard,
@@ -633,8 +637,8 @@ namespace gal::prometheus::wildcard
 							)
 						)
 						{
-							const auto result = wildcard_detail::find_set_end(std::ranges::next(current), end, wildcard, CheckSetState::NOT_OR_FIRST);
-							if (wildcard_detail::is_invalid_sentinel_for(std::ranges::next(current), end, result))
+							const auto result = find_set_end(std::ranges::next(current), end, wildcard, CheckSetState::NOT_OR_FIRST);
+							if (is_invalid_sentinel_for(std::ranges::next(current), end, result))
 							{
 								return false;
 							}
@@ -694,7 +698,7 @@ namespace gal::prometheus::wildcard
 						// this character not equal to `(`
 						if (*current != wildcard.alt_open)
 						{
-							return wildcard_detail::make_invalid_sentinel_for(begin, end);
+							return make_invalid_sentinel_for(begin, end);
 						}
 
 						// `(` is detected, then the next character should the first option
@@ -710,7 +714,7 @@ namespace gal::prometheus::wildcard
 						}
 						else if (
 							*current == wildcard.set_open and
-							wildcard_detail::check_set_exist(
+							check_set_exist(
 								std::ranges::next(current),
 								end,
 								wildcard,
@@ -718,10 +722,10 @@ namespace gal::prometheus::wildcard
 							)
 						)
 						{
-							const auto result = wildcard_detail::find_set_end(std::ranges::next(current), end, wildcard, CheckSetState::NOT_OR_FIRST);
-							if (wildcard_detail::is_invalid_sentinel_for(std::ranges::next(current), end, result))
+							const auto result = find_set_end(std::ranges::next(current), end, wildcard, CheckSetState::NOT_OR_FIRST);
+							if (is_invalid_sentinel_for(std::ranges::next(current), end, result))
 							{
-								return wildcard_detail::make_invalid_sentinel_for(begin, end);
+								return make_invalid_sentinel_for(begin, end);
 							}
 
 							current = std::ranges::prev(result);
@@ -758,7 +762,7 @@ namespace gal::prometheus::wildcard
 				std::ranges::advance(current, 1);
 			}
 
-			return wildcard_detail::make_invalid_sentinel_for(begin, end);
+			return make_invalid_sentinel_for(begin, end);
 		}
 
 		template<std::input_iterator PatternIterator>
@@ -786,7 +790,7 @@ namespace gal::prometheus::wildcard
 						}
 						else if (
 							*current == wildcard.set_open and
-							wildcard_detail::check_set_exist(
+							check_set_exist(
 								std::ranges::next(current),
 								end,
 								wildcard,
@@ -794,10 +798,10 @@ namespace gal::prometheus::wildcard
 							)
 						)
 						{
-							const auto result = wildcard_detail::find_set_end(std::ranges::next(current), end, wildcard, CheckSetState::NOT_OR_FIRST);
-							if (wildcard_detail::is_invalid_sentinel_for(std::ranges::next(current), end, result))
+							const auto result = find_set_end(std::ranges::next(current), end, wildcard, CheckSetState::NOT_OR_FIRST);
+							if (is_invalid_sentinel_for(std::ranges::next(current), end, result))
 							{
-								return wildcard_detail::make_invalid_sentinel_for(begin, end);
+								return make_invalid_sentinel_for(begin, end);
 							}
 
 							current = std::ranges::prev(result);
@@ -841,7 +845,7 @@ namespace gal::prometheus::wildcard
 				std::ranges::advance(current, 1);
 			}
 
-			return wildcard_detail::make_invalid_sentinel_for(begin, end);
+			return make_invalid_sentinel_for(begin, end);
 		}
 
 		template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator>
@@ -870,7 +874,7 @@ namespace gal::prometheus::wildcard
 		) noexcept -> match_result<SequenceIterator, PatternIterator>
 		{
 			// is the target sequence partial matches pattern1
-			if (auto result1 = wildcard_detail::match(
+			if (auto result1 = match(
 					sequence_begin,
 					sequence_end,
 					pattern1_begin,
@@ -882,7 +886,7 @@ namespace gal::prometheus::wildcard
 				result1)
 			{
 				// is the target sequence matches pattern2
-				if (auto result2 = wildcard_detail::match(
+				if (auto result2 = match(
 						result1.sequence,
 						sequence_end,
 						pattern2_begin,
@@ -899,17 +903,17 @@ namespace gal::prometheus::wildcard
 			// pattern1 and pattern2 are two connected parts
 			if (pattern1_current == pattern2_begin)
 			{
-				return wildcard_detail::make_match_result(
+				return make_match_result(
 					ResultDetail::MISMATCH,
 					sequence_begin,
 					pattern1_end
 				);
 			}
 
-			const auto sub_alt_end = wildcard_detail::find_sub_alt_end(pattern1_current, pattern2_begin, wildcard);
-			if (wildcard_detail::is_invalid_sentinel_for(pattern1_current, pattern2_begin, sub_alt_end))
+			const auto sub_alt_end = find_sub_alt_end(pattern1_current, pattern2_begin, wildcard);
+			if (is_invalid_sentinel_for(pattern1_current, pattern2_begin, sub_alt_end))
 			{
-				return wildcard_detail::make_match_result(
+				return make_match_result(
 					ResultDetail::ERROR,
 					sequence_begin,
 					pattern1_current
@@ -917,7 +921,7 @@ namespace gal::prometheus::wildcard
 			}
 
 			// the current position is relatively successful, continue to compare the next position
-			return wildcard_detail::match_alt(
+			return match_alt(
 				sequence_begin,
 				sequence_end,
 				pattern1_current,
@@ -947,7 +951,7 @@ namespace gal::prometheus::wildcard
 			{
 				const auto result = partial or sequence_begin == sequence_end;
 
-				return wildcard_detail::make_match_result(
+				return make_match_result(
 					// if it is a partial match or is not a valid sequence, the match is considered successful
 					result ? ResultDetail::SUCCESS : ResultDetail::MISMATCH,
 					sequence_begin,
@@ -964,7 +968,7 @@ namespace gal::prometheus::wildcard
 					not comparator(*sequence_begin, *pattern_begin)
 				)
 				{
-					return wildcard_detail::make_match_result(
+					return make_match_result(
 						ResultDetail::MISMATCH,
 						sequence_begin,
 						pattern_begin
@@ -972,7 +976,7 @@ namespace gal::prometheus::wildcard
 				}
 
 				// the current position is relatively successful, continue to compare the next position
-				return wildcard_detail::match(
+				return match(
 					std::ranges::next(sequence_begin),
 					sequence_end,
 					std::ranges::next(pattern_begin),
@@ -987,7 +991,7 @@ namespace gal::prometheus::wildcard
 			{
 				// if the current position of the pattern is `*`, try to match the next position of the pattern
 				// if the match is still successful, skip the current `*`
-				if (auto result = wildcard_detail::match(
+				if (auto result = match(
 						sequence_begin,
 						sequence_end,
 						std::ranges::next(pattern_begin),
@@ -1001,7 +1005,7 @@ namespace gal::prometheus::wildcard
 				// not a valid sequence
 				if (sequence_begin == sequence_end)
 				{
-					return wildcard_detail::make_match_result(
+					return make_match_result(
 						ResultDetail::MISMATCH,
 						sequence_begin,
 						pattern_begin
@@ -1009,7 +1013,7 @@ namespace gal::prometheus::wildcard
 				}
 
 				// if the match is not successful, skip the current position of sequence
-				return wildcard_detail::match(
+				return match(
 					std::ranges::next(sequence_begin),
 					sequence_end,
 					pattern_begin,
@@ -1027,7 +1031,7 @@ namespace gal::prometheus::wildcard
 				// not a valid sequence
 				if (sequence_begin == sequence_end)
 				{
-					return wildcard_detail::make_match_result(
+					return make_match_result(
 						ResultDetail::MISMATCH,
 						sequence_begin,
 						pattern_begin
@@ -1035,7 +1039,7 @@ namespace gal::prometheus::wildcard
 				}
 
 				// try to match the next position of the pattern and sequence
-				return wildcard_detail::match(
+				return match(
 					std::ranges::next(sequence_begin),
 					sequence_end,
 					std::ranges::next(pattern_begin),
@@ -1049,7 +1053,7 @@ namespace gal::prometheus::wildcard
 			if (*pattern_begin == wildcard.escape)
 			{
 				// match the next position of the pattern
-				return wildcard_detail::match(
+				return match(
 					sequence_begin,
 					sequence_end,
 					std::ranges::next(pattern_begin),
@@ -1063,7 +1067,7 @@ namespace gal::prometheus::wildcard
 
 			if (
 				*pattern_begin == wildcard.set_open and
-				wildcard_detail::check_set_exist(
+				check_set_exist(
 					std::ranges::next(pattern_begin),
 					pattern_end,
 					wildcard,
@@ -1072,7 +1076,7 @@ namespace gal::prometheus::wildcard
 			)
 			{
 				// if the nested set does not match successfully, the result will be returned directly (the match failed)
-				if (auto result = wildcard_detail::match_set(
+				if (auto result = match_set(
 						sequence_begin,
 						sequence_end,
 						std::ranges::next(pattern_begin),
@@ -1083,13 +1087,13 @@ namespace gal::prometheus::wildcard
 					);
 					not result) { return result; }
 
-				const auto pattern_set_end = wildcard_detail::find_set_end(std::ranges::next(pattern_begin), pattern_end, wildcard, CheckSetState::NOT_OR_FIRST);
-				if (wildcard_detail::is_invalid_sentinel_for(std::ranges::next(pattern_begin), pattern_end, pattern_set_end))
+				const auto pattern_set_end = find_set_end(std::ranges::next(pattern_begin), pattern_end, wildcard, CheckSetState::NOT_OR_FIRST);
+				if (is_invalid_sentinel_for(std::ranges::next(pattern_begin), pattern_end, pattern_set_end))
 				[[unlikely]]
 				{
 					// assert?
 
-					return wildcard_detail::make_match_result(
+					return make_match_result(
 						ResultDetail::ERROR,
 						sequence_begin,
 						pattern_begin
@@ -1097,7 +1101,7 @@ namespace gal::prometheus::wildcard
 				}
 
 				// after the match is successful, skip this nested set to continue matching
-				return wildcard_detail::match(
+				return match(
 					std::ranges::next(sequence_begin),
 					sequence_end,
 					pattern_set_end,
@@ -1110,7 +1114,7 @@ namespace gal::prometheus::wildcard
 
 			if (
 				*pattern_begin == wildcard.alt_open and
-				wildcard_detail::check_alt_exist(
+				check_alt_exist(
 					std::ranges::next(pattern_begin),
 					pattern_end,
 					wildcard,
@@ -1119,38 +1123,38 @@ namespace gal::prometheus::wildcard
 				)
 			)
 			{
-				const auto pattern_alt_end = wildcard_detail::find_alt_end(
+				const auto pattern_alt_end = find_alt_end(
 					std::ranges::next(pattern_begin),
 					pattern_end,
 					wildcard,
 					CheckAltState::NEXT,
 					1
 				);
-				if (wildcard_detail::is_invalid_sentinel_for(std::ranges::next(pattern_begin), pattern_end, pattern_alt_end))
+				if (is_invalid_sentinel_for(std::ranges::next(pattern_begin), pattern_end, pattern_alt_end))
 				[[unlikely]]
 				{
 					// assert?
 
-					return wildcard_detail::make_match_result(
+					return make_match_result(
 						ResultDetail::ERROR,
 						sequence_begin,
 						pattern_begin
 					);
 				}
 
-				const auto pattern_sub_alt_end = wildcard_detail::find_sub_alt_end(std::ranges::next(pattern_begin), pattern_alt_end, wildcard);
-				if (wildcard_detail::is_invalid_sentinel_for(std::ranges::next(pattern_begin), pattern_alt_end, pattern_sub_alt_end))
+				const auto pattern_sub_alt_end = find_sub_alt_end(std::ranges::next(pattern_begin), pattern_alt_end, wildcard);
+				if (is_invalid_sentinel_for(std::ranges::next(pattern_begin), pattern_alt_end, pattern_sub_alt_end))
 				{
 					// assert?
 
-					return wildcard_detail::make_match_result(
+					return make_match_result(
 						ResultDetail::ERROR,
 						sequence_begin,
 						pattern_begin
 					);
 				}
 
-				return wildcard_detail::match_alt(
+				return match_alt(
 					sequence_begin,
 					sequence_end,
 					std::ranges::next(pattern_begin),
@@ -1169,7 +1173,7 @@ namespace gal::prometheus::wildcard
 				// the match not succeed here
 				not comparator(*sequence_begin, *pattern_begin))
 			{
-				return wildcard_detail::make_match_result(
+				return make_match_result(
 					ResultDetail::MISMATCH,
 					sequence_begin,
 					pattern_begin
@@ -1177,7 +1181,7 @@ namespace gal::prometheus::wildcard
 			}
 
 			// the current position is relatively successful, continue to compare the next position
-			return wildcard_detail::match(
+			return match(
 				std::ranges::next(sequence_begin),
 				sequence_end,
 				std::ranges::next(pattern_begin),
@@ -1189,8 +1193,12 @@ namespace gal::prometheus::wildcard
 		}
 	}
 
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_BEGIN
-
+#if GAL_PROMETHEUS_INTELLISENSE_WORKING
+namespace GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_PREFIX :: wildcard
+#else
+GAL_PROMETHEUS_COMPILER_MODULE_NAMESPACE_EXPORT(wildcard)
+#endif
+{
 	template<std::input_iterator SequenceIterator, std::input_iterator PatternIterator, typename Comparator = std::ranges::equal_to>
 	constexpr auto match(
 		const SequenceIterator sequence_begin,
@@ -1200,14 +1208,14 @@ namespace gal::prometheus::wildcard
 		const wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>& wildcard = {},
 		const Comparator& comparator = {} //
 	) noexcept
-		-> wildcard_detail::full_match_result<SequenceIterator, PatternIterator>
+		-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::full_match_result<SequenceIterator, PatternIterator>
 	{
-		return wildcard_detail::make_full_match_result(
+		return GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::make_full_match_result(
 			sequence_begin,
 			sequence_end,
 			pattern_begin,
 			pattern_end,
-			wildcard_detail::match(
+			GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::match(
 				sequence_begin,
 				sequence_end,
 				pattern_begin,
@@ -1226,7 +1234,7 @@ namespace gal::prometheus::wildcard
 		const wildcard_type<std::remove_cvref_t<decltype(*std::declval<PatternIterator>())>>& wildcard = {},
 		const Comparator& comparator = {} //
 	) noexcept
-		-> wildcard_detail::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), PatternIterator>
+		-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), PatternIterator>
 	{
 		return wildcard::match(
 			std::ranges::begin(sequence),
@@ -1246,7 +1254,7 @@ namespace gal::prometheus::wildcard
 		const wildcard_type<std::ranges::range_value_t<Pattern>>& wildcard = {},
 		const Comparator& comparator = {} //
 	) noexcept
-		-> wildcard_detail::full_match_result<SequenceIterator, decltype(std::ranges::cbegin(std::declval<const Pattern&>()))>
+		-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::full_match_result<SequenceIterator, decltype(std::ranges::cbegin(std::declval<const Pattern&>()))>
 	{
 		return wildcard::match(
 			sequence_begin,
@@ -1265,7 +1273,7 @@ namespace gal::prometheus::wildcard
 		const wildcard_type<std::ranges::range_value_t<Pattern>>& wildcard = {},
 		const Comparator& comparator = {} //
 	) noexcept
-		-> wildcard_detail::full_match_result<
+		-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::full_match_result<
 			decltype(std::ranges::cbegin(std::declval<const Sequence&>())),
 			decltype(std::ranges::cbegin(std::declval<const Pattern&>()))
 		>
@@ -1337,14 +1345,14 @@ namespace gal::prometheus::wildcard
 		constexpr auto operator()(
 			SequenceIterator sequence_begin,
 			SequenceIterator sequence_end //
-		) const noexcept -> wildcard_detail::full_match_result<SequenceIterator, const_iterator>
+		) const noexcept -> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::full_match_result<SequenceIterator, const_iterator>
 		{
 			return prometheus::wildcard::match(sequence_begin, sequence_end, borrow_pattern_begin_, borrow_pattern_end_, current_wildcard_, current_comparator_);
 		}
 
 		template<std::ranges::range Sequence>
 		constexpr auto operator()(const Sequence& sequence) const noexcept
-			-> wildcard_detail::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), const_iterator>
+			-> GAL_PROMETHEUS_COMPILER_MODULE_INTERNAL::full_match_result<decltype(std::ranges::cbegin(std::declval<const Sequence&>())), const_iterator>
 		{
 			return prometheus::wildcard::match(sequence, borrow_pattern_begin_, borrow_pattern_end_, current_wildcard_, current_comparator_);
 		}
@@ -1437,6 +1445,4 @@ namespace gal::prometheus::wildcard
 			return make_wildcard_matcher(std::basic_string_view{str, size + 1});
 		}
 	} // namespace literals
-
-	GAL_PROMETHEUS_COMPILER_MODULE_EXPORT_END
 }
