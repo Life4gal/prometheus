@@ -5,14 +5,6 @@
 
 #pragma once
 
-#if not defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
-#if defined(DEBUG) or defined(_DEBUG)
-#define GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG 1
-#else
-#define GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG 0
-#endif
-#endif
-
 #include <draw/def.hpp>
 #include <draw/font.hpp>
 #include <draw/shared_data.hpp>
@@ -143,14 +135,14 @@ namespace gal::prometheus::draw
 		[[nodiscard]] auto is_widget_activated(id_type id) const noexcept -> bool;
 
 		auto invalidate_widget_hovered(
-			#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+			#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 			const std::string& reason,
 			const std::source_location& location = std::source_location::current()
 			#endif
 		) noexcept -> void;
 
 		auto invalidate_widget_activated(
-			#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+			#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 			const std::string& reason,
 			const std::source_location& location = std::source_location::current()
 			#endif
@@ -167,7 +159,7 @@ namespace gal::prometheus::draw
 			id_type id,
 			const rect_type& widget_rect,
 			bool repeat
-			#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+			#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 			,
 			const std::string& reason
 			#endif

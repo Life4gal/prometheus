@@ -68,7 +68,7 @@
 #define GAL_PROMETHEUS_COMPILER_PRIVATE_DO_PRAGMA(X) _Pragma(#X)
 #define GAL_PROMETHEUS_COMPILER_DISABLE_WARNING(warningName) GAL_PROMETHEUS_COMPILER_PRIVATE_DO_PRAGMA(clang diagnostic ignored #warningName)
 #else
-#define GAL_PROMETHEUS_COMPILER_UNREACHABLE()
+#define GAL_PROMETHEUS_COMPILER_UNREACHABLE() std::unreachable()
 #define GAL_PROMETHEUS_COMPILER_DEBUG_TRAP()
 #define GAL_PROMETHEUS_COMPILER_IMPORTED_SYMBOL
 #define GAL_PROMETHEUS_COMPILER_EXPORTED_SYMBOL
@@ -384,7 +384,11 @@
 #define GAL_PROMETHEUS_ERROR_UNREACHABLE(...) GAL_PROMETHEUS_COMPILER_UNREACHABLE()
 
 #if __has_cpp_attribute(assume)
-#define GAL_PROMETHEUS_ERROR_ASSUME(expression, ...) [[assume(expression)]]
+#define GAL_PROMETHEUS_ERROR_ASSUME(expression, ...) \
+	do                                                                                \
+	{                                                                                 \
+		const auto assume_expression_result = static_cast<bool>(expression); [[assume(assume_expression_result)]]; \
+	} while (false)
 #else
 #define GAL_PROMETHEUS_ERROR_ASSUME(expression, ...) \
 	do                                                                                \
@@ -476,5 +480,19 @@
 #define GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE GAL_PROMETHEUS_ERROR_UNREACHABLE
 
 #define GAL_PROMETHEUS_ERROR_DEBUG_ASSUME GAL_PROMETHEUS_ERROR_ASSUME
+
+#endif
+
+// =========================================================
+// MODULE: gal.prometheus.draw
+// =========================================================
+
+
+
+#if defined(DEBUG) or defined(_DEBUG)
+
+#if not defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
+#define GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+#endif
 
 #endif

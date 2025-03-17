@@ -191,13 +191,13 @@ namespace gal::prometheus::draw
 	}
 
 	auto Context::invalidate_widget_hovered(
-		#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+		#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 		const std::string& reason,
 		const std::source_location& location
 		#endif
 	) noexcept -> void
 	{
-		#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+		#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 		(void)reason;
 		(void)location;
 		#endif
@@ -206,13 +206,13 @@ namespace gal::prometheus::draw
 	}
 
 	auto Context::invalidate_widget_activated(
-		#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+		#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 		const std::string& reason,
 		const std::source_location& location
 		#endif
 	) noexcept -> void
 	{
-		#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+		#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 		(void)reason;
 		(void)location;
 		#endif
@@ -224,7 +224,7 @@ namespace gal::prometheus::draw
 		const id_type id,
 		const rect_type& widget_rect,
 		const bool repeat
-		#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+		#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 		,
 		const std::string& reason
 		#endif
@@ -264,7 +264,7 @@ namespace gal::prometheus::draw
 				}
 
 				invalidate_widget_activated(
-					#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+					#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 					std::format("Release mouse on widget #{}.({})", id, reason)
 					#endif
 				);

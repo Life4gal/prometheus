@@ -101,7 +101,7 @@ namespace gal::prometheus::draw
 					id,
 					close_button_rect,
 					false
-					#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+					#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 					,
 					std::format("Test Window({})'s close-button({}).", window.name_, close_button_rect)
 					#endif
@@ -141,7 +141,7 @@ namespace gal::prometheus::draw
 					else
 					{
 						context.invalidate_widget_activated(
-							#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+							#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 							std::format("{} is not a movable window.", window.name_)
 							#endif
 						);
@@ -169,7 +169,7 @@ namespace gal::prometheus::draw
 						id,
 						resize_grip_rect,
 						false
-						#if GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
+						#if defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
 						,
 						std::format("Test Window({})'s resize-grip({}).", window.name_, resize_grip_rect)
 						#endif
