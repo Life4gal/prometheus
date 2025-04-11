@@ -25,7 +25,7 @@ int g_window_height = 960;
 
 double g_last_time = 0;
 std::uint64_t g_frame_count = 0;
-float g_fps = 0;
+float g_fps = 60;
 
 extern auto glfw_callback_setup(GLFWwindow& w) -> void;
 

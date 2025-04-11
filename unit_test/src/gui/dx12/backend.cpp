@@ -26,8 +26,6 @@ extern double g_last_time;
 extern std::uint64_t g_frame_count;
 extern float g_fps;
 
-// extern io::DeviceEventQueue g_device_event_queue;
-
 namespace
 {
 	struct render_buffer_type
@@ -56,8 +54,6 @@ namespace
 
 	ComPtr<ID3D12Resource> g_additional_picture_resource = nullptr;
 	D3D12_GPU_DESCRIPTOR_HANDLE g_additional_picture_handle = {.ptr = 0};
-
-	draw::DrawList g_draw_list;
 
 	[[nodiscard]] auto load_texture(
 		const std::uint8_t* texture_data,
@@ -276,20 +272,6 @@ namespace
 auto prometheus_init() -> void
 {
 	print_time();
-
-	const auto glyph_range = i18n::RangeBuilder{}.simplified_chinese_common().range();
-	const auto font_option =
-			draw::Font::option()
-			.path(R"(C:\Windows\Fonts\msyh.ttc)")
-			.glyph_ranges(i18n::RangeBuilder{}.simplified_chinese_common().range())
-			.pixel_height(18);
-
-	auto font = std::make_shared<draw::Font>();
-	auto font_texture = font->load(font_option);
-
-	draw::Context::instance().set_default_font(font);
-
-	g_draw_list.draw_list_flag(draw::DrawListFlag::ANTI_ALIASED_LINE | draw::DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE | draw::DrawListFlag::ANTI_ALIASED_FILL);
 
 	// Create the root signature
 	{
@@ -566,12 +548,24 @@ auto prometheus_init() -> void
 		check_hr_error(g_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(g_shader_resource_view_descriptor_heap.GetAddressOf())));
 	}
 
+	gui::create_current_context();
+
+	set_default_theme(gui::test_theme());
+	set_default_draw_list_flag(gui::DrawListFlag::ANTI_ALIASED_LINE | gui::DrawListFlag::ANTI_ALIASED_LINE_USE_TEXTURE | gui::DrawListFlag::ANTI_ALIASED_FILL);
+
+	gui::FontOption font_option{};
+	font_option.font_path = R"(C:\Windows\Fonts\msyh.ttc)";
+	font_option.pixel_height = 18;
+	font_option.glyph_ranges = i18n::RangeBuilder{}.simplified_chinese_common().range();
+	auto font_texture = set_default_font(font_option);
+	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(font_texture.valid());
+
 	// Load default font texture
 	{
 		[[maybe_unused]] const auto load_font_texture_result = load_texture(
-			reinterpret_cast<const std::uint8_t*>(font_texture.data().get()),
-			font_texture.width(),
-			font_texture.height(),
+			reinterpret_cast<const std::uint8_t*>(font_texture.data.get()),
+			font_texture.width,
+			font_texture.height,
 			g_shader_resource_view_descriptor_heap,
 			0,
 			g_font_handle,
@@ -579,7 +573,7 @@ auto prometheus_init() -> void
 		);
 		assert(load_font_texture_result);
 
-		font_texture.bind(static_cast<draw::Font::texture_id_type>(g_font_handle.ptr));
+		font_texture.bind(static_cast<gui::texture_id_type>(g_font_handle.ptr));
 	}
 
 	// Load additional picture texture
@@ -607,85 +601,53 @@ auto prometheus_init() -> void
 
 auto prometheus_new_frame() -> void //
 {
-	g_draw_list.reset();
-	g_draw_list.push_clip_rect({0, 0}, {static_cast<float>(g_window_width), static_cast<float>(g_window_height)}, false);
+	auto& io = gui::get_io();
+
+	io.display_size = {static_cast<float>(g_window_width), static_cast<float>(g_window_height)};
+	io.delta_time = 1.f / g_fps;
+
+	gui::new_frame();
 }
 
 auto prometheus_render() -> void
 {
-	g_draw_list.text(24.f, {10, 10}, primitive::colors::blue, std::format("FPS: {:.3f}", g_fps));
+	if (static bool window_closed = false;
+		not window_closed)
+	{
+		window_closed = gui::begin_window("Window 1", {640, 480});
 
-	g_draw_list.text(18.f, {50, 50}, primitive::colors::red, "The quick brown fox jumps over the lazy dog.\nHello world!\n你好世界!\n");
+		gui::draw_text("Text:");
+		{
+			gui::draw_text("Hello");
+			gui::draw_text("World");
 
-	g_draw_list.line({200, 100}, {200, 300}, primitive::colors::red);
-	g_draw_list.line({100, 200}, {300, 200}, primitive::colors::red);
+			gui::draw_text("你好,");
+			gui::layout_same_line();
+			gui::draw_text("世界");
 
-	g_draw_list.rect({100, 100}, {300, 300}, primitive::colors::blue);
-	g_draw_list.rect({150, 150}, {250, 250}, primitive::colors::blue, 30);
+			std::string string{};
+			string.resize(200);
+			for (int i = 0; i < 200; ++i)
+			{
+				if (i != 0 and i % 25 == 0)
+				{
+					string[i] = '\n';
+				}
+				else
+				{
+					const auto c = 'a' + i % ('z' - 'a');
+					string[i] = static_cast<char>(c);
+				}
+			}
 
-	g_draw_list.triangle({120, 120}, {120, 150}, {150, 120}, primitive::colors::green);
-	g_draw_list.triangle_filled({130, 130}, {130, 150}, {150, 130}, primitive::colors::red);
+			gui::draw_text(string);
+			gui::draw_text(string);
+			gui::draw_text(string);
+		}
+		gui::end_window();
+	}
 
-	g_draw_list.rect_filled({300, 100}, {400, 200}, primitive::colors::pink);
-	g_draw_list.rect_filled({300, 200}, {400, 300}, primitive::colors::pink, 20);
-	g_draw_list.rect_filled({300, 300}, {400, 400}, primitive::colors::pink, primitive::colors::gold, primitive::colors::azure, primitive::colors::lavender);
-
-	g_draw_list.quadrilateral({100, 500}, {200, 500}, {250, 550}, {50, 550}, primitive::colors::red);
-	g_draw_list.quadrilateral_filled({100, 500}, {200, 500}, {250, 450}, {50, 450}, primitive::colors::red);
-
-	g_draw_list.circle({100, 600}, 50, primitive::colors::green);
-	g_draw_list.circle({200, 600}, 50, primitive::colors::red, 8);
-	g_draw_list.circle_filled({100, 700}, 50, primitive::colors::green);
-	g_draw_list.circle_filled({200, 700}, 50, primitive::colors::red, 8);
-
-	g_draw_list.ellipse({500, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 8);
-	g_draw_list.ellipse_filled({500, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 8);
-	g_draw_list.ellipse({600, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 16);
-	g_draw_list.ellipse_filled({600, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 16);
-	g_draw_list.ellipse({700, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red, 24);
-	g_draw_list.ellipse_filled({700, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red, 24);
-	g_draw_list.ellipse({800, 100}, {50, 70}, std::numbers::pi_v<float> * .35f, primitive::colors::red);
-	g_draw_list.ellipse_filled({800, 200}, {50, 70}, std::numbers::pi_v<float> * -.35f, primitive::colors::red);
-
-	g_draw_list.circle_filled({500, 300}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({600, 350}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({450, 500}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({550, 550}, 5, primitive::colors::red);
-	g_draw_list.bezier_cubic({500, 300}, {600, 350}, {450, 500}, {550, 550}, primitive::colors::green);
-
-	g_draw_list.circle_filled({600, 300}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({700, 350}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({550, 500}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({650, 550}, 5, primitive::colors::red);
-	g_draw_list.bezier_cubic({600, 300}, {700, 350}, {550, 500}, {650, 550}, primitive::colors::green, 5);
-
-	g_draw_list.circle_filled({500, 600}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({600, 650}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({450, 800}, 5, primitive::colors::red);
-	g_draw_list.bezier_quadratic({500, 600}, {600, 650}, {450, 800}, primitive::colors::green);
-
-	g_draw_list.circle_filled({600, 600}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({700, 650}, 5, primitive::colors::red);
-	g_draw_list.circle_filled({550, 800}, 5, primitive::colors::red);
-	g_draw_list.bezier_quadratic({600, 600}, {700, 650}, {550, 800}, primitive::colors::green, 5);
-
-	// push bound
-	// [800,350] => [1000, 550] (200 x 200)
-	g_draw_list.push_clip_rect({800, 350}, {1000, 550}, true);
-	g_draw_list.rect({800, 350}, {1000, 550}, primitive::colors::red);
-	// out-of-bound
-	g_draw_list.triangle_filled({700, 250}, {900, 400}, {850, 450}, primitive::colors::green);
-	// in-bound
-	g_draw_list.triangle_filled({900, 450}, {1000, 450}, {950, 550}, primitive::colors::blue);
-	// pop bound
-	g_draw_list.pop_clip_rect();
-
-	g_draw_list.triangle_filled({800, 450}, {700, 750}, {850, 800}, primitive::colors::gold);
-
-	// font
-	g_draw_list.image(draw::Context::instance().font().texture_id(), {900, 20, 300, 300});
-	// image
-	g_draw_list.image_rounded(static_cast<draw::DrawList::texture_id_type>(g_additional_picture_handle.ptr), {900, 350, 300, 300}, 10);
+	gui::render();
 }
 
 auto prometheus_draw() -> void
@@ -695,9 +657,32 @@ auto prometheus_draw() -> void
 	auto& this_frame = g_frame_resource[this_frame_index];
 	auto& [this_frame_index_buffer, this_frame_index_count, this_frame_vertex_buffer, this_frame_vertex_count] = this_frame;
 
-	const auto command_list = g_draw_list.command_list();
-	const auto vertex_list = g_draw_list.vertex_list();
-	const auto index_list = g_draw_list.index_list();
+	const auto& draw_datas = gui::get_draw_data();
+
+	const auto [total_vertex_count, total_index_count] = [&]() noexcept
+	{
+		struct sum
+		{
+			UINT vertex;
+			UINT index;
+		};
+
+		return std::ranges::fold_left(
+			draw_datas,
+			sum{.vertex = 0, .index = 0},
+			[](const sum s, const gui::DrawData& draw_data) noexcept -> sum
+			{
+				const auto vertex_list = draw_data.vertex_list.get();
+				const auto index_list = draw_data.index_list.get();
+
+				return
+				{
+						.vertex = s.vertex + static_cast<UINT>(vertex_list.size()),
+						.index = s.index + static_cast<UINT>(index_list.size())
+				};
+			}
+		);
+	}();
 
 	constexpr D3D12_HEAP_PROPERTIES heap_properties{
 			.Type = D3D12_HEAP_TYPE_UPLOAD,
@@ -707,10 +692,10 @@ auto prometheus_draw() -> void
 			.VisibleNodeMask = 0
 	};
 	// Create and grow vertex/index buffers if needed
-	if (this_frame_vertex_buffer == nullptr or this_frame_vertex_count < vertex_list.size())
+	if (this_frame_vertex_buffer == nullptr or this_frame_vertex_count < total_vertex_count)
 	{
 		// todo: grow factor
-		this_frame_vertex_count = static_cast<UINT>(vertex_list.size()) + 5000;
+		this_frame_vertex_count = total_vertex_count + 5000;
 
 		const D3D12_RESOURCE_DESC resource_desc{
 				.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -735,10 +720,10 @@ auto prometheus_draw() -> void
 			)
 		);
 	}
-	if (this_frame_index_buffer == nullptr or this_frame_index_count < index_list.size())
+	if (this_frame_index_buffer == nullptr or this_frame_index_count < total_index_count)
 	{
 		// todo: grow factor
-		this_frame_index_count = static_cast<UINT>(index_list.size()) + 10000;
+		this_frame_index_count = total_index_count + 10000;
 
 		const D3D12_RESOURCE_DESC resource_desc{
 				.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -776,20 +761,29 @@ auto prometheus_draw() -> void
 		auto* mapped_vertex = static_cast<d3d_vertex_type*>(mapped_vertex_resource);
 		auto* mapped_index = static_cast<d3d_index_type*>(mapped_index_resource);
 
-		std::ranges::transform(
-			vertex_list,
-			mapped_vertex,
-			[](const draw::DrawList::vertex_type& vertex) -> d3d_vertex_type
+		std::ranges::for_each(
+			draw_datas,
+			[&](const gui::DrawData& draw_data) noexcept -> void
 			{
-				// return {
-				// 		.position = {vertex.position.x, vertex.position.y},
-				// 		.uv = {vertex.uv.x, vertex.uv.y},
-				// 		.color = vertex.color.to(primitive::color_format<primitive::ColorFormat::A_B_G_R>)
-				// };
-				return std::bit_cast<d3d_vertex_type>(vertex);
+				const auto vertex_list = draw_data.vertex_list.get();
+				const auto index_list = draw_data.index_list.get();
+
+				std::ranges::transform(
+					vertex_list,
+					mapped_vertex,
+					[](const gui::vertex_type& vertex) -> d3d_vertex_type
+					{
+						// return {
+						// 		.position = {vertex.position.x, vertex.position.y},
+						// 		.uv = {vertex.uv.x, vertex.uv.y},
+						// 		.color = vertex.color.to(primitive::color_format<primitive::ColorFormat::A_B_G_R>)
+						// };
+						return std::bit_cast<d3d_vertex_type>(vertex);
+					}
+				);
+				std::ranges::copy(index_list, mapped_index);
 			}
 		);
-		std::ranges::copy(index_list, mapped_index);
 
 		this_frame_vertex_buffer->Unmap(0, &vertex_range);
 		this_frame_index_buffer->Unmap(0, &index_range);
@@ -857,18 +851,25 @@ auto prometheus_draw() -> void
 	constexpr float blend_factor[4]{.0f, .0f, .0f, .0f};
 	g_command_list->OMSetBlendFactor(blend_factor);
 
-	for (const auto& [clip_rect, texture, index_offset, element_count]: command_list)
-	{
-		const auto [point, extent] = clip_rect;
-		const D3D12_RECT rect{static_cast<LONG>(point.x), static_cast<LONG>(point.y), static_cast<LONG>(point.x + extent.width), static_cast<LONG>(point.y + extent.height)};
-		g_command_list->RSSetScissorRects(1, &rect);
+	std::ranges::for_each(
+		draw_datas,
+		[&](const gui::DrawData& draw_data) noexcept -> void
+		{
+			for (const auto& command_list = draw_data.command_list.get();
+			     const auto& [clip_rect, texture, index_offset, element_count]: command_list)
+			{
+				const auto [point, extent] = clip_rect;
+				const D3D12_RECT rect{static_cast<LONG>(point.x), static_cast<LONG>(point.y), static_cast<LONG>(point.x + extent.width), static_cast<LONG>(point.y + extent.height)};
+				g_command_list->RSSetScissorRects(1, &rect);
 
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture != 0, "push_texture_id when create texture view");
-		const D3D12_GPU_DESCRIPTOR_HANDLE texture_handle{.ptr = static_cast<UINT64>(texture)};
-		g_command_list->SetGraphicsRootDescriptorTable(1, texture_handle);
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture != 0, "push_texture_id when create texture view");
+				const D3D12_GPU_DESCRIPTOR_HANDLE texture_handle{.ptr = static_cast<UINT64>(texture)};
+				g_command_list->SetGraphicsRootDescriptorTable(1, texture_handle);
 
-		g_command_list->DrawIndexedInstanced(static_cast<UINT>(element_count), 1, static_cast<UINT>(index_offset), 0, 0);
-	}
+				g_command_list->DrawIndexedInstanced(static_cast<UINT>(element_count), 1, static_cast<UINT>(index_offset), 0, 0);
+			}
+		}
+	);
 }
 
 auto prometheus_shutdown() -> void

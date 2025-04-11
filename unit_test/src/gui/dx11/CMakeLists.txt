@@ -1,5 +1,5 @@
 project(
-		prometheus-draw-dx11
+		prometheus-gui-dx11
 		LANGUAGES CXX
 )
 

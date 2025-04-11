@@ -1,5 +1,5 @@
 project(
-		prometheus-draw-dx12
+		prometheus-gui-dx12
 		LANGUAGES CXX
 )
 

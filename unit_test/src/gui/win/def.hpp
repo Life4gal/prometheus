@@ -4,7 +4,7 @@
 #include <print>
 #include <cstdio>
 
-#include <draw/draw.hpp>
+#include <gui/gui.hpp>
 
 #include <comdef.h>
 
@@ -15,11 +15,11 @@ struct d3d_vertex_type
 	std::uint32_t color;
 };
 
-using d3d_index_type = gal::prometheus::draw::DrawList::index_type;
+using d3d_index_type = gal::prometheus::gui::index_type;
 using d3d_projection_matrix_type = float[4][4];
 
-static_assert(sizeof(gal::prometheus::draw::DrawList::vertex_type) == sizeof(d3d_vertex_type));
-static_assert(sizeof(gal::prometheus::draw::DrawList::index_type) == sizeof(d3d_index_type));
+static_assert(sizeof(gal::prometheus::gui::vertex_type) == sizeof(d3d_vertex_type));
+static_assert(sizeof(gal::prometheus::gui::index_type) == sizeof(d3d_index_type));
 
 template<bool Abort = true>
 auto check_hr_error(
