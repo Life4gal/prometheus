@@ -204,6 +204,10 @@ namespace gal::prometheus
 			 */
 			auto reset(Flag flag) noexcept -> void;
 
+			/**
+			 * @brief Handles all input devices (mouse and keyboard) at the beginning of each frame (if necessary)
+			 */
+			auto handle_inputs(const Context& context) noexcept -> void;
 
 			// -----------------------------------
 			// DRAW BEGIN

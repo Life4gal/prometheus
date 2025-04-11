@@ -312,6 +312,17 @@ namespace gal::prometheus::gui::internal
 		flag_ = flag;
 	}
 
+	auto Window::handle_inputs(const Context& context) noexcept -> void
+	{
+		// scroll
+		if (not flag_.is<WindowFlag::NO_SCROLLBAR_WITH_MOUSE>())
+		{
+			// todo
+			constexpr auto scroll_weight = static_cast<value_type>(5);
+			scroll_next_y_ -= context.mouse.wheel * Drawer{.self = *this}.font_size(context) * scroll_weight;
+		}
+	}
+
 	auto Window::begin_draw(
 		Context& context,
 		value_type fill_alpha,
@@ -591,17 +602,17 @@ namespace gal::prometheus::gui::internal
 							const auto rect = drawer.resize_grip_rect(context);
 							const auto id = id_of_resize(context);
 
-							const auto [hovered, pressed, keeping] = test_mouse(context, id, rect);
-							if (keeping)
+							const auto state = test_mouse(context, id, rect);
+							if (state & MouseState::KEEPING)
 							{
 								resize_grip_color = color_of(theme, ThemeCategory::RESIZE_GRIP_ACTIVATED);
 							}
-							else if (hovered)
+							else if (state & MouseState::HOVERED)
 							{
 								resize_grip_color = color_of(theme, ThemeCategory::RESIZE_GRIP_HOVERED);
 							}
 
-							if (keeping)
+							if (state & MouseState::KEEPING)
 							{
 								// `double left-click` on the `resize-grip` to auto-fit the current window
 								// allows the mouse to be offset from the current window area when resizing
@@ -734,8 +745,8 @@ namespace gal::prometheus::gui::internal
 						{
 							const auto id = id_of_scrollbar(context);
 
-							if (const auto [hovered, pressed, keeping] = test_mouse(context, id, scrollbar_area_rect);
-								keeping)
+							if (const auto state = test_mouse(context, id, scrollbar_area_rect);
+								state & MouseState::KEEPING)
 							{
 								grab_color = color_of(theme, ThemeCategory::SCROLLBAR_GRAB_ACTIVATED);
 
@@ -748,7 +759,7 @@ namespace gal::prometheus::gui::internal
 								scroll_y_ = size_of_content_.height * y_normalized;
 								scroll_next_y_ = scroll_y_;
 							}
-							else if (hovered)
+							else if (state & MouseState::HOVERED)
 							{
 								grab_color = color_of(theme, ThemeCategory::SCROLLBAR_GRAB_HOVERED);
 							}
@@ -810,12 +821,12 @@ namespace gal::prometheus::gui::internal
 						const auto rect = drawer.close_button_rect(context);
 						const auto id = id_of_close(context);
 
-						const auto [hovered, pressed, keeping] = test_mouse(context, id, rect);
+						const auto state = test_mouse(context, id, rect);
 
 						auto close_button_color = color_of(theme, ThemeCategory::CLOSE_BUTTON);
-						if (hovered)
+						if (state & MouseState::HOVERED)
 						{
-							if (keeping)
+							if (state & MouseState::KEEPING)
 							{
 								close_button_color = color_of(theme, ThemeCategory::CLOSE_BUTTON_ACTIVATED);
 							}
@@ -836,7 +847,7 @@ namespace gal::prometheus::gui::internal
 						);
 
 						// ×
-						if (hovered)
+						if (state & MouseState::HOVERED)
 						{
 							const auto x = rect.extent.width * .5f * .667f - 1.f;
 							const auto y = rect.extent.height * .5f * .667f - 1.f;
@@ -853,7 +864,7 @@ namespace gal::prometheus::gui::internal
 							);
 						}
 
-						close_button_pressed = pressed;
+						close_button_pressed = state & MouseState::PRESSED;
 					}
 
 					// title text
@@ -1271,6 +1282,7 @@ namespace gal::prometheus::gui::internal
 	auto Window::hide() noexcept -> void
 	{
 		visible_ = false;
+		accessed_ = false;
 	}
 
 	auto Window::id_of_move(Context& context) const noexcept -> widget_id_type

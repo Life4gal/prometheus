@@ -325,9 +325,23 @@ namespace gal::prometheus::gui
 			context.window_hovered = find_hovered_window(context, mouse_position, false);
 			context.window_hovered_root = find_hovered_window(context, mouse_position, true);
 
+			// Mark all windows as not visible
+			std::ranges::for_each(
+				context.window_list,
+				[](auto* window) noexcept -> void
+				{
+					window->hide();
+				}
+			);
+
 			// No window should be open at the beginning of the frame
 			// But in order to allow the user to call `new_frame` multiple times without calling `render`, we are doing an explicit clear
 			context.window_current_stack.clear();
+
+			if (context.window_hovered != nullptr)
+			{
+				context.window_hovered->handle_inputs(context);
+			}
 		}
 	}
 
@@ -350,6 +364,32 @@ namespace gal::prometheus::gui
 		{
 			// Sort the window list so that all child windows are after their parent
 			// We cannot do that on `focus` because children may not exist yet
+
+			std::vector<Context::window_type*> sorted_windows{};
+			sorted_windows.reserve(context.window_list.size());
+
+			std::ranges::for_each(
+				context.window_list,
+				[&](auto* window) noexcept -> void
+				{
+					// todo: child window
+					if (window->flag().template is<internal::WindowInternalFlag::CHILD_WINDOW>() and window->visible())
+					{
+						return;
+					}
+
+					sorted_windows.push_back(window);
+				}
+			);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(sorted_windows.size() == context.window_list.size());
+
+			context.window_list.swap(sorted_windows);
+
+			// clear all data for new frame
+			context.io.delta_time = -1;
+			// context.io.mouse_position = {0, 0};
+			context.io.mouse_wheel = 0;
+			// context.io.mouse_button_state.state.fill(false);
 		}
 
 		context.draw_lists.clear();
@@ -837,11 +877,12 @@ namespace gal::prometheus::gui
 			return color_of(theme, category, factor);
 		}
 
-		auto test_mouse(Context& context, const widget_id_type id, const rect_type& area, const bool repeat) noexcept -> mouse_state_type
+		auto test_mouse(Context& context, const widget_id_type id, const rect_type& area, const bool repeat) noexcept -> std::underlying_type_t<MouseState>
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
 
 			const auto& window = *context.window_current_stack.back();
+			auto state = std::to_underlying(MouseState::NONE);
 
 			const auto hovered =
 					// window
@@ -851,12 +892,16 @@ namespace gal::prometheus::gui
 					// mouse
 					window.hovered(context, area);
 
-			mouse_state_type state{.hovered = hovered, .pressed = false, .keeping = false};
 			if (hovered)
 			{
+				state |= MouseState::HOVERED;
+
+				// hovering widget
 				context.widget_hovered = id;
+
 				if (context.mouse.is_clicked(context, MouseKey::LEFT, false))
 				{
+					// select widget
 					context.widget_activated = id;
 				}
 				else if (
@@ -865,7 +910,7 @@ namespace gal::prometheus::gui
 					context.mouse.is_clicked(context, MouseKey::LEFT, true)
 				)
 				{
-					state.pressed = true;
+					state |= MouseState::PRESSED;
 				}
 			}
 
@@ -873,15 +918,23 @@ namespace gal::prometheus::gui
 			{
 				if (context.mouse.is_down(context, MouseKey::LEFT))
 				{
-					state.keeping = true;
+					// select current widget, keep the left mouse button pressed
+					state |= MouseState::KEEPING;
 				}
 				else
 				{
 					if (hovered)
 					{
-						state.pressed = true;
+						// select current widget, release the left mouse button on the widget
+						state |= MouseState::PRESSED;
+					}
+					else
+					{
+						// select current widget, did not release the left mouse button on the widget
+						// do nothing
 					}
 
+					// the widget is no longer selected
 					context.widget_activated = invalid_widget_id;
 				}
 			}

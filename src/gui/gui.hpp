@@ -249,7 +249,7 @@ namespace gal::prometheus
 		public:
 			using value_type = extent_type::value_type;
 
-			// Update every frame
+			// Update once (it can also be updated every frame basis if desired)
 			// Current window (viewport) size
 			extent_type display_size{0, 0};
 			// Update every frame
