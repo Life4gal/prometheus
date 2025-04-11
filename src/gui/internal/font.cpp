@@ -406,7 +406,7 @@ namespace gal::prometheus::gui
 			static_assert(std::is_same_v<decltype(utf16_text)::value_type, Font::char_type>);
 
 			const auto line_height = font_size;
-			const auto scale = line_height / static_cast<float>(font.pixel_height) * font.scale;
+			const auto scale = line_height / (static_cast<float>(font.pixel_height) * font.scale);
 			const auto& glyphs = font.glyphs;
 			const auto& fallback_glyph = font.fallback_glyph;
 

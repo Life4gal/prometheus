@@ -231,11 +231,11 @@ namespace gal::prometheus::gui
 				.window_background_alpha = .65f,
 				.window_titlebar_height = 20,
 				.window_corner_rounding = 0,
-				.window_min_size = {640, 480},
+				.window_min_size = {64, 48},
 				.window_resize_grip_size = {20, 20},
 				.window_padding = {8, 8},
 				.window_auto_fit_padding = {8, 8},
-				.window_vertical_scrollbar_width = 8,
+				.window_vertical_scrollbar_width = 10,
 				.item_default_width_factor = .65f,
 				.item_frame_padding = {4, 4},
 				.item_spacing = {10, 5},
@@ -447,6 +447,46 @@ namespace gal::prometheus::gui
 		context.window_current_stack.pop_back();
 	}
 
+	auto draw_text(Context& context, const std::string_view utf8_text) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		window.draw_text(context, utf8_text);
+	}
+
+	auto layout_same_line(const Context& context, const Theme::value_type column_width, const Theme::value_type spacing_width) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		window.same_line(context, column_width, spacing_width);
+	}
+
+	auto get_content_region_max(const Context& context) noexcept -> extent_type
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		const auto& window = *context.window_current_stack.back();
+		return window.content_region_max(context);
+	}
+
+	auto get_window_content_region_min(const Context& context) noexcept -> extent_type
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		const auto& window = *context.window_current_stack.back();
+		return window.window_content_region_min(context);
+	}
+
+	auto get_window_content_region_max(const Context& context) noexcept -> extent_type
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		const auto& window = *context.window_current_stack.back();
+		return window.window_content_region_max(context);
+	}
+
 	auto set_current_context(Context& context) noexcept -> void
 	{
 		g_context = std::addressof(context);
@@ -579,6 +619,41 @@ namespace gal::prometheus::gui
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
 
 		return end_window(*g_context);
+	}
+
+	auto draw_text(const std::string_view utf8_text) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+
+		draw_text(*g_context, utf8_text);
+	}
+
+	auto layout_same_line(const Theme::value_type column_width, const Theme::value_type spacing_width) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+
+		layout_same_line(*g_context, column_width, spacing_width);
+	}
+
+	auto get_content_region_max() noexcept -> extent_type
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+
+		return get_content_region_max(*g_context);
+	}
+
+	auto get_window_content_region_min() noexcept -> extent_type
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+
+		return get_window_content_region_min(*g_context);
+	}
+
+	auto get_window_content_region_max() noexcept -> extent_type
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+
+		return get_window_content_region_max(*g_context);
 	}
 
 	namespace internal

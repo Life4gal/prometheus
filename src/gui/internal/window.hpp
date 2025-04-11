@@ -122,6 +122,9 @@ namespace gal::prometheus
 				value_type height_previous_line;
 
 				std::vector<value_type> item_width;
+				// <0(DrawList::text_wrap_width_not_set): disable
+				// =0: window.content_region_max().width
+				// >0: width
 				std::vector<value_type> text_wrap_width;
 			};
 
@@ -222,7 +225,12 @@ namespace gal::prometheus
 			// -----------------------------------
 			// WIDGETS
 
-			// todo
+			auto draw_text(Context& context, std::string_view utf8_text) noexcept -> void;
+
+			// -----------------------------------
+			// LAYOUT
+
+			auto same_line(const Context& context, value_type column_width = layout_auto_size, value_type spacing_width = layout_auto_size) noexcept -> void;
 
 			// -----------------------------------
 			// DRAW END
@@ -256,6 +264,10 @@ namespace gal::prometheus
 			[[nodiscard]] auto collapsed() const noexcept -> bool;
 
 			[[nodiscard]] auto root() const noexcept -> const Window&;
+
+			[[nodiscard]] auto content_region_max(const Context& context) const noexcept -> extent_type;
+			[[nodiscard]] auto window_content_region_min(const Context& context) const noexcept -> extent_type;
+			[[nodiscard]] auto window_content_region_max(const Context& context) const noexcept -> extent_type;
 
 			/**
 			 * @brief Test if mouse cursor is hovering given rect

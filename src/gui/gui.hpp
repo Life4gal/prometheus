@@ -386,6 +386,28 @@ namespace gal::prometheus
 			WindowFlag flag = WindowFlag::NONE
 		) noexcept -> bool;
 		auto end_window(Context& context) noexcept -> void;
+
+		auto draw_text(Context& context, std::string_view utf8_text) noexcept -> void;
+
+		//------------------------------------------------------------------
+		// LAYOUT
+		//------------------------------------------------------------------
+
+		// < 0
+		constexpr Theme::value_type layout_auto_size = -1;
+
+		auto layout_same_line(const Context& context, Theme::value_type column_width = layout_auto_size, Theme::value_type spacing_width = layout_auto_size) noexcept -> void;
+
+		//------------------------------------------------------------------
+		// WIDGET STATE
+		//------------------------------------------------------------------
+
+		// The available area of the current drawing unit
+		[[nodiscard]] auto get_content_region_max(const Context& context) noexcept -> extent_type;
+		// The available area of the current window
+		[[nodiscard]] auto get_window_content_region_min(const Context& context) noexcept -> extent_type;
+		// The available area of the current window
+		[[nodiscard]] auto get_window_content_region_max(const Context& context) noexcept -> extent_type;
 	}
 
 	namespace meta::user_defined
@@ -459,4 +481,23 @@ namespace gal::prometheus::gui
 		WindowFlag flag = WindowFlag::NONE
 	) noexcept -> bool;
 	auto end_window() noexcept -> void;
+
+	auto draw_text(std::string_view utf8_text) noexcept -> void;
+
+	//------------------------------------------------------------------
+	// LAYOUT
+	//------------------------------------------------------------------
+
+	auto layout_same_line(Theme::value_type column_width = layout_auto_size, Theme::value_type spacing_width = layout_auto_size) noexcept -> void;
+
+	//------------------------------------------------------------------
+	// WIDGET STATE
+	//------------------------------------------------------------------
+
+	// The available area of the current drawing unit
+	[[nodiscard]] auto get_content_region_max() noexcept -> extent_type;
+	// The available area of the current window
+	[[nodiscard]] auto get_window_content_region_min() noexcept -> extent_type;
+	// The available area of the current window
+	[[nodiscard]] auto get_window_content_region_max() noexcept -> extent_type;
 }

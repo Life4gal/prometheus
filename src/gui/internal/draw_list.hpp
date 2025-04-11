@@ -121,7 +121,7 @@ namespace gal::prometheus
 			using command_list_type = DrawData::command_list_type;
 
 			// not set ==> Font::no_auto_wrap
-			constexpr static float text_wrap_width_not_set = -0.f;
+			constexpr static float text_wrap_width_not_set = -1.f;
 
 		private:
 			class Drawer;

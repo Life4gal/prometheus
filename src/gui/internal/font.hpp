@@ -44,7 +44,7 @@ namespace gal::prometheus::gui::internal
 		constexpr static texture_id_type invalid_texture_id = 0;
 
 		// Line breaks only when a line break ('\n') is encountered (this means that text beyond the content area will be clipped)
-		constexpr static float no_auto_wrap = 99999999.f;
+		constexpr static value_type no_auto_wrap = 99999999.f;
 
 		std::string font_path;
 		std::uint32_t pixel_height;

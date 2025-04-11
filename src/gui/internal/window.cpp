@@ -218,6 +218,37 @@ namespace gal::prometheus::gui::internal
 			const point_type p{window.point_.x + window.size_.width - s.width - 3, window.point_.y + 2};
 			return {p, s};
 		}
+
+		// -----------------------------------
+		// CANVAS
+
+		auto adjust_item_size(const Context& context, const extent_type& size) noexcept -> void
+		{
+			const auto& theme = current_theme(context);
+
+			auto& window = self.get();
+			auto& canvas = window.canvas_;
+
+			const auto line_height = std::ranges::max(canvas.height_current_line, size.height);
+
+			// Always align ourselves on pixel boundaries
+			canvas.cursor_previous_line =
+					// previous point
+					canvas.cursor_current_line +
+					// X: item width
+					// Y: 0
+					extent_type{size.width, 0};
+			canvas.cursor_current_line =
+					// todo X: start point X + columns offset
+					// Y: previous Y + item height + item spacing
+					{window.point_.x + 8, canvas.cursor_current_line.y + line_height + theme.item_spacing.height};
+			// window.point_ + extent_type{8, canvas.cursor_current_line.y + line_height + theme.item_spacing.height};
+
+			canvas.height_previous_line = line_height;
+			canvas.height_current_line = 0;
+
+			window.size_of_content_ = window.size_of_content_.combine_max(extent_type{canvas.cursor_previous_line.x, canvas.cursor_current_line.y + window.scroll_y_} - window.point_);
+		}
 	};
 
 	Window::Window(
@@ -685,34 +716,34 @@ namespace gal::prometheus::gui::internal
 							color_of(theme, ThemeCategory::SCROLLBAR_BACKGROUND)
 						);
 
-						// scrollbar grab
-						constexpr extent_type grab_offset{3, 3};
-						const auto grab_point = background_point + grab_offset;
-						const auto grab_size = background_size - grab_offset * 2;
-						const rect_type grab_rect{grab_point, grab_size};
+						// scrollbar area  
+						constexpr extent_type scrollbar_area_offset{3, 3};
+						const auto scrollbar_area_point = background_point + scrollbar_area_offset;
+						const auto scrollbar_area_size = background_size - scrollbar_area_offset * 2;
+						const rect_type scrollbar_area_rect{scrollbar_area_point, scrollbar_area_size};
 
 						const auto grab_size_y_normalized = std::ranges::clamp(
 							size_.height / std::ranges::max(size_of_content_.height, size_.height),
 							.0f,
 							1.f
 						);
-						const auto grab_size_y = grab_size.height * grab_size_y_normalized;
+						const auto grab_size_y = scrollbar_area_size.height * grab_size_y_normalized;
 
 						auto grab_color = color_of(theme, ThemeCategory::SCROLLBAR_GRAB);
 						if (grab_size_y_normalized < 1.f)
 						{
 							const auto id = id_of_scrollbar(context);
 
-							if (const auto [hovered, pressed, keeping] = test_mouse(context, id, grab_rect);
+							if (const auto [hovered, pressed, keeping] = test_mouse(context, id, scrollbar_area_rect);
 								keeping)
 							{
 								grab_color = color_of(theme, ThemeCategory::SCROLLBAR_GRAB_ACTIVATED);
 
 								const auto y_normalized = std::ranges::clamp(
-									(mouse.position_current.y - (grab_point.y + grab_size_y * .5f)) / (grab_size.height - grab_size_y) * (1.f - grab_size_y_normalized),
-									.0f,
-									1.f
-								);
+									                          (mouse.position_current.y - (scrollbar_area_point.y + grab_size_y * .5f)) / (scrollbar_area_size.height - grab_size_y),
+									                          .0f,
+									                          1.f
+								                          ) * (1.f - grab_size_y_normalized);
 
 								scroll_y_ = size_of_content_.height * y_normalized;
 								scroll_next_y_ = scroll_y_;
@@ -725,18 +756,16 @@ namespace gal::prometheus::gui::internal
 
 						// Normalized height of the grab
 						const auto y_normalized = std::ranges::clamp(
-							scroll_y_ / std::ranges::max(.0f, size_of_content_.height),
+							scroll_y_ / std::ranges::max(.00001f, size_of_content_.height),
 							.0f,
 							1.f
 						);
-						const auto y1 = std::lerp(grab_point.y, grab_point.y + grab_size.height, y_normalized);
-						const auto y2 = std::lerp(grab_point.y, grab_point.y + grab_size.height, y_normalized + grab_size_y_normalized);
 
-						draw_list_.rect_filled(
-							{grab_point.x, y1},
-							{grab_point.x + grab_size.width, y2},
-							grab_color
-						);
+						const auto grab_point = scrollbar_area_point + extent_type{0, scrollbar_area_size.height * y_normalized};
+						const auto grab_size = extent_type{scrollbar_area_size.width, scrollbar_area_size.height * grab_size_y_normalized};
+						const rect_type grab_rect{grab_point, grab_size};
+
+						draw_list_.rect_filled(grab_rect, grab_color);
 					}
 
 					// resize-grip
@@ -841,6 +870,9 @@ namespace gal::prometheus::gui::internal
 						const auto width = std::ranges::min(text_size.width, max_width);
 						const auto height = std::ranges::min(text_size.height, max_height);
 
+						// If the titlebar is not large enough to accommodate the title content,
+						// simply discard the content that exceeds the space,
+						// rather than displaying the content on a new line
 						push_clip_rect(context, {text_point, width, height});
 						draw_list_.text(
 							font,
@@ -880,11 +912,11 @@ namespace gal::prometheus::gui::internal
 					canvas_.cursor_start_line =
 							// window start point
 							point_ +
-							// X: columns
+							// todo X: columns offset
 							// Y: titlebar + padding
-							extent_type{0, current_titlebar_rect.height() + drawer.window_padding(context).height} -
+							extent_type{8, current_titlebar_rect.height() + drawer.window_padding(context).height} +
 							// Y: scrollbar
-							extent_type{0, scroll_y_};
+							extent_type{0, -scroll_y_};
 					canvas_.cursor_current_line = canvas_.cursor_start_line;
 					canvas_.cursor_previous_line = canvas_.cursor_current_line;
 
@@ -895,6 +927,7 @@ namespace gal::prometheus::gui::internal
 					canvas_.item_width.push_back(default_item_width_);
 
 					canvas_.text_wrap_width.clear();
+					static_assert(DrawList::text_wrap_width_not_set < 0);
 					canvas_.text_wrap_width.push_back(DrawList::text_wrap_width_not_set);
 				}
 			}
@@ -961,6 +994,141 @@ namespace gal::prometheus::gui::internal
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(clip_rect_stack_.size() == 2);
 
 		return close_button_pressed;
+	}
+
+	auto Window::draw_text(Context& context, const std::string_view utf8_text) noexcept -> void
+	{
+		if (skip_item_)
+		{
+			return;
+		}
+		accessed_ = true;
+
+		const auto& theme = current_theme(context);
+		const auto& font = current_font(context);
+		Drawer drawer{.self = const_cast<Window&>(*this)};
+
+		const auto font_size = drawer.font_size(context);
+
+		static_assert(DrawList::text_wrap_width_not_set < 0);
+		const auto wrap_width = canvas_.text_wrap_width.back();
+		const auto wrap_enabled = wrap_width >= .0f;
+
+		if (constexpr std::size_t long_text_threshold = 1500;
+			utf8_text.size() > long_text_threshold and not wrap_enabled)
+		{
+			const auto clip_rect = clip_rect_stack_.back();
+			const auto clip_rect_left_top = clip_rect.left_top();
+			const auto clip_rect_left_bottom = clip_rect.left_bottom();
+
+			extent_type text_size{0, 0};
+
+			// Only text that is in the visible area is rendered
+			if (const auto visible_area_height = clip_rect_left_bottom.y - canvas_.cursor_current_line.y;
+				visible_area_height > 0)
+			{
+				const auto invisible_area_height = clip_rect_left_top.y - canvas_.cursor_current_line.y;
+
+				const auto line_height = drawer.font_size(context);
+				const auto invisible_lines = static_cast<int>(invisible_area_height / line_height - 1);
+				const auto visible_lines = static_cast<int>(visible_area_height / line_height - 1);
+
+				const auto has_invisible_lines = invisible_lines > 0;
+
+				auto view = utf8_text | std::views::split('\n');
+				auto visible_view = view | std::views::drop(has_invisible_lines ? invisible_lines : 0) | std::views::take(visible_lines);
+
+				auto text_point = canvas_.cursor_current_line;
+
+				if (has_invisible_lines)
+				{
+					text_point.y += static_cast<value_type>(invisible_lines) * line_height;
+				}
+
+				for (const auto sub: visible_view)
+				{
+					const std::string_view sub_string{sub};
+					const auto this_line_text_size = internal::text_size(
+						font,
+						sub_string,
+						font_size,
+						Font::no_auto_wrap
+					);
+
+					// draw one line
+					draw_list_.text(
+						font,
+						font_size,
+						text_point,
+						color_of(theme, ThemeCategory::TEXT),
+						sub_string,
+						Font::no_auto_wrap
+					);
+
+					text_point.y += line_height;
+					text_size.width = std::ranges::max(text_size.width, this_line_text_size.width);
+				}
+
+				text_size.height = static_cast<value_type>(std::ranges::distance(view)) * line_height;
+			}
+
+			drawer.adjust_item_size(context, text_size);
+
+			// fixme: hovering text?
+		}
+		else
+		{
+			const auto this_wrap_width = wrap_enabled ? wrap_width : Font::no_auto_wrap;
+
+			const auto text_point = canvas_.cursor_current_line;
+			const auto text_size = internal::text_size(
+				font,
+				utf8_text,
+				font_size,
+				this_wrap_width
+			);
+			drawer.adjust_item_size(context, text_size);
+
+			// fixme: hovering text?
+
+			draw_list_.text(
+				font,
+				font_size,
+				text_point,
+				color_of(theme, ThemeCategory::TEXT),
+				utf8_text,
+				this_wrap_width
+			);
+		}
+	}
+
+	auto Window::same_line(const Context& context, const value_type column_width, value_type spacing_width) noexcept -> void
+	{
+		if (collapsed_)
+		{
+			return;
+		}
+
+		const auto& theme = current_theme(context);
+
+		canvas_.height_current_line = canvas_.height_previous_line;
+		canvas_.cursor_current_line = canvas_.cursor_previous_line;
+
+		if (column_width < 0)
+		{
+			if (spacing_width < 0)
+			{
+				spacing_width = theme.item_spacing.width;
+			}
+
+			canvas_.cursor_current_line.x += spacing_width;
+		}
+		else
+		{
+			spacing_width = std::ranges::max(spacing_width, static_cast<value_type>(0));
+
+			canvas_.cursor_current_line.x = column_width + spacing_width;
+		}
 	}
 
 	auto Window::end_draw(Context& context) noexcept -> void
@@ -1033,6 +1201,48 @@ namespace gal::prometheus::gui::internal
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(root_ != nullptr);
 
 		return *root_;
+	}
+
+	auto Window::content_region_max(const Context& context) const noexcept -> extent_type
+	{
+		const auto& theme = current_theme(context);
+		const Drawer drawer{.self = const_cast<Window&>(*this)};
+
+		auto size = size_ - drawer.window_padding(context);
+
+		// todo
+		if (scroll_y_visible_)
+		{
+			size.width -= theme.window_vertical_scrollbar_width;
+		}
+
+		return size;
+	}
+
+	auto Window::window_content_region_min(const Context& context) const noexcept -> extent_type
+	{
+		const Drawer drawer{.self = const_cast<Window&>(*this)};
+
+		// titlebar + padding
+		const auto titlebar_height = drawer.titlebar_height(context);
+		const auto padding = drawer.window_padding(context);
+
+		return extent_type{0, titlebar_height} + padding;
+	}
+
+	auto Window::window_content_region_max(const Context& context) const noexcept -> extent_type
+	{
+		const auto& theme = current_theme(context);
+		const Drawer drawer{.self = const_cast<Window&>(*this)};
+
+		auto size = size_ - drawer.window_padding(context);
+
+		if (scroll_y_visible_)
+		{
+			size.width -= theme.window_vertical_scrollbar_width;
+		}
+
+		return size;
 	}
 
 	auto Window::hovered(const Context& context, const rect_type& rect) const noexcept -> bool
