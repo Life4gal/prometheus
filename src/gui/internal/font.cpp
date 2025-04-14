@@ -319,33 +319,35 @@ namespace gal::prometheus::gui
 {
 	auto set_default_font(Context& context, const FontOption& option) noexcept -> Texture
 	{
-		if (context.font_current == Context::stack_pointer_default)
-		{
-			return push_font(context, option);
-		}
-
-		auto font = memory::make_unique<internal::Font>();
-		auto texture = do_load_font(option, *font);
-
-		context.font_stack[0] = std::move(font);
-
+		// if (context.font_current == Context::stack_pointer_default)
+		// {
+		// 	return push_font(context, option);
+		// }
+		//
+		// auto font = memory::make_unique<internal::Font>();
+		// auto texture = do_load_font(option, *font);
+		//
+		// context.font_stack[0] = std::move(font);
+		//
+		// return texture;
+		auto texture = do_load_font(option, context.font);
 		return texture;
 	}
 
-	[[nodiscard]] auto push_font(Context& context, const FontOption& option) noexcept -> Texture
-	{
-		auto font = memory::make_unique<internal::Font>();
-		auto texture = do_load_font(option, *font);
-
-		internal::push_font(context, std::move(font));
-
-		return texture;
-	}
-
-	auto pop_font(Context& context) noexcept -> void
-	{
-		internal::pop_font(context);
-	}
+	// [[nodiscard]] auto push_font(Context& context, const FontOption& option) noexcept -> Texture
+	// {
+	// 	auto font = memory::make_unique<internal::Font>();
+	// 	auto texture = do_load_font(option, *font);
+	//
+	// 	internal::push_font(context, std::move(font));
+	//
+	// 	return texture;
+	// }
+	//
+	// auto pop_font(Context& context) noexcept -> void
+	// {
+	// 	internal::pop_font(context);
+	// }
 
 	Texture::Texture(texture_id_type& texture_id) noexcept
 		: width{0},

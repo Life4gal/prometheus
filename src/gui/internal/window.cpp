@@ -249,6 +249,49 @@ namespace gal::prometheus::gui::internal
 
 			window.size_of_content_ = window.size_of_content_.combine_max(extent_type{canvas.cursor_previous_line.x, canvas.cursor_current_line.y + window.scroll_y_} - window.point_);
 		}
+
+		// -----------------------------------
+		// FRAME
+
+		auto draw_widget_frame(const Context& context, const rect_type& rect, const color_type& color) noexcept -> void
+		{
+			const auto& theme = current_theme(context);
+
+			auto& window = self.get();
+
+			window.draw_list_.rect_filled(rect, color);
+			if (window.flag_.is<WindowFlag::BORDERED>())
+			{
+				const point_type outer_point{rect.left_top() + extent_type{.5f, .5f}};
+				const extent_type outer_size{rect.size() - extent_type{.5f, .5f}};
+
+				const point_type inner_point{rect.left_top() + extent_type{1.5f, 1.5f}};
+				const extent_type inner_size{rect.size() - extent_type{.5f, .5f}};
+
+				window.draw_list_.rect({inner_point, inner_size}, color_of(theme, ThemeCategory::BORDER_SHADOW));
+				window.draw_list_.rect({outer_point, outer_size}, color_of(theme, ThemeCategory::BORDER));
+			}
+		}
+
+		auto draw_widget_frame(const Context& context, const circle_type& circle, const color_type& color) noexcept -> void
+		{
+			const auto& theme = current_theme(context);
+
+			auto& window = self.get();
+
+			window.draw_list_.circle_filled(circle, color);
+			if (window.flag_.is<WindowFlag::BORDERED>())
+			{
+				const point_type outer_point{circle.center() + extent_type{.5f, .5f}};
+				const auto outer_radius = circle.radius - .5f;
+
+				const point_type inner_point{circle.center() + extent_type{1.5f, 1.5f}};
+				const auto inner_radius = circle.radius - .5f;
+
+				window.draw_list_.circle({inner_point, inner_radius}, color_of(theme, ThemeCategory::BORDER_SHADOW));
+				window.draw_list_.circle({outer_point, outer_radius}, color_of(theme, ThemeCategory::BORDER));
+			}
+		}
 	};
 
 	Window::Window(
@@ -1111,6 +1154,283 @@ namespace gal::prometheus::gui::internal
 				this_wrap_width
 			);
 		}
+	}
+
+	auto Window::draw_button(Context& context, const std::string_view utf8_text, extent_type size, const bool repeat_when_held) noexcept -> bool
+	{
+		if (skip_item_)
+		{
+			return false;
+		}
+		accessed_ = true;
+
+		const auto& theme = current_theme(context);
+		const auto& font = current_font(context);
+		Drawer drawer{.self = const_cast<Window&>(*this)};
+		const IdMaker id_maker{.self = *this};
+
+		const auto id = id_maker.make_id(context, utf8_text);
+		const auto text_size = internal::text_size(font, utf8_text, drawer.font_size(context), Font::no_auto_wrap);
+
+		if (size.width <= 0)
+		{
+			size.width = text_size.width;
+		}
+		if (size.height <= 0)
+		{
+			size.height = text_size.height;
+		}
+
+		const auto button_point = canvas_.cursor_current_line;
+		const auto button_size = size + theme.item_frame_padding * 2;
+		const rect_type button_rect{button_point, button_size};
+		drawer.adjust_item_size(context, button_size);
+
+		const auto state = test_mouse(context, id, button_rect, repeat_when_held);
+
+		color_type button_color = color_of(theme, ThemeCategory::BUTTON);
+		{
+			if (state & MouseState::KEEPING or state & MouseState::PRESSED)
+			{
+				button_color = color_of(theme, ThemeCategory::BUTTON_ACTIVATED);
+			}
+			else if (state & MouseState::HOVERED)
+			{
+				button_color = color_of(theme, ThemeCategory::BUTTON_HOVERED);
+			}
+		}
+
+		// draw □
+		drawer.draw_widget_frame(context, button_rect, button_color);
+
+		const auto text_area_point = button_rect.left_top() + theme.item_frame_padding;
+
+		// the given size may be smaller than the required size of the text, in which case the button text needs to be truncated
+		const auto clip = size.width < text_size.width or size.height < text_size.height;
+		if (clip)
+		{
+			const rect_type rect
+			{
+					text_area_point,
+					// Allow extra to draw over the horizontal padding to make it visible that text doesn't fit
+					button_rect.right_bottom() - extent_type{0, theme.item_frame_padding.height}
+			};
+
+			push_clip_rect(context, rect);
+		}
+
+		const auto text_offset = (size - text_size).combine_max({0, 0}) * .5f;
+		const auto text_point =
+				text_area_point +
+				text_offset;
+
+		// draw text
+		draw_list_.text(
+			font,
+			drawer.font_size(context),
+			text_point,
+			color_of(theme, ThemeCategory::TEXT),
+			utf8_text,
+			button_rect.width()
+		);
+
+		if (clip)
+		{
+			pop_clip_rect(context);
+		}
+
+		return state & MouseState::PRESSED;
+	}
+
+	auto Window::draw_small_button(Context& context, const std::string_view utf8_text, const bool repeat_when_held) noexcept -> bool
+	{
+		if (skip_item_)
+		{
+			return false;
+		}
+		accessed_ = true;
+
+		const auto& theme = current_theme(context);
+		const auto& font = current_font(context);
+		Drawer drawer{.self = const_cast<Window&>(*this)};
+		const IdMaker id_maker{.self = *this};
+
+		const auto id = id_maker.make_id(context, utf8_text);
+		const auto text_size = internal::text_size(font, utf8_text, drawer.font_size(context), Font::no_auto_wrap);
+
+		const auto button_point = canvas_.cursor_current_line;
+		const auto button_size = text_size + theme.item_frame_padding * 2;
+		const rect_type button_rect{button_point, button_size};
+		drawer.adjust_item_size(context, button_size);
+
+		const auto state = test_mouse(context, id, button_rect, repeat_when_held);
+
+		color_type button_color = color_of(theme, ThemeCategory::BUTTON);
+		{
+			if (state & MouseState::KEEPING or state & MouseState::PRESSED)
+			{
+				button_color = color_of(theme, ThemeCategory::BUTTON_ACTIVATED);
+			}
+			else if (state & MouseState::HOVERED)
+			{
+				button_color = color_of(theme, ThemeCategory::BUTTON_HOVERED);
+			}
+		}
+
+		// draw □
+		drawer.draw_widget_frame(context, button_rect, button_color);
+
+		const auto text_area_point = button_rect.left_top() + theme.item_frame_padding;
+
+		// draw text
+		draw_list_.text(
+			font,
+			drawer.font_size(context),
+			text_area_point,
+			color_of(theme, ThemeCategory::TEXT),
+			utf8_text,
+			button_rect.width()
+		);
+
+		return state & MouseState::PRESSED;
+	}
+
+	auto Window::draw_radio_button(Context& context, const std::string_view utf8_text, const bool checked) noexcept -> bool
+	{
+		if (skip_item_)
+		{
+			return false;
+		}
+		accessed_ = true;
+
+		const auto& theme = current_theme(context);
+		const auto& font = current_font(context);
+		Drawer drawer{.self = const_cast<Window&>(*this)};
+		const IdMaker id_maker{.self = *this};
+
+		const auto id = id_maker.make_id(context, utf8_text);
+		const auto text_size = internal::text_size(font, utf8_text, drawer.font_size(context), Font::no_auto_wrap);
+
+		// ○ + text
+		const auto width = text_size.height;
+
+		// ○, diameter equals string rect height
+		const auto check_point = canvas_.cursor_current_line;
+		const auto check_size = extent_type{width + theme.item_frame_padding.height * 2, text_size.height + theme.item_frame_padding.height * 2};
+		const rect_type check_rect{check_point, check_size};
+		const circle_type check_circle{check_point + check_size / 2, check_size.width / 2};
+		drawer.adjust_item_size(context, check_size);
+
+		// ○ text
+		same_line(context, auto_size, theme.item_inner_spacing.width);
+
+		// text
+		const auto text_point = canvas_.cursor_current_line + extent_type{0, theme.item_frame_padding.height};
+		const rect_type text_rect{text_point, text_size};
+		drawer.adjust_item_size(context, text_size);
+
+		const auto state = test_mouse(context, id, check_rect, false);
+
+		// draw ○
+		if (state & MouseState::HOVERED)
+		{
+			drawer.draw_widget_frame(context, check_circle, color_of(theme, ThemeCategory::RADIO_BUTTON_HOVERED));
+		}
+		else
+		{
+			drawer.draw_widget_frame(context, check_circle, color_of(theme, ThemeCategory::FRAME_BACKGROUND));
+		}
+
+		if (checked)
+		{
+			const auto check_fill_point = check_point + theme.item_inner_spacing;
+			const auto check_fill_size = check_size - theme.item_inner_spacing * 2;
+			const circle_type check_fill_circle{check_fill_point + check_fill_size / 2, check_fill_size.width / 2};
+			draw_list_.circle_filled(check_fill_circle, color_of(theme, ThemeCategory::RADIO_BUTTON_ACTIVATED));
+		}
+
+		// draw text
+		draw_list_.text(
+			font,
+			drawer.font_size(context),
+			text_rect.left_top(),
+			color_of(theme, ThemeCategory::TEXT),
+			utf8_text,
+			text_rect.width()
+		);
+
+		return state & MouseState::PRESSED;
+	}
+
+	auto Window::draw_checkbox(Context& context, std::string_view utf8_text, bool checked) noexcept -> bool
+	{
+		if (skip_item_)
+		{
+			return false;
+		}
+		accessed_ = true;
+
+		const auto& theme = current_theme(context);
+		const auto& font = current_font(context);
+		Drawer drawer{.self = const_cast<Window&>(*this)};
+		const IdMaker id_maker{.self = *this};
+
+		const auto id = id_maker.make_id(context, utf8_text);
+		const auto text_size = internal::text_size(font, utf8_text, drawer.font_size(context), Font::no_auto_wrap);
+
+		// □ + text
+		const auto width = text_size.height;
+
+		// □, side length equals string rect height
+		const auto check_point = canvas_.cursor_current_line;
+		const auto check_size = extent_type{width + theme.item_frame_padding.height * 2, text_size.height + theme.item_frame_padding.height * 2};
+		const rect_type check_rect{check_point, check_size};
+		drawer.adjust_item_size(context, check_size);
+
+		// □ text
+		same_line(context, auto_size, theme.item_inner_spacing.width);
+
+		// text
+		const auto text_point = canvas_.cursor_current_line + extent_type{0, theme.item_frame_padding.height};
+		const rect_type text_rect{text_point, text_size};
+		drawer.adjust_item_size(context, text_size);
+
+		const auto state = test_mouse(context, id, check_rect, false);
+
+		// draw □
+		if (state & MouseState::HOVERED)
+		{
+			drawer.draw_widget_frame(context, check_rect, color_of(theme, ThemeCategory::CHECKBOX_HOVERED));
+		}
+		else
+		{
+			drawer.draw_widget_frame(context, check_rect, color_of(theme, ThemeCategory::FRAME_BACKGROUND));
+		}
+
+		if (state & MouseState::PRESSED)
+		{
+			checked = not checked;
+		}
+
+		if (checked)
+		{
+			const auto check_fill_point = check_point + theme.item_inner_spacing;
+			const auto check_fill_size = check_size - theme.item_inner_spacing * 2;
+			const rect_type check_fill_rect{check_fill_point, check_fill_size};
+			draw_list_.rect_filled(check_fill_rect, color_of(theme, ThemeCategory::CHECKBOX_ACTIVATED));
+		}
+
+		// draw text
+		draw_list_.text(
+			font,
+			drawer.font_size(context),
+			text_rect.left_top(),
+			color_of(theme, ThemeCategory::TEXT),
+			utf8_text,
+			text_rect.width()
+		);
+
+		return checked;
 	}
 
 	auto Window::same_line(const Context& context, const value_type column_width, value_type spacing_width) noexcept -> void

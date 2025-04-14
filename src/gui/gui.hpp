@@ -17,6 +17,10 @@
 
 namespace gal::prometheus
 {
+	// ==================================================
+	// TYPE & FLAG
+	// ==================================================
+
 	namespace gui
 	{
 		using rect_type = primitive::basic_rect_2d<float, float>;
@@ -31,19 +35,6 @@ namespace gal::prometheus
 
 		using texture_id_type = std::uintptr_t;
 		using time_type = float;
-
-		//------------------------------------------------------------------
-		// CONTEXT
-		//------------------------------------------------------------------
-
-		class Context;
-
-		// Create context
-		[[nodiscard]] auto create_context() noexcept -> Context*;
-		// Destroy context
-		auto destroy_context(Context& context) noexcept -> void;
-		// Destroy context, for smart pointer
-		auto destroy_context(Context* context) noexcept -> void;
 
 		//------------------------------------------------------------------
 		// FONT
@@ -99,11 +90,6 @@ namespace gal::prometheus
 			auto bind(texture_id_type texture_id) noexcept -> void;
 		};
 
-		[[nodiscard]] auto set_default_font(Context& context, const FontOption& option) noexcept -> Texture;
-
-		[[nodiscard]] auto push_font(Context& context, const FontOption& option) noexcept -> Texture;
-		auto pop_font(Context& context) noexcept -> void;
-
 		//------------------------------------------------------------------
 		// THEME
 		//------------------------------------------------------------------
@@ -136,12 +122,21 @@ namespace gal::prometheus
 			TOOLTIP_BACKGROUND,
 			TOOLTIP_TEXT,
 
-			SLIDER,
-			SLIDER_ACTIVATED,
-
 			BUTTON,
 			BUTTON_HOVERED,
 			BUTTON_ACTIVATED,
+
+			// RADIO-BUTTON / CHECKBOX
+			FRAME_BACKGROUND,
+
+			RADIO_BUTTON_HOVERED,
+			RADIO_BUTTON_ACTIVATED,
+
+			CHECKBOX_HOVERED,
+			CHECKBOX_ACTIVATED,
+
+			SLIDER,
+			SLIDER_ACTIVATED,
 
 			// -------------------------------
 			INTERNAL_COUNT
@@ -216,14 +211,6 @@ namespace gal::prometheus
 			// Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality
 			value_type draw_curve_tessellation_tolerance;
 		};
-
-		// todo
-		[[nodiscard]] auto test_theme() noexcept -> Theme;
-
-		auto set_default_theme(Context& context, const Theme& theme) noexcept -> void;
-
-		auto push_theme(Context& context, ThemeCategory category, Theme::color_type new_color) noexcept -> void;
-		auto pop_theme(Context& context) noexcept -> void;
 
 		//------------------------------------------------------------------
 		// IO
@@ -304,8 +291,6 @@ namespace gal::prometheus
 			//-----------------
 		};
 
-		[[nodiscard]] auto get_io(Context& context) noexcept -> IO&;
-
 		//------------------------------------------------------------------
 		// DRAW
 		//------------------------------------------------------------------
@@ -347,17 +332,6 @@ namespace gal::prometheus
 			std::reference_wrapper<const command_list_type> command_list;
 		};
 
-		auto set_default_draw_list_flag(Context& context, DrawListFlag flag) noexcept -> void;
-
-		auto push_draw_list_flag(Context& context, DrawListFlag new_flag) noexcept -> void;
-		auto pop_draw_list_flag(Context& context) noexcept -> void;
-
-		auto new_frame(Context& context) noexcept -> void;
-		auto end_frame(Context& context) noexcept -> void;
-		auto render(Context& context) noexcept -> void;
-
-		[[nodiscard]] auto get_draw_data(Context& context) noexcept -> std::vector<DrawData>;
-
 		//------------------------------------------------------------------
 		// WIDGET
 		//------------------------------------------------------------------
@@ -377,6 +351,81 @@ namespace gal::prometheus
 
 			AUTO_RESIZE = 1 << 7,
 		};
+	}
+
+	namespace meta::user_defined
+	{
+		template<>
+		struct enum_is_flag<gui::DrawListFlag> : std::true_type {};
+
+		template<>
+		struct enum_is_flag<gui::WindowFlag> : std::true_type {};
+	}
+
+	// ==================================================
+	// CONTEXT + API
+	// ==================================================
+
+	namespace gui
+	{
+		//------------------------------------------------------------------
+		// CONTEXT
+		//------------------------------------------------------------------
+
+		class Context;
+
+		// Create context
+		[[nodiscard]] auto create_context() noexcept -> Context*;
+		// Destroy context
+		auto destroy_context(Context& context) noexcept -> void;
+		// Destroy context, for smart pointer
+		auto destroy_context(Context* context) noexcept -> void;
+
+		//------------------------------------------------------------------
+		// FONT
+		//------------------------------------------------------------------
+
+		[[nodiscard]] auto set_default_font(Context& context, const FontOption& option) noexcept -> Texture;
+
+		// [[nodiscard]] auto push_font(Context& context, const FontOption& option) noexcept -> Texture;
+		// auto pop_font(Context& context) noexcept -> void;
+
+		//------------------------------------------------------------------
+		// THEME
+		//------------------------------------------------------------------
+
+		// todo
+		[[nodiscard]] auto test_theme() noexcept -> Theme;
+
+		auto set_default_theme(Context& context, const Theme& theme) noexcept -> void;
+
+		auto push_theme(Context& context, ThemeCategory category, Theme::color_type new_color) noexcept -> void;
+		auto pop_theme(Context& context) noexcept -> void;
+
+		//------------------------------------------------------------------
+		// IO
+		//------------------------------------------------------------------
+
+		[[nodiscard]] auto get_io(Context& context) noexcept -> IO&;
+
+		//------------------------------------------------------------------
+		// DRAW
+		//------------------------------------------------------------------
+
+		auto set_default_draw_list_flag(Context& context, DrawListFlag flag) noexcept -> void;
+
+		// auto push_draw_list_flag(Context& context, DrawListFlag new_flag) noexcept -> void;
+		// auto pop_draw_list_flag(Context& context) noexcept -> void;
+
+		auto new_frame(Context& context) noexcept -> void;
+		auto end_frame(Context& context) noexcept -> void;
+		auto render(Context& context) noexcept -> void;
+
+		[[nodiscard]] auto get_draw_data(Context& context) noexcept -> std::vector<DrawData>;
+
+		//------------------------------------------------------------------
+		// WIDGET
+		//------------------------------------------------------------------
 
 		auto begin_window(
 			Context& context,
@@ -387,7 +436,75 @@ namespace gal::prometheus
 		) noexcept -> bool;
 		auto end_window(Context& context) noexcept -> void;
 
+		/**
+		 * @brief Draw a piece of text
+		 */
 		auto draw_text(Context& context, std::string_view utf8_text) noexcept -> void;
+
+		/**
+		 * @brief Draw a button, if the specified size is smaller than the size occupied by the text (plus padding), the text will not be completely inside the box
+		 * @return Whether the button is pressed or not
+		 */
+		auto draw_button(Context& context, std::string_view utf8_text, const extent_type& size = {0, 0}, bool repeat_when_held = false) noexcept -> bool;
+
+		/**
+		 * @brief Draw a button, it fits within text without additional spacing
+		 * @return Whether the button is pressed or not
+		 */
+		auto draw_small_button(Context& context, std::string_view utf8_text, bool repeat_when_held = false) noexcept -> bool;
+
+		/**
+		 * @brief Draw a radio button, its initial state is required
+		 * @return Whether the radio button is pressed (being pressed does not mean that the state is switched, it can also be a repeat selection)
+		 */
+		auto draw_radio_button(Context& context, std::string_view utf8_text, bool checked) noexcept -> bool;
+
+		/**
+		 * @brief Draw a radio button, its initial state and referenced state is required
+		 */
+		template<std::equality_comparable T>
+		auto draw_radio_button(Context& context, std::string_view utf8_text, T& reference, const std::type_identity_t<T>& identifier) noexcept -> void
+		{
+			const auto prev_selected = reference == identifier;
+			if (const auto pressed = gui::draw_radio_button(context, utf8_text, prev_selected);
+				pressed)
+			{
+				reference = identifier;
+			}
+		}
+
+		/**
+		 * @brief Draw a checkbox, its initial state is required
+		 * @return Current state of the checkbox (checked or unchecked)
+		 */
+		auto draw_checkbox(Context& context, std::string_view utf8_text, bool checked) noexcept -> bool;
+
+		/**
+		 * @brief Draw a checkbox, its initial state and referenced state is required
+		 */
+		template<std::equality_comparable T>
+		static auto draw_checkbox(
+			Context& context,
+			const std::string_view utf8_text,
+			T& reference,
+			const std::type_identity_t<T>& checked_identifier,
+			const std::type_identity_t<T>& unchecked_identifier
+		) noexcept -> void
+		{
+			const auto prev_checked = reference == checked_identifier;
+			if (const auto checked = gui::draw_checkbox(context, utf8_text, prev_checked);
+				checked != prev_checked)
+			{
+				if (prev_checked)
+				{
+					reference = unchecked_identifier;
+				}
+				else
+				{
+					reference = checked_identifier;
+				}
+			}
+		}
 
 		//------------------------------------------------------------------
 		// LAYOUT
@@ -396,6 +513,16 @@ namespace gal::prometheus
 		// < 0
 		constexpr Theme::value_type layout_auto_size = -1;
 
+		/**
+		 * @brief Each element drawn will move the cursor to the next line of the canvas,
+		 * this function forces the cursor to move to the end of the previous line (immediately after the previous element)
+		 * @note @c column_width == @c auto_size and @c spacing_width == @c auto_size,
+		 * the x-axis distance of the next drawn element from the previous element will depend on @c theme.item_spacing.width
+		 * @note @c column_width == @c auto_size and @c spacing_width != @c auto_size,
+		 * the x-axis distance of the next drawn element from the previous element will depend on @c spacing_width
+		 * @note @c column_width != @c auto_size (@c spacing_width can be any value, force to 0 if less than 0),
+		 * the x-axis distance of the next drawn element from the previous element will depend on @c column_width + @c spacing_width
+		 */
 		auto layout_same_line(const Context& context, Theme::value_type column_width = layout_auto_size, Theme::value_type spacing_width = layout_auto_size) noexcept -> void;
 
 		//------------------------------------------------------------------
@@ -410,94 +537,154 @@ namespace gal::prometheus
 		[[nodiscard]] auto get_window_content_region_max(const Context& context) noexcept -> extent_type;
 	}
 
-	namespace meta::user_defined
+	// ==================================================
+	// API
+	// ==================================================
+
+	namespace gui
 	{
-		template<>
-		struct enum_is_flag<gui::DrawListFlag> : std::true_type {};
+		//------------------------------------------------------------------
+		// CONTEXT
+		//------------------------------------------------------------------
 
-		template<>
-		struct enum_is_flag<gui::WindowFlag> : std::true_type {};
+		auto set_current_context(Context& context) noexcept -> void;
+		auto get_current_context() noexcept -> Context&;
+
+		auto create_current_context() noexcept -> void;
+		auto destroy_current_context() noexcept -> void;
+
+		//------------------------------------------------------------------
+		// FONT
+		//------------------------------------------------------------------
+
+		[[nodiscard]] auto set_default_font(const FontOption& option) noexcept -> Texture;
+
+		// [[nodiscard]] auto push_font(const FontOption& option) noexcept -> Texture;
+		// auto pop_font() noexcept -> void;
+
+		//------------------------------------------------------------------
+		// THEME
+		//------------------------------------------------------------------
+
+		auto set_default_theme(const Theme& theme) noexcept -> void;
+
+		auto push_theme(ThemeCategory category, Theme::color_type new_color) noexcept -> void;
+		auto pop_theme() noexcept -> void;
+
+		//------------------------------------------------------------------
+		// IO
+		//------------------------------------------------------------------
+
+		[[nodiscard]] auto get_io() noexcept -> IO&;
+
+		//------------------------------------------------------------------
+		// DRAW
+		//------------------------------------------------------------------
+
+		auto set_default_draw_list_flag(DrawListFlag flag) noexcept -> void;
+
+		// auto push_draw_list_flag(DrawListFlag new_flag) noexcept -> void;
+		// auto pop_draw_list_flag() noexcept -> void;
+
+		auto new_frame() noexcept -> void;
+		auto end_frame() noexcept -> void;
+		auto render() noexcept -> void;
+
+		[[nodiscard]] auto get_draw_data() noexcept -> std::vector<DrawData>;
+
+		//------------------------------------------------------------------
+		// WIDGET
+		//------------------------------------------------------------------
+
+		auto begin_window(
+			std::string_view name,
+			const extent_type& size = {0, 0},
+			Theme::value_type fill_alpha = Theme::window_fill_alpha_not_set,
+			WindowFlag flag = WindowFlag::NONE
+		) noexcept -> bool;
+		auto end_window() noexcept -> void;
+
+		/**
+		 * @brief Draw a piece of text
+		 */
+		auto draw_text(std::string_view utf8_text) noexcept -> void;
+
+		/**
+		 * @brief Draw a button, if the specified size is smaller than the size occupied by the text (plus padding), the text will not be completely inside the box
+		 * @return Whether the button is pressed or not
+		 */
+		auto draw_button(std::string_view utf8_text, const extent_type& size = {0, 0}, bool repeat_when_held = false) noexcept -> bool;
+
+		/**
+		 * @brief Draw a button, it fits within text without additional spacing
+		 * @return Whether the button is pressed or not
+		 */
+		auto draw_small_button(std::string_view utf8_text, bool repeat_when_held = false) noexcept -> bool;
+
+		/**
+		 * @brief Draw a radio button, its initial state is required
+		 * @return Whether the radio button is pressed (being pressed does not mean that the state is switched, it can also be a repeat selection)
+		 */
+		auto draw_radio_button(std::string_view utf8_text, bool checked) noexcept -> bool;
+
+		/**
+		 * @brief Draw a radio button, its initial state and referenced state is required
+		 */
+		template<std::equality_comparable T>
+		auto draw_radio_button(std::string_view utf8_text, T& reference, const std::type_identity_t<T>& identifier) noexcept -> void
+		{
+			auto& context = get_current_context();
+
+			gui::draw_radio_button(context, utf8_text, reference, identifier);
+		}
+
+		/**
+		 * @brief Draw a checkbox, its initial state is required
+		 * @return Current state of the checkbox (checked or unchecked)
+		 */
+		auto draw_checkbox(std::string_view utf8_text, bool checked) noexcept -> bool;
+
+		/**
+		 * @brief Draw a checkbox, its initial state and referenced state is required
+		 */
+		template<std::equality_comparable T>
+		static auto draw_checkbox(
+			const std::string_view utf8_text,
+			T& reference,
+			const std::type_identity_t<T>& checked_identifier,
+			const std::type_identity_t<T>& unchecked_identifier
+		) noexcept -> void
+		{
+			auto& context = get_current_context();
+
+			gui::draw_checkbox(context, utf8_text, reference, checked_identifier, unchecked_identifier);
+		}
+
+		//------------------------------------------------------------------
+		// LAYOUT
+		//------------------------------------------------------------------
+
+		/**
+		 * @brief Each element drawn will move the cursor to the next line of the canvas,
+		 * this function forces the cursor to move to the end of the previous line (immediately after the previous element)
+		 * @note @c column_width == @c auto_size and @c spacing_width == @c auto_size,
+		 * the x-axis distance of the next drawn element from the previous element will depend on @c theme.item_spacing.width
+		 * @note @c column_width == @c auto_size and @c spacing_width != @c auto_size,
+		 * the x-axis distance of the next drawn element from the previous element will depend on @c spacing_width
+		 * @note @c column_width != @c auto_size (@c spacing_width can be any value, force to 0 if less than 0),
+		 * the x-axis distance of the next drawn element from the previous element will depend on @c column_width + @c spacing_width
+		 */
+		auto layout_same_line(Theme::value_type column_width = layout_auto_size, Theme::value_type spacing_width = layout_auto_size) noexcept -> void;
+
+		//------------------------------------------------------------------
+		// WIDGET STATE
+		//------------------------------------------------------------------
+
+		// The available area of the current drawing unit
+		[[nodiscard]] auto get_content_region_max() noexcept -> extent_type;
+		// The available area of the current window
+		[[nodiscard]] auto get_window_content_region_min() noexcept -> extent_type;
+		// The available area of the current window
+		[[nodiscard]] auto get_window_content_region_max() noexcept -> extent_type;
 	}
-}
-
-namespace gal::prometheus::gui
-{
-	//------------------------------------------------------------------
-	// CONTEXT
-	//------------------------------------------------------------------
-
-	auto set_current_context(Context& context) noexcept -> void;
-	auto get_current_context() noexcept -> Context&;
-
-	auto create_current_context() noexcept -> void;
-
-	//------------------------------------------------------------------
-	// FONT
-	//------------------------------------------------------------------
-
-	[[nodiscard]] auto set_default_font(const FontOption& option) noexcept -> Texture;
-
-	[[nodiscard]] auto push_font(const FontOption& option) noexcept -> Texture;
-	auto pop_font() noexcept -> void;
-
-	//------------------------------------------------------------------
-	// THEME
-	//------------------------------------------------------------------
-
-	auto set_default_theme(const Theme& theme) noexcept -> void;
-
-	auto push_theme(ThemeCategory category, Theme::color_type new_color) noexcept -> void;
-	auto pop_theme() noexcept -> void;
-
-	//------------------------------------------------------------------
-	// IO
-	//------------------------------------------------------------------
-
-	[[nodiscard]] auto get_io() noexcept -> IO&;
-
-	//------------------------------------------------------------------
-	// DRAW
-	//------------------------------------------------------------------
-
-	auto set_default_draw_list_flag(DrawListFlag flag) noexcept -> void;
-
-	auto push_draw_list_flag(DrawListFlag new_flag) noexcept -> void;
-	auto pop_draw_list_flag() noexcept -> void;
-
-	auto new_frame() noexcept -> void;
-	auto end_frame() noexcept -> void;
-	auto render() noexcept -> void;
-
-	[[nodiscard]] auto get_draw_data() noexcept -> std::vector<DrawData>;
-
-	//------------------------------------------------------------------
-	// WIDGET
-	//------------------------------------------------------------------
-
-	auto begin_window(
-		std::string_view name,
-		const extent_type& size = {0, 0},
-		Theme::value_type fill_alpha = Theme::window_fill_alpha_not_set,
-		WindowFlag flag = WindowFlag::NONE
-	) noexcept -> bool;
-	auto end_window() noexcept -> void;
-
-	auto draw_text(std::string_view utf8_text) noexcept -> void;
-
-	//------------------------------------------------------------------
-	// LAYOUT
-	//------------------------------------------------------------------
-
-	auto layout_same_line(Theme::value_type column_width = layout_auto_size, Theme::value_type spacing_width = layout_auto_size) noexcept -> void;
-
-	//------------------------------------------------------------------
-	// WIDGET STATE
-	//------------------------------------------------------------------
-
-	// The available area of the current drawing unit
-	[[nodiscard]] auto get_content_region_max() noexcept -> extent_type;
-	// The available area of the current window
-	[[nodiscard]] auto get_window_content_region_min() noexcept -> extent_type;
-	// The available area of the current window
-	[[nodiscard]] auto get_window_content_region_max() noexcept -> extent_type;
 }

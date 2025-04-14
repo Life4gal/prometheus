@@ -230,6 +230,10 @@ namespace gal::prometheus
 			// WIDGETS
 
 			auto draw_text(Context& context, std::string_view utf8_text) noexcept -> void;
+			auto draw_button(Context& context, std::string_view utf8_text, extent_type size, bool repeat_when_held) noexcept -> bool;
+			auto draw_small_button(Context& context, std::string_view utf8_text, bool repeat_when_held) noexcept -> bool;
+			auto draw_radio_button(Context& context, std::string_view utf8_text, bool checked) noexcept -> bool;
+			auto draw_checkbox(Context& context, std::string_view utf8_text, bool checked) noexcept -> bool;
 
 			// -----------------------------------
 			// LAYOUT

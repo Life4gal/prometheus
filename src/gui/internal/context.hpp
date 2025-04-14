@@ -10,6 +10,7 @@
 #include <memory/unique_ptr.hpp>
 
 #include <gui/internal/common.hpp>
+#include <gui/internal/font.hpp>
 #include <gui/internal/mouse.hpp>
 
 namespace gal::prometheus
@@ -45,20 +46,11 @@ namespace gal::prometheus
 			// ----------------------------------------------------------------------
 			// DrawListFlag + DrawListSharedData + Font + Theme
 
-			constexpr static std::size_t draw_list_flag_stack_size = 8;
-			constexpr static std::size_t draw_list_shared_data_stack_size = 8;
-			constexpr static std::size_t font_stack_size = 8;
+			DrawListFlag draw_list_flag;
 
-			using stack_pointer_type = std::uint8_t;
-			constexpr static auto stack_pointer_default = std::numeric_limits<stack_pointer_type>::max();
+			internal::DrawListSharedData draw_list_shared_data;
 
-			std::array<DrawListFlag, draw_list_flag_stack_size> draw_list_flag_stack;
-			std::array<internal::DrawListSharedData, draw_list_shared_data_stack_size> draw_list_shared_data_stack;
-			std::array<memory::UniquePointer<internal::Font>, font_stack_size> font_stack;
-
-			stack_pointer_type draw_list_flag_current;
-			stack_pointer_type draw_list_shared_data_current;
-			stack_pointer_type font_current;
+			internal::Font font;
 
 			Theme theme;
 			std::vector<theme_color_mod> theme_mod_stack;
@@ -115,22 +107,22 @@ namespace gal::prometheus
 			// DrawListFlag
 
 			auto current_draw_list_flag(const Context& context) noexcept -> DrawListFlag;
-			auto push_draw_list_flag(Context& context, DrawListFlag flag) noexcept -> void;
-			auto pop_draw_list_flag(Context& context) noexcept -> void;
+			// auto push_draw_list_flag(Context& context, DrawListFlag flag) noexcept -> void;
+			// auto pop_draw_list_flag(Context& context) noexcept -> void;
 
 			// ----------------------------------------------------------------------
 			// DrawListSharedData
 
 			auto current_draw_list_shared_data(const Context& context) noexcept -> const DrawListSharedData&;
-			auto push_draw_list_shared_data(Context& context, const DrawListSharedData& shared_data) noexcept -> void;
-			auto pop_draw_list_shared_data(Context& context) noexcept -> void;
+			// auto push_draw_list_shared_data(Context& context, const DrawListSharedData& shared_data) noexcept -> void;
+			// auto pop_draw_list_shared_data(Context& context) noexcept -> void;
 
 			// ----------------------------------------------------------------------
 			// Font
 
 			auto current_font(const Context& context) noexcept -> const Font&;
-			auto push_font(Context& context, memory::UniquePointer<Font> font) noexcept -> void;
-			auto pop_font(Context& context) noexcept -> void;
+			// auto push_font(Context& context, memory::UniquePointer<Font> font) noexcept -> void;
+			// auto pop_font(Context& context) noexcept -> void;
 
 			// ----------------------------------------------------------------------
 			// Theme

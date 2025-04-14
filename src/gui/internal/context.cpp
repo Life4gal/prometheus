@@ -138,12 +138,9 @@ namespace gal::prometheus::gui
 	{
 		auto* p = new ::Context{
 				.initialized = false,
-				.draw_list_flag_stack = {},
-				.draw_list_shared_data_stack = {},
-				.font_stack = {},
-				.draw_list_flag_current = Context::stack_pointer_default,
-				.draw_list_shared_data_current = Context::stack_pointer_default,
-				.font_current = Context::stack_pointer_default,
+				.draw_list_flag = DrawListFlag::NONE,
+				.draw_list_shared_data = {},
+				.font = {},
 				.theme = {},
 				.theme_mod_stack = {},
 				.io = {},
@@ -216,12 +213,20 @@ namespace gal::prometheus::gui
 			colors[static_cast<std::size_t>(TOOLTIP_BACKGROUND)] = primitive::colors::black;
 			colors[static_cast<std::size_t>(TOOLTIP_TEXT)] = primitive::colors::red;
 
-			colors[static_cast<std::size_t>(SLIDER)] = primitive::colors::light_blue;
-			colors[static_cast<std::size_t>(SLIDER_ACTIVATED)] = primitive::colors::deep_sky_blue;
-
 			colors[static_cast<std::size_t>(BUTTON)] = primitive::colors::sienna;
 			colors[static_cast<std::size_t>(BUTTON_HOVERED)] = primitive::colors::slate_gray;
 			colors[static_cast<std::size_t>(BUTTON_ACTIVATED)] = primitive::colors::steel_blue;
+
+			colors[static_cast<std::size_t>(FRAME_BACKGROUND)] = primitive::colors::steel_blue;
+
+			colors[static_cast<std::size_t>(RADIO_BUTTON_HOVERED)] = primitive::colors::powder_blue;
+			colors[static_cast<std::size_t>(RADIO_BUTTON_ACTIVATED)] = primitive::colors::green_yellow;
+
+			colors[static_cast<std::size_t>(CHECKBOX_HOVERED)] = primitive::colors::powder_blue;
+			colors[static_cast<std::size_t>(CHECKBOX_ACTIVATED)] = primitive::colors::green_yellow;
+
+			colors[static_cast<std::size_t>(SLIDER)] = primitive::colors::light_blue;
+			colors[static_cast<std::size_t>(SLIDER_ACTIVATED)] = primitive::colors::deep_sky_blue;
 
 			return colors;
 		};
@@ -269,24 +274,7 @@ namespace gal::prometheus::gui
 
 	auto set_default_draw_list_flag(Context& context, const DrawListFlag flag) noexcept -> void
 	{
-		if (context.draw_list_flag_current == Context::stack_pointer_default)
-		{
-			internal::push_draw_list_flag(context, flag);
-		}
-		else
-		{
-			context.draw_list_flag_stack[0] = flag;
-		}
-	}
-
-	auto push_draw_list_flag(Context& context, const DrawListFlag new_flag) noexcept -> void
-	{
-		internal::push_draw_list_flag(context, new_flag);
-	}
-
-	auto pop_draw_list_flag(Context& context) noexcept -> void
-	{
-		internal::pop_draw_list_flag(context);
+		context.draw_list_flag = flag;
 	}
 
 	auto new_frame(Context& context) noexcept -> void
@@ -495,6 +483,38 @@ namespace gal::prometheus::gui
 		window.draw_text(context, utf8_text);
 	}
 
+	auto draw_button(Context& context, const std::string_view utf8_text, const extent_type& size, const bool repeat_when_held) noexcept -> bool
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		return window.draw_button(context, utf8_text, size, repeat_when_held);
+	}
+
+	auto draw_small_button(Context& context, const std::string_view utf8_text, const bool repeat_when_held) noexcept -> bool
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		return window.draw_small_button(context, utf8_text, repeat_when_held);
+	}
+
+	auto draw_radio_button(Context& context, const std::string_view utf8_text, const bool checked) noexcept -> bool
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		return window.draw_radio_button(context, utf8_text, checked);
+	}
+
+	auto draw_checkbox(Context& context, const std::string_view utf8_text, const bool checked) noexcept -> bool
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		return window.draw_checkbox(context, utf8_text, checked);
+	}
+
 	auto layout_same_line(const Context& context, const Theme::value_type column_width, const Theme::value_type spacing_width) noexcept -> void
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
@@ -544,102 +564,81 @@ namespace gal::prometheus::gui
 		g_context = create_context();
 	}
 
+	auto destroy_current_context() noexcept -> void
+	{
+		auto& context = get_current_context();
+
+		destroy_context(context);
+	}
+
 	auto set_default_font(const FontOption& option) noexcept -> Texture
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		return set_default_font(*g_context, option);
-	}
-
-	auto push_font(const FontOption& option) noexcept -> Texture
-	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
-
-		return push_font(*g_context, option);
-	}
-
-	auto pop_font() noexcept -> void
-	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
-
-		pop_font(*g_context);
+		return set_default_font(context, option);
 	}
 
 	auto set_default_theme(const Theme& theme) noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		set_default_theme(*g_context, theme);
+		set_default_theme(context, theme);
 	}
 
 	auto push_theme(const ThemeCategory category, const Theme::color_type new_color) noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		push_theme(*g_context, category, new_color);
+		push_theme(context, category, new_color);
 	}
 
 	auto pop_theme() noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		pop_theme(*g_context);
+		pop_theme(context);
 	}
 
 	auto get_io() noexcept -> IO&
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		return get_io(*g_context);
+		return get_io(context);
 	}
 
 	auto set_default_draw_list_flag(const DrawListFlag flag) noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		set_default_draw_list_flag(*g_context, flag);
-	}
-
-	auto push_draw_list_flag(const DrawListFlag new_flag) noexcept -> void
-	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
-
-		push_draw_list_flag(*g_context, new_flag);
-	}
-
-	auto pop_draw_list_flag() noexcept -> void
-	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
-
-		pop_draw_list_flag(*g_context);
+		set_default_draw_list_flag(context, flag);
 	}
 
 	auto new_frame() noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		return new_frame(*g_context);
+		return new_frame(context);
 	}
 
 	auto end_frame() noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		return end_frame(*g_context);
+		return end_frame(context);
 	}
 
 	auto render() noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		return render(*g_context);
+		return render(context);
 	}
 
 	auto get_draw_data() noexcept -> std::vector<DrawData>
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		return get_draw_data(*g_context);
+		return get_draw_data(context);
 	}
 
 	auto begin_window(
@@ -649,51 +648,79 @@ namespace gal::prometheus::gui
 		const WindowFlag flag
 	) noexcept -> bool
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		return begin_window(*g_context, name, size, fill_alpha, flag);
+		return begin_window(context, name, size, fill_alpha, flag);
 	}
 
 	auto end_window() noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		return end_window(*g_context);
+		return end_window(context);
 	}
 
 	auto draw_text(const std::string_view utf8_text) noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		auto& context = get_current_context();
 
-		draw_text(*g_context, utf8_text);
+		draw_text(context, utf8_text);
+	}
+
+	auto draw_button(const std::string_view utf8_text, const extent_type& size, const bool repeat_when_held) noexcept -> bool
+	{
+		auto& context = get_current_context();
+
+		return draw_button(context, utf8_text, size, repeat_when_held);
+	}
+
+	auto draw_small_button(const std::string_view utf8_text, const bool repeat_when_held) noexcept -> bool
+	{
+		auto& context = get_current_context();
+
+		return draw_small_button(context, utf8_text, repeat_when_held);
+	}
+
+	auto draw_radio_button(const std::string_view utf8_text, const bool checked) noexcept -> bool
+	{
+		auto& context = get_current_context();
+
+		return draw_radio_button(context, utf8_text, checked);
+	}
+
+	auto draw_checkbox(const std::string_view utf8_text, const bool checked) noexcept -> bool
+	{
+		auto& context = get_current_context();
+
+		return draw_checkbox(context, utf8_text, checked);
 	}
 
 	auto layout_same_line(const Theme::value_type column_width, const Theme::value_type spacing_width) noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		const auto& context = get_current_context();
 
-		layout_same_line(*g_context, column_width, spacing_width);
+		layout_same_line(context, column_width, spacing_width);
 	}
 
 	auto get_content_region_max() noexcept -> extent_type
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		const auto& context = get_current_context();
 
-		return get_content_region_max(*g_context);
+		return get_content_region_max(context);
 	}
 
 	auto get_window_content_region_min() noexcept -> extent_type
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		const auto& context = get_current_context();
 
-		return get_window_content_region_min(*g_context);
+		return get_window_content_region_min(context);
 	}
 
 	auto get_window_content_region_max() noexcept -> extent_type
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(g_context != nullptr);
+		const auto& context = get_current_context();
 
-		return get_window_content_region_max(*g_context);
+		return get_window_content_region_max(context);
 	}
 
 	namespace internal
@@ -702,136 +729,139 @@ namespace gal::prometheus::gui
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
 
-			return context.draw_list_flag_stack[context.draw_list_flag_current];
+			// return context.draw_list_flag_stack[context.draw_list_flag_current];
+			return context.draw_list_flag;
 		}
 
-		auto push_draw_list_flag(Context& context, const DrawListFlag flag) noexcept -> void
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
-
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
-				context.draw_list_flag_current == Context::stack_pointer_default or
-				context.draw_list_flag_current < Context::draw_list_flag_stack_size,
-				"DrawListFlag stack overflow"
-			);
-
-			static_assert(
-				static_cast<::Context::stack_pointer_type>(::Context::stack_pointer_default + 1) ==
-				static_cast<::Context::stack_pointer_type>(0)
-			);
-
-			context.draw_list_flag_current += 1;
-			context.draw_list_flag_stack[context.draw_list_flag_current] = flag;
-		}
-
-		auto pop_draw_list_flag(Context& context) noexcept -> void
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
-
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
-				context.draw_list_flag_current != Context::stack_pointer_default,
-				"Unable to popup the default DrawListFlag!"
-			);
-
-			static_assert(
-				static_cast<Context::stack_pointer_type>(static_cast<Context::stack_pointer_type>(0) - 1) ==
-				Context::stack_pointer_default
-			);
-
-			context.draw_list_flag_stack[context.draw_list_flag_current] = DrawListFlag::NONE;
-			context.draw_list_flag_current -= 1;
-		}
+		// auto push_draw_list_flag(Context& context, const DrawListFlag flag) noexcept -> void
+		// {
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
+		//
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
+		// 		context.draw_list_flag_current == Context::stack_pointer_default or
+		// 		context.draw_list_flag_current < Context::draw_list_flag_stack_size,
+		// 		"DrawListFlag stack overflow"
+		// 	);
+		//
+		// 	static_assert(
+		// 		static_cast<::Context::stack_pointer_type>(::Context::stack_pointer_default + 1) ==
+		// 		static_cast<::Context::stack_pointer_type>(0)
+		// 	);
+		//
+		// 	context.draw_list_flag_current += 1;
+		// 	context.draw_list_flag_stack[context.draw_list_flag_current] = flag;
+		// }
+		//
+		// auto pop_draw_list_flag(Context& context) noexcept -> void
+		// {
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
+		//
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
+		// 		context.draw_list_flag_current != Context::stack_pointer_default,
+		// 		"Unable to popup the default DrawListFlag!"
+		// 	);
+		//
+		// 	static_assert(
+		// 		static_cast<Context::stack_pointer_type>(static_cast<Context::stack_pointer_type>(0) - 1) ==
+		// 		Context::stack_pointer_default
+		// 	);
+		//
+		// 	context.draw_list_flag_stack[context.draw_list_flag_current] = DrawListFlag::NONE;
+		// 	context.draw_list_flag_current -= 1;
+		// }
 
 		auto current_draw_list_shared_data(const Context& context) noexcept -> const DrawListSharedData&
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
 
-			return context.draw_list_shared_data_stack[context.draw_list_shared_data_current];
+			// return context.draw_list_shared_data_stack[context.draw_list_shared_data_current];
+			return context.draw_list_shared_data;
 		}
 
-		auto push_draw_list_shared_data(Context& context, const DrawListSharedData& shared_data) noexcept -> void
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
-
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
-				context.draw_list_shared_data_current == Context::stack_pointer_default or
-				context.draw_list_shared_data_current < Context::draw_list_shared_data_stack_size,
-				"DrawListSharedData stack overflow"
-			);
-
-			static_assert(
-				static_cast<::Context::stack_pointer_type>(::Context::stack_pointer_default + 1) ==
-				static_cast<::Context::stack_pointer_type>(0)
-			);
-
-			context.draw_list_shared_data_current += 1;
-			context.draw_list_shared_data_stack[context.draw_list_shared_data_current] = shared_data;
-		}
-
-		auto pop_draw_list_shared_data(Context& context) noexcept -> void
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
-
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
-				context.draw_list_shared_data_current != Context::stack_pointer_default,
-				"Unable to popup the default DrawListSharedData!"
-			);
-
-			static_assert(
-				static_cast<Context::stack_pointer_type>(static_cast<Context::stack_pointer_type>(0) - 1) ==
-				Context::stack_pointer_default
-			);
-
-			context.draw_list_shared_data_stack[context.draw_list_shared_data_current] = {};
-			context.draw_list_shared_data_current -= 1;
-		}
+		// auto push_draw_list_shared_data(Context& context, const DrawListSharedData& shared_data) noexcept -> void
+		// {
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
+		//
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
+		// 		context.draw_list_shared_data_current == Context::stack_pointer_default or
+		// 		context.draw_list_shared_data_current < Context::draw_list_shared_data_stack_size,
+		// 		"DrawListSharedData stack overflow"
+		// 	);
+		//
+		// 	static_assert(
+		// 		static_cast<::Context::stack_pointer_type>(::Context::stack_pointer_default + 1) ==
+		// 		static_cast<::Context::stack_pointer_type>(0)
+		// 	);
+		//
+		// 	context.draw_list_shared_data_current += 1;
+		// 	context.draw_list_shared_data_stack[context.draw_list_shared_data_current] = shared_data;
+		// }
+		//
+		// auto pop_draw_list_shared_data(Context& context) noexcept -> void
+		// {
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
+		//
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
+		// 		context.draw_list_shared_data_current != Context::stack_pointer_default,
+		// 		"Unable to popup the default DrawListSharedData!"
+		// 	);
+		//
+		// 	static_assert(
+		// 		static_cast<Context::stack_pointer_type>(static_cast<Context::stack_pointer_type>(0) - 1) ==
+		// 		Context::stack_pointer_default
+		// 	);
+		//
+		// 	context.draw_list_shared_data_stack[context.draw_list_shared_data_current] = {};
+		// 	context.draw_list_shared_data_current -= 1;
+		// }
 
 		auto current_font(const Context& context) noexcept -> const Font&
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
 
-			const auto& font = *context.font_stack[context.font_current];
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(font.loaded(), "Invalid font!");
-
-			return font;
+			// const auto& font = *context.font_stack[context.font_current];
+			// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(font.loaded(), "Invalid font!");
+			//
+			// return font;
+			return context.font;
 		}
 
-		auto push_font(Context& context, memory::UniquePointer<Font> font) noexcept -> void
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
-
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
-				context.font_current == Context::stack_pointer_default or
-				context.font_current < Context::font_stack_size,
-				"Font stack overflow"
-			);
-
-			static_assert(
-				static_cast<Context::stack_pointer_type>(Context::stack_pointer_default + 1) ==
-				static_cast<Context::stack_pointer_type>(0)
-			);
-
-			context.font_current += 1;
-			context.font_stack[context.font_current] = std::move(font);
-		}
-
-		auto pop_font(Context& context) noexcept -> void
-		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
-
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
-				context.font_current != Context::stack_pointer_default,
-				"Unable to popup the default Font!"
-			);
-
-			static_assert(
-				static_cast<Context::stack_pointer_type>(static_cast<Context::stack_pointer_type>(0) - 1) ==
-				Context::stack_pointer_default
-			);
-
-			context.font_stack[context.font_current].reset();
-			context.font_current -= 1;
-		}
+		// auto push_font(Context& context, memory::UniquePointer<Font> font) noexcept -> void
+		// {
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
+		//
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
+		// 		context.font_current == Context::stack_pointer_default or
+		// 		context.font_current < Context::font_stack_size,
+		// 		"Font stack overflow"
+		// 	);
+		//
+		// 	static_assert(
+		// 		static_cast<Context::stack_pointer_type>(Context::stack_pointer_default + 1) ==
+		// 		static_cast<Context::stack_pointer_type>(0)
+		// 	);
+		//
+		// 	context.font_current += 1;
+		// 	context.font_stack[context.font_current] = std::move(font);
+		// }
+		//
+		// auto pop_font(Context& context) noexcept -> void
+		// {
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
+		//
+		// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(
+		// 		context.font_current != Context::stack_pointer_default,
+		// 		"Unable to popup the default Font!"
+		// 	);
+		//
+		// 	static_assert(
+		// 		static_cast<Context::stack_pointer_type>(static_cast<Context::stack_pointer_type>(0) - 1) ==
+		// 		Context::stack_pointer_default
+		// 	);
+		//
+		// 	context.font_stack[context.font_current].reset();
+		// 	context.font_current -= 1;
+		// }
 
 		auto current_theme(const Context& context) noexcept -> const Theme&
 		{
