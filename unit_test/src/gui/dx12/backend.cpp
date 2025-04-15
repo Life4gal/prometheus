@@ -616,7 +616,15 @@ auto prometheus_render() -> void
 	{
 		window_closed = gui::begin_window("Window 1", {640, 480});
 
-		gui::draw_text("Text:");
+		static bool theme_window_closed = true;
+		theme_window_closed ^= gui::draw_button("OpenThemeEditor");
+
+		if (not theme_window_closed)
+		{
+			theme_window_closed = gui::show_theme_editor();
+		}
+
+		gui::draw_text_colored("Text:", primitive::colors::red);
 		{
 			gui::draw_text("Hello");
 			gui::draw_text("World");
@@ -640,10 +648,73 @@ auto prometheus_render() -> void
 				}
 			}
 
+			gui::push_text_wrap_width(150);
 			gui::draw_text(string);
+			gui::pop_text_wrap_width();
+
+			gui::push_text_wrap_width(300);
 			gui::draw_text(string);
-			gui::draw_text(string);
+			gui::pop_text_wrap_width();
 		}
+
+		gui::draw_text_colored("Button:", primitive::colors::red);
+		{
+			if (gui::draw_button("Button"))
+			{
+				std::println(stdout, "Press Button!");
+			}
+			if (gui::draw_small_button("SmallButton"))
+			{
+				std::println(stdout, "Press SmallButton!");
+			}
+		}
+
+		gui::draw_text_colored("RadioButton:", primitive::colors::red);
+		{
+			struct radio_button
+			{
+				int value;
+
+				[[nodiscard]] constexpr auto operator==(const radio_button& other) const noexcept -> bool
+				{
+					return value == other.value;
+				}
+			};
+			static radio_button value{.value = 0};
+
+			gui::draw_radio_button("RadioButton1", value, radio_button{.value = 0});
+			gui::layout_same_line();
+			gui::draw_radio_button("RadioButton2", value, radio_button{.value = 1});
+			gui::layout_same_line();
+			gui::draw_radio_button("RadioButton3", value, radio_button{.value = 2});
+			gui::layout_same_line();
+			gui::draw_text(std::format("> Select: {}", value.value));
+		}
+
+		gui::draw_text_colored("Checkbox:", primitive::colors::red);
+		{
+			struct checkbox
+			{
+				int value;
+
+				[[nodiscard]] constexpr auto operator==(const checkbox& other) const noexcept -> bool
+				{
+					return value == other.value;
+				}
+			};
+			static checkbox value{.value = 0};
+
+			gui::draw_checkbox("Checkbox", value, checkbox{.value = 1}, checkbox{.value = 0});
+			gui::layout_same_line();
+			gui::draw_text(std::format("> Select: {}", value.value));
+		}
+
+		gui::draw_text_colored("Slider", primitive::colors::red);
+		{
+			static float v = 0;
+			gui::draw_slider("Slider", v, -1, 1);
+		}
+
 		gui::end_window();
 	}
 
@@ -761,6 +832,9 @@ auto prometheus_draw() -> void
 		auto* mapped_vertex = static_cast<d3d_vertex_type*>(mapped_vertex_resource);
 		auto* mapped_index = static_cast<d3d_index_type*>(mapped_index_resource);
 
+		UINT vertex_offset = 0;
+		UINT index_offset = 0;
+
 		std::ranges::for_each(
 			draw_datas,
 			[&](const gui::DrawData& draw_data) noexcept -> void
@@ -770,7 +844,7 @@ auto prometheus_draw() -> void
 
 				std::ranges::transform(
 					vertex_list,
-					mapped_vertex,
+					mapped_vertex + vertex_offset,
 					[](const gui::vertex_type& vertex) -> d3d_vertex_type
 					{
 						// return {
@@ -781,7 +855,17 @@ auto prometheus_draw() -> void
 						return std::bit_cast<d3d_vertex_type>(vertex);
 					}
 				);
-				std::ranges::copy(index_list, mapped_index);
+				std::ranges::transform(
+					index_list,
+					mapped_index + index_offset,
+					[vertex_offset](const gui::index_type index) noexcept -> d3d_index_type
+					{
+						return static_cast<d3d_index_type>(index + vertex_offset);
+					}
+				);
+
+				vertex_offset += static_cast<UINT>(vertex_list.size());
+				index_offset += static_cast<UINT>(index_list.size());
 			}
 		);
 
@@ -851,23 +935,36 @@ auto prometheus_draw() -> void
 	constexpr float blend_factor[4]{.0f, .0f, .0f, .0f};
 	g_command_list->OMSetBlendFactor(blend_factor);
 
+	UINT total_index_offset = 0;
 	std::ranges::for_each(
 		draw_datas,
-		[&](const gui::DrawData& draw_data) noexcept -> void
+		[&total_index_offset](const gui::DrawData& draw_data) noexcept -> void
 		{
+			const auto vertex_list = draw_data.vertex_list.get();
+			const auto index_list = draw_data.index_list.get();
+
 			for (const auto& command_list = draw_data.command_list.get();
 			     const auto& [clip_rect, texture, index_offset, element_count]: command_list)
 			{
 				const auto [point, extent] = clip_rect;
-				const D3D12_RECT rect{static_cast<LONG>(point.x), static_cast<LONG>(point.y), static_cast<LONG>(point.x + extent.width), static_cast<LONG>(point.y + extent.height)};
+				const D3D12_RECT rect
+				{
+						static_cast<LONG>(point.x),
+						static_cast<LONG>(point.y),
+						static_cast<LONG>(point.x + extent.width),
+						static_cast<LONG>(point.y + extent.height)
+				};
 				g_command_list->RSSetScissorRects(1, &rect);
 
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture != 0, "push_texture_id when create texture view");
 				const D3D12_GPU_DESCRIPTOR_HANDLE texture_handle{.ptr = static_cast<UINT64>(texture)};
 				g_command_list->SetGraphicsRootDescriptorTable(1, texture_handle);
 
-				g_command_list->DrawIndexedInstanced(static_cast<UINT>(element_count), 1, static_cast<UINT>(index_offset), 0, 0);
+				const auto this_index_offset = static_cast<UINT>(total_index_offset + index_offset);
+				g_command_list->DrawIndexedInstanced(static_cast<UINT>(element_count), 1, this_index_offset, 0, 0);
 			}
+
+			total_index_offset += static_cast<UINT>(index_list.size());
 		}
 	);
 }
@@ -875,4 +972,6 @@ auto prometheus_draw() -> void
 auto prometheus_shutdown() -> void
 {
 	print_time();
+
+	gui::destroy_current_context();
 }

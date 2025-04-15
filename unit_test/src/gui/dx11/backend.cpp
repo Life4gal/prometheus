@@ -423,7 +423,16 @@ auto prometheus_render() -> void
 	{
 		window_closed = gui::begin_window("Window 1", {640, 480});
 
-		gui::draw_text("Text:");
+		static bool theme_window_closed = true;
+		theme_window_closed ^= gui::draw_button("OpenThemeEditor");
+
+		if (not theme_window_closed)
+		{
+			gui::set_next_window_point({100, 100});
+			theme_window_closed = gui::show_theme_editor();
+		}
+
+		gui::draw_text_colored("Text:", primitive::colors::red);
 		{
 			gui::draw_text("Hello");
 			gui::draw_text("World");
@@ -447,10 +456,73 @@ auto prometheus_render() -> void
 				}
 			}
 
+			gui::push_text_wrap_width(150);
 			gui::draw_text(string);
+			gui::pop_text_wrap_width();
+
+			gui::push_text_wrap_width(300);
 			gui::draw_text(string);
-			gui::draw_text(string);
+			gui::pop_text_wrap_width();
 		}
+
+		gui::draw_text_colored("Button:", primitive::colors::red);
+		{
+			if (gui::draw_button("Button"))
+			{
+				std::println(stdout, "Press Button!");
+			}
+			if (gui::draw_small_button("SmallButton"))
+			{
+				std::println(stdout, "Press SmallButton!");
+			}
+		}
+
+		gui::draw_text_colored("RadioButton:", primitive::colors::red);
+		{
+			struct radio_button
+			{
+				int value;
+
+				[[nodiscard]] constexpr auto operator==(const radio_button& other) const noexcept -> bool
+				{
+					return value == other.value;
+				}
+			};
+			static radio_button value{.value = 0};
+
+			gui::draw_radio_button("RadioButton1", value, radio_button{.value = 0});
+			gui::layout_same_line();
+			gui::draw_radio_button("RadioButton2", value, radio_button{.value = 1});
+			gui::layout_same_line();
+			gui::draw_radio_button("RadioButton3", value, radio_button{.value = 2});
+			gui::layout_same_line();
+			gui::draw_text(std::format("> Select: {}", value.value));
+		}
+
+		gui::draw_text_colored("Checkbox:", primitive::colors::red);
+		{
+			struct checkbox
+			{
+				int value;
+
+				[[nodiscard]] constexpr auto operator==(const checkbox& other) const noexcept -> bool
+				{
+					return value == other.value;
+				}
+			};
+			static checkbox value{.value = 0};
+
+			gui::draw_checkbox("Checkbox", value, checkbox{.value = 1}, checkbox{.value = 0});
+			gui::layout_same_line();
+			gui::draw_text(std::format("> Select: {}", value.value));
+		}
+
+		gui::draw_text_colored("Slider", primitive::colors::red);
+		{
+			static float v = 0;
+			gui::draw_slider("Slider", v, -1, 1);
+		}
+
 		gui::end_window();
 	}
 
@@ -531,6 +603,9 @@ auto prometheus_draw() -> void
 		auto* mapped_vertex = static_cast<d3d_vertex_type*>(mapped_vertex_resource.pData);
 		auto* mapped_index = static_cast<d3d_index_type*>(mapped_index_resource.pData);
 
+		UINT vertex_offset = 0;
+		UINT index_offset = 0;
+
 		std::ranges::for_each(
 			draw_datas,
 			[&](const gui::DrawData& draw_data) noexcept -> void
@@ -540,8 +615,8 @@ auto prometheus_draw() -> void
 
 				std::ranges::transform(
 					vertex_list,
-					mapped_vertex,
-					[](const gui::vertex_type& vertex) -> d3d_vertex_type
+					mapped_vertex + vertex_offset,
+					[](const gui::vertex_type& vertex) noexcept -> d3d_vertex_type
 					{
 						// return {
 						// 		.position = {vertex.position.x, vertex.position.y},
@@ -551,7 +626,17 @@ auto prometheus_draw() -> void
 						return std::bit_cast<d3d_vertex_type>(vertex);
 					}
 				);
-				std::ranges::copy(index_list, mapped_index);
+				std::ranges::transform(
+					index_list,
+					mapped_index + index_offset,
+					[vertex_offset](const gui::index_type index) noexcept -> d3d_index_type
+					{
+						return static_cast<d3d_index_type>(index + vertex_offset);
+					}
+				);
+
+				vertex_offset += static_cast<UINT>(vertex_list.size());
+				index_offset += static_cast<UINT>(index_list.size());
 			}
 		);
 
@@ -622,10 +707,14 @@ auto prometheus_draw() -> void
 	g_device_immediate_context->OMSetDepthStencilState(g_depth_stencil_state.Get(), 0);
 	g_device_immediate_context->RSSetState(g_rasterizer_state.Get());
 
+	UINT total_index_offset = 0;
 	std::ranges::for_each(
 		draw_datas,
-		[&](const gui::DrawData& draw_data) noexcept -> void
+		[&total_index_offset](const gui::DrawData& draw_data) noexcept -> void
 		{
+			const auto vertex_list = draw_data.vertex_list.get();
+			const auto index_list = draw_data.index_list.get();
+
 			for (const auto& command_list = draw_data.command_list.get();
 			     const auto& [clip_rect, texture, index_offset, element_count]: command_list)
 			{
@@ -643,9 +732,12 @@ auto prometheus_draw() -> void
 				ID3D11ShaderResourceView* textures[]{reinterpret_cast<ID3D11ShaderResourceView*>(texture)}; // NOLINT(performance-no-int-to-ptr)
 				g_device_immediate_context->PSSetShaderResources(0, 1, textures);
 
-				// g_device_immediate_context->DrawIndexed(static_cast<UINT>(element_count), static_cast<UINT>(index_offset), 0);
-				g_device_immediate_context->DrawIndexedInstanced(static_cast<UINT>(element_count), 1, static_cast<UINT>(index_offset), 0, 0);
+				const auto this_index_offset = static_cast<UINT>(total_index_offset + index_offset);
+				// g_device_immediate_context->DrawIndexed(static_cast<UINT>(element_count), this_index_offset, 0);
+				g_device_immediate_context->DrawIndexedInstanced(static_cast<UINT>(element_count), 1, this_index_offset, 0, 0);
 			}
+
+			total_index_offset += static_cast<UINT>(index_list.size());
 		}
 	);
 }
@@ -653,4 +745,6 @@ auto prometheus_draw() -> void
 auto prometheus_shutdown() -> void
 {
 	print_time();
+
+	gui::destroy_current_context();
 }
