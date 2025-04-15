@@ -121,6 +121,10 @@ namespace gal::prometheus
 				value_type height_current_line;
 				value_type height_previous_line;
 
+				rect_type last_item_rect;
+				bool last_item_hovered;
+				bool last_item_focused;
+
 				std::vector<value_type> item_width;
 				// <0(DrawList::text_wrap_width_not_set): disable
 				// =0: window.content_region_max().width
@@ -226,29 +230,72 @@ namespace gal::prometheus
 				Window* parent
 			) noexcept -> bool;
 
+			auto end_draw(Context& context) noexcept -> void;
+
+			auto render(Context& context) const noexcept -> void;
+
 			// -----------------------------------
 			// WIDGETS
 
 			auto draw_text(Context& context, std::string_view utf8_text) noexcept -> void;
+
 			auto draw_button(Context& context, std::string_view utf8_text, extent_type size, bool repeat_when_held) noexcept -> bool;
+
 			auto draw_small_button(Context& context, std::string_view utf8_text, bool repeat_when_held) noexcept -> bool;
+
 			auto draw_radio_button(Context& context, std::string_view utf8_text, bool checked) noexcept -> bool;
+
 			auto draw_checkbox(Context& context, std::string_view utf8_text, bool checked) noexcept -> bool;
 
+			auto draw_slider(
+				Context& context,
+				std::string_view utf8_text,
+				float& reference,
+				float min,
+				float max,
+				std::uint32_t decimal_precision,
+				float power
+			) noexcept -> bool;
+
 			// -----------------------------------
-			// LAYOUT
+			// WIDGET LAYOUT
 
-			auto same_line(const Context& context, value_type column_width = layout_auto_size, value_type spacing_width = layout_auto_size) noexcept -> void;
-
-			// -----------------------------------
-			// DRAW END
-
-			auto end_draw(Context& context) noexcept -> void;
+			auto same_line(Context& context, value_type column_width = layout_auto_size, value_type spacing_width = layout_auto_size) noexcept -> void;
 
 			// -----------------------------------
-			// RENDER
+			// CANVAS LAYOUT
 
-			auto render(Context& context) const noexcept -> void;
+			auto push_item_width(Context& context, Theme::value_type new_item_width) noexcept -> void;
+			auto pop_item_width(Context& context) noexcept -> void;
+
+			auto push_text_wrap_width(Context& context, Theme::value_type new_wrap_width) noexcept -> void;
+			auto pop_text_wrap_width(Context& context) noexcept -> void;
+
+			// -----------------------------------
+			// ID
+
+			[[nodiscard]] auto id_of_move(Context& context) const noexcept -> widget_id_type;
+
+			[[nodiscard]] auto id_of_close(Context& context) const noexcept -> widget_id_type;
+
+			[[nodiscard]] auto id_of_resize(Context& context) const noexcept -> widget_id_type;
+
+			[[nodiscard]] auto id_of_scrollbar(Context& context) const noexcept -> widget_id_type;
+
+			auto push_id(Context& context, std::string_view string) noexcept -> void;
+
+			auto push_id(Context& context, const void* pointer) noexcept -> void;
+
+			auto push_id(Context& context, widget_id_type value) noexcept -> void;
+
+			auto pop_id(Context& context) noexcept -> void;
+
+			// -----------------------------------
+			// CLIP RECT
+
+			auto push_clip_rect(Context& context, const rect_type& rect, bool clipped = true) noexcept -> void;
+
+			auto pop_clip_rect(Context& context) noexcept -> void;
 
 			// -----------------------------------
 			// STATES
@@ -281,39 +328,16 @@ namespace gal::prometheus
 			 * @brief Test if mouse cursor is hovering given rect
 			 * @note @c rect is clipped by current clip rect setting 
 			 */
-			[[nodiscard]] auto hovered(const Context& context, const rect_type& rect) const noexcept -> bool;
+			[[nodiscard]] auto is_hovered(const Context& context, const rect_type& rect) const noexcept -> bool;
+
+			[[nodiscard]] auto is_item_hovered(const Context& context) const noexcept -> bool;
+			[[nodiscard]] auto is_item_focused(const Context& context) const noexcept -> bool;
 
 			// -----------------------------------
 			// 
 
 			auto show() noexcept -> void;
 			auto hide() noexcept -> void;
-
-			// -----------------------------------
-			// ID
-
-			[[nodiscard]] auto id_of_move(Context& context) const noexcept -> widget_id_type;
-
-			[[nodiscard]] auto id_of_close(Context& context) const noexcept -> widget_id_type;
-
-			[[nodiscard]] auto id_of_resize(Context& context) const noexcept -> widget_id_type;
-
-			[[nodiscard]] auto id_of_scrollbar(Context& context) const noexcept -> widget_id_type;
-
-			auto push_id(Context& context, std::string_view string) noexcept -> void;
-
-			auto push_id(Context& context, const void* pointer) noexcept -> void;
-
-			auto push_id(Context& context, widget_id_type value) noexcept -> void;
-
-			auto pop_id(Context& context) noexcept -> void;
-
-			// -----------------------------------
-			// CLIP RECT
-
-			auto push_clip_rect(Context& context, const rect_type& rect, bool clipped = true) noexcept -> void;
-
-			auto pop_clip_rect(Context& context) noexcept -> void;
 		};
 	}
 }

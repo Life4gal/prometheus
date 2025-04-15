@@ -70,13 +70,13 @@ namespace
 	[[nodiscard]] auto find_or_create_window(Context& context, const std::string_view name, const extent_type& size, const internal::Window::Flag flag) noexcept -> internal::Window&
 	{
 		[[maybe_unused]] const auto is_child_window = flag.is<internal::WindowInternalFlag::CHILD_WINDOW>();
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME((is_child_window == true) == (context.window_current_stack.size() > 1));
 
 		if (auto* window = find_window(context, name);
 			window == nullptr)
 		{
 			// find root
-			auto* root = find_root_window(context);
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(is_child_window == (root != nullptr));
+			auto* root = is_child_window ? find_root_window(context) : nullptr;
 
 			// fixme: load cached settings?
 			auto temp = memory::make_unique<internal::Window>(name, flag, context.window_default_spawn_position, size, root);
@@ -98,22 +98,26 @@ namespace
 	/**
 	 * @brief Find the first (more top-level) window that contains the location of the given point
 	 */
-	[[nodiscard]] auto find_hovered_window(Context& context, const point_type& position, bool parent_only) noexcept -> internal::Window*
+	template<bool ExcludesChildren>
+	[[nodiscard]] auto find_hovered_window(Context& context, const point_type& position) noexcept -> internal::Window*
 	{
 		auto view = context.window_list | std::views::reverse;
 
 		const auto it = std::ranges::find_if(
 			view,
-			[position, parent_only](const auto& window) noexcept -> bool
+			[position](const auto& window) noexcept -> bool
 			{
 				if (not window->visible())
 				{
 					return false;
 				}
 
-				if (parent_only and window->flag().template is<internal::WindowInternalFlag::CHILD_WINDOW>())
+				if constexpr (ExcludesChildren)
 				{
-					return false;
+					if (window->flag().template is<internal::WindowInternalFlag::CHILD_WINDOW>())
+					{
+						return false;
+					}
 				}
 
 				const auto rect = window->rect();
@@ -179,79 +183,6 @@ namespace gal::prometheus::gui
 		destroy_context(*context);
 	}
 
-	auto test_theme() noexcept -> Theme
-	{
-		constexpr auto default_colors = []() noexcept -> Theme::colors_type
-		{
-			using enum ThemeCategory;
-
-			Theme::colors_type colors{};
-
-			colors[static_cast<std::size_t>(TEXT)] = primitive::colors::black;
-
-			colors[static_cast<std::size_t>(BORDER)] = primitive::colors::magenta;
-			colors[static_cast<std::size_t>(BORDER_SHADOW)] = primitive::colors::red;
-
-			colors[static_cast<std::size_t>(WINDOW_BACKGROUND)] = primitive::colors::gains_boro;
-
-			colors[static_cast<std::size_t>(TITLEBAR)] = primitive::colors::light_coral;
-			colors[static_cast<std::size_t>(TITLEBAR_COLLAPSED)] = primitive::colors::dark_khaki;
-
-			colors[static_cast<std::size_t>(RESIZE_GRIP)] = primitive::colors::gold;
-			colors[static_cast<std::size_t>(RESIZE_GRIP_HOVERED)] = primitive::colors::peru;
-			colors[static_cast<std::size_t>(RESIZE_GRIP_ACTIVATED)] = primitive::colors::powder_blue;
-
-			colors[static_cast<std::size_t>(SCROLLBAR_BACKGROUND)] = primitive::colors::white;
-			colors[static_cast<std::size_t>(SCROLLBAR_GRAB)] = primitive::colors::dark_salmon;
-			colors[static_cast<std::size_t>(SCROLLBAR_GRAB_HOVERED)] = primitive::colors::dark_green;
-			colors[static_cast<std::size_t>(SCROLLBAR_GRAB_ACTIVATED)] = primitive::colors::dark_goldenrod;
-
-			colors[static_cast<std::size_t>(CLOSE_BUTTON)] = primitive::colors::red;
-			colors[static_cast<std::size_t>(CLOSE_BUTTON_HOVERED)] = primitive::colors::violet_red;
-			colors[static_cast<std::size_t>(CLOSE_BUTTON_ACTIVATED)] = primitive::colors::white;
-
-			colors[static_cast<std::size_t>(TOOLTIP_BACKGROUND)] = primitive::colors::black;
-			colors[static_cast<std::size_t>(TOOLTIP_TEXT)] = primitive::colors::red;
-
-			colors[static_cast<std::size_t>(BUTTON)] = primitive::colors::sienna;
-			colors[static_cast<std::size_t>(BUTTON_HOVERED)] = primitive::colors::slate_gray;
-			colors[static_cast<std::size_t>(BUTTON_ACTIVATED)] = primitive::colors::steel_blue;
-
-			colors[static_cast<std::size_t>(FRAME_BACKGROUND)] = primitive::colors::steel_blue;
-
-			colors[static_cast<std::size_t>(RADIO_BUTTON_HOVERED)] = primitive::colors::powder_blue;
-			colors[static_cast<std::size_t>(RADIO_BUTTON_ACTIVATED)] = primitive::colors::green_yellow;
-
-			colors[static_cast<std::size_t>(CHECKBOX_HOVERED)] = primitive::colors::powder_blue;
-			colors[static_cast<std::size_t>(CHECKBOX_ACTIVATED)] = primitive::colors::green_yellow;
-
-			colors[static_cast<std::size_t>(SLIDER)] = primitive::colors::light_blue;
-			colors[static_cast<std::size_t>(SLIDER_ACTIVATED)] = primitive::colors::deep_sky_blue;
-
-			return colors;
-		};
-
-		return
-		{
-				.window_background_alpha = .65f,
-				.window_titlebar_height = 20,
-				.window_corner_rounding = 0,
-				.window_min_size = {64, 48},
-				.window_resize_grip_size = {20, 20},
-				.window_padding = {8, 8},
-				.window_auto_fit_padding = {8, 8},
-				.window_vertical_scrollbar_width = 10,
-				.item_default_width_factor = .65f,
-				.item_frame_padding = {4, 4},
-				.item_spacing = {10, 5},
-				.item_inner_spacing = {5, 5},
-				.alpha = 1,
-				.colors = default_colors(),
-				.circle_segment_max_error = .3f,
-				.draw_curve_tessellation_tolerance = 1.25f,
-		};
-	}
-
 	auto set_default_theme(Context& context, const Theme& theme) noexcept -> void
 	{
 		context.theme = theme;
@@ -303,15 +234,21 @@ namespace gal::prometheus::gui
 				context.widget_activated != internal::invalid_widget_id
 			)
 			{
-				context.widget_activated_previous_frame = context.widget_activated;
+				context.widget_activated = internal::invalid_widget_id;
 			}
+			context.widget_activated_previous_frame = context.widget_activated;
 			context.widget_activated_still_alive = false;
 		}
 
 		// Update window
 		{
-			context.window_hovered = find_hovered_window(context, mouse_position, false);
-			context.window_hovered_root = find_hovered_window(context, mouse_position, true);
+			context.window_hovered = find_hovered_window<false>(context, mouse_position);
+			context.window_hovered_root = find_hovered_window<true>(context, mouse_position);
+
+			if (context.window_hovered != nullptr)
+			{
+				context.window_hovered->handle_inputs(context);
+			}
 
 			// Mark all windows as not visible
 			std::ranges::for_each(
@@ -325,11 +262,6 @@ namespace gal::prometheus::gui
 			// No window should be open at the beginning of the frame
 			// But in order to allow the user to call `new_frame` multiple times without calling `render`, we are doing an explicit clear
 			context.window_current_stack.clear();
-
-			if (context.window_hovered != nullptr)
-			{
-				context.window_hovered->handle_inputs(context);
-			}
 		}
 	}
 
@@ -361,7 +293,10 @@ namespace gal::prometheus::gui
 				[&](auto* window) noexcept -> void
 				{
 					// todo: child window
-					if (window->flag().template is<internal::WindowInternalFlag::CHILD_WINDOW>() and window->visible())
+					if (
+						window->flag().template is<internal::WindowInternalFlag::CHILD_WINDOW>() and
+						window->visible()
+					)
 					{
 						return;
 					}
@@ -424,6 +359,12 @@ namespace gal::prometheus::gui
 		return data;
 	}
 
+	auto set_next_window_point(Context& context, const point_type& point) noexcept -> void
+	{
+		// todo
+		context.window_default_spawn_position = point;
+	}
+
 	auto begin_window(
 		Context& context,
 		const std::string_view name,
@@ -445,8 +386,6 @@ namespace gal::prometheus::gui
 		}
 
 		const auto is_child_window = window.flag().is<internal::WindowInternalFlag::CHILD_WINDOW>();
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(is_child_window == (context.window_current_stack.size() > 1));
-
 		auto* parent = is_child_window ? context.window_current_stack[context.window_current_stack.size() - 2] : nullptr;
 
 		return window.begin_draw(context, fill_alpha, parent);
@@ -465,7 +404,7 @@ namespace gal::prometheus::gui
 			context.widget_activated == internal::invalid_widget_id and
 			context.widget_hovered == internal::invalid_widget_id and
 			context.window_hovered_root == std::addressof(window) and
-			window.hovered(context, rect) and
+			window.is_hovered(context, rect) and
 			context.mouse.is_clicked(context, MouseKey::LEFT)
 		)
 		{
@@ -481,6 +420,13 @@ namespace gal::prometheus::gui
 
 		auto& window = *context.window_current_stack.back();
 		window.draw_text(context, utf8_text);
+	}
+
+	auto draw_text_colored(Context& context, const std::string_view utf8_text, const Theme::color_type color) noexcept -> void
+	{
+		push_theme(context, ThemeCategory::TEXT, color);
+		draw_text(context, utf8_text);
+		pop_theme(context);
 	}
 
 	auto draw_button(Context& context, const std::string_view utf8_text, const extent_type& size, const bool repeat_when_held) noexcept -> bool
@@ -515,12 +461,60 @@ namespace gal::prometheus::gui
 		return window.draw_checkbox(context, utf8_text, checked);
 	}
 
-	auto layout_same_line(const Context& context, const Theme::value_type column_width, const Theme::value_type spacing_width) noexcept -> void
+	auto draw_slider(
+		Context& context,
+		const std::string_view utf8_text,
+		float& reference,
+		const float min,
+		const float max,
+		const std::uint32_t decimal_precision,
+		const float power
+	) noexcept -> bool
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		return window.draw_slider(context, utf8_text, reference, min, max, decimal_precision, power);
+	}
+
+	auto layout_same_line(Context& context, const Theme::value_type column_width, const Theme::value_type spacing_width) noexcept -> void
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
 
 		auto& window = *context.window_current_stack.back();
 		window.same_line(context, column_width, spacing_width);
+	}
+
+	auto push_item_width(Context& context, const Theme::value_type new_item_width) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		window.push_item_width(context, new_item_width);
+	}
+
+	auto pop_item_width(Context& context) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		window.pop_item_width(context);
+	}
+
+	auto push_text_wrap_width(Context& context, const Theme::value_type new_wrap_width) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		window.push_text_wrap_width(context, new_wrap_width);
+	}
+
+	auto pop_text_wrap_width(Context& context) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		window.pop_text_wrap_width(context);
 	}
 
 	auto get_content_region_max(const Context& context) noexcept -> extent_type
@@ -641,6 +635,13 @@ namespace gal::prometheus::gui
 		return get_draw_data(context);
 	}
 
+	auto set_next_window_point(const point_type& point) noexcept -> void
+	{
+		auto& context = get_current_context();
+
+		set_next_window_point(context, point);
+	}
+
 	auto begin_window(
 		const std::string_view name,
 		const extent_type& size,
@@ -665,6 +666,13 @@ namespace gal::prometheus::gui
 		auto& context = get_current_context();
 
 		draw_text(context, utf8_text);
+	}
+
+	auto draw_text_colored(const std::string_view utf8_text, const Theme::color_type color) noexcept -> void
+	{
+		auto& context = get_current_context();
+
+		draw_text_colored(context, utf8_text, color);
 	}
 
 	auto draw_button(const std::string_view utf8_text, const extent_type& size, const bool repeat_when_held) noexcept -> bool
@@ -695,11 +703,53 @@ namespace gal::prometheus::gui
 		return draw_checkbox(context, utf8_text, checked);
 	}
 
+	auto draw_slider(
+		const std::string_view utf8_text,
+		float& reference,
+		const float min,
+		const float max,
+		const std::uint32_t decimal_precision,
+		const float power
+	) noexcept -> bool
+	{
+		auto& context = get_current_context();
+
+		return draw_slider(context, utf8_text, reference, min, max, decimal_precision, power);
+	}
+
 	auto layout_same_line(const Theme::value_type column_width, const Theme::value_type spacing_width) noexcept -> void
 	{
-		const auto& context = get_current_context();
+		auto& context = get_current_context();
 
 		layout_same_line(context, column_width, spacing_width);
+	}
+
+	auto push_item_width(const Theme::value_type new_item_width) noexcept -> void
+	{
+		auto& context = get_current_context();
+
+		push_item_width(context, new_item_width);
+	}
+
+	auto pop_item_width() noexcept -> void
+	{
+		auto& context = get_current_context();
+
+		pop_item_width(context);
+	}
+
+	auto push_text_wrap_width(const Theme::value_type new_wrap_width) noexcept -> void
+	{
+		auto& context = get_current_context();
+
+		push_text_wrap_width(context, new_wrap_width);
+	}
+
+	auto pop_text_wrap_width() noexcept -> void
+	{
+		auto& context = get_current_context();
+
+		pop_text_wrap_width(context);
 	}
 
 	auto get_content_region_max() noexcept -> extent_type
@@ -721,6 +771,112 @@ namespace gal::prometheus::gui
 		const auto& context = get_current_context();
 
 		return get_window_content_region_max(context);
+	}
+
+	auto test_theme() noexcept -> Theme
+	{
+		constexpr auto default_colors = []() noexcept -> Theme::colors_type
+		{
+			using enum ThemeCategory;
+
+			Theme::colors_type colors{};
+
+			colors[static_cast<std::size_t>(TEXT)] = primitive::colors::black;
+
+			colors[static_cast<std::size_t>(BORDER)] = primitive::colors::magenta;
+			colors[static_cast<std::size_t>(BORDER_SHADOW)] = primitive::colors::red;
+
+			colors[static_cast<std::size_t>(WINDOW_BACKGROUND)] = primitive::colors::gains_boro;
+
+			colors[static_cast<std::size_t>(TITLEBAR)] = primitive::colors::light_coral;
+			colors[static_cast<std::size_t>(TITLEBAR_COLLAPSED)] = primitive::colors::dark_khaki;
+
+			colors[static_cast<std::size_t>(RESIZE_GRIP)] = primitive::colors::gold;
+			colors[static_cast<std::size_t>(RESIZE_GRIP_HOVERED)] = primitive::colors::peru;
+			colors[static_cast<std::size_t>(RESIZE_GRIP_ACTIVATED)] = primitive::colors::powder_blue;
+
+			colors[static_cast<std::size_t>(SCROLLBAR_BACKGROUND)] = primitive::colors::white;
+			colors[static_cast<std::size_t>(SCROLLBAR_GRAB)] = primitive::colors::dark_salmon;
+			colors[static_cast<std::size_t>(SCROLLBAR_GRAB_HOVERED)] = primitive::colors::dark_green;
+			colors[static_cast<std::size_t>(SCROLLBAR_GRAB_ACTIVATED)] = primitive::colors::dark_goldenrod;
+
+			colors[static_cast<std::size_t>(CLOSE_BUTTON)] = primitive::colors::red;
+			colors[static_cast<std::size_t>(CLOSE_BUTTON_HOVERED)] = primitive::colors::violet_red;
+			colors[static_cast<std::size_t>(CLOSE_BUTTON_ACTIVATED)] = primitive::colors::white;
+
+			colors[static_cast<std::size_t>(TOOLTIP_BACKGROUND)] = primitive::colors::black;
+			colors[static_cast<std::size_t>(TOOLTIP_TEXT)] = primitive::colors::red;
+
+			colors[static_cast<std::size_t>(BUTTON)] = primitive::colors::sienna;
+			colors[static_cast<std::size_t>(BUTTON_HOVERED)] = primitive::colors::slate_gray;
+			colors[static_cast<std::size_t>(BUTTON_ACTIVATED)] = primitive::colors::steel_blue;
+
+			colors[static_cast<std::size_t>(FRAME_BACKGROUND)] = primitive::colors::steel_blue;
+
+			colors[static_cast<std::size_t>(RADIO_BUTTON_HOVERED)] = primitive::colors::powder_blue;
+			colors[static_cast<std::size_t>(RADIO_BUTTON_ACTIVATED)] = primitive::colors::green_yellow;
+
+			colors[static_cast<std::size_t>(CHECKBOX_HOVERED)] = primitive::colors::powder_blue;
+			colors[static_cast<std::size_t>(CHECKBOX_ACTIVATED)] = primitive::colors::green_yellow;
+
+			colors[static_cast<std::size_t>(SLIDER)] = primitive::colors::light_blue;
+			colors[static_cast<std::size_t>(SLIDER_ACTIVATED)] = primitive::colors::light_pink;
+
+			return colors;
+		};
+
+		return
+		{
+				.window_background_alpha = .65f,
+				.window_corner_rounding = 0,
+				.window_min_size = {64, 48},
+				.window_resize_grip_size = {20, 20},
+				.window_padding = {8, 8},
+				.window_auto_fit_padding = {8, 8},
+				.window_vertical_scrollbar_width = 10,
+				.item_default_width_factor = .65f,
+				.item_frame_padding = {4, 4},
+				.item_spacing = {10, 5},
+				.item_inner_spacing = {5, 5},
+				.alpha = 1,
+				.colors = default_colors(),
+				.circle_segment_max_error = .3f,
+				.draw_curve_tessellation_tolerance = 1.25f,
+		};
+	}
+
+	auto show_theme_editor() noexcept -> bool
+	{
+		auto& context = get_current_context();
+		auto& theme = context.theme;
+
+		const auto window_closed = begin_window(context, "ThemeEditor");
+
+		draw_slider<"window_background_alpha">(context, theme, 0, 1);
+		draw_slider<"window_corner_rounding">(context, theme, 0, 24);
+		draw_slider<"window_min_size.width">(context, theme, 64, 640);
+		draw_slider<"window_min_size.height">(context, theme, 48, 480);
+		draw_slider<"window_resize_grip_size.width">(context, theme, 10, 50);
+		draw_slider<"window_resize_grip_size.height">(context, theme, 10, 50);
+		draw_slider<"window_padding.width">(context, theme, 2, 20);
+		draw_slider<"window_padding.height">(context, theme, 2, 20);
+		draw_slider<"window_auto_fit_padding.width">(context, theme, 2, 20);
+		draw_slider<"window_auto_fit_padding.height">(context, theme, 2, 20);
+		draw_slider<"window_vertical_scrollbar_width">(context, theme, 6, 25);
+		draw_slider<"item_default_width_factor">(context, theme, .35f, .85f);
+		draw_slider<"item_frame_padding.width">(context, theme, 1, 10);
+		draw_slider<"item_frame_padding.height">(context, theme, 1, 10);
+		draw_slider<"item_spacing.width">(context, theme, 1, 10);
+		draw_slider<"item_spacing.height">(context, theme, 1, 10);
+		draw_slider<"alpha">(context, theme, 0, 1);
+
+		// todo: update DrawListSharedData
+		draw_slider<"circle_segment_max_error">(context, theme, 0, 1);
+		draw_slider<"draw_curve_tessellation_tolerance">(context, theme, 0, 5);
+
+		end_window(context);
+
+		return window_closed;
 	}
 
 	namespace internal
@@ -920,7 +1076,7 @@ namespace gal::prometheus::gui
 					// new
 					context.widget_hovered == invalid_widget_id and
 					// mouse
-					window.hovered(context, area);
+					window.is_hovered(context, area);
 
 			if (hovered)
 			{
@@ -979,6 +1135,11 @@ namespace gal::prometheus::gui
 
 		auto focus_window(Context& context, Window& window) noexcept -> void
 		{
+			if (context.window_focused == std::addressof(window))
+			{
+				return;
+			}
+
 			context.window_focused = std::addressof(window);
 
 			const auto it = std::ranges::find(context.window_list, std::addressof(window));

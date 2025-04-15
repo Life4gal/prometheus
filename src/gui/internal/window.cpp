@@ -250,6 +250,26 @@ namespace gal::prometheus::gui::internal
 			window.size_of_content_ = window.size_of_content_.combine_max(extent_type{canvas.cursor_previous_line.x, canvas.cursor_current_line.y + window.scroll_y_} - window.point_);
 		}
 
+		auto test_last_item(const Context& context, const rect_type& rect) noexcept -> void
+		{
+			auto& window = self.get();
+			auto& canvas = window.canvas_;
+
+			canvas.last_item_rect = rect;
+			canvas.last_item_focused = false;
+			canvas.last_item_hovered = window.is_hovered(context, rect);
+		}
+
+		[[nodiscard]] auto is_visible_area(const Context& context, const rect_type& rect) const noexcept -> bool
+		{
+			std::ignore = context;
+
+			auto& window = self.get();
+
+			const auto& last = window.clip_rect_stack_.back();
+			return last.intersects(rect);
+		}
+
 		// -----------------------------------
 		// FRAME
 
@@ -308,6 +328,9 @@ namespace gal::prometheus::gui::internal
 				  .cursor_previous_line = {0, 0},
 				  .height_current_line = 0,
 				  .height_previous_line = 0,
+				  .last_item_rect = {0, 0, 0, 0},
+				  .last_item_hovered = false,
+				  .last_item_focused = false,
 				  .item_width = {},
 				  .text_wrap_width = {}
 		  },
@@ -446,6 +469,7 @@ namespace gal::prometheus::gui::internal
 			const auto& font = current_font(context);
 			const auto& theme = current_theme(context);
 
+			const auto font_size = drawer.font_size(context);
 			const auto has_titlebar = not flag_.is<WindowFlag::NO_TITLEBAR>();
 
 			const auto is_child_window = flag_.is<WindowInternalFlag::CHILD_WINDOW>();
@@ -507,8 +531,7 @@ namespace gal::prometheus::gui::internal
 
 				if (not is_child_window)
 				{
-					const auto s = drawer.font_size(context);
-					const auto pad = extent_type{s * 2.f, s * 2.f};
+					const auto pad = extent_type{font_size * 2.f, font_size * 2.f};
 
 					// Limit the current window from moving outside the program's visual area
 					point_ = point_.clamp(
@@ -554,7 +577,7 @@ namespace gal::prometheus::gui::internal
 					if (is_window_hovered(context, *this))
 					{
 						if (const auto rect = drawer.titlebar_rect(context);
-							hovered(context, rect) and
+							is_hovered(context, rect) and
 							mouse.is_double_clicked(context, MouseKey::LEFT)
 						)
 						{
@@ -911,7 +934,6 @@ namespace gal::prometheus::gui::internal
 					}
 
 					// title text
-					const auto font_size = drawer.font_size(context);
 					const auto text_point = point_ + theme.item_frame_padding;
 					const auto text_size = internal::text_size(font, name_, font_size, Font::no_auto_wrap);
 
@@ -1050,6 +1072,26 @@ namespace gal::prometheus::gui::internal
 		return close_button_pressed;
 	}
 
+	auto Window::end_draw(Context& context) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(clip_rect_stack_.size() == 2);
+
+		// canvas rect
+		pop_clip_rect(context);
+
+		// window rect
+		pop_clip_rect(context);
+
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(clip_rect_stack_.empty());
+
+		// window_data.root = nullptr;
+	}
+
+	auto Window::render(Context& context) const noexcept -> void
+	{
+		context.draw_lists.emplace_back(draw_list_);
+	}
+
 	auto Window::draw_text(Context& context, const std::string_view utf8_text) noexcept -> void
 	{
 		if (skip_item_)
@@ -1126,9 +1168,11 @@ namespace gal::prometheus::gui::internal
 				text_size.height = static_cast<value_type>(std::ranges::distance(view)) * line_height;
 			}
 
-			drawer.adjust_item_size(context, text_size);
+			const rect_type rect{canvas_.cursor_current_line, text_size};
 
-			// fixme: hovering text?
+			drawer.adjust_item_size(context, text_size);
+			// todo: test visible?
+			drawer.test_last_item(context, rect);
 		}
 		else
 		{
@@ -1141,9 +1185,14 @@ namespace gal::prometheus::gui::internal
 				font_size,
 				this_wrap_width
 			);
-			drawer.adjust_item_size(context, text_size);
+			const rect_type rect{text_point, text_size};
 
-			// fixme: hovering text?
+			drawer.adjust_item_size(context, text_size);
+			if (not drawer.is_visible_area(context, rect))
+			{
+				return;
+			}
+			drawer.test_last_item(context, rect);
 
 			draw_list_.text(
 				font,
@@ -1169,8 +1218,10 @@ namespace gal::prometheus::gui::internal
 		Drawer drawer{.self = const_cast<Window&>(*this)};
 		const IdMaker id_maker{.self = *this};
 
+		const auto font_size = drawer.font_size(context);
+
 		const auto id = id_maker.make_id(context, utf8_text);
-		const auto text_size = internal::text_size(font, utf8_text, drawer.font_size(context), Font::no_auto_wrap);
+		const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
 
 		if (size.width <= 0)
 		{
@@ -1184,7 +1235,14 @@ namespace gal::prometheus::gui::internal
 		const auto button_point = canvas_.cursor_current_line;
 		const auto button_size = size + theme.item_frame_padding * 2;
 		const rect_type button_rect{button_point, button_size};
+
 		drawer.adjust_item_size(context, button_size);
+		if (not drawer.is_visible_area(context, button_rect))
+		{
+			// invisible
+			return false;
+		}
+		drawer.test_last_item(context, button_rect);
 
 		const auto state = test_mouse(context, id, button_rect, repeat_when_held);
 
@@ -1227,7 +1285,7 @@ namespace gal::prometheus::gui::internal
 		// draw text
 		draw_list_.text(
 			font,
-			drawer.font_size(context),
+			font_size,
 			text_point,
 			color_of(theme, ThemeCategory::TEXT),
 			utf8_text,
@@ -1255,13 +1313,22 @@ namespace gal::prometheus::gui::internal
 		Drawer drawer{.self = const_cast<Window&>(*this)};
 		const IdMaker id_maker{.self = *this};
 
+		const auto font_size = drawer.font_size(context);
+
 		const auto id = id_maker.make_id(context, utf8_text);
-		const auto text_size = internal::text_size(font, utf8_text, drawer.font_size(context), Font::no_auto_wrap);
+		const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
 
 		const auto button_point = canvas_.cursor_current_line;
 		const auto button_size = text_size + theme.item_frame_padding * 2;
 		const rect_type button_rect{button_point, button_size};
+
 		drawer.adjust_item_size(context, button_size);
+		if (not drawer.is_visible_area(context, button_rect))
+		{
+			// invisible
+			return false;
+		}
+		drawer.test_last_item(context, button_rect);
 
 		const auto state = test_mouse(context, id, button_rect, repeat_when_held);
 
@@ -1285,7 +1352,7 @@ namespace gal::prometheus::gui::internal
 		// draw text
 		draw_list_.text(
 			font,
-			drawer.font_size(context),
+			font_size,
 			text_area_point,
 			color_of(theme, ThemeCategory::TEXT),
 			utf8_text,
@@ -1308,15 +1375,16 @@ namespace gal::prometheus::gui::internal
 		Drawer drawer{.self = const_cast<Window&>(*this)};
 		const IdMaker id_maker{.self = *this};
 
+		const auto font_size = drawer.font_size(context);
+
 		const auto id = id_maker.make_id(context, utf8_text);
-		const auto text_size = internal::text_size(font, utf8_text, drawer.font_size(context), Font::no_auto_wrap);
+		const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
 
 		// ○ + text
-		const auto width = text_size.height;
 
 		// ○, diameter equals string rect height
 		const auto check_point = canvas_.cursor_current_line;
-		const auto check_size = extent_type{width + theme.item_frame_padding.height * 2, text_size.height + theme.item_frame_padding.height * 2};
+		const auto check_size = extent_type{text_size.height + theme.item_frame_padding.height * 2 - 1, text_size.height + theme.item_frame_padding.height * 2 - 1};
 		const rect_type check_rect{check_point, check_size};
 		const circle_type check_circle{check_point + check_size / 2, check_size.width / 2};
 		drawer.adjust_item_size(context, check_size);
@@ -1329,6 +1397,15 @@ namespace gal::prometheus::gui::internal
 		const rect_type text_rect{text_point, text_size};
 		drawer.adjust_item_size(context, text_size);
 
+		const rect_type total_rect{check_rect.left_top(), text_rect.right_bottom()};
+		if (not drawer.is_visible_area(context, total_rect))
+		{
+			// invisible
+			return false;
+		}
+		drawer.test_last_item(context, total_rect);
+
+		// fixme: test check_rect or total_rect?
 		const auto state = test_mouse(context, id, check_rect, false);
 
 		// draw ○
@@ -1352,7 +1429,7 @@ namespace gal::prometheus::gui::internal
 		// draw text
 		draw_list_.text(
 			font,
-			drawer.font_size(context),
+			font_size,
 			text_rect.left_top(),
 			color_of(theme, ThemeCategory::TEXT),
 			utf8_text,
@@ -1362,7 +1439,7 @@ namespace gal::prometheus::gui::internal
 		return state & MouseState::PRESSED;
 	}
 
-	auto Window::draw_checkbox(Context& context, std::string_view utf8_text, bool checked) noexcept -> bool
+	auto Window::draw_checkbox(Context& context, const std::string_view utf8_text, bool checked) noexcept -> bool
 	{
 		if (skip_item_)
 		{
@@ -1375,8 +1452,10 @@ namespace gal::prometheus::gui::internal
 		Drawer drawer{.self = const_cast<Window&>(*this)};
 		const IdMaker id_maker{.self = *this};
 
+		const auto font_size = drawer.font_size(context);
+
 		const auto id = id_maker.make_id(context, utf8_text);
-		const auto text_size = internal::text_size(font, utf8_text, drawer.font_size(context), Font::no_auto_wrap);
+		const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
 
 		// □ + text
 		const auto width = text_size.height;
@@ -1395,6 +1474,15 @@ namespace gal::prometheus::gui::internal
 		const rect_type text_rect{text_point, text_size};
 		drawer.adjust_item_size(context, text_size);
 
+		const rect_type total_rect{check_rect.left_top(), text_rect.right_bottom()};
+		if (not drawer.is_visible_area(context, total_rect))
+		{
+			// invisible
+			return false;
+		}
+		drawer.test_last_item(context, total_rect);
+
+		// fixme: test check_rect or total_rect?
 		const auto state = test_mouse(context, id, check_rect, false);
 
 		// draw □
@@ -1423,7 +1511,7 @@ namespace gal::prometheus::gui::internal
 		// draw text
 		draw_list_.text(
 			font,
-			drawer.font_size(context),
+			font_size,
 			text_rect.left_top(),
 			color_of(theme, ThemeCategory::TEXT),
 			utf8_text,
@@ -1433,7 +1521,206 @@ namespace gal::prometheus::gui::internal
 		return checked;
 	}
 
-	auto Window::same_line(const Context& context, const value_type column_width, value_type spacing_width) noexcept -> void
+	auto Window::draw_slider(
+		Context& context,
+		const std::string_view utf8_text,
+		float& reference,
+		const float min,
+		const float max,
+		const std::uint32_t decimal_precision,
+		const float power
+	) noexcept -> bool
+	{
+		if (skip_item_)
+		{
+			return false;
+		}
+		accessed_ = true;
+
+		const auto& theme = current_theme(context);
+		const auto& font = current_font(context);
+		Drawer drawer{.self = const_cast<Window&>(*this)};
+		const IdMaker id_maker{.self = *this};
+
+		const auto font_size = drawer.font_size(context);
+
+		const auto id = id_maker.make_id(context, utf8_text);
+		const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
+
+		// □ + text
+		const auto last_item_width = canvas_.item_width.back();
+
+		// □, height equals last item width
+		const auto slider_point = canvas_.cursor_current_line + theme.item_frame_padding;
+		const auto slider_size = extent_type{last_item_width, text_size.height};
+		const rect_type slider_rect{slider_point, slider_size};
+
+		const auto frame_point = canvas_.cursor_current_line;
+		const auto frame_size = slider_size + theme.item_frame_padding * 2;
+		const rect_type frame_rect{frame_point, frame_size};
+
+		drawer.adjust_item_size(context, frame_size);
+
+		// □ text
+		same_line(context, auto_size, theme.item_inner_spacing.width);
+
+		// text
+		const auto text_point = canvas_.cursor_current_line + theme.item_frame_padding;
+		const rect_type text_rect{text_point, text_size};
+		drawer.adjust_item_size(context, text_size);
+
+		const rect_type total_rect{frame_rect.left_top(), text_rect.right_bottom()};
+		if (not drawer.is_visible_area(context, total_rect))
+		{
+			// invisible
+			return false;
+		}
+		drawer.test_last_item(context, total_rect);
+
+		const auto state = test_mouse(context, id, slider_rect, false);
+
+		// draw □ (frame + slider + text)
+		bool value_changed = false;
+		{
+			// frame
+			drawer.draw_widget_frame(context, frame_rect, color_of(theme, ThemeCategory::FRAME_BACKGROUND));
+
+			// slider
+
+			// todo
+			constexpr float grab_size_in_pixels = 10.f;
+
+			const auto slider_effective_width = slider_size.width - grab_size_in_pixels;
+			const auto slider_effective_x1 = slider_point.x + grab_size_in_pixels * .5f;
+			const auto slider_effective_x2 = slider_point.x + slider_size.width - grab_size_in_pixels * .5f;
+
+			const auto linear_zero_pos = [=]() noexcept -> float
+			{
+				if (min * max < 0)
+				{
+					// different sign
+					const auto linear_dist_min_to_0 = std::powf(std::abs(.0f - min), 1.f / power);
+					const auto linear_dist_max_to_0 = std::powf(std::abs(max - .0f), 1.f / power);
+					return linear_dist_min_to_0 / (linear_dist_min_to_0 + linear_dist_max_to_0);
+				}
+
+				// same sign
+				return min < 0 ? 1.f : .0f;
+			}();
+
+			if (state & MouseState::KEEPING)
+			{
+				const auto mouse_position = context.mouse.position_current;
+				const auto normalized_x = std::ranges::clamp((mouse_position.x - slider_effective_x1) / slider_effective_width, .0f, 1.f);
+
+				// account for logarithmic scale on both sides of the zero
+				auto value = [=]() noexcept -> float
+				{
+					if (normalized_x < linear_zero_pos)
+					{
+						// rescale to the negative range before powering
+						auto v = 1.f - (normalized_x / linear_zero_pos);
+						v = std::powf(v, power);
+						return std::lerp(std::ranges::min(max, .0f), min, v);
+					}
+
+					// rescale to the positive range before powering
+					auto v = normalized_x;
+					if (std::abs(linear_zero_pos - 1.f) > 1e-6)
+					{
+						v = (v - linear_zero_pos) / (1.f - linear_zero_pos);
+					}
+					v = std::powf(v, power);
+					return std::lerp(std::ranges::max(min, .0f), max, v);
+				}();
+
+				const auto min_step = 1.f / std::powf(10.f, static_cast<float>(decimal_precision));
+				const auto remainder = std::fmodf(value, min_step);
+
+				if (remainder <= min_step * .5f)
+				{
+					value -= remainder;
+				}
+				else
+				{
+					value += (min_step - remainder);
+				}
+
+				if (reference != value) // NOLINT(clang-diagnostic-float-equal)
+				{
+					reference = value;
+					value_changed = true;
+				}
+			}
+
+			// grab
+			{
+				const auto v = [=]() noexcept -> float
+				{
+					const auto clamped = std::ranges::clamp(reference, min, max);
+					if (clamped < .0f)
+					{
+						const auto f = 1.f - (clamped - min) / (std::ranges::min(.0f, max) - min);
+						return (1.f - std::powf(f, 1.f / power)) * linear_zero_pos;
+					}
+
+					const auto f = (clamped - std::ranges::max(0.f, min)) / (max - std::ranges::max(0.f, min));
+					return linear_zero_pos + std::powf(f, 1.f / power) * (1.f - linear_zero_pos);
+				}();
+
+				const auto x = std::lerp(slider_effective_x1, slider_effective_x2, v);
+				const point_type grab_point{x - grab_size_in_pixels * .5f, frame_point.y + 2.f};
+				const extent_type grab_size{grab_size_in_pixels, frame_size.height - 4.f};
+				const rect_type grab_rect{grab_point, grab_size};
+
+				if (state & MouseState::PRESSED)
+				{
+					draw_list_.rect_filled(
+						grab_rect,
+						color_of(theme, ThemeCategory::SLIDER_ACTIVATED),
+						theme.window_corner_rounding,
+						DrawFlag::ROUND_CORNER_ALL
+					);
+				}
+				else
+				{
+					draw_list_.rect_filled(
+						grab_rect,
+						color_of(theme, ThemeCategory::SLIDER),
+						theme.window_corner_rounding,
+						DrawFlag::ROUND_CORNER_ALL
+					);
+				}
+			}
+
+			// text
+			const auto value_text = std::format("{:.{}f}", reference, decimal_precision);
+			const auto value_text_size = internal::text_size(font, value_text, font_size, Font::no_auto_wrap);
+			const point_type value_text_point{slider_point.x + slider_size.width / 2 - value_text_size.width / 2, frame_point.y + theme.item_frame_padding.height};
+			draw_list_.text(
+				font,
+				font_size,
+				value_text_point,
+				color_of(theme, ThemeCategory::TEXT),
+				value_text
+			);
+		}
+
+		// draw text
+		draw_list_.text(
+			font,
+			font_size,
+			text_rect.left_top(),
+			color_of(theme, ThemeCategory::TEXT),
+			utf8_text,
+			text_rect.width()
+		);
+
+		return value_changed;
+	}
+
+	// ReSharper disable once CppParameterMayBeConstPtrOrRef
+	auto Window::same_line(Context& context, const value_type column_width, value_type spacing_width) noexcept -> void
 	{
 		if (collapsed_)
 		{
@@ -1462,24 +1749,123 @@ namespace gal::prometheus::gui::internal
 		}
 	}
 
-	auto Window::end_draw(Context& context) noexcept -> void
+	// ReSharper disable once CppParameterMayBeConstPtrOrRef
+	auto Window::push_item_width(Context& context, const Theme::value_type new_item_width) noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(clip_rect_stack_.size() == 2);
+		std::ignore = context;
 
-		// canvas rect
-		pop_clip_rect(context);
-
-		// window rect
-		pop_clip_rect(context);
-
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(clip_rect_stack_.empty());
-
-		// window_data.root = nullptr;
+		canvas_.item_width.push_back(new_item_width);
 	}
 
-	auto Window::render(Context& context) const noexcept -> void
+	// ReSharper disable once CppParameterMayBeConstPtrOrRef
+	auto Window::pop_item_width(Context& context) noexcept -> void
 	{
-		context.draw_lists.emplace_back(draw_list_);
+		std::ignore = context;
+
+		canvas_.item_width.pop_back();
+	}
+
+	// ReSharper disable once CppParameterMayBeConstPtrOrRef
+	auto Window::push_text_wrap_width(Context& context, const Theme::value_type new_wrap_width) noexcept -> void
+	{
+		std::ignore = context;
+
+		canvas_.text_wrap_width.push_back(new_wrap_width);
+	}
+
+	// ReSharper disable once CppParameterMayBeConstPtrOrRef
+	auto Window::pop_text_wrap_width(Context& context) noexcept -> void
+	{
+		std::ignore = context;
+
+		canvas_.text_wrap_width.pop_back();
+	}
+
+	auto Window::id_of_move(Context& context) const noexcept -> widget_id_type
+	{
+		constexpr std::string_view name{"@WINDOW::MOVE@"};
+		return IdMaker{.self = const_cast<Window&>(*this)}.make_id(context, name);
+	}
+
+	auto Window::id_of_close(Context& context) const noexcept -> widget_id_type
+	{
+		constexpr std::string_view name{"@WINDOW::CLOSE@"};
+		return IdMaker{.self = const_cast<Window&>(*this)}.make_id(context, name);
+	}
+
+	auto Window::id_of_resize(Context& context) const noexcept -> widget_id_type
+	{
+		constexpr std::string_view name{"@WINDOW::RESIZE@"};
+		return IdMaker{.self = const_cast<Window&>(*this)}.make_id(context, name);
+	}
+
+	auto Window::id_of_scrollbar(Context& context) const noexcept -> widget_id_type
+	{
+		constexpr std::string_view name{"@WINDOW::SCROLLBAR@"};
+		return IdMaker{.self = const_cast<Window&>(*this)}.make_id(context, name);
+	}
+
+	auto Window::push_id(Context& context, const std::string_view string) noexcept -> void
+	{
+		const auto id = IdMaker{.self = *this}.make_id(context, string);
+		id_stack_.push_back(id);
+	}
+
+	auto Window::push_id(Context& context, const void* pointer) noexcept -> void
+	{
+		const auto id = IdMaker{.self = *this}.make_id(context, pointer);
+		id_stack_.push_back(id);
+	}
+
+	auto Window::push_id(Context& context, const widget_id_type value) noexcept -> void
+	{
+		const auto id = IdMaker{.self = *this}.make_id(context, value);
+		id_stack_.push_back(id);
+	}
+
+	// ReSharper disable once CppParameterMayBeConstPtrOrRef
+	auto Window::pop_id(Context& context) noexcept -> void
+	{
+		std::ignore = context;
+
+		id_stack_.pop_back();
+	}
+
+	// ReSharper disable once CppParameterMayBeConstPtrOrRef
+	auto Window::push_clip_rect(Context& context, const rect_type& rect, const bool clipped) noexcept -> void
+	{
+		std::ignore = context;
+
+		const auto clip_rect = [&]() noexcept -> rect_type
+		{
+			if (clipped and not clip_rect_stack_.empty())
+			{
+				// clip to a new rect
+				const auto last = clip_rect_stack_.back();
+				return last.combine_min(rect);
+			}
+
+			return rect;
+		}();
+
+		clip_rect_stack_.push_back(clip_rect);
+		draw_list_.push_clip_rect(clip_rect, false);
+	}
+
+	// ReSharper disable once CppParameterMayBeConstPtrOrRef
+	auto Window::pop_clip_rect(Context& context) noexcept -> void
+	{
+		clip_rect_stack_.pop_back();
+
+		if (clip_rect_stack_.empty())
+		{
+			const auto size = context.io.display_size;
+			draw_list_.push_clip_rect({0, 0, size}, false);
+		}
+		else
+		{
+			draw_list_.push_clip_rect(clip_rect_stack_.back(), false);
+		}
 	}
 
 	auto Window::name() const noexcept -> std::string_view
@@ -1576,14 +1962,13 @@ namespace gal::prometheus::gui::internal
 		return size;
 	}
 
-	auto Window::hovered(const Context& context, const rect_type& rect) const noexcept -> bool
+	auto Window::is_hovered(const Context& context, const rect_type& rect) const noexcept -> bool
 	{
 		const auto clipped = [&]() noexcept -> rect_type
 		{
 			if (not clip_rect_stack_.empty())
 			{
 				const auto& last = clip_rect_stack_.back();
-				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(last.includes(rect));
 
 				return rect.combine_min(last);
 			}
@@ -1592,6 +1977,20 @@ namespace gal::prometheus::gui::internal
 		}();
 
 		return clipped.includes(context.mouse.position_current);
+	}
+
+	auto Window::is_item_hovered(const Context& context) const noexcept -> bool
+	{
+		std::ignore = context;
+
+		return canvas_.last_item_hovered;
+	}
+
+	auto Window::is_item_focused(const Context& context) const noexcept -> bool
+	{
+		std::ignore = context;
+
+		return canvas_.last_item_focused;
 	}
 
 	auto Window::show() noexcept -> void
@@ -1603,92 +2002,5 @@ namespace gal::prometheus::gui::internal
 	{
 		visible_ = false;
 		accessed_ = false;
-	}
-
-	auto Window::id_of_move(Context& context) const noexcept -> widget_id_type
-	{
-		constexpr std::string_view name{"@WINDOW::MOVE@"};
-		return IdMaker{.self = const_cast<Window&>(*this)}.make_id(context, name);
-	}
-
-	auto Window::id_of_close(Context& context) const noexcept -> widget_id_type
-	{
-		constexpr std::string_view name{"@WINDOW::CLOSE@"};
-		return IdMaker{.self = const_cast<Window&>(*this)}.make_id(context, name);
-	}
-
-	auto Window::id_of_resize(Context& context) const noexcept -> widget_id_type
-	{
-		constexpr std::string_view name{"@WINDOW::RESIZE@"};
-		return IdMaker{.self = const_cast<Window&>(*this)}.make_id(context, name);
-	}
-
-	auto Window::id_of_scrollbar(Context& context) const noexcept -> widget_id_type
-	{
-		constexpr std::string_view name{"@WINDOW::SCROLLBAR@"};
-		return IdMaker{.self = const_cast<Window&>(*this)}.make_id(context, name);
-	}
-
-	auto Window::push_id(Context& context, const std::string_view string) noexcept -> void
-	{
-		const auto id = IdMaker{.self = *this}.make_id(context, string);
-		id_stack_.push_back(id);
-	}
-
-	auto Window::push_id(Context& context, const void* pointer) noexcept -> void
-	{
-		const auto id = IdMaker{.self = *this}.make_id(context, pointer);
-		id_stack_.push_back(id);
-	}
-
-	auto Window::push_id(Context& context, const widget_id_type value) noexcept -> void
-	{
-		const auto id = IdMaker{.self = *this}.make_id(context, value);
-		id_stack_.push_back(id);
-	}
-
-	// ReSharper disable once CppParameterMayBeConstPtrOrRef
-	auto Window::pop_id(Context& context) noexcept -> void
-	{
-		std::ignore = context;
-
-		id_stack_.pop_back();
-	}
-
-	// ReSharper disable once CppParameterMayBeConstPtrOrRef
-	auto Window::push_clip_rect(Context& context, const rect_type& rect, const bool clipped) noexcept -> void
-	{
-		std::ignore = context;
-
-		const auto clip_rect = [&]() noexcept -> rect_type
-		{
-			if (clipped and not clip_rect_stack_.empty())
-			{
-				// clip to a new rect
-				const auto last = clip_rect_stack_.back();
-				return last.combine_min(rect);
-			}
-
-			return rect;
-		}();
-
-		clip_rect_stack_.push_back(clip_rect);
-		draw_list_.push_clip_rect(clip_rect, false);
-	}
-
-	// ReSharper disable once CppParameterMayBeConstPtrOrRef
-	auto Window::pop_clip_rect(Context& context) noexcept -> void
-	{
-		clip_rect_stack_.pop_back();
-
-		if (clip_rect_stack_.empty())
-		{
-			const auto size = context.io.display_size;
-			draw_list_.push_clip_rect({0, 0, size}, false);
-		}
-		else
-		{
-			draw_list_.push_clip_rect(clip_rect_stack_.back(), false);
-		}
 	}
 }

@@ -126,7 +126,7 @@ namespace gal::prometheus
 			BUTTON_HOVERED,
 			BUTTON_ACTIVATED,
 
-			// RADIO-BUTTON / CHECKBOX
+			// RADIO-BUTTON / CHECKBOX / SLIDER
 			FRAME_BACKGROUND,
 
 			RADIO_BUTTON_HOVERED,
@@ -163,8 +163,6 @@ namespace gal::prometheus
 
 			// Default alpha of window background
 			value_type window_background_alpha;
-			// Height of the window titlebar
-			value_type window_titlebar_height;
 			// Rounding of the window corners
 			value_type window_corner_rounding;
 			// Minimum size of the window
@@ -394,9 +392,6 @@ namespace gal::prometheus
 		// THEME
 		//------------------------------------------------------------------
 
-		// todo
-		[[nodiscard]] auto test_theme() noexcept -> Theme;
-
 		auto set_default_theme(Context& context, const Theme& theme) noexcept -> void;
 
 		auto push_theme(Context& context, ThemeCategory category, Theme::color_type new_color) noexcept -> void;
@@ -427,6 +422,8 @@ namespace gal::prometheus
 		// WIDGET
 		//------------------------------------------------------------------
 
+		auto set_next_window_point(Context& context, const point_type& point) noexcept -> void;
+
 		auto begin_window(
 			Context& context,
 			std::string_view name,
@@ -440,6 +437,11 @@ namespace gal::prometheus
 		 * @brief Draw a piece of text
 		 */
 		auto draw_text(Context& context, std::string_view utf8_text) noexcept -> void;
+
+		/**
+		 * @brief Draw a piece of text with specified color
+		 */
+		auto draw_text_colored(Context& context, std::string_view utf8_text, Theme::color_type color) noexcept -> void;
 
 		/**
 		 * @brief Draw a button, if the specified size is smaller than the size occupied by the text (plus padding), the text will not be completely inside the box
@@ -506,8 +508,46 @@ namespace gal::prometheus
 			}
 		}
 
+		auto draw_slider(
+			Context& context,
+			std::string_view utf8_text,
+			float& reference,
+			float min,
+			float max,
+			std::uint32_t decimal_precision = 3,
+			float power = 1
+		) noexcept -> bool;
+
+		template<meta::basic_fixed_string MemberName, typename T, typename ValueType>
+			requires std::is_arithmetic_v<ValueType>
+		auto draw_slider(
+			Context& context,
+			T&& object,
+			const ValueType min,
+			const std::type_identity_t<ValueType> max,
+			const std::uint32_t decimal_precision = 3,
+			const float power = 1
+		) noexcept -> bool
+		{
+			auto& ref = meta::member_of_name<MemberName>(std::forward<T>(object));
+			auto v = static_cast<float>(ref);
+
+			const auto result = gui::draw_slider(
+				context,
+				MemberName,
+				v,
+				static_cast<float>(min),
+				static_cast<float>(max),
+				decimal_precision,
+				power
+			);
+			ref = v;
+
+			return result;
+		}
+
 		//------------------------------------------------------------------
-		// LAYOUT
+		// WIDGET LAYOUT
 		//------------------------------------------------------------------
 
 		// < 0
@@ -523,7 +563,17 @@ namespace gal::prometheus
 		 * @note @c column_width != @c auto_size (@c spacing_width can be any value, force to 0 if less than 0),
 		 * the x-axis distance of the next drawn element from the previous element will depend on @c column_width + @c spacing_width
 		 */
-		auto layout_same_line(const Context& context, Theme::value_type column_width = layout_auto_size, Theme::value_type spacing_width = layout_auto_size) noexcept -> void;
+		auto layout_same_line(Context& context, Theme::value_type column_width = layout_auto_size, Theme::value_type spacing_width = layout_auto_size) noexcept -> void;
+
+		//------------------------------------------------------------------
+		// CANVAS LAYOUT
+		//------------------------------------------------------------------
+
+		auto push_item_width(Context& context, Theme::value_type new_item_width) noexcept -> void;
+		auto pop_item_width(Context& context) noexcept -> void;
+
+		auto push_text_wrap_width(Context& context, Theme::value_type new_wrap_width) noexcept -> void;
+		auto pop_text_wrap_width(Context& context) noexcept -> void;
 
 		//------------------------------------------------------------------
 		// WIDGET STATE
@@ -596,6 +646,8 @@ namespace gal::prometheus
 		// WIDGET
 		//------------------------------------------------------------------
 
+		auto set_next_window_point(const point_type& point) noexcept -> void;
+
 		auto begin_window(
 			std::string_view name,
 			const extent_type& size = {0, 0},
@@ -608,6 +660,11 @@ namespace gal::prometheus
 		 * @brief Draw a piece of text
 		 */
 		auto draw_text(std::string_view utf8_text) noexcept -> void;
+
+		/**
+		 * @brief Draw a piece of text with specified color
+		 */
+		auto draw_text_colored(std::string_view utf8_text, Theme::color_type color) noexcept -> void;
 
 		/**
 		 * @brief Draw a button, if the specified size is smaller than the size occupied by the text (plus padding), the text will not be completely inside the box
@@ -660,8 +717,32 @@ namespace gal::prometheus
 			gui::draw_checkbox(context, utf8_text, reference, checked_identifier, unchecked_identifier);
 		}
 
+		auto draw_slider(
+			std::string_view utf8_text,
+			float& reference,
+			float min,
+			float max,
+			std::uint32_t decimal_precision = 3,
+			float power = 1
+		) noexcept -> bool;
+
+		template<typename T, meta::basic_fixed_string MemberName, typename ValueType>
+			requires std::is_arithmetic_v<ValueType>
+		auto draw_slider(
+			T& object,
+			const ValueType min,
+			const std::type_identity_t<ValueType> max,
+			const std::uint32_t decimal_precision = 3,
+			const float power = 1
+		) noexcept -> bool
+		{
+			auto& context = get_current_context();
+
+			return gui::draw_slider<T, MemberName, ValueType>(context, object, min, max, decimal_precision, power);
+		}
+
 		//------------------------------------------------------------------
-		// LAYOUT
+		// WIDGET LAYOUT
 		//------------------------------------------------------------------
 
 		/**
@@ -677,6 +758,16 @@ namespace gal::prometheus
 		auto layout_same_line(Theme::value_type column_width = layout_auto_size, Theme::value_type spacing_width = layout_auto_size) noexcept -> void;
 
 		//------------------------------------------------------------------
+		// CANVAS LAYOUT
+		//------------------------------------------------------------------
+
+		auto push_item_width(Theme::value_type new_item_width) noexcept -> void;
+		auto pop_item_width() noexcept -> void;
+
+		auto push_text_wrap_width(Theme::value_type new_wrap_width) noexcept -> void;
+		auto pop_text_wrap_width() noexcept -> void;
+
+		//------------------------------------------------------------------
 		// WIDGET STATE
 		//------------------------------------------------------------------
 
@@ -686,5 +777,14 @@ namespace gal::prometheus
 		[[nodiscard]] auto get_window_content_region_min() noexcept -> extent_type;
 		// The available area of the current window
 		[[nodiscard]] auto get_window_content_region_max() noexcept -> extent_type;
+
+		//------------------------------------------------------------------
+		// FOR TEST
+		//------------------------------------------------------------------
+
+		// todo
+		[[nodiscard]] auto test_theme() noexcept -> Theme;
+
+		auto show_theme_editor() noexcept -> bool;
 	}
 }
