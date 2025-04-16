@@ -477,6 +477,22 @@ namespace gal::prometheus::gui
 		return window.draw_slider(context, utf8_text, reference, min, max, decimal_precision, power);
 	}
 
+	auto draw_slider_n(
+		Context& context,
+		const std::string_view utf8_text,
+		const std::span<float> references,
+		const float min,
+		const float max,
+		const std::uint32_t decimal_precision,
+		const float power
+	) noexcept -> bool
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		return window.draw_slider_n(context, utf8_text, references, min, max, decimal_precision, power);
+	}
+
 	auto layout_same_line(Context& context, const Theme::value_type column_width, const Theme::value_type spacing_width) noexcept -> void
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
@@ -715,6 +731,20 @@ namespace gal::prometheus::gui
 		auto& context = get_current_context();
 
 		return draw_slider(context, utf8_text, reference, min, max, decimal_precision, power);
+	}
+
+	auto draw_slider_n(
+		const std::string_view utf8_text,
+		const std::span<float> references,
+		const float min,
+		const float max,
+		const std::uint32_t decimal_precision,
+		const float power
+	) noexcept -> bool
+	{
+		auto& context = get_current_context();
+
+		return draw_slider_n(context, utf8_text, references, min, max, decimal_precision, power);
 	}
 
 	auto layout_same_line(const Theme::value_type column_width, const Theme::value_type spacing_width) noexcept -> void

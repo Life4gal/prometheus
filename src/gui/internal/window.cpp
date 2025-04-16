@@ -314,6 +314,315 @@ namespace gal::prometheus::gui::internal
 		}
 	};
 
+	class Window::Anonymous final
+	{
+	public:
+		memory::RefWrapper<Window> self;
+
+		template<typename T>
+			requires (std::is_same_v<T, float> or std::is_same_v<T, std::span<float>>)
+		auto draw_slider(
+			Context& context,
+			const std::string_view utf8_text,
+			T& reference,
+			const float min,
+			const float max,
+			const std::uint32_t decimal_precision,
+			const float power
+		) noexcept -> bool
+		{
+			constexpr auto is_list = std::is_same_v<T, std::span<float>>;
+
+			auto& window = self.get();
+
+			if (window.skip_item_)
+			{
+				return false;
+			}
+			window.accessed_ = true;
+
+			const auto& theme = current_theme(context);
+			const auto& font = current_font(context);
+			Drawer drawer{.self = window};
+			const IdMaker id_maker{.self = window};
+
+			const auto font_size = drawer.font_size(context);
+
+			const auto do_draw_slider = [&]<typename ValueType>(const widget_id_type id, ValueType& ref_value, const rect_type& slider_rect, const rect_type& frame_rect) noexcept -> bool
+			{
+				const auto slider_point = slider_rect.left_top();
+				const auto slider_size = slider_rect.size();
+				const auto frame_point = frame_rect.left_top();
+				const auto frame_size = frame_rect.size();
+
+				const auto state = test_mouse(context, id, slider_rect, false);
+
+				// draw □ (frame + slider + text)
+				bool value_changed = false;
+
+				// frame
+				drawer.draw_widget_frame(context, frame_rect, color_of(theme, ThemeCategory::FRAME_BACKGROUND));
+
+				// slider
+
+				// todo
+				constexpr float grab_size_in_pixels = 10.f;
+
+				const auto slider_effective_width = slider_size.width - grab_size_in_pixels;
+				const auto slider_effective_x1 = slider_point.x + grab_size_in_pixels * .5f;
+				const auto slider_effective_x2 = slider_point.x + slider_size.width - grab_size_in_pixels * .5f;
+
+				const auto linear_zero_pos = [=]() noexcept -> float
+				{
+					if (min * max < 0)
+					{
+						// different sign
+						const auto linear_dist_min_to_0 = std::powf(std::fabs(.0f - min), 1.f / power);
+						const auto linear_dist_max_to_0 = std::powf(std::fabs(max - .0f), 1.f / power);
+						return linear_dist_min_to_0 / (linear_dist_min_to_0 + linear_dist_max_to_0);
+					}
+
+					// same sign
+					return min < 0 ? 1.f : .0f;
+				}();
+
+				if (state & MouseState::KEEPING)
+				{
+					const auto mouse_position = context.mouse.position_current;
+					const auto normalized_x = std::ranges::clamp((mouse_position.x - slider_effective_x1) / slider_effective_width, .0f, 1.f);
+
+					// account for logarithmic scale on both sides of the zero
+					auto value = [=]() noexcept -> float
+					{
+						if (normalized_x < linear_zero_pos)
+						{
+							// rescale to the negative range before powering
+							auto v = 1.f - (normalized_x / linear_zero_pos);
+							v = std::powf(v, power);
+
+							const auto negative_part_max = std::ranges::min(max, .0f);
+							return std::lerp(negative_part_max, min, v);
+						}
+
+						// rescale to the positive range before powering
+						auto v = normalized_x;
+						if (std::abs(linear_zero_pos - 1.f) > 1e-6)
+						{
+							v = (v - linear_zero_pos) / (1.f - linear_zero_pos);
+						}
+						v = std::powf(v, power);
+
+						const auto positive_part_min = std::ranges::max(min, .0f);
+						return std::lerp(positive_part_min, max, v);
+					}();
+
+					const auto min_step = 1.f / std::powf(10.f, static_cast<float>(decimal_precision));
+					const auto remainder = std::fmodf(value, min_step);
+
+					if (remainder <= min_step * .5f)
+					{
+						value -= remainder;
+					}
+					else
+					{
+						value += (min_step - remainder);
+					}
+
+					// if (ref_value != value) // NOLINT(clang-diagnostic-float-equal)
+					if (std::fabs(ref_value - value) > 1e-6f)
+					{
+						ref_value = value;
+						value_changed = true;
+					}
+				}
+
+				// grab
+				{
+					const auto v = [=]() noexcept -> float
+					{
+						const auto clamped = std::ranges::clamp(ref_value, min, max);
+						if (clamped < .0f)
+						{
+							const auto f = 1.f - (clamped - min) / (std::ranges::min(.0f, max) - min);
+							return (1.f - std::powf(f, 1.f / power)) * linear_zero_pos;
+						}
+
+						const auto f = (clamped - std::ranges::max(0.f, min)) / (max - std::ranges::max(0.f, min));
+						return linear_zero_pos + std::powf(f, 1.f / power) * (1.f - linear_zero_pos);
+					}();
+
+					const auto x = std::lerp(slider_effective_x1, slider_effective_x2, v);
+					const point_type grab_point{x - grab_size_in_pixels * .5f, frame_point.y + 2.f};
+					const extent_type grab_size{grab_size_in_pixels, frame_size.height - 4.f};
+					const rect_type grab_rect{grab_point, grab_size};
+
+					if (state & MouseState::PRESSED)
+					{
+						window.draw_list_.rect_filled(
+							grab_rect,
+							color_of(theme, ThemeCategory::SLIDER_ACTIVATED),
+							theme.window_corner_rounding,
+							DrawFlag::ROUND_CORNER_ALL
+						);
+					}
+					else
+					{
+						window.draw_list_.rect_filled(
+							grab_rect,
+							color_of(theme, ThemeCategory::SLIDER),
+							theme.window_corner_rounding,
+							DrawFlag::ROUND_CORNER_ALL
+						);
+					}
+				}
+
+				// text
+				const auto value_text = std::format("{:.{}f}", ref_value, decimal_precision);
+				const auto value_text_size = internal::text_size(font, value_text, font_size, Font::no_auto_wrap);
+				const point_type value_text_point{slider_point.x + slider_size.width / 2 - value_text_size.width / 2, frame_point.y + theme.item_frame_padding.height};
+				window.draw_list_.text(
+					font,
+					font_size,
+					value_text_point,
+					color_of(theme, ThemeCategory::TEXT),
+					value_text
+				);
+
+				return value_changed;
+			};
+
+			const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
+
+			// □ + text
+			const auto last_item_width = window.canvas_.item_width.back();
+			bool value_changed = false;
+
+			if constexpr (is_list)
+			{
+				const auto list_size = reference.size();
+				if (list_size == 1)
+				{
+					return this->draw_slider(context, utf8_text, reference[0], min, max, decimal_precision, power);
+				}
+
+				const auto each_frame_width = (last_item_width - theme.item_inner_spacing.width * static_cast<value_type>(list_size - 1)) / static_cast<value_type>(list_size);
+				const auto each_slider_width = each_frame_width - theme.item_frame_padding.width * 2;
+
+				const auto total_frame_point = window.canvas_.cursor_current_line;
+				const extent_type total_frame_size{last_item_width + theme.item_frame_padding.width * 2, text_size.height + theme.item_frame_padding.height * 2};
+				const rect_type total_frame_rect{total_frame_point, total_frame_size};
+				drawer.adjust_item_size(context, total_frame_size);
+
+				// □ text
+				window.same_line(context, auto_size, theme.item_inner_spacing.width);
+
+				// text
+				const auto text_point = window.canvas_.cursor_current_line + theme.item_frame_padding;
+				const rect_type text_rect{text_point, text_size};
+				drawer.adjust_item_size(context, text_size);
+
+				const rect_type total_rect{total_frame_rect.left_top(), text_rect.right_bottom()};
+				if (not drawer.is_visible_area(context, total_rect))
+				{
+					// invisible
+					return false;
+				}
+				drawer.test_last_item(context, total_rect);
+
+				// draw all slider
+				// note: when drawing multiple sliders, the widget id is based on the slider index, not the label text
+				// note: to avoid different sliders getting the same id (since ids are based on index), the label text is pushed in here as the seed
+				window.push_id(context, utf8_text);
+				for (const auto view = reference | std::views::enumerate;
+				     auto [index, ref_value]: view)
+				{
+					const auto id = id_maker.make_id(context, index);
+
+					const point_type slider_point
+					{
+							(total_frame_point.x + theme.item_frame_padding.width) + ((each_frame_width + theme.item_inner_spacing.width) * static_cast<value_type>(index)),
+							(total_frame_point.y + theme.item_frame_padding.height)
+					};
+					const extent_type slider_size
+					{
+							each_slider_width,
+							text_size.height
+					};
+					const rect_type slider_rect{slider_point, slider_size};
+
+					const point_type frame_point
+					{
+							(total_frame_point.x) + ((each_frame_width + theme.item_inner_spacing.width) * static_cast<value_type>(index)),
+							(total_frame_point.y)
+					};
+					const extent_type frame_size
+					{
+							each_frame_width,
+							text_size.height + theme.item_frame_padding.height * 2
+					};
+					const rect_type frame_rect{frame_point, frame_size};
+
+					value_changed |= do_draw_slider(id, ref_value, slider_rect, frame_rect);
+				}
+				window.pop_id(context);
+
+				// draw text
+				window.draw_list_.text(
+					font,
+					font_size,
+					text_rect.left_top(),
+					color_of(theme, ThemeCategory::TEXT),
+					utf8_text,
+					text_rect.width()
+				);
+			}
+			else
+			{
+				const auto id = id_maker.make_id(context, utf8_text);
+
+				// □, height equals last item width
+				const auto slider_point = window.canvas_.cursor_current_line + theme.item_frame_padding;
+				const auto slider_size = extent_type{last_item_width, text_size.height};
+				const rect_type slider_rect{slider_point, slider_size};
+
+				const auto frame_point = window.canvas_.cursor_current_line;
+				const auto frame_size = slider_size + theme.item_frame_padding * 2;
+				const rect_type frame_rect{frame_point, frame_size};
+				drawer.adjust_item_size(context, frame_size);
+
+				// □ text
+				window.same_line(context, auto_size, theme.item_inner_spacing.width);
+
+				// text
+				const auto text_point = window.canvas_.cursor_current_line + theme.item_frame_padding;
+				const rect_type text_rect{text_point, text_size};
+				drawer.adjust_item_size(context, text_size);
+
+				const rect_type total_rect{frame_rect.left_top(), text_rect.right_bottom()};
+				if (not drawer.is_visible_area(context, total_rect))
+				{
+					// invisible
+					return false;
+				}
+				drawer.test_last_item(context, total_rect);
+
+				value_changed |= do_draw_slider(id, reference, slider_rect, frame_rect);
+
+				// draw text
+				window.draw_list_.text(
+					font,
+					font_size,
+					text_rect.left_top(),
+					color_of(theme, ThemeCategory::TEXT),
+					utf8_text,
+					text_rect.width()
+				);
+			}
+
+			return value_changed;
+		}
+	};
+
 	Window::Window(
 		const std::string_view name,
 		const Flag flag,
@@ -1531,192 +1840,24 @@ namespace gal::prometheus::gui::internal
 		const float power
 	) noexcept -> bool
 	{
-		if (skip_item_)
-		{
-			return false;
-		}
-		accessed_ = true;
+		Anonymous anonymous{.self = *this};
 
-		const auto& theme = current_theme(context);
-		const auto& font = current_font(context);
-		Drawer drawer{.self = const_cast<Window&>(*this)};
-		const IdMaker id_maker{.self = *this};
+		return anonymous.draw_slider(context, utf8_text, reference, min, max, decimal_precision, power);
+	}
 
-		const auto font_size = drawer.font_size(context);
+	auto Window::draw_slider_n(
+		Context& context,
+		const std::string_view utf8_text,
+		std::span<float> references,
+		const float min,
+		const float max,
+		const std::uint32_t decimal_precision,
+		const float power
+	) noexcept -> bool
+	{
+		Anonymous anonymous{.self = *this};
 
-		const auto id = id_maker.make_id(context, utf8_text);
-		const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
-
-		// □ + text
-		const auto last_item_width = canvas_.item_width.back();
-
-		// □, height equals last item width
-		const auto slider_point = canvas_.cursor_current_line + theme.item_frame_padding;
-		const auto slider_size = extent_type{last_item_width, text_size.height};
-		const rect_type slider_rect{slider_point, slider_size};
-
-		const auto frame_point = canvas_.cursor_current_line;
-		const auto frame_size = slider_size + theme.item_frame_padding * 2;
-		const rect_type frame_rect{frame_point, frame_size};
-
-		drawer.adjust_item_size(context, frame_size);
-
-		// □ text
-		same_line(context, auto_size, theme.item_inner_spacing.width);
-
-		// text
-		const auto text_point = canvas_.cursor_current_line + theme.item_frame_padding;
-		const rect_type text_rect{text_point, text_size};
-		drawer.adjust_item_size(context, text_size);
-
-		const rect_type total_rect{frame_rect.left_top(), text_rect.right_bottom()};
-		if (not drawer.is_visible_area(context, total_rect))
-		{
-			// invisible
-			return false;
-		}
-		drawer.test_last_item(context, total_rect);
-
-		const auto state = test_mouse(context, id, slider_rect, false);
-
-		// draw □ (frame + slider + text)
-		bool value_changed = false;
-		{
-			// frame
-			drawer.draw_widget_frame(context, frame_rect, color_of(theme, ThemeCategory::FRAME_BACKGROUND));
-
-			// slider
-
-			// todo
-			constexpr float grab_size_in_pixels = 10.f;
-
-			const auto slider_effective_width = slider_size.width - grab_size_in_pixels;
-			const auto slider_effective_x1 = slider_point.x + grab_size_in_pixels * .5f;
-			const auto slider_effective_x2 = slider_point.x + slider_size.width - grab_size_in_pixels * .5f;
-
-			const auto linear_zero_pos = [=]() noexcept -> float
-			{
-				if (min * max < 0)
-				{
-					// different sign
-					const auto linear_dist_min_to_0 = std::powf(std::abs(.0f - min), 1.f / power);
-					const auto linear_dist_max_to_0 = std::powf(std::abs(max - .0f), 1.f / power);
-					return linear_dist_min_to_0 / (linear_dist_min_to_0 + linear_dist_max_to_0);
-				}
-
-				// same sign
-				return min < 0 ? 1.f : .0f;
-			}();
-
-			if (state & MouseState::KEEPING)
-			{
-				const auto mouse_position = context.mouse.position_current;
-				const auto normalized_x = std::ranges::clamp((mouse_position.x - slider_effective_x1) / slider_effective_width, .0f, 1.f);
-
-				// account for logarithmic scale on both sides of the zero
-				auto value = [=]() noexcept -> float
-				{
-					if (normalized_x < linear_zero_pos)
-					{
-						// rescale to the negative range before powering
-						auto v = 1.f - (normalized_x / linear_zero_pos);
-						v = std::powf(v, power);
-						return std::lerp(std::ranges::min(max, .0f), min, v);
-					}
-
-					// rescale to the positive range before powering
-					auto v = normalized_x;
-					if (std::abs(linear_zero_pos - 1.f) > 1e-6)
-					{
-						v = (v - linear_zero_pos) / (1.f - linear_zero_pos);
-					}
-					v = std::powf(v, power);
-					return std::lerp(std::ranges::max(min, .0f), max, v);
-				}();
-
-				const auto min_step = 1.f / std::powf(10.f, static_cast<float>(decimal_precision));
-				const auto remainder = std::fmodf(value, min_step);
-
-				if (remainder <= min_step * .5f)
-				{
-					value -= remainder;
-				}
-				else
-				{
-					value += (min_step - remainder);
-				}
-
-				if (reference != value) // NOLINT(clang-diagnostic-float-equal)
-				{
-					reference = value;
-					value_changed = true;
-				}
-			}
-
-			// grab
-			{
-				const auto v = [=]() noexcept -> float
-				{
-					const auto clamped = std::ranges::clamp(reference, min, max);
-					if (clamped < .0f)
-					{
-						const auto f = 1.f - (clamped - min) / (std::ranges::min(.0f, max) - min);
-						return (1.f - std::powf(f, 1.f / power)) * linear_zero_pos;
-					}
-
-					const auto f = (clamped - std::ranges::max(0.f, min)) / (max - std::ranges::max(0.f, min));
-					return linear_zero_pos + std::powf(f, 1.f / power) * (1.f - linear_zero_pos);
-				}();
-
-				const auto x = std::lerp(slider_effective_x1, slider_effective_x2, v);
-				const point_type grab_point{x - grab_size_in_pixels * .5f, frame_point.y + 2.f};
-				const extent_type grab_size{grab_size_in_pixels, frame_size.height - 4.f};
-				const rect_type grab_rect{grab_point, grab_size};
-
-				if (state & MouseState::PRESSED)
-				{
-					draw_list_.rect_filled(
-						grab_rect,
-						color_of(theme, ThemeCategory::SLIDER_ACTIVATED),
-						theme.window_corner_rounding,
-						DrawFlag::ROUND_CORNER_ALL
-					);
-				}
-				else
-				{
-					draw_list_.rect_filled(
-						grab_rect,
-						color_of(theme, ThemeCategory::SLIDER),
-						theme.window_corner_rounding,
-						DrawFlag::ROUND_CORNER_ALL
-					);
-				}
-			}
-
-			// text
-			const auto value_text = std::format("{:.{}f}", reference, decimal_precision);
-			const auto value_text_size = internal::text_size(font, value_text, font_size, Font::no_auto_wrap);
-			const point_type value_text_point{slider_point.x + slider_size.width / 2 - value_text_size.width / 2, frame_point.y + theme.item_frame_padding.height};
-			draw_list_.text(
-				font,
-				font_size,
-				value_text_point,
-				color_of(theme, ThemeCategory::TEXT),
-				value_text
-			);
-		}
-
-		// draw text
-		draw_list_.text(
-			font,
-			font_size,
-			text_rect.left_top(),
-			color_of(theme, ThemeCategory::TEXT),
-			utf8_text,
-			text_rect.width()
-		);
-
-		return value_changed;
+		return anonymous.draw_slider(context, utf8_text, references, min, max, decimal_precision, power);
 	}
 
 	// ReSharper disable once CppParameterMayBeConstPtrOrRef

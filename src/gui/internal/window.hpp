@@ -111,6 +111,7 @@ namespace gal::prometheus
 		private:
 			class IdMaker;
 			class Drawer;
+			class Anonymous;
 
 			struct canvas_type
 			{
@@ -251,6 +252,16 @@ namespace gal::prometheus
 				Context& context,
 				std::string_view utf8_text,
 				float& reference,
+				float min,
+				float max,
+				std::uint32_t decimal_precision,
+				float power
+			) noexcept -> bool;
+
+			auto draw_slider_n(
+				Context& context,
+				std::string_view utf8_text,
+				std::span<float> references,
 				float min,
 				float max,
 				std::uint32_t decimal_precision,

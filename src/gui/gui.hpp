@@ -7,6 +7,7 @@
 
 #include <array>
 #include <vector>
+#include <span>
 
 #include <primitive/rect.hpp>
 #include <primitive/color.hpp>
@@ -463,16 +464,19 @@ namespace gal::prometheus
 
 		/**
 		 * @brief Draw a radio button, its initial state and referenced state is required
+		 * @return Whether the radio button is pressed (being pressed does not mean that the state is switched, it can also be a repeat selection)
 		 */
 		template<std::equality_comparable T>
-		auto draw_radio_button(Context& context, std::string_view utf8_text, T& reference, const std::type_identity_t<T>& identifier) noexcept -> void
+		auto draw_radio_button(Context& context, std::string_view utf8_text, T& reference, const std::type_identity_t<T>& identifier) noexcept -> bool
 		{
 			const auto prev_selected = reference == identifier;
-			if (const auto pressed = gui::draw_radio_button(context, utf8_text, prev_selected);
-				pressed)
+			const auto pressed = gui::draw_radio_button(context, utf8_text, prev_selected);
+
+			if (pressed)
 			{
 				reference = identifier;
 			}
+			return pressed;
 		}
 
 		/**
@@ -483,6 +487,7 @@ namespace gal::prometheus
 
 		/**
 		 * @brief Draw a checkbox, its initial state and referenced state is required
+		 * @return Current state of the checkbox (checked or unchecked)
 		 */
 		template<std::equality_comparable T>
 		static auto draw_checkbox(
@@ -491,11 +496,12 @@ namespace gal::prometheus
 			T& reference,
 			const std::type_identity_t<T>& checked_identifier,
 			const std::type_identity_t<T>& unchecked_identifier
-		) noexcept -> void
+		) noexcept -> bool
 		{
 			const auto prev_checked = reference == checked_identifier;
-			if (const auto checked = gui::draw_checkbox(context, utf8_text, prev_checked);
-				checked != prev_checked)
+			const auto checked = gui::draw_checkbox(context, utf8_text, prev_checked);
+
+			if (checked != prev_checked)
 			{
 				if (prev_checked)
 				{
@@ -506,6 +512,7 @@ namespace gal::prometheus
 					reference = checked_identifier;
 				}
 			}
+			return checked;
 		}
 
 		auto draw_slider(
@@ -517,6 +524,34 @@ namespace gal::prometheus
 			std::uint32_t decimal_precision = 3,
 			float power = 1
 		) noexcept -> bool;
+
+		template<typename T, typename ValueType>
+			requires std::is_arithmetic_v<ValueType>
+		auto draw_slider(
+			Context& context,
+			const std::string_view utf8_text,
+			T& reference,
+			const ValueType min,
+			const std::type_identity_t<ValueType> max,
+			const std::uint32_t decimal_precision = 3,
+			const float power = 1
+		) noexcept -> bool
+		{
+			auto v = static_cast<float>(reference);
+
+			const auto result = gui::draw_slider(
+				context,
+				utf8_text,
+				v,
+				static_cast<float>(min),
+				static_cast<float>(max),
+				decimal_precision,
+				power
+			);
+			reference = v;
+
+			return result;
+		}
 
 		template<meta::basic_fixed_string MemberName, typename T, typename ValueType>
 			requires std::is_arithmetic_v<ValueType>
@@ -546,6 +581,16 @@ namespace gal::prometheus
 			return result;
 		}
 
+		auto draw_slider_n(
+			Context& context,
+			std::string_view utf8_text,
+			std::span<float> references,
+			float min,
+			float max,
+			std::uint32_t decimal_precision = 3,
+			float power = 1
+		) noexcept -> bool;
+
 		//------------------------------------------------------------------
 		// WIDGET LAYOUT
 		//------------------------------------------------------------------
@@ -556,11 +601,11 @@ namespace gal::prometheus
 		/**
 		 * @brief Each element drawn will move the cursor to the next line of the canvas,
 		 * this function forces the cursor to move to the end of the previous line (immediately after the previous element)
-		 * @note @c column_width == @c auto_size and @c spacing_width == @c auto_size,
+		 * @note @c column_width == @c layout_auto_size and @c spacing_width == @c layout_auto_size,
 		 * the x-axis distance of the next drawn element from the previous element will depend on @c theme.item_spacing.width
-		 * @note @c column_width == @c auto_size and @c spacing_width != @c auto_size,
+		 * @note @c column_width == @c layout_auto_size and @c spacing_width != @c layout_auto_size,
 		 * the x-axis distance of the next drawn element from the previous element will depend on @c spacing_width
-		 * @note @c column_width != @c auto_size (@c spacing_width can be any value, force to 0 if less than 0),
+		 * @note @c column_width != @c layout_auto_size (@c spacing_width can be any value, force to 0 if less than 0),
 		 * the x-axis distance of the next drawn element from the previous element will depend on @c column_width + @c spacing_width
 		 */
 		auto layout_same_line(Context& context, Theme::value_type column_width = layout_auto_size, Theme::value_type spacing_width = layout_auto_size) noexcept -> void;
@@ -740,6 +785,15 @@ namespace gal::prometheus
 
 			return gui::draw_slider<T, MemberName, ValueType>(context, object, min, max, decimal_precision, power);
 		}
+
+		auto draw_slider_n(
+			std::string_view utf8_text,
+			std::span<float> references,
+			float min,
+			float max,
+			std::uint32_t decimal_precision = 3,
+			float power = 1
+		) noexcept -> bool;
 
 		//------------------------------------------------------------------
 		// WIDGET LAYOUT
