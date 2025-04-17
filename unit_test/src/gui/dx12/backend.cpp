@@ -611,6 +611,25 @@ auto prometheus_new_frame() -> void //
 
 auto prometheus_render() -> void
 {
+	static auto test_string = []
+	{
+		std::string string{};
+		string.resize(200);
+		for (int i = 0; i < 200; ++i)
+		{
+			if (i != 0 and i % 25 == 0)
+			{
+				string[i] = '\n';
+			}
+			else
+			{
+				const auto c = 'a' + i % ('z' - 'a');
+				string[i] = static_cast<char>(c);
+			}
+		}
+		return string;
+	}();
+
 	if (static bool window_closed = false;
 		not window_closed)
 	{
@@ -633,27 +652,12 @@ auto prometheus_render() -> void
 			gui::layout_same_line();
 			gui::draw_text("世界");
 
-			std::string string{};
-			string.resize(200);
-			for (int i = 0; i < 200; ++i)
-			{
-				if (i != 0 and i % 25 == 0)
-				{
-					string[i] = '\n';
-				}
-				else
-				{
-					const auto c = 'a' + i % ('z' - 'a');
-					string[i] = static_cast<char>(c);
-				}
-			}
-
 			gui::push_text_wrap_width(150);
-			gui::draw_text(string);
+			gui::draw_text(test_string);
 			gui::pop_text_wrap_width();
 
 			gui::push_text_wrap_width(300);
-			gui::draw_text(string);
+			gui::draw_text(test_string);
 			gui::pop_text_wrap_width();
 		}
 
@@ -711,11 +715,33 @@ auto prometheus_render() -> void
 
 		gui::draw_text_colored("Slider", primitive::colors::red);
 		{
-			static float v = 0;
-			gui::draw_slider("Slider", v, -1, 1);
-		}
+			static bool open_slider = false;
+			open_slider ^= gui::draw_button("OpenSlider");
 
-		gui::end_window();
+			if (open_slider)
+			{
+				gui::begin_window("SliderWindow");
+
+				gui::draw_text(test_string);
+
+				gui::begin_child_window("SliderWindowChild");
+
+				static std::array<float, 5> v{0, 0, 0, 0, 0};
+
+				gui::draw_slider("Slider1", v[0], -1, 1);
+				gui::draw_slider_n("Slider1(n)", {v.begin(), v.begin() + 1}, -1, 1);
+				gui::draw_slider_n("Slider2", {v.begin(), v.begin() + 2}, -1, 1);
+				gui::draw_slider_n("Slider3", {v.begin(), v.begin() + 3}, -1, 1);
+				gui::draw_slider_n("Slider4", {v.begin(), v.begin() + 4}, -1, 1);
+				gui::draw_slider_n("Slider5", {v.begin(), v.begin() + 5}, -1, 1);
+
+				gui::end_child_window();
+
+				gui::end_window();
+			}
+
+			gui::end_window();
+		}
 	}
 
 	gui::render();
