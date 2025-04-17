@@ -72,11 +72,14 @@ namespace gal::prometheus
 
 			point_type window_default_spawn_position;
 
-			// all created windows
+			// All created windows
 			std::vector<memory::UniquePointer<window_type>> window_hive;
 
-			// all created windows, but sorted (child windows are next to their parents, the most recently used window is always moved to the tail)
-			std::vector<window_type*> window_list;
+			// Root window only, child windows are managed by their parent window
+			// The order of the windows in this list determines the drawing order, the windows at the end are drawn last
+			std::vector<window_type*> window_root_list;
+
+			// Current window stack, push the stack when begin_window is called, and pop the stack when end_window is called (Nested calls are also included in this list)
 			std::vector<window_type*> window_current_stack;
 
 			// catch mouse
@@ -103,6 +106,14 @@ namespace gal::prometheus
 
 		namespace internal
 		{
+			auto begin_window(
+				Context& context,
+				std::string_view name,
+				const extent_type& size,
+				Theme::value_type fill_alpha,
+				WindowFlag flag
+			) noexcept -> bool;
+
 			// ----------------------------------------------------------------------
 			// DrawListFlag
 

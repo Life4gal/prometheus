@@ -25,31 +25,29 @@ namespace
 	 */
 	[[nodiscard]] auto find_window(Context& context, const std::string_view name) noexcept -> internal::Window*
 	{
-		auto view = context.window_list | std::views::all;
-
 		const auto it = std::ranges::find_if(
-			view,
+			context.window_hive,
 			[name](const auto& window) noexcept -> bool
 			{
-				return name == window->name();
+				return window->name() == name;
 			}
 		);
 
-		if (it == std::ranges::end(view))
+		if (it != context.window_hive.end())
 		{
-			return nullptr;
+			return it->get();
 		}
 
-		return it.operator*();
+		return nullptr;
 	}
 
 	/**
-	 * @brief Find the last possible parent (not child) window from the available windows in this frame
+	 * @brief Find the last possible root (not child) window from the available windows in this frame
 	 * @return If it is not found (if and only if there are no currently available windows, i.e. the window to be created is the first one), then the null pointer is returned
 	 */
 	[[nodiscard]] auto find_root_window(Context& context) noexcept -> internal::Window*
 	{
-		auto view = context.window_current_stack | std::views::all;
+		const auto view = context.window_current_stack | std::views::reverse;
 
 		const auto it = std::ranges::find_if(
 			view,
@@ -67,28 +65,42 @@ namespace
 		return it.operator*();
 	}
 
-	[[nodiscard]] auto find_or_create_window(Context& context, const std::string_view name, const extent_type& size, const internal::Window::Flag flag) noexcept -> internal::Window&
+	[[nodiscard]] auto find_or_create_window(Context& context, const std::string_view name, const extent_type& size, const internal::WindowFlag flag) noexcept -> internal::Window&
 	{
 		[[maybe_unused]] const auto is_child_window = flag.is<internal::WindowInternalFlag::CHILD_WINDOW>();
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME((is_child_window == true) == (context.window_current_stack.size() > 1));
+		if (is_child_window)
+		{
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+		}
 
 		if (auto* window = find_window(context, name);
 			window == nullptr)
 		{
-			// find root
 			auto* root = is_child_window ? find_root_window(context) : nullptr;
 
 			// fixme: load cached settings?
-			auto temp = memory::make_unique<internal::Window>(name, flag, context.window_default_spawn_position, size, root);
+			auto temp = memory::make_unique<internal::Window>(
+				name,
+				flag,
+				context.window_default_spawn_position,
+				size,
+				root
+			);
 
 			auto& ref = context.window_hive.emplace_back(std::move(temp));
+			if (root == nullptr)
+			{
+				// The current window is the root window
+				context.window_root_list.emplace_back(ref.get());
+			}
 
-			context.window_list.emplace_back(ref.get());
 			context.window_current_stack.emplace_back(ref.get());
 		}
 		else
 		{
+			// todo: Just need to reset the flag?
 			window->reset(flag);
+
 			context.window_current_stack.emplace_back(window);
 		}
 
@@ -101,36 +113,17 @@ namespace
 	template<bool ExcludesChildren>
 	[[nodiscard]] auto find_hovered_window(Context& context, const point_type& position) noexcept -> internal::Window*
 	{
-		auto view = context.window_list | std::views::reverse;
-
-		const auto it = std::ranges::find_if(
-			view,
-			[position](const auto& window) noexcept -> bool
-			{
-				if (not window->visible())
-				{
-					return false;
-				}
-
-				if constexpr (ExcludesChildren)
-				{
-					if (window->flag().template is<internal::WindowInternalFlag::CHILD_WINDOW>())
-					{
-						return false;
-					}
-				}
-
-				const auto rect = window->rect();
-				return rect.includes(position);
-			}
-		);
-
-		if (it == std::ranges::end(view))
+		for (const auto view = context.window_root_list | std::views::reverse;
+		     auto* root: view)
 		{
-			return nullptr;
+			if (auto* window = root->find_hovered_window(position, ExcludesChildren);
+				window != nullptr)
+			{
+				return window;
+			}
 		}
 
-		return it.operator*();
+		return nullptr;
 	}
 
 	Context* g_context = nullptr;
@@ -154,7 +147,7 @@ namespace gal::prometheus::gui
 				.mouse = {},
 				.window_default_spawn_position = {50, 50},
 				.window_hive = {},
-				.window_list = {},
+				.window_root_list = {},
 				.window_current_stack = {},
 				.window_hovered = nullptr,
 				.window_hovered_root = nullptr,
@@ -252,7 +245,7 @@ namespace gal::prometheus::gui
 
 			// Mark all windows as not visible
 			std::ranges::for_each(
-				context.window_list,
+				context.window_root_list,
 				[](auto* window) noexcept -> void
 				{
 					window->hide();
@@ -282,32 +275,6 @@ namespace gal::prometheus::gui
 
 		if (is_first_render_this_frame)
 		{
-			// Sort the window list so that all child windows are after their parent
-			// We cannot do that on `focus` because children may not exist yet
-
-			std::vector<Context::window_type*> sorted_windows{};
-			sorted_windows.reserve(context.window_list.size());
-
-			std::ranges::for_each(
-				context.window_list,
-				[&](auto* window) noexcept -> void
-				{
-					// todo: child window
-					if (
-						window->flag().template is<internal::WindowInternalFlag::CHILD_WINDOW>() and
-						window->visible()
-					)
-					{
-						return;
-					}
-
-					sorted_windows.push_back(window);
-				}
-			);
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(sorted_windows.size() == context.window_list.size());
-
-			context.window_list.swap(sorted_windows);
-
 			// clear all data for new frame
 			context.io.delta_time = -1;
 			// context.io.mouse_position = {0, 0};
@@ -321,13 +288,10 @@ namespace gal::prometheus::gui
 		{
 			// gather windows to render
 			std::ranges::for_each(
-				context.window_list,
+				context.window_root_list,
 				[&context](auto* window) noexcept -> void
 				{
-					if (window->visible())
-					{
-						window->render(context);
-					}
+					window->render(context);
 				}
 			);
 		}
@@ -369,26 +333,11 @@ namespace gal::prometheus::gui
 		Context& context,
 		const std::string_view name,
 		const extent_type& size,
-		Theme::value_type fill_alpha,
+		const Theme::value_type fill_alpha,
 		const WindowFlag flag
 	) noexcept -> bool
 	{
-		const auto& theme = internal::current_theme(context);
-
-		auto& window = find_or_create_window(context, name, size, flag);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.window_current_stack.back() == std::addressof(window));
-
-		// alpha
-		static_assert(Context::window_fill_alpha_not_set < 0);
-		if (fill_alpha < 0)
-		{
-			fill_alpha = theme.window_background_alpha;
-		}
-
-		const auto is_child_window = window.flag().is<internal::WindowInternalFlag::CHILD_WINDOW>();
-		auto* parent = is_child_window ? context.window_current_stack[context.window_current_stack.size() - 2] : nullptr;
-
-		return window.begin_draw(context, fill_alpha, parent);
+		return internal::begin_window(context, name, size, fill_alpha, flag);
 	}
 
 	auto end_window(Context& context) noexcept -> void
@@ -396,8 +345,7 @@ namespace gal::prometheus::gui
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
 
 		auto& window = *context.window_current_stack.back();
-
-		window.end_draw(context);
+		window.end_window(context);
 
 		// Select window for move/focus when we're done with all our widgets (we only consider non-children windows here)
 		if (const auto rect = window.rect();
@@ -412,6 +360,31 @@ namespace gal::prometheus::gui
 		}
 
 		context.window_current_stack.pop_back();
+	}
+
+	auto begin_child_window(
+		Context& context,
+		const std::string_view name,
+		const extent_type& size,
+		const bool border,
+		const WindowFlag flag
+	) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+		auto& parent = *context.window_current_stack.back();
+
+		parent.begin_child_window(context, name, size, border, flag);
+	}
+
+	auto end_child_window(Context& context) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.window_current_stack.size() >= 2);
+
+		auto& window = **(context.window_current_stack.end() - 1);
+		auto& parent = **(context.window_current_stack.end() - 2);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(window.flag().is<internal::WindowInternalFlag::CHILD_WINDOW>());
+
+		parent.end_child_window(context, window);
 	}
 
 	auto draw_text(Context& context, const std::string_view utf8_text) noexcept -> void
@@ -677,6 +650,25 @@ namespace gal::prometheus::gui
 		return end_window(context);
 	}
 
+	auto begin_child_window(
+		const std::string_view name,
+		const extent_type& size,
+		const bool border,
+		const WindowFlag flag
+	) noexcept -> void
+	{
+		auto& context = get_current_context();
+
+		begin_child_window(context, name, size, border, flag);
+	}
+
+	auto end_child_window() noexcept -> void
+	{
+		auto& context = get_current_context();
+
+		end_child_window(context);
+	}
+
 	auto draw_text(const std::string_view utf8_text) noexcept -> void
 	{
 		auto& context = get_current_context();
@@ -911,6 +903,32 @@ namespace gal::prometheus::gui
 
 	namespace internal
 	{
+		auto begin_window(
+			Context& context,
+			const std::string_view name,
+			const extent_type& size,
+			Theme::value_type fill_alpha,
+			const WindowFlag flag
+		) noexcept -> bool
+		{
+			const auto& theme = current_theme(context);
+
+			auto& window = find_or_create_window(context, name, size, flag);
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.window_current_stack.back() == std::addressof(window));
+
+			// alpha
+			static_assert(Context::window_fill_alpha_not_set < 0);
+			if (fill_alpha < 0)
+			{
+				fill_alpha = theme.window_background_alpha;
+			}
+
+			const auto is_child_window = window.flag().is<WindowInternalFlag::CHILD_WINDOW>();
+			auto* parent = is_child_window ? context.window_current_stack[context.window_current_stack.size() - 2] : nullptr;
+
+			return window.begin_window(context, parent, fill_alpha, size);
+		}
+
 		auto current_draw_list_flag(const Context& context) noexcept -> DrawListFlag
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context.initialized);
@@ -1101,11 +1119,8 @@ namespace gal::prometheus::gui
 			auto state = std::to_underlying(MouseState::NONE);
 
 			const auto hovered =
-					// window
-					context.window_hovered_root == std::addressof(window) and
-					// new
+					context.window_hovered_root == std::addressof(window.root()) and
 					context.widget_hovered == invalid_widget_id and
-					// mouse
 					window.is_hovered(context, area);
 
 			if (hovered)
@@ -1172,13 +1187,20 @@ namespace gal::prometheus::gui
 
 			context.window_focused = std::addressof(window);
 
-			const auto it = std::ranges::find(context.window_list, std::addressof(window));
+			auto& root = window.root();
 
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it != context.window_list.end());
+			const auto it = std::ranges::find(context.window_root_list, std::addressof(root));
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it != context.window_root_list.end());
 
-			const auto p = *it;
-			context.window_list.erase(it);
-			context.window_list.push_back(p);
+			if (it != context.window_root_list.end() - 1)
+			{
+				// The focused window is drawn last
+				const auto p = *it;
+				context.window_root_list.erase(it);
+				context.window_root_list.push_back(p);
+			}
+
+			// todo: reorder child window?
 		}
 
 		auto is_widget_hovered(const Context& context, const widget_id_type id) noexcept -> bool

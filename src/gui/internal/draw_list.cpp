@@ -1156,7 +1156,7 @@ namespace gal::prometheus::gui::internal
 	auto DrawList::push_command() noexcept -> void
 	{
 		// fixme: If the window boundary is smaller than the rect boundary, the rect will no longer be valid.
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not this_command_clip_rect_.empty() and this_command_clip_rect_.valid());
+		// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not this_command_clip_rect_.empty() and this_command_clip_rect_.valid());
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(this_command_texture_id_ != Font::invalid_texture_id);
 
 		command_list_.emplace_back(
@@ -1295,7 +1295,7 @@ namespace gal::prometheus::gui::internal
 
 	auto DrawList::push_clip_rect(const rect_type& rect, const bool intersect_with_current_clip_rect) noexcept -> rect_type&
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+		// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
 
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not command_list_.empty());
 

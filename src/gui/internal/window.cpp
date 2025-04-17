@@ -131,7 +131,7 @@ namespace gal::prometheus::gui::internal
 
 			const auto& theme = current_theme(context);
 
-			if (window.flag_.is<WindowInternalFlag::CHILD_WINDOW>() and not window.flag_.is<WindowFlag::BORDERED>())
+			if (window.flag_.is<WindowInternalFlag::CHILD_WINDOW>() and not window.flag_.is<gui::WindowFlag::BORDERED>())
 			{
 				return {1, 1};
 			}
@@ -146,7 +146,7 @@ namespace gal::prometheus::gui::internal
 		{
 			const auto& window = self.get();
 
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not window.flag_.is<WindowFlag::NO_TITLEBAR>());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not window.flag_.is<gui::WindowFlag::NO_TITLEBAR>());
 
 			const auto& theme = current_theme(context);
 
@@ -166,7 +166,7 @@ namespace gal::prometheus::gui::internal
 
 			const auto& window = self.get();
 
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(window.flag_.is<WindowFlag::NO_TITLEBAR>());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(window.flag_.is<gui::WindowFlag::NO_TITLEBAR>());
 
 			return {window.point_, window.size_full_.width, height};
 		}
@@ -201,7 +201,7 @@ namespace gal::prometheus::gui::internal
 		{
 			const auto& window = self.get();
 
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not window.flag_.is<WindowFlag::NO_TITLEBAR>());
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not window.flag_.is<gui::WindowFlag::NO_TITLEBAR>());
 
 			const auto height = titlebar_height(context);
 
@@ -280,7 +280,7 @@ namespace gal::prometheus::gui::internal
 			auto& window = self.get();
 
 			window.draw_list_.rect_filled(rect, color);
-			if (window.flag_.is<WindowFlag::BORDERED>())
+			if (window.flag_.is<gui::WindowFlag::BORDERED>())
 			{
 				const point_type outer_point{rect.left_top() + extent_type{.5f, .5f}};
 				const extent_type outer_size{rect.size() - extent_type{.5f, .5f}};
@@ -300,7 +300,7 @@ namespace gal::prometheus::gui::internal
 			auto& window = self.get();
 
 			window.draw_list_.circle_filled(circle, color);
-			if (window.flag_.is<WindowFlag::BORDERED>())
+			if (window.flag_.is<gui::WindowFlag::BORDERED>())
 			{
 				const point_type outer_point{circle.center() + extent_type{.5f, .5f}};
 				const auto outer_radius = circle.radius - .5f;
@@ -332,6 +332,14 @@ namespace gal::prometheus::gui::internal
 		) noexcept -> bool
 		{
 			constexpr auto is_list = std::is_same_v<T, std::span<float>>;
+			if constexpr (is_list)
+			{
+				const auto list_size = reference.size();
+				if (list_size == 1)
+				{
+					return this->draw_slider(context, utf8_text, reference[0], min, max, decimal_precision, power);
+				}
+			}
 
 			auto& window = self.get();
 
@@ -352,6 +360,7 @@ namespace gal::prometheus::gui::internal
 			{
 				const auto slider_point = slider_rect.left_top();
 				const auto slider_size = slider_rect.size();
+
 				const auto frame_point = frame_rect.left_top();
 				const auto frame_size = frame_rect.size();
 
@@ -406,7 +415,7 @@ namespace gal::prometheus::gui::internal
 
 						// rescale to the positive range before powering
 						auto v = normalized_x;
-						if (std::abs(linear_zero_pos - 1.f) > 1e-6)
+						if (std::fabs(linear_zero_pos - 1.f) > 1e-6)
 						{
 							v = (v - linear_zero_pos) / (1.f - linear_zero_pos);
 						}
@@ -493,43 +502,52 @@ namespace gal::prometheus::gui::internal
 
 			const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
 
-			// □ + text
 			const auto last_item_width = window.canvas_.item_width.back();
+
+			const auto total_frame_point = window.canvas_.cursor_current_line;
+			const auto total_frame_size = extent_type{last_item_width, text_size.height} + theme.item_frame_padding * 2;
+			const rect_type total_frame_rect{total_frame_point, total_frame_size};
+
+			const auto total_slider_point = total_frame_point + theme.item_frame_padding;
+			const auto total_slider_size = total_frame_size - theme.item_frame_padding * 2;
+			const rect_type total_slider_rect{total_slider_point, total_slider_size};
+
+			drawer.adjust_item_size(context, total_frame_size);
+
+			// □ text / □ □ .. □ □ text
+			window.same_line(context, auto_size, theme.item_inner_spacing.width);
+
+			// text
+			const auto text_point = window.canvas_.cursor_current_line + theme.item_frame_padding;
+			const rect_type text_rect{text_point, text_size};
+			drawer.adjust_item_size(context, text_size);
+
+			const rect_type total_rect{total_frame_point, text_rect.right_bottom()};
+			if (not drawer.is_visible_area(context, total_rect))
+			{
+				// invisible
+				return false;
+			}
+			drawer.test_last_item(context, total_rect);
+
 			bool value_changed = false;
 
 			if constexpr (is_list)
 			{
 				const auto list_size = reference.size();
-				if (list_size == 1)
+
+				// width: (total - spacing) / size
+				// height: total
+				const auto each_frame_size = extent_type
 				{
-					return this->draw_slider(context, utf8_text, reference[0], min, max, decimal_precision, power);
-				}
+						(total_frame_size.width - theme.item_inner_spacing.width * static_cast<value_type>(list_size - 1)) / static_cast<value_type>(list_size),
+						total_frame_size.height
+				};
+				const auto each_slider_size = each_frame_size - theme.item_frame_padding * 2;
 
-				const auto each_frame_width = (last_item_width - theme.item_inner_spacing.width * static_cast<value_type>(list_size - 1)) / static_cast<value_type>(list_size);
-				const auto each_slider_width = each_frame_width - theme.item_frame_padding.width * 2;
+				const auto offset_x = each_frame_size.width + theme.item_inner_spacing.width;
 
-				const auto total_frame_point = window.canvas_.cursor_current_line;
-				const extent_type total_frame_size{last_item_width + theme.item_frame_padding.width * 2, text_size.height + theme.item_frame_padding.height * 2};
-				const rect_type total_frame_rect{total_frame_point, total_frame_size};
-				drawer.adjust_item_size(context, total_frame_size);
-
-				// □ text
-				window.same_line(context, auto_size, theme.item_inner_spacing.width);
-
-				// text
-				const auto text_point = window.canvas_.cursor_current_line + theme.item_frame_padding;
-				const rect_type text_rect{text_point, text_size};
-				drawer.adjust_item_size(context, text_size);
-
-				const rect_type total_rect{total_frame_rect.left_top(), text_rect.right_bottom()};
-				if (not drawer.is_visible_area(context, total_rect))
-				{
-					// invisible
-					return false;
-				}
-				drawer.test_last_item(context, total_rect);
-
-				// draw all slider
+				// draw n slider
 				// note: when drawing multiple sliders, the widget id is based on the slider index, not the label text
 				// note: to avoid different sliders getting the same id (since ids are based on index), the label text is pushed in here as the seed
 				window.push_id(context, utf8_text);
@@ -538,86 +556,44 @@ namespace gal::prometheus::gui::internal
 				{
 					const auto id = id_maker.make_id(context, index);
 
-					const point_type slider_point
-					{
-							(total_frame_point.x + theme.item_frame_padding.width) + ((each_frame_width + theme.item_inner_spacing.width) * static_cast<value_type>(index)),
-							(total_frame_point.y + theme.item_frame_padding.height)
-					};
-					const extent_type slider_size
-					{
-							each_slider_width,
-							text_size.height
-					};
-					const rect_type slider_rect{slider_point, slider_size};
-
+					// x: total + offset * n
+					// y: total
 					const point_type frame_point
 					{
-							(total_frame_point.x) + ((each_frame_width + theme.item_inner_spacing.width) * static_cast<value_type>(index)),
-							(total_frame_point.y)
+							total_frame_point.x + offset_x * static_cast<value_type>(index),
+							total_frame_point.y
 					};
-					const extent_type frame_size
+					const rect_type frame_rect{frame_point, each_frame_size};
+
+					// x: total + offset * n
+					// y: total
+					const point_type slider_point
 					{
-							each_frame_width,
-							text_size.height + theme.item_frame_padding.height * 2
+							total_slider_point.x + offset_x * static_cast<value_type>(index),
+							total_slider_point.y
 					};
-					const rect_type frame_rect{frame_point, frame_size};
+					const rect_type slider_rect{slider_point, each_slider_size};
 
 					value_changed |= do_draw_slider(id, ref_value, slider_rect, frame_rect);
 				}
 				window.pop_id(context);
-
-				// draw text
-				window.draw_list_.text(
-					font,
-					font_size,
-					text_rect.left_top(),
-					color_of(theme, ThemeCategory::TEXT),
-					utf8_text,
-					text_rect.width()
-				);
 			}
 			else
 			{
+				// draw one slider
 				const auto id = id_maker.make_id(context, utf8_text);
-
-				// □, height equals last item width
-				const auto slider_point = window.canvas_.cursor_current_line + theme.item_frame_padding;
-				const auto slider_size = extent_type{last_item_width, text_size.height};
-				const rect_type slider_rect{slider_point, slider_size};
-
-				const auto frame_point = window.canvas_.cursor_current_line;
-				const auto frame_size = slider_size + theme.item_frame_padding * 2;
-				const rect_type frame_rect{frame_point, frame_size};
-				drawer.adjust_item_size(context, frame_size);
-
-				// □ text
-				window.same_line(context, auto_size, theme.item_inner_spacing.width);
-
-				// text
-				const auto text_point = window.canvas_.cursor_current_line + theme.item_frame_padding;
-				const rect_type text_rect{text_point, text_size};
-				drawer.adjust_item_size(context, text_size);
-
-				const rect_type total_rect{frame_rect.left_top(), text_rect.right_bottom()};
-				if (not drawer.is_visible_area(context, total_rect))
-				{
-					// invisible
-					return false;
-				}
-				drawer.test_last_item(context, total_rect);
-
-				value_changed |= do_draw_slider(id, reference, slider_rect, frame_rect);
-
-				// draw text
-				window.draw_list_.text(
-					font,
-					font_size,
-					text_rect.left_top(),
-					color_of(theme, ThemeCategory::TEXT),
-					utf8_text,
-					text_rect.width()
-				);
+				value_changed |= do_draw_slider(id, reference, total_slider_rect, total_frame_rect);
 			}
+
+			// draw text
+			window.draw_list_.text(
+				font,
+				font_size,
+				text_rect.left_top(),
+				color_of(theme, ThemeCategory::TEXT),
+				utf8_text,
+				text_rect.width()
+			);
 
 			return value_changed;
 		}
@@ -625,7 +601,7 @@ namespace gal::prometheus::gui::internal
 
 	Window::Window(
 		const std::string_view name,
-		const Flag flag,
+		const WindowFlag flag,
 		const point_type& point,
 		const extent_type& size,
 		Window* root
@@ -647,8 +623,8 @@ namespace gal::prometheus::gui::internal
 		  flag_{flag},
 		  root_{root},
 		  point_{point},
-		  size_{size},
 		  size_full_{size},
+		  size_{size},
 		  size_of_content_{0, 0},
 		  default_item_width_{0},
 		  scroll_y_{0},
@@ -674,15 +650,15 @@ namespace gal::prometheus::gui::internal
 			root_ = this;
 		}
 
-		// auto fit
-		if (size.width < .001f or size.height < .001f)
+		// auto-fit
+		// if (size.width < 1e-3f or size.height < 1e-3f)
 		{
 			auto_fit_only_grows_ = true;
 			auto_fit_frames_ = 2;
 		}
 	}
 
-	auto Window::reset(const Flag flag) noexcept -> void
+	auto Window::reset(const WindowFlag flag) noexcept -> void
 	{
 		flag_ = flag;
 	}
@@ -690,7 +666,7 @@ namespace gal::prometheus::gui::internal
 	auto Window::handle_inputs(const Context& context) noexcept -> void
 	{
 		// scroll
-		if (not flag_.is<WindowFlag::NO_SCROLLBAR_WITH_MOUSE>())
+		if (not flag_.is<gui::WindowFlag::NO_SCROLLBAR_WITH_MOUSE>())
 		{
 			// todo
 			constexpr auto scroll_weight = static_cast<value_type>(5);
@@ -698,10 +674,11 @@ namespace gal::prometheus::gui::internal
 		}
 	}
 
-	auto Window::begin_draw(
+	auto Window::begin_window(
 		Context& context,
-		value_type fill_alpha,
-		Window* parent
+		Window* parent,
+		value_type background_fill_alpha,
+		const extent_type& size
 	) noexcept -> bool
 	{
 		// This function can be called multiple times per frame,
@@ -721,6 +698,8 @@ namespace gal::prometheus::gui::internal
 				draw_list_.bind_context(context);
 				// clear render data
 				draw_list_.reset();
+				// clear all child
+				children_this_frame_.clear();
 				// show
 				visible_ = true;
 				// clear clip rect
@@ -733,36 +712,28 @@ namespace gal::prometheus::gui::internal
 				if (flag_.is<WindowInternalFlag::CHILD_WINDOW>())
 				{
 					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(parent != nullptr);
+					parent->children_this_frame_.push_back(this);
 
-					parent->child_stack_.push_back(this);
-
-					// moves the child window to the current cursor position of the parent window
+					// Moves the child window to the current cursor position of the parent window
 					point_ = parent->canvas_.cursor_current_line;
+					// Follows the size of the parent window
+					size_full_ = size;
+				}
+			}
 
-					// the viewing area of the child window must not exceed that of the parent window
-					push_clip_rect(context, parent->clip_rect_stack_.back());
-				}
-				else
-				{
-					// entire display area
-					push_clip_rect(context, {0, 0, display_size});
-				}
+			// Outer clipping rectangle (window area)
+			if (flag_.is<WindowInternalFlag::CHILD_WINDOW>())
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(parent != nullptr);
+				const auto& last = parent->clip_rect_stack_.back();
+
+				// the viewing area of the child window must not exceed that of the parent window
+				push_clip_rect(context, last);
 			}
 			else
 			{
-				// the viewing area of the child window must not exceed that of the parent window
-				if (flag_.is<WindowInternalFlag::CHILD_WINDOW>())
-				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(parent != nullptr);
-
-					// the viewing area of the child window must not exceed that of the parent window
-					push_clip_rect(context, parent->clip_rect_stack_.back());
-				}
-				else
-				{
-					// entire display area
-					push_clip_rect(context, {0, 0, display_size});
-				}
+				// entire display area
+				push_clip_rect(context, {0, 0, display_size});
 			}
 		}
 
@@ -779,13 +750,19 @@ namespace gal::prometheus::gui::internal
 			const auto& theme = current_theme(context);
 
 			const auto font_size = drawer.font_size(context);
-			const auto has_titlebar = not flag_.is<WindowFlag::NO_TITLEBAR>();
+			const auto has_titlebar = not flag_.is<gui::WindowFlag::NO_TITLEBAR>();
 
 			const auto is_child_window = flag_.is<WindowInternalFlag::CHILD_WINDOW>();
 			const auto is_tooltip_window = flag_.is<WindowInternalFlag::CATEGORY_TOOLTIP>();
 
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(has_titlebar != is_child_window, "The child window is not allowed to contain a titlebar!");
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(has_titlebar != is_tooltip_window, "The tootip window is not allowed to contain a titlebar!");
+			if (is_child_window)
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not has_titlebar, "The child window is not allowed to contain a titlebar!");
+			}
+			if (is_tooltip_window)
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not has_titlebar, "The tootip window is not allowed to contain a titlebar!");
+			}
 
 			if (is_first_draw_this_frame)
 			{
@@ -822,7 +799,7 @@ namespace gal::prometheus::gui::internal
 							// select current window
 							focus_window(context, *this);
 
-							if (not flag_.is<WindowFlag::NO_MOVE>())
+							if (not flag_.is<gui::WindowFlag::NO_MOVE>())
 							{
 								const auto delta = mouse.position_delta;
 
@@ -856,15 +833,18 @@ namespace gal::prometheus::gui::internal
 				if (
 					size_.width > 0 and
 					not is_tooltip_window and
-					not flag_.is<WindowFlag::AUTO_RESIZE>()
+					not flag_.is<gui::WindowFlag::AUTO_RESIZE>()
 				)
 				{
 					default_item_width_ = size_.width * theme.item_default_width_factor;
 				}
 				else
 				{
-					// todo: default item width
-					default_item_width_ = theme.window_min_size.width * theme.item_default_width_factor;
+					// If this value is too small, the width of the widgets that use item_width will also be small,
+					// if the width of the newly created (showed) window depends on these widgets,
+					// the window may not be able to display the all widgets in its entirety
+					// default_item_width_ = theme.window_min_size.width * theme.item_default_width_factor;
+					default_item_width_ = 300;
 				}
 
 				// apply and clamp scrolling
@@ -910,6 +890,7 @@ namespace gal::prometheus::gui::internal
 
 					// titlebar only
 					const auto rect = drawer.titlebar_rect(context);
+					size_ = rect.size();
 
 					draw_list_.rect_filled(
 						rect,
@@ -917,7 +898,7 @@ namespace gal::prometheus::gui::internal
 						theme.window_corner_rounding
 					);
 
-					if (flag_.is<WindowFlag::BORDERED>())
+					if (flag_.is<gui::WindowFlag::BORDERED>())
 					{
 						constexpr auto offset = extent_type{1, 1};
 
@@ -955,7 +936,7 @@ namespace gal::prometheus::gui::internal
 									display_size - theme.window_auto_fit_padding
 								);
 
-						if (flag_.is<WindowFlag::AUTO_RESIZE>())
+						if (flag_.is<gui::WindowFlag::AUTO_RESIZE>())
 						{
 							size_full_ = auto_fit_size;
 						}
@@ -971,7 +952,7 @@ namespace gal::prometheus::gui::internal
 								size_full_ = auto_fit_size;
 							}
 						}
-						else if (not flag_.is<WindowFlag::NO_RESIZE>())
+						else if (not flag_.is<gui::WindowFlag::NO_RESIZE>())
 						{
 							// resize grip
 							const auto rect = drawer.resize_grip_rect(context);
@@ -1024,16 +1005,16 @@ namespace gal::prometheus::gui::internal
 					}();
 
 					// background rect
-					if (fill_alpha > 0)
+					if (background_fill_alpha > 0)
 					{
 						draw_list_.rect_filled(
 							{point_, size_},
-							color_of(theme, ThemeCategory::WINDOW_BACKGROUND, fill_alpha),
+							color_of(theme, ThemeCategory::WINDOW_BACKGROUND, background_fill_alpha),
 							theme.window_corner_rounding
 						);
 
 						// border
-						if (flag_.is<WindowFlag::BORDERED>())
+						if (flag_.is<gui::WindowFlag::BORDERED>())
 						{
 							constexpr auto offset = extent_type{1, 1};
 
@@ -1061,7 +1042,7 @@ namespace gal::prometheus::gui::internal
 						);
 
 						// border
-						if (flag_.is<WindowFlag::BORDERED>())
+						if (flag_.is<gui::WindowFlag::BORDERED>())
 						{
 							draw_list_.line(
 								current_titlebar_rect.left_bottom(),
@@ -1074,7 +1055,7 @@ namespace gal::prometheus::gui::internal
 					// scrollbar
 					if (
 						// no scrollbar
-						flag_.is<WindowFlag::NO_SCROLLBAR>() or
+						flag_.is<gui::WindowFlag::NO_SCROLLBAR>() or
 						// window space is greater than the space required for content
 						size_.height > size_of_content_.height)
 					{
@@ -1155,7 +1136,7 @@ namespace gal::prometheus::gui::internal
 					}
 
 					// resize-grip
-					if (not flag_.is<WindowFlag::NO_RESIZE>())
+					if (not flag_.is<gui::WindowFlag::NO_RESIZE>())
 					{
 						const auto rect = drawer.resize_grip_rect(context);
 						// if (const auto rounding = theme.window_corner_rounding;
@@ -1191,7 +1172,7 @@ namespace gal::prometheus::gui::internal
 				// titlebar context
 				if (has_titlebar)
 				{
-					if (not flag_.is<WindowFlag::NO_CLOSE>())
+					if (not flag_.is<gui::WindowFlag::NO_CLOSE>())
 					{
 						const auto rect = drawer.close_button_rect(context);
 						const auto id = id_of_close(context);
@@ -1316,49 +1297,41 @@ namespace gal::prometheus::gui::internal
 					canvas_.text_wrap_width.push_back(DrawList::text_wrap_width_not_set);
 				}
 			}
-			else
-			{
-				//
-			}
-
-			const auto window_rect = rect();
-			const auto current_window_padding = drawer.window_padding(context);
-			const auto current_titlebar_rect = [&]() noexcept -> rect_type
-			{
-				if (has_titlebar)
-				{
-					return drawer.titlebar_rect(context);
-				}
-
-				return drawer.titlebar_rect(context, 0);
-			}();
-
-			const point_type clip_rect_point
-			{
-					current_titlebar_rect.left_bottom().x + current_window_padding.width * .5f + .5f,
-					current_titlebar_rect.left_bottom().y + .5f
-			};
-			const extent_type clip_rect_size
-			{
-					current_titlebar_rect.width() - current_window_padding.width - (scroll_y_visible_ ? theme.window_vertical_scrollbar_width : 0),
-					window_rect.height() - current_titlebar_rect.height() - 2
-			};
-			const rect_type clip_rect{clip_rect_point, clip_rect_size};
 
 			// Inner clipping rectangle (canvas area)
-			push_clip_rect(context, clip_rect);
-
-			if (is_first_draw_this_frame)
 			{
-				accessed_ = false;
+				const auto window_rect = rect();
+				const auto current_window_padding = drawer.window_padding(context);
+				const auto current_titlebar_rect = [&]() noexcept -> rect_type
+				{
+					if (has_titlebar)
+					{
+						return drawer.titlebar_rect(context);
+					}
+
+					return drawer.titlebar_rect(context, 0);
+				}();
+
+				const point_type clip_rect_point
+				{
+						current_titlebar_rect.left_bottom().x + current_window_padding.width * .5f + .5f,
+						current_titlebar_rect.left_bottom().y + .5f
+				};
+				const extent_type clip_rect_size
+				{
+						current_titlebar_rect.width() - current_window_padding.width - (scroll_y_visible_ ? theme.window_vertical_scrollbar_width : 0),
+						window_rect.height() - current_titlebar_rect.height() - 2
+				};
+				const rect_type clip_rect{clip_rect_point, clip_rect_size};
+
+				push_clip_rect(context, clip_rect);
 			}
 
-			// > Limit the current window from moving outside the program's visual area (if it is not a child window) (see code above)
-			// If it is a child window, it may move out of the visual area because the parent window moves, and we collapse it (so that we can skip the widgets drawn on it earlier)
+			// Child windows may not be visible (located in areas not visible to the parent window), we collapse it manually (so that we can skip the widgets drawn on it earlier)
 			if (is_child_window)
 			{
-				// todo
-				collapsed_ = not clip_rect.valid();
+				const auto last_clip_rect = clip_rect_stack_.back();
+				collapsed_ = not last_clip_rect.valid();
 
 				// We also hide the window from rendering because we've already added its border to the command list
 				// (we could perform the check earlier in the function, but it is simpler at this point)
@@ -1374,6 +1347,11 @@ namespace gal::prometheus::gui::internal
 			}
 
 			skip_item_ = collapsed_ or (not visible_ and auto_fit_frames_ == 0);
+
+			if (is_first_draw_this_frame)
+			{
+				accessed_ = false;
+			}
 		}
 
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(clip_rect_stack_.size() == 2);
@@ -1381,7 +1359,7 @@ namespace gal::prometheus::gui::internal
 		return close_button_pressed;
 	}
 
-	auto Window::end_draw(Context& context) noexcept -> void
+	auto Window::end_window(Context& context) noexcept -> void
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(clip_rect_stack_.size() == 2);
 
@@ -1396,9 +1374,74 @@ namespace gal::prometheus::gui::internal
 		// window_data.root = nullptr;
 	}
 
+	auto Window::begin_child_window(Context& context, std::string_view name, extent_type size, const bool border, WindowFlag flag) noexcept -> void
+	{
+		const auto& theme = current_theme(context);
+
+		flag |= gui::WindowFlag::NO_TITLEBAR | gui::WindowFlag::NO_CLOSE | gui::WindowFlag::NO_RESIZE | gui::WindowFlag::NO_MOVE;
+		flag |= WindowInternalFlag::CHILD_WINDOW;
+
+		if (border)
+		{
+			flag |= gui::WindowFlag::BORDERED;
+		}
+
+		const auto content_region = content_region_max(context);
+		const auto remaining_size = content_region - (canvas_.cursor_current_line - point_);
+
+		if (size.width <= 0)
+		{
+			flag |= WindowInternalFlag::CHILD_WINDOW_AUTO_FIT_X;
+
+			size.width = std::ranges::max(remaining_size.width, theme.window_min_size.width);
+		}
+		if (size.height <= 0)
+		{
+			flag |= WindowInternalFlag::CHILD_WINDOW_AUTO_FIT_Y;
+
+			size.height = std::ranges::max(remaining_size.height, theme.window_min_size.height);
+		}
+
+		const auto child_window_name = std::format("{}.{}", name_, name);
+		internal::begin_window(context, child_window_name, size, 0, flag);
+	}
+
+	// ReSharper disable once CppParameterMayBeConstPtrOrRef
+	auto Window::end_child_window(Context& context, Window& child) noexcept -> void
+	{
+		gui::end_window(context);
+
+		// When using autofill child window, we don't provide the width/height to `adjust_item_size` so that it doesn't feed back into automatic size-fitting
+		auto size = child.size_;
+		if (child.flag_.is<WindowInternalFlag::CHILD_WINDOW_AUTO_FIT_X>())
+		{
+			size.width = 0;
+		}
+		if (child.flag_.is<WindowInternalFlag::CHILD_WINDOW_AUTO_FIT_Y>())
+		{
+			size.height = 0;
+		}
+
+		Drawer drawer{.self = *this};
+		drawer.adjust_item_size(context, size);
+	}
+
 	auto Window::render(Context& context) const noexcept -> void
 	{
+		if (not visible_)
+		{
+			return;
+		}
+
 		context.draw_lists.emplace_back(draw_list_);
+
+		std::ranges::for_each(
+			children_this_frame_,
+			[&](auto& child) noexcept -> void
+			{
+				child->render(context);
+			}
+		);
 	}
 
 	auto Window::draw_text(Context& context, const std::string_view utf8_text) noexcept -> void
@@ -1895,7 +1938,7 @@ namespace gal::prometheus::gui::internal
 	{
 		std::ignore = context;
 
-		canvas_.item_width.push_back(new_item_width);
+		canvas_.item_width.push_back(new_item_width > 0 ? new_item_width : default_item_width_);
 	}
 
 	// ReSharper disable once CppParameterMayBeConstPtrOrRef
@@ -2014,7 +2057,7 @@ namespace gal::prometheus::gui::internal
 		return name_;
 	}
 
-	auto Window::flag() const noexcept -> Flag
+	auto Window::flag() const noexcept -> WindowFlag
 	{
 		return flag_;
 	}
@@ -2134,14 +2177,52 @@ namespace gal::prometheus::gui::internal
 		return canvas_.last_item_focused;
 	}
 
-	auto Window::show() noexcept -> void
-	{
-		visible_ = true;
-	}
+	// auto Window::show() noexcept -> void
+	// {
+	// 	visible_ = true;
+	//
+	// 	std::ranges::for_each(
+	// 		children_this_frame_,
+	// 		&Window::show
+	// 	);
+	// }
 
 	auto Window::hide() noexcept -> void
 	{
 		visible_ = false;
 		accessed_ = false;
+
+		std::ranges::for_each(
+			children_this_frame_,
+			&Window::hide
+		);
+	}
+
+	auto Window::find_hovered_window(const point_type& position, const bool excludes_children) noexcept -> Window*
+	{
+		if (not visible_)
+		{
+			return nullptr;
+		}
+
+		if (not excludes_children)
+		{
+			for (auto* child: children_this_frame_)
+			{
+				if (auto* window = child->find_hovered_window(position, excludes_children);
+					window != nullptr)
+				{
+					return window;
+				}
+			}
+		}
+
+		if (const auto rect = this->rect();
+			rect.includes(position))
+		{
+			return this;
+		}
+
+		return nullptr;
 	}
 }

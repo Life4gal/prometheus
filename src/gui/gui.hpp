@@ -434,6 +434,15 @@ namespace gal::prometheus
 		) noexcept -> bool;
 		auto end_window(Context& context) noexcept -> void;
 
+		auto begin_child_window(
+			Context& context,
+			std::string_view name,
+			const extent_type& size = {0, 0},
+			bool border = false,
+			WindowFlag flag = WindowFlag::NONE
+		) noexcept -> void;
+		auto end_child_window(Context& context) noexcept -> void;
+
 		/**
 		 * @brief Draw a piece of text
 		 */
@@ -700,6 +709,14 @@ namespace gal::prometheus
 			WindowFlag flag = WindowFlag::NONE
 		) noexcept -> bool;
 		auto end_window() noexcept -> void;
+
+		auto begin_child_window(
+			std::string_view name,
+			const extent_type& size = {0, 0},
+			bool border = false,
+			WindowFlag flag = WindowFlag::NONE
+		) noexcept -> void;
+		auto end_child_window() noexcept -> void;
 
 		/**
 		 * @brief Draw a piece of text
