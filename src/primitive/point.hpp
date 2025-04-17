@@ -122,13 +122,13 @@ namespace gal::prometheus
 			{
 				if constexpr (Index == 0)
 				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.x) < static_cast<value_type>(p2.x));
+					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.x) < static_cast<value_type>(p2.x));
 
 					return x >= static_cast<value_type>(p1.x) and x < static_cast<value_type>(p2.x);
 				}
 				else if constexpr (Index == 1)
 				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.y) < static_cast<value_type>(p2.y));
+					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.y) < static_cast<value_type>(p2.y));
 
 					return y >= static_cast<value_type>(p1.y) and y < static_cast<value_type>(p2.y);
 				}
@@ -256,19 +256,19 @@ namespace gal::prometheus
 			{
 				if constexpr (Index == 0)
 				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.x) < static_cast<value_type>(p2.x));
+					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.x) < static_cast<value_type>(p2.x));
 
 					return x >= static_cast<value_type>(p1.x) and x < static_cast<value_type>(p2.x);
 				}
 				else if constexpr (Index == 1)
 				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.y) < static_cast<value_type>(p2.y));
+					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.y) < static_cast<value_type>(p2.y));
 
 					return y >= static_cast<value_type>(p1.y) and y < static_cast<value_type>(p2.y);
 				}
 				else if constexpr (Index == 2)
 				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.z) < static_cast<value_type>(p2.z));
+					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.z) < static_cast<value_type>(p2.z));
 
 					return z >= static_cast<value_type>(p1.z) and z < static_cast<value_type>(p2.z);
 				}

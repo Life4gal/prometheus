@@ -162,16 +162,16 @@ namespace gal::prometheus
 
 			[[nodiscard]] constexpr auto includes(const point_type& p) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
 
 				return p.between(left_top(), right_bottom());
 			}
 
 			[[nodiscard]] constexpr auto includes(const basic_rect& rect) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width() > rect.width() and height() > rect.height());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width() > rect.width() and height() > rect.height());
 
 				return
 						rect.point.x >= point.x and
@@ -182,8 +182,8 @@ namespace gal::prometheus
 
 			[[nodiscard]] constexpr auto intersects(const basic_rect& rect) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
 
 				return not(
 					rect.point.x >= point.x + width() or
@@ -197,8 +197,8 @@ namespace gal::prometheus
 			{
 				return
 				{
-						point.combine_min(rect.point),
-						extent.combine_max(rect.extent)
+						left_top().combine_min(rect.left_top()),
+						right_bottom().combine_max(rect.right_bottom())
 				};
 			}
 
@@ -206,8 +206,8 @@ namespace gal::prometheus
 			{
 				return
 				{
-						point.combine_max(rect.point),
-						extent.combine_min(rect.extent)
+						left_top().combine_max(rect.left_top()),
+						right_bottom().combine_min(rect.right_bottom())
 				};
 			}
 		};
