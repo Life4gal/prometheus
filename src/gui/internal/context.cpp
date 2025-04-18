@@ -387,6 +387,27 @@ namespace gal::prometheus::gui
 		parent.end_child_window(context, window);
 	}
 
+	auto begin_tooltip_window(Context& context) noexcept -> void
+	{
+		// todo
+		constexpr std::string_view tooltip_window_name{"@WINDOW::TOOLTIP@"};
+		constexpr internal::WindowFlag tooltip_window_flag
+		{
+				WindowFlag::NO_TITLEBAR | WindowFlag::NO_CLOSE | WindowFlag::NO_RESIZE | WindowFlag::NO_MOVE,
+				internal::WindowInternalFlag::CATEGORY_TOOLTIP
+		};
+
+		std::ignore = internal::begin_window(context, tooltip_window_name, {}, .9f, tooltip_window_flag);
+	}
+
+	auto end_tooltip_window(Context& context) noexcept -> void
+	{
+		const auto& window = *context.window_current_stack.back();
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(window.flag().is<internal::WindowInternalFlag::CATEGORY_TOOLTIP>());
+
+		end_window(context);
+	}
+
 	auto draw_text(Context& context, const std::string_view utf8_text) noexcept -> void
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
@@ -530,6 +551,22 @@ namespace gal::prometheus::gui
 		return window.window_content_region_max(context);
 	}
 
+	auto is_item_hovered(const Context& context) noexcept -> bool
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		const auto& window = *context.window_current_stack.back();
+		return window.is_item_hovered(context);
+	}
+
+	auto is_item_focused(const Context& context) noexcept -> bool
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		const auto& window = *context.window_current_stack.back();
+		return window.is_item_hovered(context);
+	}
+
 	auto set_current_context(Context& context) noexcept -> void
 	{
 		g_context = std::addressof(context);
@@ -669,6 +706,20 @@ namespace gal::prometheus::gui
 		end_child_window(context);
 	}
 
+	auto begin_tooltip_window() noexcept -> void
+	{
+		auto& context = get_current_context();
+
+		begin_tooltip_window(context);
+	}
+
+	auto end_tooltip_window() noexcept -> void
+	{
+		auto& context = get_current_context();
+
+		end_tooltip_window(context);
+	}
+
 	auto draw_text(const std::string_view utf8_text) noexcept -> void
 	{
 		auto& context = get_current_context();
@@ -793,6 +844,20 @@ namespace gal::prometheus::gui
 		const auto& context = get_current_context();
 
 		return get_window_content_region_max(context);
+	}
+
+	auto is_item_hovered() noexcept -> bool
+	{
+		const auto& context = get_current_context();
+
+		return is_item_hovered(context);
+	}
+
+	auto is_item_focused() noexcept -> bool
+	{
+		const auto& context = get_current_context();
+
+		return is_item_focused(context);
 	}
 
 	auto test_theme() noexcept -> Theme

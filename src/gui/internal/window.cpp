@@ -250,24 +250,39 @@ namespace gal::prometheus::gui::internal
 			window.size_of_content_ = window.size_of_content_.combine_max(extent_type{canvas.cursor_previous_line.x, canvas.cursor_current_line.y + window.scroll_y_} - window.point_);
 		}
 
-		auto test_last_item(const Context& context, const rect_type& rect) noexcept -> void
+		// auto test_last_item(const Context& context, const rect_type& rect) noexcept -> void
+		// {
+		// 	auto& window = self.get();
+		// 	auto& canvas = window.canvas_;
+		//
+		// 	canvas.last_item_rect = rect;
+		// 	canvas.last_item_focused = false;
+		// 	canvas.last_item_hovered = window.is_hovered(context, rect);
+		// }
+		//
+		// [[nodiscard]] auto is_visible_area(const Context& context, const rect_type& rect) const noexcept -> bool
+		// {
+		// 	std::ignore = context;
+		//
+		// 	auto& window = self.get();
+		//
+		// 	const auto& last = window.clip_rect_stack_.back();
+		// 	return last.intersects(rect);
+		// }
+
+		[[nodiscard]] auto test_last_item_visible(const Context& context, const rect_type& rect) noexcept -> bool
 		{
 			auto& window = self.get();
 			auto& canvas = window.canvas_;
 
+			const auto& last = window.clip_rect_stack_.back();
+			const auto visible = last.intersects(rect);
+
 			canvas.last_item_rect = rect;
 			canvas.last_item_focused = false;
-			canvas.last_item_hovered = window.is_hovered(context, rect);
-		}
+			canvas.last_item_hovered = visible ? window.is_hovered(context, rect) : false;
 
-		[[nodiscard]] auto is_visible_area(const Context& context, const rect_type& rect) const noexcept -> bool
-		{
-			std::ignore = context;
-
-			auto& window = self.get();
-
-			const auto& last = window.clip_rect_stack_.back();
-			return last.intersects(rect);
+			return visible;
 		}
 
 		// -----------------------------------
@@ -523,12 +538,17 @@ namespace gal::prometheus::gui::internal
 			drawer.adjust_item_size(context, text_size);
 
 			const rect_type total_rect{total_frame_point, text_rect.right_bottom()};
-			if (not drawer.is_visible_area(context, total_rect))
+			// if (not drawer.is_visible_area(context, total_rect))
+			// {
+			// 	// invisible
+			// 	return false;
+			// }
+			// drawer.test_last_item(context, total_rect);
+			if (not drawer.test_last_item_visible(context, total_rect))
 			{
 				// invisible
 				return false;
 			}
-			drawer.test_last_item(context, total_rect);
 
 			bool value_changed = false;
 
@@ -1533,7 +1553,8 @@ namespace gal::prometheus::gui::internal
 
 			drawer.adjust_item_size(context, text_size);
 			// todo: test visible?
-			drawer.test_last_item(context, rect);
+			// drawer.test_last_item(context, rect);
+			std::ignore = drawer.test_last_item_visible(context, rect);
 		}
 		else
 		{
@@ -1549,11 +1570,16 @@ namespace gal::prometheus::gui::internal
 			const rect_type rect{text_point, text_size};
 
 			drawer.adjust_item_size(context, text_size);
-			if (not drawer.is_visible_area(context, rect))
+			// if (not drawer.is_visible_area(context, rect))
+			// {
+			// 	return;
+			// }
+			// drawer.test_last_item(context, rect);
+			if (not drawer.test_last_item_visible(context, rect))
 			{
+				// invisible
 				return;
 			}
-			drawer.test_last_item(context, rect);
 
 			draw_list_.text(
 				font,
@@ -1598,12 +1624,17 @@ namespace gal::prometheus::gui::internal
 		const rect_type button_rect{button_point, button_size};
 
 		drawer.adjust_item_size(context, button_size);
-		if (not drawer.is_visible_area(context, button_rect))
+		// if (not drawer.is_visible_area(context, button_rect))
+		// {
+		// 	// invisible
+		// 	return false;
+		// }
+		// drawer.test_last_item(context, button_rect);
+		if (not drawer.test_last_item_visible(context, button_rect))
 		{
 			// invisible
 			return false;
 		}
-		drawer.test_last_item(context, button_rect);
 
 		const auto state = test_mouse(context, id, button_rect, repeat_when_held);
 
@@ -1684,12 +1715,17 @@ namespace gal::prometheus::gui::internal
 		const rect_type button_rect{button_point, button_size};
 
 		drawer.adjust_item_size(context, button_size);
-		if (not drawer.is_visible_area(context, button_rect))
+		// if (not drawer.is_visible_area(context, button_rect))
+		// {
+		// 	// invisible
+		// 	return false;
+		// }
+		// drawer.test_last_item(context, button_rect);
+		if (not drawer.test_last_item_visible(context, button_rect))
 		{
 			// invisible
 			return false;
 		}
-		drawer.test_last_item(context, button_rect);
 
 		const auto state = test_mouse(context, id, button_rect, repeat_when_held);
 
@@ -1759,12 +1795,17 @@ namespace gal::prometheus::gui::internal
 		drawer.adjust_item_size(context, text_size);
 
 		const rect_type total_rect{check_rect.left_top(), text_rect.right_bottom()};
-		if (not drawer.is_visible_area(context, total_rect))
+		// if (not drawer.is_visible_area(context, total_rect))
+		// {
+		// 	// invisible
+		// 	return false;
+		// }
+		// drawer.test_last_item(context, total_rect);
+		if (not drawer.test_last_item_visible(context, total_rect))
 		{
 			// invisible
 			return false;
 		}
-		drawer.test_last_item(context, total_rect);
 
 		// fixme: test check_rect or total_rect?
 		const auto state = test_mouse(context, id, check_rect, false);
@@ -1836,12 +1877,17 @@ namespace gal::prometheus::gui::internal
 		drawer.adjust_item_size(context, text_size);
 
 		const rect_type total_rect{check_rect.left_top(), text_rect.right_bottom()};
-		if (not drawer.is_visible_area(context, total_rect))
+		// if (not drawer.is_visible_area(context, total_rect))
+		// {
+		// 	// invisible
+		// 	return false;
+		// }
+		// drawer.test_last_item(context, total_rect);
+		if (not drawer.test_last_item_visible(context, total_rect))
 		{
 			// invisible
 			return false;
 		}
-		drawer.test_last_item(context, total_rect);
 
 		// fixme: test check_rect or total_rect?
 		const auto state = test_mouse(context, id, check_rect, false);

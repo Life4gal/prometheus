@@ -443,6 +443,9 @@ namespace gal::prometheus
 		) noexcept -> void;
 		auto end_child_window(Context& context) noexcept -> void;
 
+		auto begin_tooltip_window(Context& context) noexcept -> void;
+		auto end_tooltip_window(Context& context) noexcept -> void;
+
 		/**
 		 * @brief Draw a piece of text
 		 */
@@ -639,6 +642,11 @@ namespace gal::prometheus
 		[[nodiscard]] auto get_window_content_region_min(const Context& context) noexcept -> extent_type;
 		// The available area of the current window
 		[[nodiscard]] auto get_window_content_region_max(const Context& context) noexcept -> extent_type;
+
+		// Whether the last drawn item was hovered by the mouse
+		[[nodiscard]] auto is_item_hovered(const Context& context) noexcept -> bool;
+		// Whether the last drawn item was focused by the mouse
+		[[nodiscard]] auto is_item_focused(const Context& context) noexcept -> bool;
 	}
 
 	// ==================================================
@@ -717,6 +725,9 @@ namespace gal::prometheus
 			WindowFlag flag = WindowFlag::NONE
 		) noexcept -> void;
 		auto end_child_window() noexcept -> void;
+
+		auto begin_tooltip_window() noexcept -> void;
+		auto end_tooltip_window() noexcept -> void;
 
 		/**
 		 * @brief Draw a piece of text
@@ -848,6 +859,11 @@ namespace gal::prometheus
 		[[nodiscard]] auto get_window_content_region_min() noexcept -> extent_type;
 		// The available area of the current window
 		[[nodiscard]] auto get_window_content_region_max() noexcept -> extent_type;
+
+		// Whether the last drawn item was hovered by the mouse
+		[[nodiscard]] auto is_item_hovered() noexcept -> bool;
+		// Whether the last drawn item was focused by the mouse
+		[[nodiscard]] auto is_item_focused() noexcept -> bool;
 
 		//------------------------------------------------------------------
 		// FOR TEST
