@@ -1012,23 +1012,6 @@ namespace gal::prometheus::gui::internal
 							color_of(theme, ThemeCategory::WINDOW_BACKGROUND, background_fill_alpha),
 							theme.window_corner_rounding
 						);
-
-						// border
-						if (flag_.is<gui::WindowFlag::BORDERED>())
-						{
-							constexpr auto offset = extent_type{1, 1};
-
-							draw_list_.rect(
-								{point_ + offset, size_},
-								color_of(theme, ThemeCategory::BORDER_SHADOW),
-								theme.window_corner_rounding
-							);
-							draw_list_.rect(
-								{point_, size_},
-								color_of(theme, ThemeCategory::BORDER),
-								theme.window_corner_rounding
-							);
-						}
 					}
 
 					// titlebar rect
@@ -1041,7 +1024,7 @@ namespace gal::prometheus::gui::internal
 							DrawFlag::ROUND_CORNER_TOP
 						);
 
-						// border
+						// titlebar border
 						if (flag_.is<gui::WindowFlag::BORDERED>())
 						{
 							draw_list_.line(
@@ -1050,6 +1033,23 @@ namespace gal::prometheus::gui::internal
 								color_of(theme, ThemeCategory::BORDER)
 							);
 						}
+					}
+
+					// background border
+					if (flag_.is<gui::WindowFlag::BORDERED>())
+					{
+						constexpr auto offset = extent_type{1, 1};
+
+						draw_list_.rect(
+							{point_ + offset, size_},
+							color_of(theme, ThemeCategory::BORDER_SHADOW),
+							theme.window_corner_rounding
+						);
+						draw_list_.rect(
+							{point_, size_},
+							color_of(theme, ThemeCategory::BORDER),
+							theme.window_corner_rounding
+						);
 					}
 
 					// scrollbar
@@ -1404,6 +1404,15 @@ namespace gal::prometheus::gui::internal
 
 		const auto child_window_name = std::format("{}.{}", name_, name);
 		internal::begin_window(context, child_window_name, size, 0, flag);
+
+		if (border and not flag_.is<gui::WindowFlag::BORDERED>())
+		{
+			auto& child = *children_this_frame_.back();
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(child.name_ == child_window_name);
+
+			// border only indicates whether the child window has a border, not the widgets of the child window
+			child.flag_ &= ~gui::WindowFlag::BORDERED;
+		}
 	}
 
 	// ReSharper disable once CppParameterMayBeConstPtrOrRef

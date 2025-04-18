@@ -75,6 +75,18 @@ namespace gal::prometheus
 				return *this;
 			}
 
+			constexpr auto operator&=(const gui::WindowFlag flag) noexcept -> WindowFlag&
+			{
+				flag_ &= flag;
+				return *this;
+			}
+
+			constexpr auto operator&=(const WindowInternalFlag flag) noexcept -> WindowFlag&
+			{
+				internal_flag_ &= flag;
+				return *this;
+			}
+
 			#if defined(GAL_PROMETHEUS_COMPILER_MSVC)
 
 			template<typename T>
