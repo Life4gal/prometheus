@@ -92,11 +92,17 @@ namespace gal::prometheus
 			// ----------------------------------------------------------------------
 			// WIDGET
 
+			// widget for mouse hovering in this frame
 			widget_id_type widget_hovered;
+			// widget for mouse selecting in this frame
 			widget_id_type widget_activated;
+			// widget for mouse hovering in previous frame
 			widget_id_type widget_activated_previous_frame;
-
+			// widget for mouse selecting in this frame is still alive
 			bool widget_activated_still_alive;
+
+			// Currently open combo window
+			widget_id_type widget_activated_combo_id;
 
 			// ----------------------------------------------------------------------
 			// DRAW LIST
@@ -113,6 +119,15 @@ namespace gal::prometheus
 				Theme::value_type fill_alpha,
 				WindowFlag flag
 			) noexcept -> bool;
+
+			auto begin_child_window(
+				Context& context,
+				std::string_view name,
+				Theme::alpha_type background_fill_alpha,
+				const extent_type& size,
+				bool border,
+				WindowFlag flag
+			) noexcept -> void;
 
 			// ----------------------------------------------------------------------
 			// DrawListFlag
@@ -157,26 +172,43 @@ namespace gal::prometheus
 				KEEPING = 1 << 2,
 			};
 
+			// Test the behavior of the mouse on the target widget
 			[[nodiscard]] auto test_mouse(Context& context, widget_id_type id, const rect_type& area, bool repeat = false) noexcept -> std::underlying_type_t<MouseState>;
+			// Similar to test_mouse, but does not activate any widget
+			[[nodiscard]] auto queue_mouse(Context& context, widget_id_type id, const rect_type& area) noexcept -> std::underlying_type_t<MouseState>;
 
 			// ----------------------------------------------------------------------
 			// WINDOW
 
-			auto is_window_hovered(const Context& context, const Window& window) noexcept -> bool;
+			// Test that the mouse is hovering over the target window
+			[[nodiscard]] auto is_window_hovered(const Context& context, const Window& window) noexcept -> bool;
 
+			// Focus on the target window (this determines the order in which the windows are drawn)
 			auto focus_window(Context& context, Window& window) noexcept -> void;
 
 			// ----------------------------------------------------------------------
 			// WIDGET
 
-			auto is_widget_hovered(const Context& context, widget_id_type id) noexcept -> bool;
-			auto is_widget_activated(const Context& context, widget_id_type id) noexcept -> bool;
+			// Whether the mouse is hovering over the target widget
+			[[nodiscard]] auto is_widget_hovered(const Context& context, widget_id_type id) noexcept -> bool;
+			// Whether the mouse is hovering over the widget
+			[[nodiscard]] auto is_any_widget_hovered(const Context& context) noexcept -> bool;
+			// Whether the mouse is selecting over the target widget
+			[[nodiscard]] auto is_widget_activated(const Context& context, widget_id_type id) noexcept -> bool;
+			// Whether the mouse is selecting over the widget
+			[[nodiscard]] auto is_any_widget_activated(const Context& context) noexcept -> bool;
 
-			/**
-			 * @return @c is_widget_activated
-			 */
+			// Marks the current widget alive, returns whether it is currently selected (activated) or not
 			auto mark_widget_alive(Context& context, widget_id_type id) noexcept -> bool;
+			// Marks that no widget is currently selected (activated)
 			auto mark_widget_dead(Context& context, widget_id_type id = invalid_widget_id) noexcept -> void;
+
+			// Activate the specified combo widget (window)
+			auto mark_combo_alive(Context& context, widget_id_type id) noexcept -> void;
+			// Deactivate the specified combo widget (window)
+			auto mark_combo_dead(Context& context, widget_id_type id = invalid_widget_id) noexcept -> void;
+			// Whether the target combo widget is active or not
+			[[nodiscard]] auto is_combo_activated(const Context& context, widget_id_type id) noexcept -> bool;
 		}
 	}
 

@@ -250,6 +250,82 @@ namespace gal::prometheus::gui::internal
 			window.size_of_content_ = window.size_of_content_.combine_max(extent_type{canvas.cursor_previous_line.x, canvas.cursor_current_line.y + window.scroll_y_} - window.point_);
 		}
 
+		// cursor position is relative to window position
+		[[nodiscard]] auto cursor_position(const Context& context) const noexcept -> point_type
+		{
+			std::ignore = context;
+
+			const auto& window = self.get();
+			const auto& canvas = window.canvas_;
+
+			return canvas.cursor_previous_line - window.point_;
+		}
+
+		// cursor position in screen space
+		[[nodiscard]] auto cursor_screen_position(const Context& context) const noexcept -> point_type
+		{
+			std::ignore = context;
+
+			const auto& window = self.get();
+			const auto& canvas = window.canvas_;
+
+			return canvas.cursor_current_line;
+		}
+
+		auto set_cursor_position_x(const Context& context, const value_type x) noexcept -> void
+		{
+			std::ignore = context;
+
+			auto& window = self.get();
+			auto& canvas = window.canvas_;
+
+			canvas.cursor_current_line.x = window.point_.x + x;
+		}
+
+		auto set_cursor_position_y(const Context& context, const value_type y) noexcept -> void
+		{
+			std::ignore = context;
+
+			auto& window = self.get();
+			auto& canvas = window.canvas_;
+
+			canvas.cursor_current_line.y = window.point_.y + y;
+		}
+
+		auto set_cursor_position(const Context& context, const point_type& point) noexcept -> void
+		{
+			set_cursor_position_x(context, point.x);
+			set_cursor_position_y(context, point.y);
+		}
+
+		auto set_scroll_position(const Context& context, const value_type y) noexcept -> void
+		{
+			std::ignore = context;
+
+			auto& window = self.get();
+
+			window.scroll_next_y_ = y;
+		}
+
+		// adjust scrolling position to center into the current cursor position
+		auto set_scroll_position_here(const Context& context) noexcept -> void
+		{
+			const auto& window = self.get();
+			const auto& canvas = window.canvas_;
+
+			const auto middle = window.point_.y + window.size_full_.height * .5f;
+
+			auto y = canvas.cursor_current_line.y - window.scroll_y_ - window_padding(context).height;
+
+			y -= middle;
+			if (not window.flag_.is<gui::WindowFlag::NO_TITLEBAR>())
+			{
+				y -= titlebar_height(context);
+			}
+
+			set_scroll_position(context, y);
+		}
+
 		// auto test_last_item(const Context& context, const rect_type& rect) noexcept -> void
 		// {
 		// 	auto& window = self.get();
@@ -288,7 +364,7 @@ namespace gal::prometheus::gui::internal
 		// -----------------------------------
 		// FRAME
 
-		auto draw_widget_frame(const Context& context, const rect_type& rect, const color_type& color) noexcept -> void
+		auto draw_widget_frame(const Context& context, const rect_type& rect, const color_type color) noexcept -> void
 		{
 			const auto& theme = current_theme(context);
 
@@ -308,7 +384,7 @@ namespace gal::prometheus::gui::internal
 			}
 		}
 
-		auto draw_widget_frame(const Context& context, const circle_type& circle, const color_type& color) noexcept -> void
+		auto draw_widget_frame(const Context& context, const circle_type& circle, const color_type color) noexcept -> void
 		{
 			const auto& theme = current_theme(context);
 
@@ -326,6 +402,23 @@ namespace gal::prometheus::gui::internal
 				window.draw_list_.circle({inner_point, inner_radius}, color_of(theme, ThemeCategory::BORDER_SHADOW));
 				window.draw_list_.circle({outer_point, outer_radius}, color_of(theme, ThemeCategory::BORDER));
 			}
+		}
+
+		auto draw_widget_frame(const Context& context, const point_type& a, const point_type& b, const point_type& c) noexcept -> void
+		{
+			const auto& theme = current_theme(context);
+
+			auto& window = self.get();
+
+			if (window.flag_.is<gui::WindowFlag::BORDERED>())
+			{
+				const auto offset_a = a + extent_type{1.5f, 1.5f};
+				const auto offset_b = b + extent_type{1.5f, 1.5f};
+				const auto offset_c = c + extent_type{1.5f, 1.5f};
+
+				window.draw_list_.triangle_filled(offset_a, offset_b, offset_c, color_of(theme, ThemeCategory::BORDER_SHADOW));
+			}
+			window.draw_list_.triangle_filled(a, b, c, color_of(theme, ThemeCategory::BORDER));
 		}
 	};
 
@@ -571,30 +664,32 @@ namespace gal::prometheus::gui::internal
 				// note: when drawing multiple sliders, the widget id is based on the slider index, not the label text
 				// note: to avoid different sliders getting the same id (since ids are based on index), the label text is pushed in here as the seed
 				window.push_id(context, utf8_text);
-				for (const auto view = reference | std::views::enumerate;
-				     auto [index, ref_value]: view)
 				{
-					const auto id = id_maker.make_id(context, index);
-
-					// x: total + offset * n
-					// y: total
-					const point_type frame_point
+					for (const auto view = reference | std::views::enumerate;
+					     auto [index, ref_value]: view)
 					{
-							total_frame_point.x + offset_x * static_cast<value_type>(index),
-							total_frame_point.y
-					};
-					const rect_type frame_rect{frame_point, each_frame_size};
+						const auto id = id_maker.make_id(context, index);
 
-					// x: total + offset * n
-					// y: total
-					const point_type slider_point
-					{
-							total_slider_point.x + offset_x * static_cast<value_type>(index),
-							total_slider_point.y
-					};
-					const rect_type slider_rect{slider_point, each_slider_size};
+						// x: total + offset * n
+						// y: total
+						const point_type frame_point
+						{
+								total_frame_point.x + offset_x * static_cast<value_type>(index),
+								total_frame_point.y
+						};
+						const rect_type frame_rect{frame_point, each_frame_size};
 
-					value_changed |= do_draw_slider(id, ref_value, slider_rect, frame_rect);
+						// x: total + offset * n
+						// y: total
+						const point_type slider_point
+						{
+								total_slider_point.x + offset_x * static_cast<value_type>(index),
+								total_slider_point.y
+						};
+						const rect_type slider_rect{slider_point, each_slider_size};
+
+						value_changed |= do_draw_slider(id, ref_value, slider_rect, frame_rect);
+					}
 				}
 				window.pop_id(context);
 			}
@@ -614,6 +709,255 @@ namespace gal::prometheus::gui::internal
 				utf8_text,
 				text_rect.width()
 			);
+
+			return value_changed;
+		}
+
+		template<typename T>
+		auto draw_combo(
+			Context& context,
+			const std::string_view utf8_text,
+			const std::span<const T> selections,
+			std::size_t& selected,
+			const std::size_t show_selection_count
+		) noexcept -> bool
+		{
+			auto& window = self.get();
+
+			if (window.skip_item_)
+			{
+				return false;
+			}
+			window.accessed_ = true;
+
+			const auto& theme = current_theme(context);
+			const auto& font = current_font(context);
+			Drawer drawer{.self = window};
+			const IdMaker id_maker{.self = window};
+
+			const auto font_size = drawer.font_size(context);
+
+			const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
+
+			const auto last_item_width = window.canvas_.item_width.back();
+
+			const auto frame_point = window.canvas_.cursor_current_line;
+			const auto frame_size = extent_type{last_item_width, text_size.height} + theme.item_frame_padding * 2;
+			const rect_type frame_rect{frame_point, frame_size};
+
+			const auto drop_down_button_width = font_size + theme.item_frame_padding.width * 2;
+			const auto dropdown_button_point = frame_rect.right_top() - extent_type{drop_down_button_width, 0};
+			const auto dropdown_button_size = extent_type{drop_down_button_width, drop_down_button_width};
+			const rect_type dropdown_button_rect{dropdown_button_point, dropdown_button_size};
+
+			const auto selection_point = frame_point + theme.item_frame_padding;
+			const auto selection_size = frame_size - theme.item_frame_padding * 2;
+			// const rect_type selection_rect{selection_point, selection_size};
+
+			drawer.adjust_item_size(context, frame_size);
+
+			// □ text
+			window.same_line(context, auto_size, theme.item_inner_spacing.width);
+
+			// text
+			const auto text_point = window.canvas_.cursor_current_line + theme.item_frame_padding;
+			const rect_type text_rect{text_point, text_size};
+			drawer.adjust_item_size(context, text_size);
+
+			const rect_type total_rect{frame_point, text_rect.right_bottom()};
+			// if (not drawer.is_visible_area(context, total_rect))
+			// {
+			// 	// invisible
+			// 	return false;
+			// }
+			// drawer.test_last_item(context, total_rect);
+			if (not drawer.test_last_item_visible(context, total_rect))
+			{
+				// invisible
+				return false;
+			}
+
+			bool value_changed = false;
+
+			const auto id = id_maker.make_id(context, utf8_text);
+			// note: Leave the frame inactive so that clicking on it again does not accidentally re-open the dropdown window again
+			const auto state = queue_mouse(context, id, frame_rect);
+
+			// draw frame
+			drawer.draw_widget_frame(context, frame_rect, color_of(theme, ThemeCategory::FRAME_BACKGROUND));
+
+			// draw dropdown button frame
+			{
+				if (state & MouseState::HOVERED)
+				{
+					drawer.draw_widget_frame(context, dropdown_button_rect, color_of(theme, ThemeCategory::BUTTON_HOVERED));
+				}
+				else
+				{
+					drawer.draw_widget_frame(context, dropdown_button_rect, color_of(theme, ThemeCategory::BUTTON));
+				}
+
+				const auto r = font_size * .5f;
+				const auto center = dropdown_button_rect.center() - extent_type{0, r * .25f};
+
+				const auto a = center + extent_type{0, 1} * r;
+				const auto b = center + extent_type{-.667f, -.5f} * r;
+				const auto c = center + extent_type{.667f, -.5f} * r;
+
+				drawer.draw_widget_frame(context, a, b, c);
+			}
+
+			// fixme: leave empty or default?
+			if (selected >= selections.size())
+			{
+				window.draw_list_.text(
+					font,
+					font_size,
+					selection_point,
+					color_of(theme, ThemeCategory::TEXT),
+					"<unselected>",
+					selection_size.width
+				);
+			}
+			else
+			{
+				const auto& string = selections[selected];
+
+				window.draw_list_.text(
+					font,
+					font_size,
+					selection_point,
+					color_of(theme, ThemeCategory::TEXT),
+					string,
+					selection_size.width
+				);
+			}
+
+			// draw text
+			window.draw_list_.text(
+				font,
+				font_size,
+				text_rect.left_top(),
+				color_of(theme, ThemeCategory::TEXT),
+				utf8_text,
+				text_rect.width()
+			);
+
+			// draw dropdown menu
+			bool menu_toggled = false;
+			if (state & MouseState::PRESSED)
+			{
+				menu_toggled = true;
+
+				// If the combo is already open, click again to close the combo, otherwise open the combo
+				if (is_combo_activated(context, id))
+				{
+					mark_combo_dead(context);
+				}
+				else
+				{
+					mark_combo_alive(context, id);
+				}
+			}
+
+			if (is_combo_activated(context, id))
+			{
+				// The contents of the dropdown window should not affect the layout of the parent window, so after drawing the dropdown window, we reset the parent window canvas cursor
+				const auto backup_position = drawer.cursor_position(context);
+				{
+					// const auto dropdown_offset_x = theme.item_inner_spacing.width;
+					constexpr auto dropdown_offset_x = value_type{0};
+					const auto dropdown_height =
+							(text_size.height + theme.item_spacing.height) * static_cast<value_type>(std::ranges::min(selections.size(), show_selection_count)) +
+							theme.window_padding.height;
+
+					constexpr std::string_view combo_window_name{"@WINDOW::COMBO@"};
+					const WindowFlag combo_window_flag
+					{
+							window.flag_.is<gui::WindowFlag::BORDERED>() ? gui::WindowFlag::BORDERED : gui::WindowFlag::NONE,
+							WindowInternalFlag::CATEGORY_COMBO
+					};
+
+					const auto dropdown_point = point_type{frame_point.x + dropdown_offset_x, frame_point.y + frame_size.height};
+					const auto dropdown_size = extent_type{frame_size.width - dropdown_offset_x, dropdown_height};
+
+					// begin dropdown window (with background)
+					internal::begin_child_window(context, combo_window_name, 1, dropdown_size, false, combo_window_flag);
+					{
+						auto& combo_window = *window.children_this_frame_.back();
+						auto& combo_window_canvas = combo_window.canvas_;
+						IdMaker combo_window_id_maker{.self = combo_window};
+						Drawer combo_window_drawer{.self = combo_window};
+
+						const auto item_height = font_size;
+
+						// Close the dropdown if the user interacts with another widget (unless the widget is the dropdown window's scrollbar)
+						bool combo_item_active = false;
+						combo_item_active |= is_widget_activated(context, combo_window.id_of_scrollbar(context));
+
+						for (const auto view = selections | std::views::enumerate;
+						     const auto [index, selection]: view)
+						{
+							const auto item_selected = std::cmp_equal(index, selected);
+							const auto item_id = combo_window_id_maker.make_id(context, selection);
+
+							const auto item_point = point_type{dropdown_point.x, combo_window_canvas.cursor_current_line.y - theme.item_spacing.height / 2};
+							const auto item_size = extent_type{dropdown_size.width, item_height + theme.item_spacing.height};
+							const rect_type item_rect{item_point, item_size};
+
+							auto item_state = internal::test_mouse(context, item_id, item_rect);
+							combo_item_active |= is_widget_activated(context, item_id);
+
+							if (item_state & MouseState::HOVERED or item_selected)
+							{
+								const auto color = [&]noexcept -> Theme::color_type
+								{
+									if (item_state & MouseState::HOVERED)
+									{
+										if (item_state & MouseState::KEEPING)
+										{
+											return color_of(theme, ThemeCategory::COMBO_ITEM_ACTIVATED);
+										}
+										return color_of(theme, ThemeCategory::COMBO_ITEM_HOVERED);
+									}
+
+									return color_of(theme, ThemeCategory::COMBO_ITEM);
+								}();
+
+								combo_window_drawer.draw_widget_frame(context, item_rect, color);
+							}
+
+							const auto& selection_text = selections[index];
+							combo_window.draw_text(context, selection_text);
+
+							// Scroll to the selected item when opening the window
+							if (item_selected and menu_toggled)
+							{
+								combo_window_drawer.set_scroll_position_here(context);
+							}
+
+							// Close the dropdown window after selecting any item
+							if (item_state & MouseState::PRESSED)
+							{
+								mark_widget_dead(context);
+								mark_combo_dead(context);
+
+								value_changed = true;
+								selected = index;
+
+								break;
+							}
+						}
+
+						if (not combo_item_active and is_any_widget_activated(context))
+						{
+							mark_combo_dead(context);
+						}
+					}
+					gui::end_child_window(context);
+				}
+				window.canvas_.cursor_current_line = backup_position;
+			}
 
 			return value_changed;
 		}
@@ -697,7 +1041,7 @@ namespace gal::prometheus::gui::internal
 	auto Window::begin_window(
 		Context& context,
 		Window* parent,
-		value_type background_fill_alpha,
+		alpha_type background_fill_alpha,
 		const extent_type& size
 	) noexcept -> bool
 	{
@@ -1394,7 +1738,14 @@ namespace gal::prometheus::gui::internal
 		// window_data.root = nullptr;
 	}
 
-	auto Window::begin_child_window(Context& context, std::string_view name, extent_type size, const bool border, WindowFlag flag) noexcept -> void
+	auto Window::begin_child_window(
+		Context& context,
+		const std::string_view name,
+		const alpha_type background_fill_alpha,
+		extent_type size,
+		const bool border,
+		WindowFlag flag
+	) noexcept -> void
 	{
 		const auto& theme = current_theme(context);
 
@@ -1423,7 +1774,7 @@ namespace gal::prometheus::gui::internal
 		}
 
 		const auto child_window_name = std::format("{}.{}", name_, name);
-		internal::begin_window(context, child_window_name, size, 0, flag);
+		internal::begin_window(context, child_window_name, size, background_fill_alpha, flag);
 
 		if (border and not flag_.is<gui::WindowFlag::BORDERED>())
 		{
@@ -1607,7 +1958,6 @@ namespace gal::prometheus::gui::internal
 
 		const auto font_size = drawer.font_size(context);
 
-		const auto id = id_maker.make_id(context, utf8_text);
 		const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
 
 		if (size.width <= 0)
@@ -1636,6 +1986,7 @@ namespace gal::prometheus::gui::internal
 			return false;
 		}
 
+		const auto id = id_maker.make_id(context, utf8_text);
 		const auto state = test_mouse(context, id, button_rect, repeat_when_held);
 
 		color_type button_color = color_of(theme, ThemeCategory::BUTTON);
@@ -1707,7 +2058,6 @@ namespace gal::prometheus::gui::internal
 
 		const auto font_size = drawer.font_size(context);
 
-		const auto id = id_maker.make_id(context, utf8_text);
 		const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
 
 		const auto button_point = canvas_.cursor_current_line;
@@ -1727,6 +2077,7 @@ namespace gal::prometheus::gui::internal
 			return false;
 		}
 
+		const auto id = id_maker.make_id(context, utf8_text);
 		const auto state = test_mouse(context, id, button_rect, repeat_when_held);
 
 		color_type button_color = color_of(theme, ThemeCategory::BUTTON);
@@ -1774,7 +2125,6 @@ namespace gal::prometheus::gui::internal
 
 		const auto font_size = drawer.font_size(context);
 
-		const auto id = id_maker.make_id(context, utf8_text);
 		const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
 
 		// ○ + text
@@ -1807,6 +2157,7 @@ namespace gal::prometheus::gui::internal
 			return false;
 		}
 
+		const auto id = id_maker.make_id(context, utf8_text);
 		// fixme: test check_rect or total_rect?
 		const auto state = test_mouse(context, id, check_rect, false);
 
@@ -1856,7 +2207,6 @@ namespace gal::prometheus::gui::internal
 
 		const auto font_size = drawer.font_size(context);
 
-		const auto id = id_maker.make_id(context, utf8_text);
 		const auto text_size = internal::text_size(font, utf8_text, font_size, Font::no_auto_wrap);
 
 		// □ + text
@@ -1889,6 +2239,7 @@ namespace gal::prometheus::gui::internal
 			return false;
 		}
 
+		const auto id = id_maker.make_id(context, utf8_text);
 		// fixme: test check_rect or total_rect?
 		const auto state = test_mouse(context, id, check_rect, false);
 
@@ -1956,6 +2307,45 @@ namespace gal::prometheus::gui::internal
 		Anonymous anonymous{.self = *this};
 
 		return anonymous.draw_slider(context, utf8_text, references, min, max, decimal_precision, power);
+	}
+
+	auto Window::draw_combo(
+		Context& context,
+		const std::string_view utf8_text,
+		const std::span<const std::string> selections,
+		std::size_t& selected,
+		const std::size_t show_selection_count
+	) noexcept -> bool
+	{
+		Anonymous anonymous{.self = *this};
+
+		return anonymous.draw_combo<const std::string>(context, utf8_text, selections, selected, show_selection_count);
+	}
+
+	auto Window::draw_combo(
+		Context& context,
+		const std::string_view utf8_text,
+		const std::span<const std::string_view> selections,
+		std::size_t& selected,
+		const std::size_t show_selection_count
+	) noexcept -> bool
+	{
+		Anonymous anonymous{.self = *this};
+
+		return anonymous.draw_combo<const std::string_view>(context, utf8_text, selections, selected, show_selection_count);
+	}
+
+	auto Window::draw_combo(
+		Context& context,
+		const std::string_view utf8_text,
+		const std::span<const char*> selections,
+		std::size_t& selected,
+		const std::size_t show_selection_count
+	) noexcept -> bool
+	{
+		Anonymous anonymous{.self = *this};
+
+		return anonymous.draw_combo<const char*>(context, utf8_text, selections, selected, show_selection_count);
 	}
 
 	// ReSharper disable once CppParameterMayBeConstPtrOrRef

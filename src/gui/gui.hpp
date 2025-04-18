@@ -139,6 +139,10 @@ namespace gal::prometheus
 			SLIDER,
 			SLIDER_ACTIVATED,
 
+			COMBO_ITEM,
+			COMBO_ITEM_HOVERED,
+			COMBO_ITEM_ACTIVATED,
+
 			// -------------------------------
 			INTERNAL_COUNT
 		};
@@ -429,7 +433,7 @@ namespace gal::prometheus
 			Context& context,
 			std::string_view name,
 			const extent_type& size = {0, 0},
-			Theme::value_type fill_alpha = Theme::window_fill_alpha_not_set,
+			Theme::alpha_type fill_alpha = Theme::window_fill_alpha_not_set,
 			WindowFlag flag = WindowFlag::NONE
 		) noexcept -> bool;
 		auto end_window(Context& context) noexcept -> void;
@@ -601,6 +605,30 @@ namespace gal::prometheus
 			float max,
 			std::uint32_t decimal_precision = 3,
 			float power = 1
+		) noexcept -> bool;
+
+		auto draw_combo(
+			Context& context,
+			std::string_view utf8_text,
+			std::span<const std::string> selections,
+			std::size_t& selected,
+			std::size_t show_selection_count = 7
+		) noexcept -> bool;
+
+		auto draw_combo(
+			Context& context,
+			std::string_view utf8_text,
+			std::span<const std::string_view> selections,
+			std::size_t& selected,
+			std::size_t show_selection_count = 7
+		) noexcept -> bool;
+
+		auto draw_combo(
+			Context& context,
+			std::string_view utf8_text,
+			std::span<const char*> selections,
+			std::size_t& selected,
+			std::size_t show_selection_count = 7
 		) noexcept -> bool;
 
 		//------------------------------------------------------------------
@@ -821,6 +849,27 @@ namespace gal::prometheus
 			float max,
 			std::uint32_t decimal_precision = 3,
 			float power = 1
+		) noexcept -> bool;
+
+		auto draw_combo(
+			std::string_view utf8_text,
+			std::span<const std::string> selections,
+			std::size_t& selected,
+			std::size_t show_selection_count = 7
+		) noexcept -> bool;
+
+		auto draw_combo(
+			std::string_view utf8_text,
+			std::span<const std::string_view> selections,
+			std::size_t& selected,
+			std::size_t show_selection_count = 7
+		) noexcept -> bool;
+
+		auto draw_combo(
+			std::string_view utf8_text,
+			std::span<const char*> selections,
+			std::size_t& selected,
+			std::size_t show_selection_count = 7
 		) noexcept -> bool;
 
 		//------------------------------------------------------------------

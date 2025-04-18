@@ -16,6 +16,7 @@ namespace gal::prometheus::gui::internal
 	{
 	public:
 		using value_type = extent_type::value_type;
+		using alpha_type = Theme::alpha_type;
 
 		// <= 0
 		constexpr static auto auto_size = value_type{-.999999f};
@@ -166,7 +167,7 @@ namespace gal::prometheus::gui::internal
 		[[nodiscard]] auto begin_window(
 			Context& context,
 			Window* parent,
-			value_type background_fill_alpha,
+			alpha_type background_fill_alpha,
 			const extent_type& size
 		) noexcept -> bool;
 		auto end_window(Context& context) noexcept -> void;
@@ -174,6 +175,7 @@ namespace gal::prometheus::gui::internal
 		auto begin_child_window(
 			Context& context,
 			std::string_view name,
+			alpha_type background_fill_alpha,
 			extent_type size,
 			bool border,
 			WindowFlag flag
@@ -213,6 +215,30 @@ namespace gal::prometheus::gui::internal
 			float max,
 			std::uint32_t decimal_precision,
 			float power
+		) noexcept -> bool;
+
+		auto draw_combo(
+			Context& context,
+			std::string_view utf8_text,
+			std::span<const std::string> selections,
+			std::size_t& selected,
+			std::size_t show_selection_count
+		) noexcept -> bool;
+
+		auto draw_combo(
+			Context& context,
+			std::string_view utf8_text,
+			std::span<const std::string_view> selections,
+			std::size_t& selected,
+			std::size_t show_selection_count
+		) noexcept -> bool;
+
+		auto draw_combo(
+			Context& context,
+			std::string_view utf8_text,
+			std::span<const char*> selections,
+			std::size_t& selected,
+			std::size_t show_selection_count
 		) noexcept -> bool;
 
 		// -----------------------------------

@@ -38,6 +38,7 @@ namespace gal::prometheus
 			CHILD_WINDOW_AUTO_FIT_Y = 1 << 2,
 
 			CATEGORY_TOOLTIP = 1 << 3,
+			CATEGORY_COMBO = 1 << 4,
 		};
 	}
 

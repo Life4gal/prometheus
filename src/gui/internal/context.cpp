@@ -333,7 +333,7 @@ namespace gal::prometheus::gui
 		Context& context,
 		const std::string_view name,
 		const extent_type& size,
-		const Theme::value_type fill_alpha,
+		const Theme::alpha_type fill_alpha,
 		const WindowFlag flag
 	) noexcept -> bool
 	{
@@ -370,10 +370,7 @@ namespace gal::prometheus::gui
 		const WindowFlag flag
 	) noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
-		auto& parent = *context.window_current_stack.back();
-
-		parent.begin_child_window(context, name, size, border, flag);
+		internal::begin_child_window(context, name, 0, size, border, flag);
 	}
 
 	auto end_child_window(Context& context) noexcept -> void
@@ -485,6 +482,48 @@ namespace gal::prometheus::gui
 
 		auto& window = *context.window_current_stack.back();
 		return window.draw_slider_n(context, utf8_text, references, min, max, decimal_precision, power);
+	}
+
+	auto draw_combo(
+		Context& context,
+		const std::string_view utf8_text,
+		const std::span<const std::string> selections,
+		std::size_t& selected,
+		const std::size_t show_selection_count
+	) noexcept -> bool
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		return window.draw_combo(context, utf8_text, selections, selected, show_selection_count);
+	}
+
+	auto draw_combo(
+		Context& context,
+		const std::string_view utf8_text,
+		const std::span<const std::string_view> selections,
+		std::size_t& selected,
+		const std::size_t show_selection_count
+	) noexcept -> bool
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		return window.draw_combo(context, utf8_text, selections, selected, show_selection_count);
+	}
+
+	auto draw_combo(
+		Context& context,
+		const std::string_view utf8_text,
+		const std::span<const char*> selections,
+		std::size_t& selected,
+		const std::size_t show_selection_count
+	) noexcept -> bool
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+		auto& window = *context.window_current_stack.back();
+		return window.draw_combo(context, utf8_text, selections, selected, show_selection_count);
 	}
 
 	auto layout_same_line(Context& context, const Theme::value_type column_width, const Theme::value_type spacing_width) noexcept -> void
@@ -790,6 +829,42 @@ namespace gal::prometheus::gui
 		return draw_slider_n(context, utf8_text, references, min, max, decimal_precision, power);
 	}
 
+	auto draw_combo(
+		const std::string_view utf8_text,
+		const std::span<const std::string> selections,
+		std::size_t& selected,
+		const std::size_t show_selection_count
+	) noexcept -> bool
+	{
+		auto& context = get_current_context();
+
+		return draw_combo(context, utf8_text, selections, selected, show_selection_count);
+	}
+
+	auto draw_combo(
+		const std::string_view utf8_text,
+		const std::span<const std::string_view> selections,
+		std::size_t& selected,
+		const std::size_t show_selection_count
+	) noexcept -> bool
+	{
+		auto& context = get_current_context();
+
+		return draw_combo(context, utf8_text, selections, selected, show_selection_count);
+	}
+
+	auto draw_combo(
+		const std::string_view utf8_text,
+		const std::span<const char*> selections,
+		std::size_t& selected,
+		const std::size_t show_selection_count
+	) noexcept -> bool
+	{
+		auto& context = get_current_context();
+
+		return draw_combo(context, utf8_text, selections, selected, show_selection_count);
+	}
+
 	auto layout_same_line(const Theme::value_type column_width, const Theme::value_type spacing_width) noexcept -> void
 	{
 		auto& context = get_current_context();
@@ -909,6 +984,10 @@ namespace gal::prometheus::gui
 			colors[static_cast<std::size_t>(SLIDER)] = primitive::colors::light_blue;
 			colors[static_cast<std::size_t>(SLIDER_ACTIVATED)] = primitive::colors::light_pink;
 
+			colors[static_cast<std::size_t>(COMBO_ITEM)] = primitive::colors::red;
+			colors[static_cast<std::size_t>(COMBO_ITEM_HOVERED)] = primitive::colors::violet_red;
+			colors[static_cast<std::size_t>(COMBO_ITEM_ACTIVATED)] = primitive::colors::white;
+
 			return colors;
 		};
 
@@ -992,6 +1071,21 @@ namespace gal::prometheus::gui
 			auto* parent = is_child_window ? context.window_current_stack[context.window_current_stack.size() - 2] : nullptr;
 
 			return window.begin_window(context, parent, fill_alpha, size);
+		}
+
+		auto begin_child_window(
+			Context& context,
+			const std::string_view name,
+			const Theme::alpha_type background_fill_alpha,
+			const extent_type& size,
+			const bool border,
+			const WindowFlag flag
+		) noexcept -> void
+		{
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+			auto& parent = *context.window_current_stack.back();
+
+			parent.begin_child_window(context, name, background_fill_alpha, size, border, flag);
 		}
 
 		auto current_draw_list_flag(const Context& context) noexcept -> DrawListFlag
@@ -1238,6 +1332,34 @@ namespace gal::prometheus::gui
 			return state;
 		}
 
+		auto queue_mouse(Context& context, const widget_id_type id, const rect_type& area) noexcept -> std::underlying_type_t<MouseState>
+		{
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not context.window_current_stack.empty());
+
+			const auto& window = *context.window_current_stack.back();
+			auto state = std::to_underlying(MouseState::NONE);
+
+			const auto hovered =
+					context.window_hovered_root == std::addressof(window.root()) and
+					context.widget_hovered == invalid_widget_id and
+					window.is_hovered(context, area);
+
+			if (hovered)
+			{
+				state |= MouseState::HOVERED;
+
+				// hovering widget
+				context.widget_hovered = id;
+
+				if (context.mouse.is_clicked(context, MouseKey::LEFT, false))
+				{
+					state |= MouseState::PRESSED;
+				}
+			}
+
+			return state;
+		}
+
 		auto is_window_hovered(const Context& context, const Window& window) noexcept -> bool
 		{
 			return context.window_hovered == std::addressof(window);
@@ -1273,9 +1395,19 @@ namespace gal::prometheus::gui
 			return context.widget_hovered == id;
 		}
 
+		auto is_any_widget_hovered(const Context& context) noexcept -> bool
+		{
+			return context.widget_hovered != invalid_widget_id;
+		}
+
 		auto is_widget_activated(const Context& context, const widget_id_type id) noexcept -> bool
 		{
 			return context.widget_activated == id;
+		}
+
+		auto is_any_widget_activated(const Context& context) noexcept -> bool
+		{
+			return context.widget_activated != invalid_widget_id;
 		}
 
 		auto mark_widget_alive(Context& context, const widget_id_type id) noexcept -> bool
@@ -1293,6 +1425,21 @@ namespace gal::prometheus::gui
 		auto mark_widget_dead(Context& context, const widget_id_type id) noexcept -> void
 		{
 			context.widget_activated = id;
+		}
+
+		auto mark_combo_alive(Context& context, const widget_id_type id) noexcept -> void
+		{
+			context.widget_activated_combo_id = id;
+		}
+
+		auto mark_combo_dead(Context& context, const widget_id_type id) noexcept -> void
+		{
+			context.widget_activated_combo_id = id;
+		}
+
+		auto is_combo_activated(const Context& context, const widget_id_type id) noexcept -> bool
+		{
+			return context.widget_activated_combo_id == id;
 		}
 	}
 }
