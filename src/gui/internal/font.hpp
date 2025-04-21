@@ -62,6 +62,8 @@ namespace gal::prometheus::gui::internal
 
 		Font() noexcept;
 
+		auto load(const FontOption& option) noexcept -> Texture;
+
 		// ---------------------------------------------------------
 
 		[[nodiscard]] auto loaded() const noexcept -> bool;

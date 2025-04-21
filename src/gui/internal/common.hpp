@@ -29,6 +29,9 @@ namespace gal::prometheus
 		using widget_id_type = functional::hash_result_type;
 		constexpr auto invalid_widget_id = std::numeric_limits<widget_id_type>::max();
 
+		class DrawList;
+		using draw_lists_type = std::vector<std::reference_wrapper<const DrawList>>;
+
 		enum class WindowInternalFlag : std::uint16_t
 		{
 			NONE = 0,

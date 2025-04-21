@@ -21,6 +21,8 @@ namespace gal::prometheus::gui::internal
 
 	auto Mouse::is_clicked(const Context& context, MouseKey key, const bool repeat) const noexcept -> bool
 	{
+		const auto& io = context.io();
+
 		const auto index = static_cast<std::size_t>(key);
 
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(index < mouse_key_count);
@@ -33,10 +35,10 @@ namespace gal::prometheus::gui::internal
 			return true;
 		}
 
-		if (repeat and down_time > context.io.mouse_repeat_click_delay)
+		if (repeat and down_time > io.mouse_repeat_click_delay)
 		{
-			const auto v1 = std::fmodf(down_time - context.io.mouse_repeat_click_delay, context.io.mouse_repeat_click_rate) > context.io.mouse_repeat_click_rate * .5f;
-			const auto v2 = std::fmodf(down_time - context.io.delta_time, context.io.mouse_repeat_click_rate) > context.io.mouse_repeat_click_rate * .5f;
+			const auto v1 = std::fmodf(down_time - io.mouse_repeat_click_delay, io.mouse_repeat_click_rate) > io.mouse_repeat_click_rate * .5f;
+			const auto v2 = std::fmodf(down_time - io.delta_time, io.mouse_repeat_click_rate) > io.mouse_repeat_click_rate * .5f;
 
 			return v1 != v2;
 		}
@@ -61,7 +63,8 @@ namespace gal::prometheus::gui::internal
 	{
 		// ----------------------
 		// read context
-		const auto& io = context.io;
+		const auto& io = context.io();
+		const auto time = context.current_time();
 
 		position_current = io.mouse_position;
 		wheel = io.mouse_wheel;
@@ -95,7 +98,7 @@ namespace gal::prometheus::gui::internal
 		static_assert(time_not_start < 0);
 		std::ranges::for_each(
 			key_statuses,
-			[this, &context](auto& key_status) noexcept -> void
+			[&](auto& key_status) noexcept -> void
 			{
 				if (key_status.down)
 				{
@@ -106,7 +109,7 @@ namespace gal::prometheus::gui::internal
 					}
 					else
 					{
-						key_status.down_time += context.io.delta_time;
+						key_status.down_time += io.delta_time;
 					}
 				}
 				else
@@ -121,9 +124,9 @@ namespace gal::prometheus::gui::internal
 				if (key_status.clicked)
 				{
 					// time_not_start < 0
-					if (context.time_total - key_status.click_time < context.io.mouse_double_click_interval_threshold)
+					if (time - key_status.click_time < io.mouse_double_click_interval_threshold)
 					{
-						if (position_current.distance(key_status.click_position) < context.io.mouse_double_click_distance_threshold)
+						if (position_current.distance(key_status.click_position) < io.mouse_double_click_distance_threshold)
 						{
 							key_status.double_clicked = true;
 						}
@@ -133,7 +136,7 @@ namespace gal::prometheus::gui::internal
 					}
 					else
 					{
-						key_status.click_time = context.time_total;
+						key_status.click_time = time;
 						key_status.click_position = position_current;
 					}
 				}

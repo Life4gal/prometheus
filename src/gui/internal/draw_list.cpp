@@ -156,7 +156,7 @@ namespace gal::prometheus::gui::internal
 
 			const auto& draw_list = self.get();
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(draw_list.context_ != nullptr);
-			const auto& font = current_font(*draw_list.context_);
+			const auto& font = draw_list.context_->current_font();
 			auto appender = make_appender();
 
 			const auto is_closed = (draw_flag & DrawFlag::CLOSED) != DrawFlag::NONE;
@@ -202,7 +202,7 @@ namespace gal::prometheus::gui::internal
 
 			const auto& draw_list = self.get();
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(draw_list.context_ != nullptr);
-			const auto& font = current_font(*draw_list.context_);
+			const auto& font = draw_list.context_->current_font();
 			const auto draw_list_flag = self.get().draw_list_flag_;
 			auto appender = make_appender();
 
@@ -433,7 +433,7 @@ namespace gal::prometheus::gui::internal
 
 			const auto& draw_list = self.get();
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(draw_list.context_ != nullptr);
-			const auto& font = current_font(*draw_list.context_);
+			const auto& font = draw_list.context_->current_font();
 			auto appender = make_appender();
 
 			const auto vertex_count = path_point_count;
@@ -471,7 +471,7 @@ namespace gal::prometheus::gui::internal
 
 			const auto& draw_list = self.get();
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(draw_list.context_ != nullptr);
-			const auto& font = current_font(*draw_list.context_);
+			const auto& font = draw_list.context_->current_font();
 			auto appender = make_appender();
 
 			const auto& opaque_uv = font.white_pixel_uv;
@@ -553,7 +553,7 @@ namespace gal::prometheus::gui::internal
 		{
 			const auto& draw_list = self.get();
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(draw_list.context_ != nullptr);
-			const auto& font = current_font(*draw_list.context_);
+			const auto& font = draw_list.context_->current_font();
 			auto appender = make_appender();
 
 			// two triangle without path
@@ -811,7 +811,7 @@ namespace gal::prometheus::gui::internal
 
 			const auto& draw_list = self.get();
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(draw_list.context_ != nullptr);
-			const auto& draw_list_shared_data = current_draw_list_shared_data(*draw_list.context_);
+			const auto& draw_list_shared_data = draw_list.context_->current_draw_list_shared_data();
 
 			// Calculate arc auto segment step size
 			auto step = DrawListSharedData::vertex_sample_points_count / draw_list_shared_data.circle_auto_segment_count(radius);
@@ -936,7 +936,7 @@ namespace gal::prometheus::gui::internal
 
 			const auto& draw_list = self.get();
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(draw_list.context_ != nullptr);
-			const auto& draw_list_shared_data = current_draw_list_shared_data(*draw_list.context_);
+			const auto& draw_list_shared_data = draw_list.context_->current_draw_list_shared_data();
 
 			// Automatic segment count
 			if (radius <= draw_list_shared_data.arc_fast_radius_cutoff)
@@ -1104,7 +1104,7 @@ namespace gal::prometheus::gui::internal
 		{
 			const auto& draw_list = self.get();
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(draw_list.context_ != nullptr);
-			const auto& draw_list_shared_data = current_draw_list_shared_data(*draw_list.context_);
+			const auto& draw_list_shared_data = draw_list.context_->current_draw_list_shared_data();
 
 			path_pin(p1);
 			if (segments == 0)
@@ -1130,7 +1130,7 @@ namespace gal::prometheus::gui::internal
 		{
 			const auto& draw_list = self.get();
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(draw_list.context_ != nullptr);
-			const auto& draw_list_shared_data = current_draw_list_shared_data(*draw_list.context_);
+			const auto& draw_list_shared_data = draw_list.context_->current_draw_list_shared_data();
 
 			path_pin(p1);
 			if (segments == 0)
@@ -1248,13 +1248,13 @@ namespace gal::prometheus::gui::internal
 	{
 		context_ = std::addressof(context);
 
-		draw_list_flag_ = current_draw_list_flag(context);
+		draw_list_flag_ = context.current_draw_list_flag();
 	}
 
 	auto DrawList::reset() noexcept -> void
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context_ != nullptr);
-		const auto& font = current_font(*context_);
+		const auto& font = context_->current_font();
 
 		command_list_.clear();
 		vertex_list_.clear();
@@ -1736,7 +1736,7 @@ namespace gal::prometheus::gui::internal
 	) noexcept -> void
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context_ != nullptr);
-		const auto& draw_list_shared_data = current_draw_list_shared_data(*context_);
+		const auto& draw_list_shared_data = context_->current_draw_list_shared_data();
 
 		if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f)
 		{
@@ -1771,7 +1771,7 @@ namespace gal::prometheus::gui::internal
 	) noexcept -> void
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context_ != nullptr);
-		const auto& draw_list_shared_data = current_draw_list_shared_data(*context_);
+		const auto& draw_list_shared_data = context_->current_draw_list_shared_data();
 
 		if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f)
 		{
@@ -1874,7 +1874,7 @@ namespace gal::prometheus::gui::internal
 	) noexcept -> void
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(context_ != nullptr);
-		const auto& font = current_font(*context_);
+		const auto& font = context_->current_font();
 
 		text(font, font_size, point, color, utf8_text, wrap_width);
 	}

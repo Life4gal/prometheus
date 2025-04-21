@@ -362,6 +362,7 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/gui/gui.hpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/gui.inl
 		${PROJECT_SOURCE_DIR}/src/gui/internal/common.hpp
 		${PROJECT_SOURCE_DIR}/src/gui/internal/font.hpp
 		${PROJECT_SOURCE_DIR}/src/gui/internal/draw_list.hpp

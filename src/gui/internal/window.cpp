@@ -10,6 +10,15 @@
 #include <gui/internal/font.hpp>
 #include <gui/internal/context.hpp>
 
+namespace
+{
+	using namespace gal::prometheus;
+	using namespace gui;
+
+	// ReSharper disable once CppInconsistentNaming
+	using MouseState = Context::MouseState;
+}
+
 namespace gal::prometheus::gui::internal
 {
 	class Window::IdMaker final
@@ -68,7 +77,7 @@ namespace gal::prometheus::gui::internal
 			const auto seed = window.id_stack_.back();
 			const auto id = make(seed, string);
 
-			mark_widget_alive(context, id);
+			context.mark_widget_alive(id);
 
 			return id;
 		}
@@ -83,7 +92,7 @@ namespace gal::prometheus::gui::internal
 			const auto seed = window.id_stack_.back();
 			const auto id = make(seed, pointer);
 
-			mark_widget_alive(context, id);
+			context.mark_widget_alive(id);
 
 			return id;
 		}
@@ -98,7 +107,7 @@ namespace gal::prometheus::gui::internal
 			const auto seed = window.id_stack_.back();
 			const auto id = make(seed, value);
 
-			mark_widget_alive(context, id);
+			context.mark_widget_alive(id);
 
 			return id;
 		}
@@ -116,7 +125,7 @@ namespace gal::prometheus::gui::internal
 		{
 			std::ignore = this;
 
-			const auto& font = current_font(context);
+			const auto& font = context.current_font();
 
 			// todo: scale?
 			return static_cast<value_type>(font.pixel_height) * font.scale;
@@ -129,7 +138,7 @@ namespace gal::prometheus::gui::internal
 		{
 			const auto& window = self.get();
 
-			const auto& theme = current_theme(context);
+			const auto& theme = context.current_theme();
 
 			if (window.flag_.is<WindowInternalFlag::CHILD_WINDOW>() and not window.flag_.is<gui::WindowFlag::BORDERED>())
 			{
@@ -148,7 +157,7 @@ namespace gal::prometheus::gui::internal
 
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not window.flag_.is<gui::WindowFlag::NO_TITLEBAR>());
 
-			const auto& theme = current_theme(context);
+			const auto& theme = context.current_theme();
 
 			return font_size(context) + theme.item_frame_padding.height * 2;
 		}
@@ -178,7 +187,7 @@ namespace gal::prometheus::gui::internal
 		{
 			std::ignore = this;
 
-			const auto& theme = current_theme(context);
+			const auto& theme = context.current_theme();
 
 			return theme.window_resize_grip_size;
 		}
@@ -224,7 +233,7 @@ namespace gal::prometheus::gui::internal
 
 		auto adjust_item_size(const Context& context, const extent_type& size) noexcept -> void
 		{
-			const auto& theme = current_theme(context);
+			const auto& theme = context.current_theme();
 
 			auto& window = self.get();
 			auto& canvas = window.canvas_;
@@ -366,7 +375,7 @@ namespace gal::prometheus::gui::internal
 
 		auto draw_widget_frame(const Context& context, const rect_type& rect, const color_type color) noexcept -> void
 		{
-			const auto& theme = current_theme(context);
+			const auto& theme = context.current_theme();
 
 			auto& window = self.get();
 
@@ -379,14 +388,14 @@ namespace gal::prometheus::gui::internal
 				const point_type inner_point{rect.left_top() + extent_type{1.5f, 1.5f}};
 				const extent_type inner_size{rect.size() - extent_type{.5f, .5f}};
 
-				window.draw_list_.rect({inner_point, inner_size}, color_of(theme, ThemeCategory::BORDER_SHADOW));
-				window.draw_list_.rect({outer_point, outer_size}, color_of(theme, ThemeCategory::BORDER));
+				window.draw_list_.rect({inner_point, inner_size}, context.color_of(theme, ThemeCategory::BORDER_SHADOW));
+				window.draw_list_.rect({outer_point, outer_size}, context.color_of(theme, ThemeCategory::BORDER));
 			}
 		}
 
 		auto draw_widget_frame(const Context& context, const circle_type& circle, const color_type color) noexcept -> void
 		{
-			const auto& theme = current_theme(context);
+			const auto& theme = context.current_theme();
 
 			auto& window = self.get();
 
@@ -399,14 +408,14 @@ namespace gal::prometheus::gui::internal
 				const point_type inner_point{circle.center() + extent_type{1.5f, 1.5f}};
 				const auto inner_radius = circle.radius - .5f;
 
-				window.draw_list_.circle({inner_point, inner_radius}, color_of(theme, ThemeCategory::BORDER_SHADOW));
-				window.draw_list_.circle({outer_point, outer_radius}, color_of(theme, ThemeCategory::BORDER));
+				window.draw_list_.circle({inner_point, inner_radius}, context.color_of(theme, ThemeCategory::BORDER_SHADOW));
+				window.draw_list_.circle({outer_point, outer_radius}, context.color_of(theme, ThemeCategory::BORDER));
 			}
 		}
 
 		auto draw_widget_frame(const Context& context, const point_type& a, const point_type& b, const point_type& c) noexcept -> void
 		{
-			const auto& theme = current_theme(context);
+			const auto& theme = context.current_theme();
 
 			auto& window = self.get();
 
@@ -416,9 +425,9 @@ namespace gal::prometheus::gui::internal
 				const auto offset_b = b + extent_type{1.5f, 1.5f};
 				const auto offset_c = c + extent_type{1.5f, 1.5f};
 
-				window.draw_list_.triangle_filled(offset_a, offset_b, offset_c, color_of(theme, ThemeCategory::BORDER_SHADOW));
+				window.draw_list_.triangle_filled(offset_a, offset_b, offset_c, context.color_of(theme, ThemeCategory::BORDER_SHADOW));
 			}
-			window.draw_list_.triangle_filled(a, b, c, color_of(theme, ThemeCategory::BORDER));
+			window.draw_list_.triangle_filled(a, b, c, context.color_of(theme, ThemeCategory::BORDER));
 		}
 	};
 
@@ -457,8 +466,8 @@ namespace gal::prometheus::gui::internal
 			}
 			window.accessed_ = true;
 
-			const auto& theme = current_theme(context);
-			const auto& font = current_font(context);
+			const auto& theme = context.current_theme();
+			const auto& font = context.current_font();
 			Drawer drawer{.self = window};
 			const IdMaker id_maker{.self = window};
 
@@ -472,13 +481,13 @@ namespace gal::prometheus::gui::internal
 				const auto frame_point = frame_rect.left_top();
 				const auto frame_size = frame_rect.size();
 
-				const auto state = test_mouse(context, id, slider_rect, false);
+				const auto state = context.test_mouse(id, slider_rect, false);
 
 				// draw □ (frame + slider + text)
 				bool value_changed = false;
 
 				// frame
-				drawer.draw_widget_frame(context, frame_rect, color_of(theme, ThemeCategory::FRAME_BACKGROUND));
+				drawer.draw_widget_frame(context, frame_rect, context.color_of(theme, ThemeCategory::FRAME_BACKGROUND));
 
 				// slider
 
@@ -505,7 +514,7 @@ namespace gal::prometheus::gui::internal
 
 				if (state & MouseState::KEEPING)
 				{
-					const auto mouse_position = context.mouse.position_current;
+					const auto mouse_position = context.mouse().position_current;
 					const auto normalized_x = std::ranges::clamp((mouse_position.x - slider_effective_x1) / slider_effective_width, .0f, 1.f);
 
 					// account for logarithmic scale on both sides of the zero
@@ -577,7 +586,7 @@ namespace gal::prometheus::gui::internal
 					{
 						window.draw_list_.rect_filled(
 							grab_rect,
-							color_of(theme, ThemeCategory::SLIDER_ACTIVATED),
+							context.color_of(theme, ThemeCategory::SLIDER_ACTIVATED),
 							theme.window_corner_rounding,
 							DrawFlag::ROUND_CORNER_ALL
 						);
@@ -586,7 +595,7 @@ namespace gal::prometheus::gui::internal
 					{
 						window.draw_list_.rect_filled(
 							grab_rect,
-							color_of(theme, ThemeCategory::SLIDER),
+							context.color_of(theme, ThemeCategory::SLIDER),
 							theme.window_corner_rounding,
 							DrawFlag::ROUND_CORNER_ALL
 						);
@@ -601,7 +610,7 @@ namespace gal::prometheus::gui::internal
 					font,
 					font_size,
 					value_text_point,
-					color_of(theme, ThemeCategory::TEXT),
+					context.color_of(theme, ThemeCategory::TEXT),
 					value_text
 				);
 
@@ -705,7 +714,7 @@ namespace gal::prometheus::gui::internal
 				font,
 				font_size,
 				text_rect.left_top(),
-				color_of(theme, ThemeCategory::TEXT),
+				context.color_of(theme, ThemeCategory::TEXT),
 				utf8_text,
 				text_rect.width()
 			);
@@ -730,8 +739,8 @@ namespace gal::prometheus::gui::internal
 			}
 			window.accessed_ = true;
 
-			const auto& theme = current_theme(context);
-			const auto& font = current_font(context);
+			const auto& theme = context.current_theme();
+			const auto& font = context.current_font();
 			Drawer drawer{.self = window};
 			const IdMaker id_maker{.self = window};
 
@@ -781,20 +790,20 @@ namespace gal::prometheus::gui::internal
 
 			const auto id = id_maker.make_id(context, utf8_text);
 			// note: Leave the frame inactive so that clicking on it again does not accidentally re-open the dropdown window again
-			const auto state = queue_mouse(context, id, frame_rect);
+			const auto state = context.queue_mouse(id, frame_rect);
 
 			// draw frame
-			drawer.draw_widget_frame(context, frame_rect, color_of(theme, ThemeCategory::FRAME_BACKGROUND));
+			drawer.draw_widget_frame(context, frame_rect, context.color_of(theme, ThemeCategory::FRAME_BACKGROUND));
 
 			// draw dropdown button frame
 			{
 				if (state & MouseState::HOVERED)
 				{
-					drawer.draw_widget_frame(context, dropdown_button_rect, color_of(theme, ThemeCategory::BUTTON_HOVERED));
+					drawer.draw_widget_frame(context, dropdown_button_rect, context.color_of(theme, ThemeCategory::BUTTON_HOVERED));
 				}
 				else
 				{
-					drawer.draw_widget_frame(context, dropdown_button_rect, color_of(theme, ThemeCategory::BUTTON));
+					drawer.draw_widget_frame(context, dropdown_button_rect, context.color_of(theme, ThemeCategory::BUTTON));
 				}
 
 				const auto r = font_size * .5f;
@@ -814,7 +823,7 @@ namespace gal::prometheus::gui::internal
 					font,
 					font_size,
 					selection_point,
-					color_of(theme, ThemeCategory::TEXT),
+					context.color_of(theme, ThemeCategory::TEXT),
 					"<unselected>",
 					selection_size.width
 				);
@@ -827,7 +836,7 @@ namespace gal::prometheus::gui::internal
 					font,
 					font_size,
 					selection_point,
-					color_of(theme, ThemeCategory::TEXT),
+					context.color_of(theme, ThemeCategory::TEXT),
 					string,
 					selection_size.width
 				);
@@ -838,7 +847,7 @@ namespace gal::prometheus::gui::internal
 				font,
 				font_size,
 				text_rect.left_top(),
-				color_of(theme, ThemeCategory::TEXT),
+				context.color_of(theme, ThemeCategory::TEXT),
 				utf8_text,
 				text_rect.width()
 			);
@@ -850,17 +859,17 @@ namespace gal::prometheus::gui::internal
 				menu_toggled = true;
 
 				// If the combo is already open, click again to close the combo, otherwise open the combo
-				if (is_combo_activated(context, id))
+				if (context.is_combo_activated(id))
 				{
-					mark_combo_dead(context);
+					context.mark_combo_dead();
 				}
 				else
 				{
-					mark_combo_alive(context, id);
+					context.mark_combo_alive(id);
 				}
 			}
 
-			if (is_combo_activated(context, id))
+			if (context.is_combo_activated(id))
 			{
 				// The contents of the dropdown window should not affect the layout of the parent window, so after drawing the dropdown window, we reset the parent window canvas cursor
 				const auto backup_position = drawer.cursor_position(context);
@@ -882,7 +891,7 @@ namespace gal::prometheus::gui::internal
 					const auto dropdown_size = extent_type{frame_size.width - dropdown_offset_x, dropdown_height};
 
 					// begin dropdown window (with background)
-					internal::begin_child_window(context, combo_window_name, 1, dropdown_size, false, combo_window_flag);
+					context.begin_child_window(combo_window_name, dropdown_size, 1, combo_window_flag, false);
 					{
 						auto& combo_window = *window.children_this_frame_.back();
 						auto& combo_window_canvas = combo_window.canvas_;
@@ -893,7 +902,7 @@ namespace gal::prometheus::gui::internal
 
 						// Close the dropdown if the user interacts with another widget (unless the widget is the dropdown window's scrollbar)
 						bool combo_item_active = false;
-						combo_item_active |= is_widget_activated(context, combo_window.id_of_scrollbar(context));
+						combo_item_active |= context.is_widget_activated(combo_window.id_of_scrollbar(context));
 
 						for (const auto view = selections | std::views::enumerate;
 						     const auto [index, selection]: view)
@@ -905,8 +914,8 @@ namespace gal::prometheus::gui::internal
 							const auto item_size = extent_type{dropdown_size.width, item_height + theme.item_spacing.height};
 							const rect_type item_rect{item_point, item_size};
 
-							auto item_state = internal::test_mouse(context, item_id, item_rect);
-							combo_item_active |= is_widget_activated(context, item_id);
+							auto item_state = context.test_mouse(item_id, item_rect);
+							combo_item_active |= context.is_widget_activated(item_id);
 
 							if (item_state & MouseState::HOVERED or item_selected)
 							{
@@ -916,12 +925,12 @@ namespace gal::prometheus::gui::internal
 									{
 										if (item_state & MouseState::KEEPING)
 										{
-											return color_of(theme, ThemeCategory::COMBO_ITEM_ACTIVATED);
+											return context.color_of(theme, ThemeCategory::COMBO_ITEM_ACTIVATED);
 										}
-										return color_of(theme, ThemeCategory::COMBO_ITEM_HOVERED);
+										return context.color_of(theme, ThemeCategory::COMBO_ITEM_HOVERED);
 									}
 
-									return color_of(theme, ThemeCategory::COMBO_ITEM);
+									return context.color_of(theme, ThemeCategory::COMBO_ITEM);
 								}();
 
 								combo_window_drawer.draw_widget_frame(context, item_rect, color);
@@ -939,8 +948,8 @@ namespace gal::prometheus::gui::internal
 							// Close the dropdown window after selecting any item
 							if (item_state & MouseState::PRESSED)
 							{
-								mark_widget_dead(context);
-								mark_combo_dead(context);
+								context.mark_widget_dead();
+								context.mark_combo_dead();
 
 								value_changed = true;
 								selected = index;
@@ -949,9 +958,9 @@ namespace gal::prometheus::gui::internal
 							}
 						}
 
-						if (not combo_item_active and is_any_widget_activated(context))
+						if (not combo_item_active and context.is_any_widget_activated())
 						{
-							mark_combo_dead(context);
+							context.mark_combo_dead();
 						}
 					}
 					gui::end_child_window(context);
@@ -1022,36 +1031,42 @@ namespace gal::prometheus::gui::internal
 		}
 	}
 
-	auto Window::reset(const WindowFlag flag) noexcept -> void
+	auto Window::reset(const WindowFlag flag, const extent_type& size) noexcept -> void
 	{
 		flag_ = flag;
+
+		if (flag_.is<WindowInternalFlag::CHILD_WINDOW>())
+		{
+			size_full_ = size;
+		}
 	}
 
 	auto Window::handle_inputs(const Context& context) noexcept -> void
 	{
+		const auto& mouse = context.mouse();
+
 		// scroll
 		if (not flag_.is<gui::WindowFlag::NO_SCROLLBAR_WITH_MOUSE>())
 		{
 			// todo
 			constexpr auto scroll_weight = static_cast<value_type>(5);
-			scroll_next_y_ -= context.mouse.wheel * Drawer{.self = *this}.font_size(context) * scroll_weight;
+			scroll_next_y_ -= mouse.wheel * Drawer{.self = *this}.font_size(context) * scroll_weight;
 		}
 	}
 
 	auto Window::begin_window(
 		Context& context,
 		Window* parent,
-		alpha_type background_fill_alpha,
-		const extent_type& size
+		alpha_type background_fill_alpha
 	) noexcept -> bool
 	{
 		// This function can be called multiple times per frame,
 		// but is only initialized the first time it is called (after that we can just append the contents)
 
-		const auto current_frame_count = context.frame_count;
+		const auto current_frame_count = context.current_frame();
 		const auto is_first_draw_this_frame = current_frame_count != last_drawn_frame_;
 
-		const auto display_size = context.io.display_size;
+		const auto display_size = context.io().display_size;
 
 		// ---------------------------------
 		// initialize the window, set the window's clip rect
@@ -1080,8 +1095,6 @@ namespace gal::prometheus::gui::internal
 
 					// Moves the child window to the current cursor position of the parent window
 					point_ = parent->canvas_.cursor_current_line;
-					// Follows the size of the parent window
-					size_full_ = size;
 				}
 			}
 
@@ -1109,9 +1122,9 @@ namespace gal::prometheus::gui::internal
 		{
 			auto drawer = Drawer{*this};
 
-			const auto& mouse = context.mouse;
-			const auto& font = current_font(context);
-			const auto& theme = current_theme(context);
+			const auto& mouse = context.mouse();
+			const auto& font = context.current_font();
+			const auto& theme = context.current_theme();
 
 			const auto font_size = drawer.font_size(context);
 			const auto has_titlebar = not flag_.is<gui::WindowFlag::NO_TITLEBAR>();
@@ -1134,7 +1147,7 @@ namespace gal::prometheus::gui::internal
 				{
 					// The current window was not drawn in the last frame (or even many frames before that), this is usually because the window was just created, or the window was not visible before
 					// Focus on the current window
-					focus_window(context, *this);
+					context.focus_window(*this);
 
 					if (is_tooltip_window)
 					{
@@ -1155,13 +1168,13 @@ namespace gal::prometheus::gui::internal
 				else
 				{
 					// If the user drags the window, we determine the new position of the window before the frame is drawn to avoid lag
-					if (const auto activated = mark_widget_alive(context, id_of_move(context));
+					if (const auto activated = context.mark_widget_alive(id_of_move(context));
 						activated)
 					{
 						if (mouse.is_down(context, MouseKey::LEFT))
 						{
 							// select current window
-							focus_window(context, *this);
+							context.focus_window(*this);
 
 							if (not flag_.is<gui::WindowFlag::NO_MOVE>())
 							{
@@ -1174,7 +1187,7 @@ namespace gal::prometheus::gui::internal
 						else
 						{
 							// No widgets are active
-							mark_widget_dead(context);
+							context.mark_widget_dead();
 						}
 					}
 				}
@@ -1227,7 +1240,7 @@ namespace gal::prometheus::gui::internal
 				if (has_titlebar)
 				{
 					// `double left-click` on the `titlebar` of the `current window` to collapse the current window
-					if (is_window_hovered(context, *this))
+					if (context.is_window_hovered(*this))
 					{
 						if (const auto rect = drawer.titlebar_rect(context);
 							is_hovered(context, rect) and
@@ -1235,7 +1248,7 @@ namespace gal::prometheus::gui::internal
 						)
 						{
 							// select current window
-							focus_window(context, *this);
+							context.focus_window(*this);
 
 							// collapse window by double-clicking on titlebar
 							collapsed_ = not collapsed_;
@@ -1258,7 +1271,7 @@ namespace gal::prometheus::gui::internal
 
 					draw_list_.rect_filled(
 						rect,
-						color_of(theme, ThemeCategory::TITLEBAR_COLLAPSED),
+						context.color_of(theme, ThemeCategory::TITLEBAR_COLLAPSED),
 						theme.window_corner_rounding
 					);
 
@@ -1268,12 +1281,12 @@ namespace gal::prometheus::gui::internal
 
 						draw_list_.rect(
 							{rect.point + offset, rect.extent},
-							color_of(theme, ThemeCategory::BORDER),
+							context.color_of(theme, ThemeCategory::BORDER),
 							theme.window_corner_rounding
 						);
 						draw_list_.rect(
 							rect,
-							color_of(theme, ThemeCategory::BORDER),
+							context.color_of(theme, ThemeCategory::BORDER),
 							theme.window_corner_rounding
 						);
 					}
@@ -1282,7 +1295,7 @@ namespace gal::prometheus::gui::internal
 				{
 					size_ = size_full_;
 
-					auto resize_grip_color = color_of(theme, ThemeCategory::RESIZE_GRIP);
+					auto resize_grip_color = context.color_of(theme, ThemeCategory::RESIZE_GRIP);
 
 					// The tooltip window always adapts to the size of the content
 					if (is_tooltip_window)
@@ -1322,14 +1335,15 @@ namespace gal::prometheus::gui::internal
 							const auto rect = drawer.resize_grip_rect(context);
 							const auto id = id_of_resize(context);
 
-							const auto state = test_mouse(context, id, rect);
+							const auto state = context.test_mouse(id, rect);
+
 							if (state & MouseState::KEEPING)
 							{
-								resize_grip_color = color_of(theme, ThemeCategory::RESIZE_GRIP_ACTIVATED);
+								resize_grip_color = context.color_of(theme, ThemeCategory::RESIZE_GRIP_ACTIVATED);
 							}
 							else if (state & MouseState::HOVERED)
 							{
-								resize_grip_color = color_of(theme, ThemeCategory::RESIZE_GRIP_HOVERED);
+								resize_grip_color = context.color_of(theme, ThemeCategory::RESIZE_GRIP_HOVERED);
 							}
 
 							if (state & MouseState::KEEPING)
@@ -1373,7 +1387,7 @@ namespace gal::prometheus::gui::internal
 					{
 						draw_list_.rect_filled(
 							{point_, size_},
-							color_of(theme, ThemeCategory::WINDOW_BACKGROUND, background_fill_alpha),
+							context.color_of(theme, ThemeCategory::WINDOW_BACKGROUND, background_fill_alpha),
 							theme.window_corner_rounding
 						);
 					}
@@ -1383,7 +1397,7 @@ namespace gal::prometheus::gui::internal
 					{
 						draw_list_.rect_filled(
 							current_titlebar_rect,
-							color_of(theme, ThemeCategory::TITLEBAR),
+							context.color_of(theme, ThemeCategory::TITLEBAR),
 							theme.window_corner_rounding,
 							DrawFlag::ROUND_CORNER_TOP
 						);
@@ -1394,7 +1408,7 @@ namespace gal::prometheus::gui::internal
 							draw_list_.line(
 								current_titlebar_rect.left_bottom(),
 								current_titlebar_rect.right_bottom(),
-								color_of(theme, ThemeCategory::BORDER)
+								context.color_of(theme, ThemeCategory::BORDER)
 							);
 						}
 					}
@@ -1406,12 +1420,12 @@ namespace gal::prometheus::gui::internal
 
 						draw_list_.rect(
 							{point_ + offset, size_},
-							color_of(theme, ThemeCategory::BORDER_SHADOW),
+							context.color_of(theme, ThemeCategory::BORDER_SHADOW),
 							theme.window_corner_rounding
 						);
 						draw_list_.rect(
 							{point_, size_},
-							color_of(theme, ThemeCategory::BORDER),
+							context.color_of(theme, ThemeCategory::BORDER),
 							theme.window_corner_rounding
 						);
 					}
@@ -1444,7 +1458,7 @@ namespace gal::prometheus::gui::internal
 						const rect_type background_rect{background_point, background_size};
 						draw_list_.rect_filled(
 							background_rect,
-							color_of(theme, ThemeCategory::SCROLLBAR_BACKGROUND)
+							context.color_of(theme, ThemeCategory::SCROLLBAR_BACKGROUND)
 						);
 
 						// scrollbar area  
@@ -1460,15 +1474,16 @@ namespace gal::prometheus::gui::internal
 						);
 						const auto grab_size_y = scrollbar_area_size.height * grab_size_y_normalized;
 
-						auto grab_color = color_of(theme, ThemeCategory::SCROLLBAR_GRAB);
+						auto grab_color = context.color_of(theme, ThemeCategory::SCROLLBAR_GRAB);
 						if (grab_size_y_normalized < 1.f)
 						{
 							const auto id = id_of_scrollbar(context);
 
-							if (const auto state = test_mouse(context, id, scrollbar_area_rect);
-								state & MouseState::KEEPING)
+							const auto state = context.test_mouse(id, scrollbar_area_rect);
+
+							if (state & MouseState::KEEPING)
 							{
-								grab_color = color_of(theme, ThemeCategory::SCROLLBAR_GRAB_ACTIVATED);
+								grab_color = context.color_of(theme, ThemeCategory::SCROLLBAR_GRAB_ACTIVATED);
 
 								const auto y_normalized = std::ranges::clamp(
 									                          (mouse.position_current.y - (scrollbar_area_point.y + grab_size_y * .5f)) / (scrollbar_area_size.height - grab_size_y),
@@ -1481,7 +1496,7 @@ namespace gal::prometheus::gui::internal
 							}
 							else if (state & MouseState::HOVERED)
 							{
-								grab_color = color_of(theme, ThemeCategory::SCROLLBAR_GRAB_HOVERED);
+								grab_color = context.color_of(theme, ThemeCategory::SCROLLBAR_GRAB_HOVERED);
 							}
 						}
 
@@ -1541,18 +1556,19 @@ namespace gal::prometheus::gui::internal
 						const auto rect = drawer.close_button_rect(context);
 						const auto id = id_of_close(context);
 
-						const auto state = test_mouse(context, id, rect);
+						const auto state = context.test_mouse(id, rect);
 
-						auto close_button_color = color_of(theme, ThemeCategory::CLOSE_BUTTON);
+						auto close_button_color = context.color_of(theme, ThemeCategory::CLOSE_BUTTON);
+
 						if (state & MouseState::HOVERED)
 						{
 							if (state & MouseState::KEEPING)
 							{
-								close_button_color = color_of(theme, ThemeCategory::CLOSE_BUTTON_ACTIVATED);
+								close_button_color = context.color_of(theme, ThemeCategory::CLOSE_BUTTON_ACTIVATED);
 							}
 							else
 							{
-								close_button_color = color_of(theme, ThemeCategory::CLOSE_BUTTON_HOVERED);
+								close_button_color = context.color_of(theme, ThemeCategory::CLOSE_BUTTON_HOVERED);
 							}
 						}
 
@@ -1575,12 +1591,12 @@ namespace gal::prometheus::gui::internal
 							draw_list_.line(
 								center + extent_type{x, y},
 								center + extent_type{-x, -y},
-								color_of(theme, ThemeCategory::TEXT)
+								context.color_of(theme, ThemeCategory::TEXT)
 							);
 							draw_list_.line(
 								center + extent_type{x, -y},
 								center + extent_type{-x, y},
-								color_of(theme, ThemeCategory::TEXT)
+								context.color_of(theme, ThemeCategory::TEXT)
 							);
 						}
 
@@ -1608,7 +1624,7 @@ namespace gal::prometheus::gui::internal
 							font,
 							font_size,
 							text_point,
-							color_of(theme, ThemeCategory::TEXT),
+							context.color_of(theme, ThemeCategory::TEXT),
 							name_,
 							width
 						);
@@ -1620,7 +1636,7 @@ namespace gal::prometheus::gui::internal
 							font,
 							font_size,
 							text_point,
-							color_of(theme, ThemeCategory::TEXT),
+							context.color_of(theme, ThemeCategory::TEXT),
 							name_,
 							text_size.width
 						);
@@ -1747,7 +1763,7 @@ namespace gal::prometheus::gui::internal
 		WindowFlag flag
 	) noexcept -> void
 	{
-		const auto& theme = current_theme(context);
+		const auto& theme = context.current_theme();
 
 		flag |= gui::WindowFlag::NO_TITLEBAR | gui::WindowFlag::NO_CLOSE | gui::WindowFlag::NO_RESIZE | gui::WindowFlag::NO_MOVE;
 		flag |= WindowInternalFlag::CHILD_WINDOW;
@@ -1774,11 +1790,13 @@ namespace gal::prometheus::gui::internal
 		}
 
 		const auto child_window_name = std::format("{}.{}", name_, name);
-		internal::begin_window(context, child_window_name, size, background_fill_alpha, flag);
+		context.begin_window(child_window_name, size, background_fill_alpha, flag);
+		auto& window = context.current_window();
 
 		if (border and not flag_.is<gui::WindowFlag::BORDERED>())
 		{
 			auto& child = *children_this_frame_.back();
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(std::addressof(window) == std::addressof(child));
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(child.name_ == child_window_name);
 
 			// border only indicates whether the child window has a border, not the widgets of the child window
@@ -1789,7 +1807,7 @@ namespace gal::prometheus::gui::internal
 	// ReSharper disable once CppParameterMayBeConstPtrOrRef
 	auto Window::end_child_window(Context& context, Window& child) noexcept -> void
 	{
-		gui::end_window(context);
+		context.end_window();
 
 		// When using autofill child window, we don't provide the width/height to `adjust_item_size` so that it doesn't feed back into automatic size-fitting
 		auto size = child.size_;
@@ -1806,20 +1824,20 @@ namespace gal::prometheus::gui::internal
 		drawer.adjust_item_size(context, size);
 	}
 
-	auto Window::render(Context& context) const noexcept -> void
+	auto Window::render(Context& context, draw_lists_type& draw_lists) const noexcept -> void
 	{
 		if (not visible_)
 		{
 			return;
 		}
 
-		context.draw_lists.emplace_back(draw_list_);
+		draw_lists.emplace_back(draw_list_);
 
 		std::ranges::for_each(
 			children_this_frame_,
 			[&](auto& child) noexcept -> void
 			{
-				child->render(context);
+				child->render(context, draw_lists);
 			}
 		);
 	}
@@ -1832,8 +1850,8 @@ namespace gal::prometheus::gui::internal
 		}
 		accessed_ = true;
 
-		const auto& theme = current_theme(context);
-		const auto& font = current_font(context);
+		const auto& theme = context.current_theme();
+		const auto& font = context.current_font();
 		Drawer drawer{.self = const_cast<Window&>(*this)};
 
 		const auto font_size = drawer.font_size(context);
@@ -1888,7 +1906,7 @@ namespace gal::prometheus::gui::internal
 						font,
 						font_size,
 						text_point,
-						color_of(theme, ThemeCategory::TEXT),
+						context.color_of(theme, ThemeCategory::TEXT),
 						sub_string,
 						Font::no_auto_wrap
 					);
@@ -1936,7 +1954,7 @@ namespace gal::prometheus::gui::internal
 				font,
 				font_size,
 				text_point,
-				color_of(theme, ThemeCategory::TEXT),
+				context.color_of(theme, ThemeCategory::TEXT),
 				utf8_text,
 				this_wrap_width
 			);
@@ -1951,8 +1969,8 @@ namespace gal::prometheus::gui::internal
 		}
 		accessed_ = true;
 
-		const auto& theme = current_theme(context);
-		const auto& font = current_font(context);
+		const auto& theme = context.current_theme();
+		const auto& font = context.current_font();
 		Drawer drawer{.self = const_cast<Window&>(*this)};
 		const IdMaker id_maker{.self = *this};
 
@@ -1987,17 +2005,17 @@ namespace gal::prometheus::gui::internal
 		}
 
 		const auto id = id_maker.make_id(context, utf8_text);
-		const auto state = test_mouse(context, id, button_rect, repeat_when_held);
+		const auto state = context.test_mouse(id, button_rect, repeat_when_held);
 
-		color_type button_color = color_of(theme, ThemeCategory::BUTTON);
+		color_type button_color = context.color_of(theme, ThemeCategory::BUTTON);
 		{
 			if (state & MouseState::KEEPING or state & MouseState::PRESSED)
 			{
-				button_color = color_of(theme, ThemeCategory::BUTTON_ACTIVATED);
+				button_color = context.color_of(theme, ThemeCategory::BUTTON_ACTIVATED);
 			}
 			else if (state & MouseState::HOVERED)
 			{
-				button_color = color_of(theme, ThemeCategory::BUTTON_HOVERED);
+				button_color = context.color_of(theme, ThemeCategory::BUTTON_HOVERED);
 			}
 		}
 
@@ -2030,7 +2048,7 @@ namespace gal::prometheus::gui::internal
 			font,
 			font_size,
 			text_point,
-			color_of(theme, ThemeCategory::TEXT),
+			context.color_of(theme, ThemeCategory::TEXT),
 			utf8_text,
 			button_rect.width()
 		);
@@ -2051,8 +2069,8 @@ namespace gal::prometheus::gui::internal
 		}
 		accessed_ = true;
 
-		const auto& theme = current_theme(context);
-		const auto& font = current_font(context);
+		const auto& theme = context.current_theme();
+		const auto& font = context.current_font();
 		Drawer drawer{.self = const_cast<Window&>(*this)};
 		const IdMaker id_maker{.self = *this};
 
@@ -2078,17 +2096,17 @@ namespace gal::prometheus::gui::internal
 		}
 
 		const auto id = id_maker.make_id(context, utf8_text);
-		const auto state = test_mouse(context, id, button_rect, repeat_when_held);
+		const auto state = context.test_mouse(id, button_rect, repeat_when_held);
 
-		color_type button_color = color_of(theme, ThemeCategory::BUTTON);
+		color_type button_color = context.color_of(theme, ThemeCategory::BUTTON);
 		{
 			if (state & MouseState::KEEPING or state & MouseState::PRESSED)
 			{
-				button_color = color_of(theme, ThemeCategory::BUTTON_ACTIVATED);
+				button_color = context.color_of(theme, ThemeCategory::BUTTON_ACTIVATED);
 			}
 			else if (state & MouseState::HOVERED)
 			{
-				button_color = color_of(theme, ThemeCategory::BUTTON_HOVERED);
+				button_color = context.color_of(theme, ThemeCategory::BUTTON_HOVERED);
 			}
 		}
 
@@ -2102,7 +2120,7 @@ namespace gal::prometheus::gui::internal
 			font,
 			font_size,
 			text_area_point,
-			color_of(theme, ThemeCategory::TEXT),
+			context.color_of(theme, ThemeCategory::TEXT),
 			utf8_text,
 			button_rect.width()
 		);
@@ -2118,8 +2136,8 @@ namespace gal::prometheus::gui::internal
 		}
 		accessed_ = true;
 
-		const auto& theme = current_theme(context);
-		const auto& font = current_font(context);
+		const auto& theme = context.current_theme();
+		const auto& font = context.current_font();
 		Drawer drawer{.self = const_cast<Window&>(*this)};
 		const IdMaker id_maker{.self = *this};
 
@@ -2159,16 +2177,16 @@ namespace gal::prometheus::gui::internal
 
 		const auto id = id_maker.make_id(context, utf8_text);
 		// fixme: test check_rect or total_rect?
-		const auto state = test_mouse(context, id, check_rect, false);
+		const auto state = context.test_mouse(id, check_rect, false);
 
 		// draw ○
 		if (state & MouseState::HOVERED)
 		{
-			drawer.draw_widget_frame(context, check_circle, color_of(theme, ThemeCategory::RADIO_BUTTON_HOVERED));
+			drawer.draw_widget_frame(context, check_circle, context.color_of(theme, ThemeCategory::RADIO_BUTTON_HOVERED));
 		}
 		else
 		{
-			drawer.draw_widget_frame(context, check_circle, color_of(theme, ThemeCategory::FRAME_BACKGROUND));
+			drawer.draw_widget_frame(context, check_circle, context.color_of(theme, ThemeCategory::FRAME_BACKGROUND));
 		}
 
 		if (checked)
@@ -2176,7 +2194,7 @@ namespace gal::prometheus::gui::internal
 			const auto check_fill_point = check_point + theme.item_inner_spacing;
 			const auto check_fill_size = check_size - theme.item_inner_spacing * 2;
 			const circle_type check_fill_circle{check_fill_point + check_fill_size / 2, check_fill_size.width / 2};
-			draw_list_.circle_filled(check_fill_circle, color_of(theme, ThemeCategory::RADIO_BUTTON_ACTIVATED));
+			draw_list_.circle_filled(check_fill_circle, context.color_of(theme, ThemeCategory::RADIO_BUTTON_ACTIVATED));
 		}
 
 		// draw text
@@ -2184,7 +2202,7 @@ namespace gal::prometheus::gui::internal
 			font,
 			font_size,
 			text_rect.left_top(),
-			color_of(theme, ThemeCategory::TEXT),
+			context.color_of(theme, ThemeCategory::TEXT),
 			utf8_text,
 			text_rect.width()
 		);
@@ -2200,8 +2218,8 @@ namespace gal::prometheus::gui::internal
 		}
 		accessed_ = true;
 
-		const auto& theme = current_theme(context);
-		const auto& font = current_font(context);
+		const auto& theme = context.current_theme();
+		const auto& font = context.current_font();
 		Drawer drawer{.self = const_cast<Window&>(*this)};
 		const IdMaker id_maker{.self = *this};
 
@@ -2241,16 +2259,16 @@ namespace gal::prometheus::gui::internal
 
 		const auto id = id_maker.make_id(context, utf8_text);
 		// fixme: test check_rect or total_rect?
-		const auto state = test_mouse(context, id, check_rect, false);
+		const auto state = context.test_mouse(id, check_rect, false);
 
 		// draw □
 		if (state & MouseState::HOVERED)
 		{
-			drawer.draw_widget_frame(context, check_rect, color_of(theme, ThemeCategory::CHECKBOX_HOVERED));
+			drawer.draw_widget_frame(context, check_rect, context.color_of(theme, ThemeCategory::CHECKBOX_HOVERED));
 		}
 		else
 		{
-			drawer.draw_widget_frame(context, check_rect, color_of(theme, ThemeCategory::FRAME_BACKGROUND));
+			drawer.draw_widget_frame(context, check_rect, context.color_of(theme, ThemeCategory::FRAME_BACKGROUND));
 		}
 
 		if (state & MouseState::PRESSED)
@@ -2263,7 +2281,7 @@ namespace gal::prometheus::gui::internal
 			const auto check_fill_point = check_point + theme.item_inner_spacing;
 			const auto check_fill_size = check_size - theme.item_inner_spacing * 2;
 			const rect_type check_fill_rect{check_fill_point, check_fill_size};
-			draw_list_.rect_filled(check_fill_rect, color_of(theme, ThemeCategory::CHECKBOX_ACTIVATED));
+			draw_list_.rect_filled(check_fill_rect, context.color_of(theme, ThemeCategory::CHECKBOX_ACTIVATED));
 		}
 
 		// draw text
@@ -2271,7 +2289,7 @@ namespace gal::prometheus::gui::internal
 			font,
 			font_size,
 			text_rect.left_top(),
-			color_of(theme, ThemeCategory::TEXT),
+			context.color_of(theme, ThemeCategory::TEXT),
 			utf8_text,
 			text_rect.width()
 		);
@@ -2356,7 +2374,7 @@ namespace gal::prometheus::gui::internal
 			return;
 		}
 
-		const auto& theme = current_theme(context);
+		const auto& theme = context.current_theme();
 
 		canvas_.height_current_line = canvas_.height_previous_line;
 		canvas_.cursor_current_line = canvas_.cursor_previous_line;
@@ -2488,7 +2506,7 @@ namespace gal::prometheus::gui::internal
 
 		if (clip_rect_stack_.empty())
 		{
-			const auto size = context.io.display_size;
+			const auto size = context.io().display_size;
 			draw_list_.push_clip_rect({0, 0, size}, false);
 		}
 		else
@@ -2551,7 +2569,7 @@ namespace gal::prometheus::gui::internal
 
 	auto Window::content_region_max(const Context& context) const noexcept -> extent_type
 	{
-		const auto& theme = current_theme(context);
+		const auto& theme = context.current_theme();
 		const Drawer drawer{.self = const_cast<Window&>(*this)};
 
 		auto size = size_ - drawer.window_padding(context);
@@ -2578,7 +2596,7 @@ namespace gal::prometheus::gui::internal
 
 	auto Window::window_content_region_max(const Context& context) const noexcept -> extent_type
 	{
-		const auto& theme = current_theme(context);
+		const auto& theme = context.current_theme();
 		const Drawer drawer{.self = const_cast<Window&>(*this)};
 
 		auto size = size_ - drawer.window_padding(context);
@@ -2593,6 +2611,9 @@ namespace gal::prometheus::gui::internal
 
 	auto Window::is_hovered(const Context& context, const rect_type& rect) const noexcept -> bool
 	{
+		const auto& mouse = context.mouse();
+		const auto position = mouse.position_current;
+
 		const auto clipped = [&]() noexcept -> rect_type
 		{
 			if (not clip_rect_stack_.empty())
@@ -2605,7 +2626,7 @@ namespace gal::prometheus::gui::internal
 			return rect;
 		}();
 
-		return clipped.includes(context.mouse.position_current);
+		return clipped.includes(position);
 	}
 
 	auto Window::is_item_hovered(const Context& context) const noexcept -> bool

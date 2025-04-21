@@ -144,8 +144,9 @@ namespace gal::prometheus::gui::internal
 		/**
 		 * @brief If a window has already been created, each "re-creation" only resets its flag (if necessary)
 		 * @param flag window flag
+		 * @param size If the current window is a child window, set the window size to @c size
 		 */
-		auto reset(WindowFlag flag) noexcept -> void;
+		auto reset(WindowFlag flag, const extent_type& size) noexcept -> void;
 
 		/**
 		 * @brief Handles all input devices (mouse and keyboard) at the beginning of each frame (if necessary)
@@ -160,15 +161,13 @@ namespace gal::prometheus::gui::internal
 		 * @param context
 		 * @param parent If the current window is a child window, then @c parent is its parent, otherwise this parameter must be a null pointer
 		 * @param background_fill_alpha Alpha for window background color fill
-		 * @param size If the current window is a child window, set the window size to @c size
 		 * @return Whether the window is visible (not closed)
 		 * @note Widgets can be drawn in the window if and only if its canvas has been created
 		 */
 		[[nodiscard]] auto begin_window(
 			Context& context,
 			Window* parent,
-			alpha_type background_fill_alpha,
-			const extent_type& size
+			alpha_type background_fill_alpha
 		) noexcept -> bool;
 		auto end_window(Context& context) noexcept -> void;
 
@@ -182,7 +181,7 @@ namespace gal::prometheus::gui::internal
 		) noexcept -> void;
 		auto end_child_window(Context& context, Window& child) noexcept -> void;
 
-		auto render(Context& context) const noexcept -> void;
+		auto render(Context& context, draw_lists_type& draw_lists) const noexcept -> void;
 
 		// -----------------------------------
 		// WIDGETS

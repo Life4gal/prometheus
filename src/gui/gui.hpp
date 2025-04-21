@@ -160,7 +160,7 @@ namespace gal::prometheus
 			using colors_type = std::array<color_type, theme_category_count>;
 
 			// < 0
-			constexpr static alpha_type window_fill_alpha_not_set{-.99999f};
+			constexpr static alpha_type window_background_fill_alpha_not_set{-.99999f};
 
 			//-----------------
 			// WINDOW
@@ -433,7 +433,7 @@ namespace gal::prometheus
 			Context& context,
 			std::string_view name,
 			const extent_type& size = {0, 0},
-			Theme::alpha_type fill_alpha = Theme::window_fill_alpha_not_set,
+			Theme::alpha_type fill_alpha = Theme::window_background_fill_alpha_not_set,
 			WindowFlag flag = WindowFlag::NONE
 		) noexcept -> bool;
 		auto end_window(Context& context) noexcept -> void;
@@ -483,17 +483,8 @@ namespace gal::prometheus
 		 * @return Whether the radio button is pressed (being pressed does not mean that the state is switched, it can also be a repeat selection)
 		 */
 		template<std::equality_comparable T>
-		auto draw_radio_button(Context& context, std::string_view utf8_text, T& reference, const std::type_identity_t<T>& identifier) noexcept -> bool
-		{
-			const auto prev_selected = reference == identifier;
-			const auto pressed = gui::draw_radio_button(context, utf8_text, prev_selected);
+		auto draw_radio_button(Context& context, std::string_view utf8_text, T& reference, const std::type_identity_t<T>& identifier) noexcept -> bool;
 
-			if (pressed)
-			{
-				reference = identifier;
-			}
-			return pressed;
-		}
 
 		/**
 		 * @brief Draw a checkbox, its initial state is required
@@ -506,30 +497,13 @@ namespace gal::prometheus
 		 * @return Current state of the checkbox (checked or unchecked)
 		 */
 		template<std::equality_comparable T>
-		static auto draw_checkbox(
+		auto draw_checkbox(
 			Context& context,
-			const std::string_view utf8_text,
+			std::string_view utf8_text,
 			T& reference,
 			const std::type_identity_t<T>& checked_identifier,
 			const std::type_identity_t<T>& unchecked_identifier
-		) noexcept -> bool
-		{
-			const auto prev_checked = reference == checked_identifier;
-			const auto checked = gui::draw_checkbox(context, utf8_text, prev_checked);
-
-			if (checked != prev_checked)
-			{
-				if (prev_checked)
-				{
-					reference = unchecked_identifier;
-				}
-				else
-				{
-					reference = checked_identifier;
-				}
-			}
-			return checked;
-		}
+		) noexcept -> bool;
 
 		auto draw_slider(
 			Context& context,
@@ -545,57 +519,24 @@ namespace gal::prometheus
 			requires std::is_arithmetic_v<ValueType>
 		auto draw_slider(
 			Context& context,
-			const std::string_view utf8_text,
+			std::string_view utf8_text,
 			T& reference,
-			const ValueType min,
-			const std::type_identity_t<ValueType> max,
-			const std::uint32_t decimal_precision = 3,
-			const float power = 1
-		) noexcept -> bool
-		{
-			auto v = static_cast<float>(reference);
-
-			const auto result = gui::draw_slider(
-				context,
-				utf8_text,
-				v,
-				static_cast<float>(min),
-				static_cast<float>(max),
-				decimal_precision,
-				power
-			);
-			reference = v;
-
-			return result;
-		}
+			ValueType min,
+			std::type_identity_t<ValueType> max,
+			std::uint32_t decimal_precision = 3,
+			float power = 1
+		) noexcept -> bool;
 
 		template<meta::basic_fixed_string MemberName, typename T, typename ValueType>
 			requires std::is_arithmetic_v<ValueType>
 		auto draw_slider(
 			Context& context,
 			T&& object,
-			const ValueType min,
-			const std::type_identity_t<ValueType> max,
-			const std::uint32_t decimal_precision = 3,
-			const float power = 1
-		) noexcept -> bool
-		{
-			auto& ref = meta::member_of_name<MemberName>(std::forward<T>(object));
-			auto v = static_cast<float>(ref);
-
-			const auto result = gui::draw_slider(
-				context,
-				MemberName,
-				v,
-				static_cast<float>(min),
-				static_cast<float>(max),
-				decimal_precision,
-				power
-			);
-			ref = v;
-
-			return result;
-		}
+			ValueType min,
+			std::type_identity_t<ValueType> max,
+			std::uint32_t decimal_precision = 3,
+			float power = 1
+		) noexcept -> bool;
 
 		auto draw_slider_n(
 			Context& context,
@@ -741,7 +682,7 @@ namespace gal::prometheus
 		auto begin_window(
 			std::string_view name,
 			const extent_type& size = {0, 0},
-			Theme::value_type fill_alpha = Theme::window_fill_alpha_not_set,
+			Theme::value_type fill_alpha = Theme::window_background_fill_alpha_not_set,
 			WindowFlag flag = WindowFlag::NONE
 		) noexcept -> bool;
 		auto end_window() noexcept -> void;
@@ -924,3 +865,5 @@ namespace gal::prometheus
 		auto show_theme_editor() noexcept -> bool;
 	}
 }
+
+#include <gui/internal/gui.inl>

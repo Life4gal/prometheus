@@ -317,38 +317,6 @@ namespace
 
 namespace gal::prometheus::gui
 {
-	auto set_default_font(Context& context, const FontOption& option) noexcept -> Texture
-	{
-		// if (context.font_current == Context::stack_pointer_default)
-		// {
-		// 	return push_font(context, option);
-		// }
-		//
-		// auto font = memory::make_unique<internal::Font>();
-		// auto texture = do_load_font(option, *font);
-		//
-		// context.font_stack[0] = std::move(font);
-		//
-		// return texture;
-		auto texture = do_load_font(option, context.font);
-		return texture;
-	}
-
-	// [[nodiscard]] auto push_font(Context& context, const FontOption& option) noexcept -> Texture
-	// {
-	// 	auto font = memory::make_unique<internal::Font>();
-	// 	auto texture = do_load_font(option, *font);
-	//
-	// 	internal::push_font(context, std::move(font));
-	//
-	// 	return texture;
-	// }
-	//
-	// auto pop_font(Context& context) noexcept -> void
-	// {
-	// 	internal::pop_font(context);
-	// }
-
 	Texture::Texture(texture_id_type& texture_id) noexcept
 		: width{0},
 		  height{0},
@@ -389,6 +357,12 @@ namespace gal::prometheus::gui
 			scale{1},
 			display_offset{0, 0},
 			texture_id{invalid_texture_id} {}
+
+		auto Font::load(const FontOption& option) noexcept -> Texture
+		{
+			auto texture = do_load_font(option, *this);
+			return texture;
+		}
 
 		auto Font::loaded() const noexcept -> bool
 		{
@@ -432,7 +406,8 @@ namespace gal::prometheus::gui
 				}
 				else
 				{
-					const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&glyphs, &fallback_glyph](const auto c) -> const auto& {
+					const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&glyphs, &fallback_glyph](const auto c) -> const auto&
+					{
 						if (const auto it = glyphs.find(c);
 							it != glyphs.end())
 						{
@@ -516,7 +491,8 @@ namespace gal::prometheus::gui
 					continue;
 				}
 
-				const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&glyphs, &fallback_glyph](const auto c) -> const auto& {
+				const auto& [glyph_rect, glyph_uv, glyph_advance_x] = [&glyphs, &fallback_glyph](const auto c) -> const auto&
+				{
 					if (const auto it = glyphs.find(c);
 						it != glyphs.end())
 					{
