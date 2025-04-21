@@ -442,6 +442,8 @@ auto prometheus_render() -> void
 	{
 		window_closed = gui::begin_window("Window 1", {640, 480});
 
+		gui::draw_text(std::format("FPS: {:.3}", g_fps));
+
 		static bool theme_window_closed = true;
 		theme_window_closed ^= gui::draw_button("OpenThemeEditor");
 
@@ -532,7 +534,10 @@ auto prometheus_render() -> void
 
 				gui::draw_text(test_string);
 
-				gui::begin_child_window("SliderWindowChild");
+				static bool border = false;
+				border ^= gui::draw_button("border");
+
+				gui::begin_child_window("SliderWindowChild", {}, border);
 
 				static std::array<float, 5> v{0, 0, 0, 0, 0};
 
@@ -547,6 +552,27 @@ auto prometheus_render() -> void
 
 				gui::end_window();
 			}
+		}
+
+		gui::draw_text_colored("Tooltip", primitive::colors::red);
+		{
+			gui::draw_text("Hover me");
+			if (gui::is_item_hovered())
+			{
+				gui::begin_tooltip_window();
+
+				gui::draw_text("You found me!");
+
+				gui::end_tooltip_window();
+			}
+		}
+
+		gui::draw_text_colored("Combo", primitive::colors::red);
+		{
+			static std::array selections{"selection1", "selection2", "selection3", "selection4", "selection5", "selection6", "selection7", "selection8", "selection9"};
+			static std::size_t selected = 8;
+
+			gui::draw_combo("Combo", selections, selected);
 		}
 
 		gui::end_window();
