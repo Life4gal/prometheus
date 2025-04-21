@@ -482,17 +482,3 @@
 #define GAL_PROMETHEUS_ERROR_DEBUG_ASSUME GAL_PROMETHEUS_ERROR_ASSUME
 
 #endif
-
-// =========================================================
-// MODULE: gal.prometheus.draw
-// =========================================================
-
-
-
-#if defined(DEBUG) or defined(_DEBUG)
-
-#if not defined(GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG)
-#define GAL_PROMETHEUS_DRAW_CONTEXT_DEBUG
-#endif
-
-#endif
