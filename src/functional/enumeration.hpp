@@ -214,3 +214,322 @@ template<typename EnumType>
 {
 	return !std::to_underlying(e);
 }
+
+namespace gal::prometheus::functional
+{
+	template<typename EnumType>
+		requires std::is_scoped_enum_v<EnumType>
+	class EnumWrapper
+	{
+	public:
+		using type = EnumType;
+		using underlying_type = std::underlying_type_t<type>;
+
+	private:
+		constexpr static auto is_flag = meta::user_defined::enum_is_flag<type>::value;
+
+		underlying_type value_;
+
+	public:
+		constexpr explicit (false) EnumWrapper(const underlying_type value) noexcept
+			: value_{value} {}
+
+		constexpr explicit (false) EnumWrapper(const type e) noexcept
+			: EnumWrapper{std::to_underlying(e)} {}
+
+		[[nodiscard]] constexpr explicit (false) operator underlying_type() const noexcept
+		{
+			return value_;
+		}
+
+		[[nodiscard]] constexpr explicit (false) operator type() const noexcept
+		{
+			return static_cast<type>(value_);
+		}
+
+		// =============================================================================
+		// operator|
+
+		template<std::integral ValueType>
+		[[nodiscard]] friend constexpr auto operator|(const EnumWrapper lhs, const ValueType rhs) noexcept -> EnumWrapper
+		{
+			if constexpr (is_flag)
+			{
+				return {lhs.operator type() | rhs};
+			}
+			else
+			{
+				return {lhs.operator underlying_type() | rhs};
+			}
+		}
+
+		template<std::integral ValueType>
+		[[nodiscard]] friend constexpr auto operator|(const ValueType lhs, const EnumWrapper rhs) noexcept -> ValueType
+		{
+			if constexpr (is_flag)
+			{
+				return lhs | rhs.operator type();
+			}
+			else
+			{
+				return lhs | rhs.operator underlying_type();
+			}
+		}
+
+		[[nodiscard]] friend constexpr auto operator|(const EnumWrapper lhs, const type rhs) noexcept -> EnumWrapper
+		{
+			if constexpr (is_flag)
+			{
+				return {lhs.operator type() | rhs};
+			}
+			else
+			{
+				return {lhs.operator underlying_type() | rhs};
+			}
+		}
+
+		[[nodiscard]] friend constexpr auto operator|(const type lhs, const EnumWrapper rhs) noexcept -> type
+		{
+			if constexpr (is_flag)
+			{
+				return lhs | rhs.operator type();
+			}
+			else
+			{
+				return lhs | rhs.operator underlying_type();
+			}
+		}
+
+		// =============================================================================
+		// operator|=
+
+		template<std::integral ValueType>
+		friend constexpr auto operator|=(EnumWrapper& lhs, const ValueType rhs) noexcept -> EnumWrapper&
+		{
+			lhs = lhs | rhs;
+			return lhs;
+		}
+
+		template<std::integral ValueType>
+		friend constexpr auto operator|=(ValueType& lhs, const EnumWrapper rhs) noexcept -> ValueType&
+		{
+			lhs = lhs | rhs;
+			return lhs;
+		}
+
+		friend constexpr auto operator|=(EnumWrapper& lhs, const type rhs) noexcept -> EnumWrapper&
+		{
+			lhs = lhs | rhs;
+			return lhs;
+		}
+
+		friend constexpr auto operator|=(type& lhs, const EnumWrapper rhs) noexcept -> type&
+		{
+			lhs = lhs | rhs;
+			return lhs;
+		}
+
+		// =============================================================================
+		// operator&
+
+		template<std::integral ValueType>
+		[[nodiscard]] friend constexpr auto operator&(const EnumWrapper lhs, const ValueType rhs) noexcept -> EnumWrapper
+		{
+			if constexpr (is_flag)
+			{
+				return {lhs.operator type() & rhs};
+			}
+			else
+			{
+				return {lhs.operator underlying_type() & rhs};
+			}
+		}
+
+		template<std::integral ValueType>
+		[[nodiscard]] friend constexpr auto operator&(const ValueType lhs, const EnumWrapper rhs) noexcept -> ValueType
+		{
+			if constexpr (is_flag)
+			{
+				return lhs & rhs.operator type();
+			}
+			else
+			{
+				return lhs & rhs.operator underlying_type();
+			}
+		}
+
+		[[nodiscard]] friend constexpr auto operator&(const EnumWrapper lhs, const type rhs) noexcept -> EnumWrapper
+		{
+			if constexpr (is_flag)
+			{
+				return {lhs.operator type() & rhs};
+			}
+			else
+			{
+				return {lhs.operator underlying_type() & rhs};
+			}
+		}
+
+		[[nodiscard]] friend constexpr auto operator&(const type lhs, const EnumWrapper rhs) noexcept -> type
+		{
+			if constexpr (is_flag)
+			{
+				return lhs & rhs.operator type();
+			}
+			else
+			{
+				return lhs & rhs.operator underlying_type();
+			}
+		}
+
+		// =============================================================================
+		// operator&=
+
+		template<std::integral ValueType>
+		friend constexpr auto operator&=(EnumWrapper& lhs, const ValueType rhs) noexcept -> EnumWrapper&
+		{
+			lhs = lhs & rhs;
+			return lhs;
+		}
+
+		template<std::integral ValueType>
+		friend constexpr auto operator&=(ValueType& lhs, const EnumWrapper rhs) noexcept -> ValueType&
+		{
+			lhs = lhs & rhs;
+			return lhs;
+		}
+
+		friend constexpr auto operator&=(EnumWrapper& lhs, const type rhs) noexcept -> EnumWrapper&
+		{
+			lhs = lhs & rhs;
+			return lhs;
+		}
+
+		friend constexpr auto operator&=(type& lhs, const EnumWrapper rhs) noexcept -> type&
+		{
+			lhs = lhs & rhs;
+			return lhs;
+		}
+
+		// =============================================================================
+		// operator^
+
+		template<std::integral ValueType>
+		[[nodiscard]] friend constexpr auto operator^(const EnumWrapper lhs, const ValueType rhs) noexcept -> EnumWrapper
+		{
+			if constexpr (is_flag)
+			{
+				return {lhs.operator type() ^ rhs};
+			}
+			else
+			{
+				return {lhs.operator underlying_type() ^ rhs};
+			}
+		}
+
+		template<std::integral ValueType>
+		[[nodiscard]] friend constexpr auto operator^(const ValueType lhs, const EnumWrapper rhs) noexcept -> ValueType
+		{
+			if constexpr (is_flag)
+			{
+				return lhs ^ rhs.operator type();
+			}
+			else
+			{
+				return lhs ^ rhs.operator underlying_type();
+			}
+		}
+
+		[[nodiscard]] friend constexpr auto operator^(const EnumWrapper lhs, const type rhs) noexcept -> EnumWrapper
+		{
+			if constexpr (is_flag)
+			{
+				return {lhs.operator type() ^ rhs};
+			}
+			else
+			{
+				return {lhs.operator underlying_type() ^ rhs};
+			}
+		}
+
+		[[nodiscard]] friend constexpr auto operator^(const type lhs, const EnumWrapper rhs) noexcept -> type
+		{
+			if constexpr (is_flag)
+			{
+				return lhs ^ rhs.operator type();
+			}
+			else
+			{
+				return lhs ^ rhs.operator underlying_type();
+			}
+		}
+
+		// =============================================================================
+		// operator^=
+
+		template<std::integral ValueType>
+		friend constexpr auto operator^=(EnumWrapper& lhs, const ValueType rhs) noexcept -> EnumWrapper&
+		{
+			lhs = lhs ^ rhs;
+			return lhs;
+		}
+
+		template<std::integral ValueType>
+		friend constexpr auto operator^=(ValueType& lhs, const EnumWrapper rhs) noexcept -> ValueType&
+		{
+			lhs = lhs ^ rhs;
+			return lhs;
+		}
+
+		friend constexpr auto operator^=(EnumWrapper& lhs, const type rhs) noexcept -> EnumWrapper&
+		{
+			lhs = lhs ^ rhs;
+			return lhs;
+		}
+
+		friend constexpr auto operator^=(type& lhs, const EnumWrapper rhs) noexcept -> type&
+		{
+			lhs = lhs ^ rhs;
+			return lhs;
+		}
+
+		// =============================================================================
+		// operator~
+
+		[[nodiscard]] friend constexpr auto operator~(const EnumWrapper self) noexcept -> EnumWrapper
+		{
+			if constexpr (is_flag)
+			{
+				return {~self.operator type()};
+			}
+			else
+			{
+				return {~self.operator underlying_type()};
+			}
+		}
+
+		// =============================================================================
+		// operator~
+
+		[[nodiscard]] friend constexpr auto operator!(const EnumWrapper self) noexcept -> bool
+		{
+			if constexpr (is_flag)
+			{
+				return !self.operator type();
+			}
+			else
+			{
+				return !self.operator underlying_type();
+			}
+		}
+	};
+}
+
+namespace std
+{
+	template<typename EnumType>
+	struct underlying_type<gal::prometheus::functional::EnumWrapper<EnumType>> // NOLINT(cert-dcl58-cpp)
+	{
+		using type = typename gal::prometheus::functional::EnumWrapper<EnumType>::underlying_type;
+	};
+}
