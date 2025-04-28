@@ -15,17 +15,17 @@
 
 namespace gal::prometheus::meta
 {
+	template<typename T>
+	struct extern_accessor
+	{
+		[[nodiscard]] constexpr static auto make() noexcept -> T
+		{
+			return T{};
+		}
+	};
+
 	namespace member_detail
 	{
-		template<typename T>
-		struct extern_accessor
-		{
-			[[nodiscard]] constexpr static auto make() noexcept -> T
-			{
-				return T{};
-			}
-		};
-
 		// note that this requires the target type to be default constructible
 		template<typename T>
 		extern const auto extern_any = extern_accessor<T>::make();
