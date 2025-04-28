@@ -358,6 +358,14 @@ set(
 		${PROJECT_SOURCE_DIR}/src/unit_test/unit_test.hpp
 
 		# =========================
+		# IO
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/io/inputs.hpp
+
+		${PROJECT_SOURCE_DIR}/src/io/io.hpp
+
+		# =========================
 		# GUI
 		# =========================
 
@@ -401,6 +409,12 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/chars/scalar.cpp
 		${PROJECT_SOURCE_DIR}/src/chars/icelake.cpp
+
+		# =========================
+		# IO
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/io/inputs.cpp
 
 		# =========================
 		# GUI
