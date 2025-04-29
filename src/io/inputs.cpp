@@ -28,7 +28,7 @@ namespace gal::prometheus::io
 			states,
 			[&](key_state_type& state) noexcept -> void
 			{
-				state.action_this_frame = DeviceKeyAction::NONE;
+				state.down_this_frame = 0;
 
 				const auto view = state.press_records | std::views::reverse;
 				const auto it = std::ranges::find_if(
@@ -65,7 +65,7 @@ namespace gal::prometheus::io
 
 		const auto& state = states[index];
 
-		return state.action_this_frame == DeviceKeyAction::UP;
+		return state.down_this_frame == 0;
 	}
 
 	auto InputHandler::Mouse::is_down(const InputHandler& self, const MouseButton button) const noexcept -> bool
@@ -77,10 +77,10 @@ namespace gal::prometheus::io
 
 		const auto& state = states[index];
 
-		return state.action_this_frame == DeviceKeyAction::DOWN;
+		return state.down_this_frame != 0;
 	}
 
-	auto InputHandler::Mouse::is_clicked(const InputHandler& self, const MouseButton button) const noexcept -> bool
+	auto InputHandler::Mouse::is_clicked(const InputHandler& self, const MouseButton button, const bool repeat) const noexcept -> bool
 	{
 		std::ignore = self;
 
@@ -89,7 +89,30 @@ namespace gal::prometheus::io
 
 		const auto& state = states[index];
 
-		return state.action_this_frame == DeviceKeyAction::DOWN;
+		if (state.down_this_frame != 0)
+		{
+			return true;
+		}
+
+		if (repeat and state.down_time != 0)
+		{
+			const auto now = current_time();
+
+			if (const auto interval = duration_type{now.time_since_epoch().count() - state.down_time};
+				interval > self.mouse_repeat_click_delay_)
+			{
+				// todo: 1/60 second?
+				constexpr auto tick_time{std::chrono::milliseconds{16}};
+				const auto half = self.mouse_repeat_click_rate_ / 2;
+
+				const auto v1 = (interval - self.mouse_repeat_click_delay_) % self.mouse_repeat_click_rate_;
+				const auto v2 = (interval - tick_time) % self.mouse_repeat_click_rate_;
+
+				return (v1 > half) != (v2 > half);
+			}
+		}
+
+		return false;
 	}
 
 	auto InputHandler::Mouse::is_double_clicked(const InputHandler& self, const MouseButton button) const noexcept -> bool
@@ -99,7 +122,7 @@ namespace gal::prometheus::io
 
 		const auto& state = states[index];
 
-		if (state.action_this_frame != DeviceKeyAction::DOWN)
+		if (state.down_this_frame == 0)
 		{
 			return false;
 		}
@@ -135,7 +158,7 @@ namespace gal::prometheus::io
 
 		const auto& state = states[index];
 
-		return state.down_last_frame;
+		return state.down_time != 0;
 	}
 
 	auto InputHandler::Keyboard::reset(const time_point_type& time_point, const InputHandler& handler) noexcept -> void
@@ -144,7 +167,7 @@ namespace gal::prometheus::io
 			states,
 			[&](key_state_type& state) noexcept -> void
 			{
-				state.action_this_frame = DeviceKeyAction::NONE;
+				state.down_this_frame = 0;
 
 				const auto view = state.press_records | std::views::reverse;
 				const auto it = std::ranges::find_if(
@@ -173,7 +196,7 @@ namespace gal::prometheus::io
 
 		const auto& state = states[index];
 
-		return state.action_this_frame == DeviceKeyAction::UP;
+		return state.down_this_frame == 0;
 	}
 
 	auto InputHandler::Keyboard::is_down(const InputHandler& self, const KeyboardKeyCode code) const noexcept -> bool
@@ -185,7 +208,7 @@ namespace gal::prometheus::io
 
 		const auto& state = states[index];
 
-		return state.action_this_frame == DeviceKeyAction::DOWN;
+		return state.down_this_frame != 0;
 	}
 
 	auto InputHandler::Keyboard::is_pressing(const InputHandler& self, const KeyboardKeyCode code) const noexcept -> bool
@@ -197,7 +220,7 @@ namespace gal::prometheus::io
 
 		const auto& state = states[index];
 
-		return state.down_last_frame;
+		return state.down_time != 0;
 	}
 
 	auto InputHandler::Keyboard::is_combination_pressing(const InputHandler& self, const std::span<const KeyboardKeyCode> codes) const noexcept -> bool
@@ -252,17 +275,19 @@ namespace gal::prometheus::io
 			const auto button = static_cast<std::size_t>(data.button);
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(button < mouse_.states.size());
 
-			auto& state = mouse_.states[button];
-
-			state.action_this_frame = data.action;
-			if (data.action == DeviceKeyAction::DOWN)
+			if (auto& [down_this_frame, down_time, press_records] = mouse_.states[button];
+				data.action == DeviceKeyAction::DOWN)
 			{
-				state.down_last_frame = true;
-				state.press_records.emplace_back(Mouse::press_record_type{.time_point = current_time(), .position = mouse_.position_current});
+				const auto now = current_time();
+
+				down_this_frame = 1;
+				down_time = now.time_since_epoch().count();
+				press_records.emplace_back(Mouse::press_record_type{.time_point = now, .position = mouse_.position_current});
 			}
 			else
 			{
-				state.down_last_frame = false;
+				down_this_frame = 0;
+				down_time = 0;
 			}
 		};
 		const auto handle_mouse_wheel = [this](const MouseWheelEventData& data) noexcept -> void
@@ -284,17 +309,19 @@ namespace gal::prometheus::io
 			const auto code = static_cast<std::size_t>(data.code);
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(code < keyboard_.states.size());
 
-			auto& state = keyboard_.states[code];
-
-			state.action_this_frame = data.action;
-			if (data.action == DeviceKeyAction::DOWN)
+			if (auto& [down_this_frame, down_time, press_records] = keyboard_.states[code];
+				data.action == DeviceKeyAction::DOWN)
 			{
-				state.down_last_frame = true;
-				state.press_records.emplace_back(Keyboard::press_record_type{.time_point = current_time()});
+				const auto now = current_time();
+
+				down_this_frame = 1;
+				down_time = now.time_since_epoch().count();
+				press_records.emplace_back(Keyboard::press_record_type{.time_point = now});
 			}
 			else
 			{
-				state.down_last_frame = false;
+				down_this_frame = 0;
+				down_time = 0;
 			}
 		};
 
@@ -352,7 +379,9 @@ namespace gal::prometheus::io
 				.size = {0, 0}
 		},
 		mouse_double_click_interval_threshold_{std::chrono::milliseconds{300}},
-		mouse_double_click_distance_threshold_{6} {}
+		mouse_double_click_distance_threshold_{6},
+		mouse_repeat_click_delay_{std::chrono::milliseconds{275}},
+		mouse_repeat_click_rate_{std::chrono::milliseconds{50}} {}
 
 	auto InputHandler::begin_frame() noexcept -> void
 	{
@@ -439,12 +468,12 @@ namespace gal::prometheus::io
 		return mouse.is_down(handler, button);
 	}
 
-	auto InputHandler::mouse_proxy::is_click(const MouseButton button) const noexcept -> bool
+	auto InputHandler::mouse_proxy::is_click(const MouseButton button, const bool repeat) const noexcept -> bool
 	{
 		const auto& handler = self.get();
 		const auto& mouse = handler.mouse_;
 
-		return mouse.is_clicked(handler, button);
+		return mouse.is_clicked(handler, button, repeat);
 	}
 
 	auto InputHandler::mouse_proxy::is_double_click(const MouseButton button) const noexcept -> bool
@@ -548,6 +577,20 @@ namespace gal::prometheus::io
 		auto& handler = self.get();
 
 		handler.mouse_double_click_distance_threshold_ = distance;
+	}
+
+	auto InputHandler::config_proxy::set_mouse_repeat_click_delay(const duration_type delay) noexcept -> void
+	{
+		auto& handler = self.get();
+
+		handler.mouse_repeat_click_delay_ = delay;
+	}
+
+	auto InputHandler::config_proxy::set_mouse_repeat_click_rate(const duration_type rate) noexcept -> void
+	{
+		auto& handler = self.get();
+
+		handler.mouse_repeat_click_rate_ = rate;
 	}
 
 	auto InputHandler::config() noexcept -> config_proxy

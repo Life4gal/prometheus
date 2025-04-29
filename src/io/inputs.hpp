@@ -382,19 +382,21 @@ namespace gal::prometheus::io
 		public:
 			struct press_record_type
 			{
-				time_point_type time_point;
-				position_type position;
+				time_point_type time_point{};
+				position_type position{0, 0};
 			};
 
 			struct key_state_type
 			{
-				DeviceKeyAction action_this_frame;
-				bool down_last_frame;
+				static_assert(sizeof(time_point_type) == sizeof(std::uint64_t));
 
-				std::uint8_t pad1;
-				std::uint8_t pad2;
+				// Whether this key is pressed or not in this frame (depends on DeviceKeyAction), reset to 0 every frame
+				std::uint64_t down_this_frame : 1 {0};
+				// If pressed, the time of the moment of the press, this value is only updated the next time it is released, not reset every frame
+				// fixme: If the runtime is too long, the 63-bit will not fully represent the 64-bit time values
+				std::uint64_t down_time : 63 {0};
 
-				std::vector<press_record_type> press_records;
+				std::vector<press_record_type> press_records{};
 			};
 
 			using mouse_states_type = std::array<key_state_type, total_mouse_button>;
@@ -422,7 +424,7 @@ namespace gal::prometheus::io
 			[[nodiscard]] auto is_up(const InputHandler& self, MouseButton button) const noexcept -> bool;
 			[[nodiscard]] auto is_down(const InputHandler& self, MouseButton button) const noexcept -> bool;
 
-			[[nodiscard]] auto is_clicked(const InputHandler& self, MouseButton button) const noexcept -> bool;
+			[[nodiscard]] auto is_clicked(const InputHandler& self, MouseButton button, bool repeat) const noexcept -> bool;
 			[[nodiscard]] auto is_double_clicked(const InputHandler& self, MouseButton button) const noexcept -> bool;
 
 			[[nodiscard]] auto is_pressing(const InputHandler& self, MouseButton button) const noexcept -> bool;
@@ -439,18 +441,20 @@ namespace gal::prometheus::io
 		public:
 			struct press_record_type
 			{
-				time_point_type time_point;
+				time_point_type time_point{};
 			};
 
 			struct key_state_type
 			{
-				DeviceKeyAction action_this_frame;
-				bool down_last_frame;
+				static_assert(sizeof(time_point_type) == sizeof(std::uint64_t));
 
-				std::uint8_t pad1;
-				std::uint8_t pad2;
+				// Whether this key is pressed or not in this frame (depends on DeviceKeyAction), reset to 0 every frame
+				std::uint64_t down_this_frame : 1 {0};
+				// If pressed, the time of the moment of the press, this value is only updated the next time it is released, not reset every frame
+				// fixme: If the runtime is too long, the 63-bit will not fully represent the 64-bit time values
+				std::uint64_t down_time : 63 {0};
 
-				std::vector<press_record_type> press_records;
+				std::vector<press_record_type> press_records{};
 			};
 
 			using keyboard_states_type = std::array<key_state_type, total_keyboard_code>;
@@ -498,6 +502,12 @@ namespace gal::prometheus::io
 		// Update once (it can also be updated every frame basis if desired)
 		// The mouse position delta between two clicks is less than this threshold to be considered as a double click
 		value_type mouse_double_click_distance_threshold_;
+		// Update once (it can also be updated every frame basis if desired)
+		// When holding a button, time before it starts repeating, in seconds
+		duration_type mouse_repeat_click_delay_;
+		// Update once (it can also be updated every frame basis if desired)
+		// When holding a button, rate at which it repeats, in seconds
+		duration_type mouse_repeat_click_rate_;
 
 		auto process_event(const input_event_type& event) noexcept -> void;
 
@@ -531,7 +541,7 @@ namespace gal::prometheus::io
 			[[nodiscard]] auto is_up(MouseButton button) const noexcept -> bool;
 			[[nodiscard]] auto is_down(MouseButton button) const noexcept -> bool;
 
-			[[nodiscard]] auto is_click(MouseButton button) const noexcept -> bool;
+			[[nodiscard]] auto is_click(MouseButton button, bool repeat = false) const noexcept -> bool;
 			[[nodiscard]] auto is_double_click(MouseButton button) const noexcept -> bool;
 
 			[[nodiscard]] auto is_pressing(MouseButton button) const noexcept -> bool;
@@ -582,6 +592,8 @@ namespace gal::prometheus::io
 
 			auto set_mouse_double_click_interval_threshold(duration_type interval) noexcept -> void;
 			auto set_mouse_double_click_distance_threshold(value_type distance) noexcept -> void;
+			auto set_mouse_repeat_click_delay(duration_type delay) noexcept -> void;
+			auto set_mouse_repeat_click_rate(duration_type rate) noexcept -> void;
 		};
 
 		[[nodiscard]] auto config() noexcept -> config_proxy;
