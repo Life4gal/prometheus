@@ -257,20 +257,13 @@ namespace gal::prometheus::io
 		// ============
 		const auto handle_mouse_move = [this](const MouseMoveEventData& data) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.source != MouseInputSource::NONE);
-
-			mouse_.input_source = data.source;
-
 			mouse_.position_previous = mouse_.position_current;
 			mouse_.position_current = data.position;
 			mouse_.position_delta = (mouse_.position_current - mouse_.position_previous).to<extent_type>();
 		};
 		const auto handle_mouse_button = [this](const MouseButtonEventData& data) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.source != MouseInputSource::NONE);
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.action != DeviceKeyAction::NONE);
-
-			mouse_.input_source = data.source;
 
 			const auto button = static_cast<std::size_t>(data.button);
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(button < mouse_.states.size());
@@ -292,9 +285,6 @@ namespace gal::prometheus::io
 		};
 		const auto handle_mouse_wheel = [this](const MouseWheelEventData& data) noexcept -> void
 		{
-			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.source != MouseInputSource::NONE);
-			mouse_.input_source = data.source;
-
 			mouse_.wheel = data.value;
 		};
 
@@ -362,7 +352,6 @@ namespace gal::prometheus::io
 		// event_queue_processing_{},
 		mouse_
 		{
-				.input_source = MouseInputSource::NONE,
 				.position_current = {0, 0},
 				.position_previous = {0, 0},
 				.position_delta = {0, 0},

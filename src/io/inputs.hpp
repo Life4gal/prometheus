@@ -15,8 +15,6 @@
 #include <primitive/extent.hpp>
 #include <memory/reference_wrapper.hpp>
 
-#include <prometheus/macro.hpp>
-
 namespace gal::prometheus::io
 {
 	using position_type = primitive::basic_point_2d<float>;
@@ -50,18 +48,6 @@ namespace gal::prometheus::io
 
 		NONE,
 	};
-
-	enum class MouseInputSource : std::uint8_t
-	{
-		MOUSE = 0,
-		TOUCH_SCREEN,
-		PEN,
-
-		INTERNAL_COUNT,
-		NONE,
-	};
-
-	constexpr auto total_mouse_input_source = static_cast<std::size_t>(MouseInputSource::INTERNAL_COUNT);
 
 	// ======================================================================
 	// KEYBOARD
@@ -246,52 +232,29 @@ namespace gal::prometheus::io
 		DISPLAY,
 	};
 
-	#if defined(GAL_PROMETHEUS_IO_INPUTS_FORCE_ALIGN)
-
-	constexpr auto event_data_alignment = sizeof(position_type) + sizeof(extent_type);
-
-	#define GAL_PROMETHEUS_IO_INPUTS_EVENT_DATA_ALIGNAS alignas(event_data_alignment)
-
-	#else
-
-	#define GAL_PROMETHEUS_IO_INPUTS_EVENT_DATA_ALIGNAS
-
-	#endif
-
-	#if defined(GAL_PROMETHEUS_IO_INPUTS_FORCE_ALIGN)
-	GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
-	GAL_PROMETHEUS_COMPILER_DISABLE_MSVC_WARNING(4324)
-	#endif
-
 	// ======================================================================
 	// MOUSE
 	// ======================================================================
 
-	// 1 byte + 8 bytes
-	class GAL_PROMETHEUS_IO_INPUTS_EVENT_DATA_ALIGNAS MouseMoveEventData final
+	// 8 bytes
+	class MouseMoveEventData final
 	{
 	public:
-		MouseInputSource source{MouseInputSource::NONE};
-
 		position_type position{0, 0};
 	};
 
-	// 1 byte + 2 bytes
-	class GAL_PROMETHEUS_IO_INPUTS_EVENT_DATA_ALIGNAS MouseButtonEventData final
+	// 2 bytes
+	class MouseButtonEventData final
 	{
 	public:
-		MouseInputSource source{MouseInputSource::NONE};
-
 		MouseButton button{MouseButton::NONE};
 		DeviceKeyAction action{DeviceKeyAction::NONE};
 	};
 
-	// 1 byte + 8 bytes
-	class GAL_PROMETHEUS_IO_INPUTS_EVENT_DATA_ALIGNAS MouseWheelEventData final
+	// 8 bytes
+	class MouseWheelEventData final
 	{
 	public:
-		MouseInputSource source{MouseInputSource::NONE};
-
 		extent_type value;
 	};
 
@@ -300,7 +263,7 @@ namespace gal::prometheus::io
 	// ======================================================================
 
 	// 2 bytes
-	class GAL_PROMETHEUS_IO_INPUTS_EVENT_DATA_ALIGNAS KeyboardEventData final
+	class KeyboardEventData final
 	{
 	public:
 		KeyboardKeyCode code{KeyboardKeyCode::NONE};
@@ -312,22 +275,18 @@ namespace gal::prometheus::io
 	// ======================================================================
 
 	// 8 bytes
-	class GAL_PROMETHEUS_IO_INPUTS_EVENT_DATA_ALIGNAS DisplayMoveEventData final
+	class DisplayMoveEventData final
 	{
 	public:
 		position_type position{0, 0};
 	};
 
 	// 8 bytes
-	class GAL_PROMETHEUS_IO_INPUTS_EVENT_DATA_ALIGNAS DisplayResizeEventData final
+	class DisplayResizeEventData final
 	{
 	public:
 		extent_type size{0, 0};
 	};
-
-	#if defined(GAL_PROMETHEUS_IO_INPUTS_FORCE_ALIGN)
-	GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
-	#endif
 
 	// ======================================================================
 	// Handler
@@ -400,8 +359,6 @@ namespace gal::prometheus::io
 			};
 
 			using mouse_states_type = std::array<key_state_type, total_mouse_button>;
-
-			MouseInputSource input_source;
 
 			// Update every frame
 			// Current mouse position (this frame)
