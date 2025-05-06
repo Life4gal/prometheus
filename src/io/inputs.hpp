@@ -10,6 +10,7 @@
 #include <variant>
 #include <vector>
 #include <span>
+#include <mutex>
 
 #include <primitive/point.hpp>
 #include <primitive/extent.hpp>
@@ -304,33 +305,14 @@ namespace gal::prometheus::io
 	class InputHandler
 	{
 	public:
-		// todo
-		#if not defined(GAL_PROMETHEUS_IO_INPUTS_MUTEX)
-		class TrivialMutex
-		{
-		public:
-			std::uintptr_t pad{0xdead'c0ffee};
-
-			constexpr auto lock() const noexcept -> void { std::ignore = this; }
-
-			constexpr auto unlock() const noexcept -> void { std::ignore = this; }
-		};
-
-		using mutex_type = TrivialMutex;
-		#else
-		using mutext_type = GAL_PROMETHEUS_IO_INPUTS_MUTEX
-		#endif
-
+		using mutex_type = std::mutex;
 		using event_queue_type = std::vector<input_event_type>;
 
 		using value_type = extent_type::value_type;
 
 	private:
-		mutable mutex_type mutex_;
-
-		//
-		event_queue_type event_queue_pending_;
-		event_queue_type event_queue_processing_;
+		mutex_type mutex_;
+		event_queue_type event_queue_;
 
 		// ============
 		// MOUSE
@@ -470,9 +452,9 @@ namespace gal::prometheus::io
 
 	public:
 		InputHandler(const InputHandler&) noexcept = delete;
-		InputHandler(InputHandler&&) noexcept = default;
+		InputHandler(InputHandler&&) noexcept = delete;
 		auto operator=(const InputHandler&) noexcept -> InputHandler& = delete;
-		auto operator=(InputHandler&&) noexcept -> InputHandler& = default;
+		auto operator=(InputHandler&&) noexcept -> InputHandler& = delete;
 		~InputHandler() noexcept = default;
 
 		InputHandler() noexcept;

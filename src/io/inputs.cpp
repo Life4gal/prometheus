@@ -5,8 +5,6 @@
 
 #include <io/inputs.hpp>
 
-#include <mutex>
-
 #include <functional/functor.hpp>
 
 namespace
@@ -346,10 +344,6 @@ namespace gal::prometheus::io
 
 	InputHandler::InputHandler() noexcept
 		:
-		// ReSharper disable once CppRedundantMemberInitializer
-		mutex_{},
-		// event_queue_pending_{},
-		// event_queue_processing_{},
 		mouse_
 		{
 				.position_current = {0, 0},
@@ -374,21 +368,20 @@ namespace gal::prometheus::io
 
 	auto InputHandler::begin_frame() noexcept -> void
 	{
+		event_queue_type queue{};
 		{
 			std::scoped_lock lock{mutex_};
 
-			event_queue_processing_.append_range(std::move(event_queue_pending_));
-			event_queue_pending_.clear();
+			event_queue_.swap(queue);
 		}
 
 		std::ranges::for_each(
-			event_queue_processing_,
+			queue,
 			[this](const input_event_type& event) noexcept -> void
 			{
 				process_event(event);
 			}
 		);
-		event_queue_processing_.clear();
 	}
 
 	auto InputHandler::end_frame() noexcept -> void
@@ -414,7 +407,7 @@ namespace gal::prometheus::io
 	auto InputHandler::push_event(const input_event_type& event) noexcept -> void
 	{
 		std::scoped_lock lock{mutex_};
-		event_queue_pending_.push_back(event);
+		event_queue_.push_back(event);
 	}
 
 	auto InputHandler::mouse_proxy::position() const noexcept -> position_type
