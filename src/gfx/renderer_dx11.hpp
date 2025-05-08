@@ -50,8 +50,9 @@ namespace gal::prometheus::gfx
 		[[nodiscard]] auto create_vertex_shader() noexcept -> bool;
 		[[nodiscard]] auto create_pixel_shader() noexcept -> bool;
 
-		[[nodiscard]] auto create_texture(
-			const TextureAtlas& texture,
+		[[nodiscard]] auto upload_texture(
+			Texture::data_view_type data,
+			Texture::size_type size,
 			D3D11_USAGE usage = D3D11_USAGE_DEFAULT,
 			std::uint32_t bind_flags = D3D11_BIND_SHADER_RESOURCE,
 			std::uint32_t cpu_access_flags = 0,
@@ -74,10 +75,7 @@ namespace gal::prometheus::gfx
 
 		[[nodiscard]] auto ready() const noexcept -> bool override;
 
-		auto begin_frame(const RendererContext& context) noexcept -> void override;
-		auto end_frame(const RendererContext& context) noexcept -> void override;
-
-		auto create_texture() noexcept -> void override;
+		auto create_texture(Texture::data_view_type data, Texture::size_type size) noexcept -> texture_id_type override;
 		auto destroy_texture(texture_id_type texture_id) noexcept -> void override;
 	};
 }

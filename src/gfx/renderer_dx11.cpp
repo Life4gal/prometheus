@@ -25,6 +25,9 @@
 
 namespace
 {
+	using namespace gal::prometheus;
+	using namespace gfx;
+
 	[[nodiscard]] auto check_hr_error(
 		const HRESULT result
 		#if defined(GAL_PROMETHEUS_GFX_DEBUG)
@@ -55,6 +58,16 @@ namespace
 	}
 
 	using projection_matrix_type = float[4][4];
+
+	[[nodiscard]] auto id_to_gpu_handle(const texture_id_type id) noexcept -> ID3D11ShaderResourceView*
+	{
+		return reinterpret_cast<ID3D11ShaderResourceView*>(id); // NOLINT(performance-no-int-to-ptr)
+	}
+
+	[[nodiscard]] auto gpu_handle_to_id(const ID3D11ShaderResourceView* srv) noexcept -> texture_id_type
+	{
+		return reinterpret_cast<texture_id_type>(srv);
+	}
 }
 
 namespace gal::prometheus::gfx
@@ -347,8 +360,9 @@ namespace gal::prometheus::gfx
 		return false;
 	}
 
-	auto Dx11Renderer::create_texture(
-		const TextureAtlas& texture,
+	auto Dx11Renderer::upload_texture(
+		const Texture::data_view_type data,
+		const Texture::size_type size,
 		const D3D11_USAGE usage,
 		const std::uint32_t bind_flags,
 		const std::uint32_t cpu_access_flags,
@@ -356,13 +370,10 @@ namespace gal::prometheus::gfx
 		const bool record_resource
 	) noexcept -> texture_id_type
 	{
-		const auto texture_size = texture.size();
-		const auto texture_data = texture.data();
-
 		const D3D11_TEXTURE2D_DESC texture_2d_desc
 		{
-				.Width = static_cast<UINT>(texture_size.width),
-				.Height = static_cast<UINT>(texture_size.height),
+				.Width = static_cast<UINT>(size.width),
+				.Height = static_cast<UINT>(size.height),
 				.MipLevels = 1,
 				.ArraySize = 1,
 				.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
@@ -375,8 +386,8 @@ namespace gal::prometheus::gfx
 
 		const D3D11_SUBRESOURCE_DATA subresource_data
 		{
-				.pSysMem = texture_data.data(),
-				.SysMemPitch = static_cast<UINT>(texture_size.width * 4),
+				.pSysMem = data.data(),
+				.SysMemPitch = static_cast<UINT>(size.width * 4),
 				.SysMemSlicePitch = 0
 		};
 
@@ -424,7 +435,7 @@ namespace gal::prometheus::gfx
 			texture_2d->Release();
 		}
 
-		return reinterpret_cast<texture_id_type>(srv);
+		return gpu_handle_to_id(srv);
 	}
 
 	Dx11Renderer::Dx11Renderer() noexcept
@@ -541,14 +552,16 @@ namespace gal::prometheus::gfx
 		return true;
 	}
 
-	auto Dx11Renderer::begin_frame(const RendererContext& context) noexcept -> void
+	auto Dx11Renderer::create_texture(const Texture::data_view_type data, const Texture::size_type size) noexcept -> texture_id_type
 	{
-		// todo: create texture 
+		return upload_texture(data, size);
 	}
 
-	auto Dx11Renderer::end_frame(const RendererContext& context) noexcept -> void
+	auto Dx11Renderer::destroy_texture(const texture_id_type texture_id) noexcept -> void
 	{
-		//
+		auto* srv = id_to_gpu_handle(texture_id);
+
+		textures_.erase(srv);
 	}
 }
 

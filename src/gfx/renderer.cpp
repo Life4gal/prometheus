@@ -7,5 +7,5 @@
 
 namespace gal::prometheus::gfx
 {
-	//
+	Renderer::~Renderer() noexcept = default;
 }

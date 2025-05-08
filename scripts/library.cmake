@@ -364,20 +364,26 @@ set(
 		${PROJECT_SOURCE_DIR}/src/io/inputs.hpp
 
 		${PROJECT_SOURCE_DIR}/src/io/io.hpp
-		
+
 		# =========================
 		# GFX
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/gfx/type.hpp
-		${PROJECT_SOURCE_DIR}/src/gfx/draw_list_shared_data.hpp
+
+		${PROJECT_SOURCE_DIR}/src/gfx/texture.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/font.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/render_list.hpp
+
 		${PROJECT_SOURCE_DIR}/src/gfx/glyph_parser_freetype.hpp
+
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer_dx11.hpp
 
+		${PROJECT_SOURCE_DIR}/src/gfx/context.hpp
+
 		${PROJECT_SOURCE_DIR}/src/gfx/gfx.hpp
-		
+
 		# =========================
 		# GUI
 		# =========================
@@ -428,16 +434,21 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/io/inputs.cpp
-		
+
 		# =========================
 		# GFX
 		# =========================
-		
-		${PROJECT_SOURCE_DIR}/src/gfx/draw_list_shared_data.cpp
+
+		${PROJECT_SOURCE_DIR}/src/gfx/texture.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/font.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/render_list.cpp
+
 		${PROJECT_SOURCE_DIR}/src/gfx/glyph_parser_freetype.cpp
+
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer_dx11.cpp
+
+		${PROJECT_SOURCE_DIR}/src/gfx/context.cpp
 
 		# =========================
 		# GUI

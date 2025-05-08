@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <gfx/type.hpp>
+#include <gfx/texture.hpp>
 
 namespace gal::prometheus::gfx
 {
@@ -17,7 +17,7 @@ namespace gal::prometheus::gfx
 		auto operator=(const Renderer&) noexcept -> Renderer& = delete;
 		auto operator=(Renderer&&) noexcept -> Renderer& = default;
 
-		virtual ~Renderer() noexcept = default;
+		virtual ~Renderer() noexcept;
 
 	protected:
 		Renderer() noexcept = default;
@@ -28,11 +28,7 @@ namespace gal::prometheus::gfx
 
 		[[nodiscard]] virtual auto ready() const noexcept -> bool = 0;
 
-		virtual auto begin_frame(const RendererContext& context) noexcept -> void = 0;
-		virtual auto end_frame(const RendererContext& context) noexcept -> void = 0;
-
-		// todo
-		virtual auto create_texture() noexcept -> void = 0;
+		virtual auto create_texture(Texture::data_view_type data, Texture::size_type size) noexcept -> texture_id_type = 0;
 		virtual auto destroy_texture(texture_id_type texture_id) noexcept -> void = 0;
 	};
-}
+} // namespace gal::prometheus::gfx
