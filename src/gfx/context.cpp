@@ -41,7 +41,7 @@ namespace gal::prometheus::gfx
 		return 0;
 	}
 
-	auto TextureContext::make_territory(const Texture::size_type size) noexcept -> SubTexture
+	auto TextureContext::make_territory(const Texture::size_type size) noexcept -> BorrowTexture
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(size.width > 0 and size.height > 0);
 
@@ -72,8 +72,8 @@ namespace gal::prometheus::gfx
 		// ========================================
 		{
 			constexpr std::uint32_t white_color = 0xff'ff'ff'ff;
-			constexpr auto aa_width = RenderListSharedData::baked_line_uv_count;
-			constexpr auto aa_height = RenderListSharedData::baked_line_uv_count;
+			constexpr auto aa_width = static_cast<Texture::size_type::value_type>(RenderListSharedData::baked_line_uv_count);
+			constexpr auto aa_height = static_cast<Texture::size_type::value_type>(RenderListSharedData::baked_line_uv_count);
 			constexpr auto aa_size = Texture::size_type{aa_width, aa_height};
 
 			const auto atlas_id = select_atlas(aa_size);
@@ -147,92 +147,30 @@ namespace gal::prometheus::gfx
 		return *parser_;
 	}
 
-	auto TextureContext::add_font(const std::filesystem::path& path) noexcept -> void
+	auto TextureContext::add_font(const std::filesystem::path& path) noexcept -> bool
 	{
 		std::ifstream file{path, std::ios::binary};
 		if (not file.is_open())
 		{
 			// todo: error handling
-			return;
+			return false;
 		}
 
 		file.seekg(0, std::ios::end);
 		const auto size = file.tellg();
 
-		auto data = std::make_unique_for_overwrite<FontFaceTask::value_type[]>(size);
+		auto data = std::make_unique_for_overwrite<FontPendingLoadData::element_type[]>(size);
 		file.seekg(0, std::ios::beg);
 		file.read(reinterpret_cast<char*>(data.get()), size);
 		file.close();
 
-		font_face_tasks_.emplace_back(std::move(data), size);
+		font_pending_load_datas_.emplace_back(std::move(data), static_cast<FontPendingLoadData::size_type>(size));
+		return true;
 	}
 
-	auto TextureContext::add_font(const std::string_view path) noexcept -> void
+	auto TextureContext::add_font(const std::string_view path) noexcept -> bool
 	{
-		add_font(std::filesystem::path{path});
-	}
-
-	auto TextureContext::load_all_font() noexcept -> void
-	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(parser_ != nullptr);
-
-		std::ranges::for_each(
-				font_face_tasks_,
-				[this](const FontFaceTask& task) noexcept -> void
-				{
-					if (auto result = parser_->load({task.data.get(), task.size}); result.valid())
-					{
-						font_faces_.emplace_back(*this, std::move(result.name), result.id);
-					}
-					else
-					{
-						// todo: error handling
-					}
-				}
-		);
-		font_face_tasks_.clear();
-	}
-
-	auto TextureContext::upload_all_font_face() noexcept -> void
-	{
-		std::ranges::for_each(font_faces_, &FontFace::upload);
-	}
-
-	auto TextureContext::upload_glyph_to_texture(GlyphUploadInfo& upload_info) noexcept -> void
-	{
-		auto& info = upload_info.info.get();
-		const auto& data = upload_info.data;
-
-		const auto width = static_cast<Texture::size_type::value_type>(info.rect.width());
-		const auto height = static_cast<Texture::size_type::value_type>(info.rect.height());
-		const auto size = Texture::size_type{width, height};
-
-		const auto atlas_id = select_atlas(size);
-		const auto& atlas = select_atlas(atlas_id);
-
-		const auto atlas_uv_scale = atlas.uv();
-
-		const auto& texture = make_territory(size);
-		texture.fill({data.get(), width * height});
-
-		const auto texture_point = texture.point();
-		info.texture_atlas_id = atlas_id;
-		info.uv.point = texture_point.to<point_type>() * atlas_uv_scale;
-		info.uv.extent = size.to<extent_type>() * atlas_uv_scale;
-	}
-
-	auto TextureContext::upload_all_texture(Renderer& renderer) noexcept -> void
-	{
-		std::ranges::for_each(
-				texture_atlases_,
-				[&renderer](auto& atlas) noexcept -> void
-				{
-					if (not atlas.valid())
-					{
-						atlas.build(renderer);
-					}
-				}
-		);
+		return add_font(std::filesystem::path{path});
 	}
 
 	auto TextureContext::root_texture() const noexcept -> texture_id_type
@@ -308,6 +246,66 @@ namespace gal::prometheus::gfx
 		);
 
 		return total_size;
+	}
+
+	auto TextureContext::load_all_font() noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(parser_ != nullptr);
+
+		std::ranges::for_each(
+				font_pending_load_datas_,
+				[this](const FontPendingLoadData& data) noexcept -> void
+				{
+					if (auto result = parser_->load(data); result.valid())
+					{
+						font_faces_.emplace_back(*this, std::move(result.name), result.id);
+					}
+					else
+					{
+						// todo: error handling
+					}
+				}
+		);
+		font_pending_load_datas_.clear();
+	}
+
+	auto TextureContext::upload_all_font_face() noexcept -> void
+	{
+		std::ranges::for_each(font_faces_, &FontFace::upload);
+	}
+
+	auto TextureContext::upload_glyph_to_texture(GlyphInfo& info, const GlyphParsedInfo::data_type& data) noexcept -> void
+	{
+		const auto width = static_cast<Texture::size_type::value_type>(info.rect.width());
+		const auto height = static_cast<Texture::size_type::value_type>(info.rect.height());
+		const auto size = Texture::size_type{width, height};
+
+		const auto atlas_id = select_atlas(size);
+		const auto& atlas = select_atlas(atlas_id);
+
+		const auto atlas_uv_scale = atlas.uv();
+
+		const auto& texture = make_territory(size);
+		texture.fill({data.get(), width * height});
+
+		const auto texture_point = texture.point();
+		info.texture_atlas_id = atlas_id;
+		info.uv.point = texture_point.to<point_type>() * atlas_uv_scale;
+		info.uv.extent = size.to<extent_type>() * atlas_uv_scale;
+	}
+
+	auto TextureContext::upload_all_texture(Renderer& renderer) noexcept -> void
+	{
+		std::ranges::for_each(
+				texture_atlases_,
+				[&renderer](auto& atlas) noexcept -> void
+				{
+					if (not atlas.uploaded())
+					{
+						atlas.upload(renderer);
+					}
+				}
+		);
 	}
 
 	RendererContext::~RendererContext() noexcept = default;

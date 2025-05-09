@@ -10,12 +10,45 @@
 #include <chars/chars.hpp>
 #include <gfx/context.hpp>
 
-#define STB_RECT_PACK_IMPLEMENTATION
-#include <stb_rect_pack.h>
-
 namespace gal::prometheus::gfx
 {
+	FontPendingLoadData::FontPendingLoadData(data_type data, const size_type size) noexcept
+		: data_{std::move(data)},
+		  size_{size}
+	{
+	}
+
+	auto FontPendingLoadData::data() const noexcept -> data_view_type
+	{
+		return {data_.get(), size()};
+	}
+
+	auto FontPendingLoadData::size() const noexcept -> size_type
+	{
+		return size_;
+	}
+
+	GlyphParsedInfo::GlyphParsedInfo(GlyphInfo& info, data_type data) noexcept
+		: info_{info},
+		  data_{std::move(data)}
+	{
+	}
+
+	auto GlyphParsedInfo::upload(TextureContext& texture_context) noexcept -> void
+	{
+		auto& info = info_.get();
+
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(info.texture_atlas_id == invalid_texture_atlas_id);
+		texture_context.upload_glyph_to_texture(info, data_);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(info.texture_atlas_id != invalid_texture_atlas_id);
+	}
+
 	GlyphParser::~GlyphParser() noexcept = default;
+
+	auto GlyphParser::load(const FontPendingLoadData& data) noexcept -> LoadResult
+	{
+		return this->load(data.data());
+	}
 
 	auto GlyphParser::parse(const font_id_type id, const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> ParseResult
 	{
@@ -45,7 +78,7 @@ namespace gal::prometheus::gfx
 
 		const auto [it, inserted] = glyphs_.emplace(key, result.info);
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(inserted);
-		upload_queue_.emplace_back(memory::ref(it->second), std::move(result.data));
+		parsed_infos_upload_queue_.emplace_back(memory::ref(it->second), std::move(result.data));
 
 		return std::addressof(it->second);
 	}
@@ -99,17 +132,13 @@ namespace gal::prometheus::gfx
 	auto FontFace::upload() noexcept -> void
 	{
 		std::ranges::for_each(
-				upload_queue_,
-				[&context = context_.get()](GlyphUploadInfo& upload_info) noexcept -> void
+				parsed_infos_upload_queue_,
+				[&context = context_.get()](GlyphParsedInfo& parsed_info) noexcept -> void
 				{
-					const auto& info = upload_info.info.get();
-
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(info.texture_atlas_id == invalid_texture_atlas_id);
-					context.upload_glyph_to_texture(upload_info);
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(info.texture_atlas_id != invalid_texture_atlas_id);
+					parsed_info.upload(context);
 				}
 		);
-		upload_queue_.clear();
+		parsed_infos_upload_queue_.clear();
 	}
 
 	auto FontFace::find_glyph(const GlyphKey& key) noexcept -> const GlyphInfo&

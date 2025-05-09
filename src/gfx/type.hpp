@@ -35,9 +35,8 @@ namespace gal::prometheus::gfx
 	using texture_id_type = std::uintptr_t;
 	constexpr texture_id_type invalid_texture_id{0};
 
-	class TextureDescriptor;
-	class SubTexture;
 	class Texture;
+	class BorrowTexture;
 
 	// =========================================================
 	// FONT
@@ -51,18 +50,31 @@ namespace gal::prometheus::gfx
 
 	class GlyphKey;
 	class GlyphInfo;
+
+	class FontPendingLoadData;
+
+	class GlyphParsedInfo;
 	class GlyphParser;
-	class GlyphUploadInfo;
+
 	class FontFace;
+
+	// =========================================================
+	// RENDERER LIST
+	// =========================================================
+
+	class RenderListSharedData;
+	class RenderList;
 
 	// =========================================================
 	// RENDERER
 	// =========================================================
 
-	class TextureContext;
-
-	class RenderListSharedData;
-	class RenderList;
 	class Renderer;
+
+	// =========================================================
+	// CONTEXT
+	// =========================================================
+
+	class TextureContext;
 	class RendererContext;
 } // namespace gal::prometheus::gfx

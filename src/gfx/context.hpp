@@ -24,8 +24,8 @@ namespace gal::prometheus::gfx
 		class Territory final
 		{
 		public:
-			using point_type = TextureDescriptor::point_type;
-			using size_type = TextureDescriptor::size_type;
+			using point_type = Texture::point_type;
+			using size_type = Texture::size_type;
 
 			texture_atlas_id_type id{invalid_texture_atlas_id};
 
@@ -35,23 +35,15 @@ namespace gal::prometheus::gfx
 
 		using territories_type = std::vector<Territory>;
 
-		class FontFaceTask final
-		{
-		public:
-			using value_type = GlyphParser::binary_data_type::element_type;
-
-			std::unique_ptr<value_type[]> data;
-			std::size_t size;
-		};
-
-		using font_face_tasks_type = std::vector<FontFaceTask>;
+		using font_pending_load_datas = std::vector<FontPendingLoadData>;
 
 		GlyphParser* parser_;
 
 		texture_atlases_type texture_atlases_;
-		font_faces_type font_faces_;
 		territories_type territories_;
-		font_face_tasks_type font_face_tasks_;
+
+		font_faces_type font_faces_;
+		font_pending_load_datas font_pending_load_datas_;
 
 		/**
 		 * @brief Retain at least one texture atlas (root)
@@ -82,7 +74,7 @@ namespace gal::prometheus::gfx
 		 * @param size Sub texture size
 		 * @return Region on the texture atlas
 		 */
-		auto make_territory(Texture::size_type size) noexcept -> SubTexture;
+		auto make_territory(Texture::size_type size) noexcept -> BorrowTexture;
 
 	public:
 		TextureContext(const TextureContext&) noexcept = delete;
@@ -112,33 +104,13 @@ namespace gal::prometheus::gfx
 		 * @brief Load fonts from the specified path, assuming the path is a valid font file
 		 * @param path Font path
 		 */
-		auto add_font(const std::filesystem::path& path) noexcept -> void;
+		auto add_font(const std::filesystem::path& path) noexcept -> bool;
 
 		/**
 		 * @brief Load fonts from the specified path, assuming the path is a valid font file
 		 * @param path Font path
 		 */
-		auto add_font(std::string_view path) noexcept -> void;
-
-		/**
-		 * @brief Load the fonts previously added by @c add_font
-		 */
-		auto load_all_font() noexcept -> void;
-
-		/**
-		 * @brief UUpload all used glyphs to the texture (if it is not already uploaded)
-		 */
-		auto upload_all_font_face() noexcept -> void;
-
-		/**
-		 * @brief Write FontFace uploaded glyph data to texture, also set the texture atlas id and uv coordinates for this glyph data
-		 */
-		auto upload_glyph_to_texture(GlyphUploadInfo& upload_info) noexcept -> void;
-
-		/**
-		 * @brief Upload all texture atlas (if it didn't upload or needs to be re-uploaded)
-		 */
-		auto upload_all_texture(Renderer& renderer) noexcept -> void;
+		auto add_font(std::string_view path) noexcept -> bool;
 
 		/**
 		 * @brief Get root (default) texture
@@ -170,6 +142,28 @@ namespace gal::prometheus::gfx
 		 * @return
 		 */
 		[[nodiscard]] auto size_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
+
+		// =============================================================================================================================
+
+		/**
+		 * @brief Load the fonts previously added by @c add_font
+		 */
+		auto load_all_font() noexcept -> void;
+
+		/**
+		 * @brief Upload all used glyphs to the texture (if it is not already uploaded)
+		 */
+		auto upload_all_font_face() noexcept -> void;
+
+		/**
+		 * @brief Write FontFace uploaded glyph data to texture, also set the @c texture_atlas_id and @c uv coordinates for this glyph data
+		 */
+		auto upload_glyph_to_texture(GlyphInfo& info, const GlyphParsedInfo::data_type& data) noexcept -> void;
+
+		/**
+		 * @brief Upload all texture atlas (if it didn't upload or needs to be re-uploaded)
+		 */
+		auto upload_all_texture(Renderer& renderer) noexcept -> void;
 	};
 
 	class RendererContext final

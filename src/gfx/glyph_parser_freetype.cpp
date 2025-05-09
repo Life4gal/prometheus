@@ -5,9 +5,9 @@
 
 #include <gfx/glyph_parser_freetype.hpp>
 
-#include <freetype/ftsynth.h>
-
 #if defined(GAL_PROMETHEUS_GFX_GLYPH_PARSER_FREETYPE)
+
+#include <freetype/ftsynth.h>
 
 namespace
 {
@@ -15,23 +15,15 @@ namespace
 	{
 		return static_cast<float>((size + 63) >> 6);
 	}
-}
+} // namespace
 
 namespace gal::prometheus::gfx
 {
 	auto FreeTypeGlyphParser::FontInfo::set_pixel_height(const std::size_t height) noexcept -> bool
 	{
-		FT_Size_RequestRec request
-		{
-				.type = FT_SIZE_REQUEST_TYPE_NOMINAL,
-				.width = 0,
-				.height = static_cast<FT_Long>(height) * 64,
-				.horiResolution = 0,
-				.vertResolution = 0
-		};
+		FT_Size_RequestRec request{.type = FT_SIZE_REQUEST_TYPE_NOMINAL, .width = 0, .height = static_cast<FT_Long>(height) * 64, .horiResolution = 0, .vertResolution = 0};
 
-		if (const auto error = FT_Request_Size(face, &request);
-			error != FT_Err_Ok)
+		if (const auto error = FT_Request_Size(face, &request); error != FT_Err_Ok)
 		{
 			return false;
 		}
@@ -50,25 +42,26 @@ namespace gal::prometheus::gfx
 	FreeTypeGlyphParser::~FreeTypeGlyphParser() noexcept
 	{
 		std::ranges::for_each(
-			infos_,
-			[](auto& info) noexcept -> void
-			{
-				::FT_Done_Face(info.face);
-			}
+				infos_,
+				[](auto& info) noexcept -> void
+				{
+					::FT_Done_Face(info.face);
+				}
 		);
 
 		FT_Done_FreeType(library_);
 	}
 
 	FreeTypeGlyphParser::FreeTypeGlyphParser() noexcept
-		: library_{nullptr} {}
+		: library_{nullptr}
+	{
+	}
 
 	auto FreeTypeGlyphParser::initialize() noexcept -> bool
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(library_ == nullptr);
 
-		if (const auto error = FT_Init_FreeType(&library_);
-			error != FT_Err_Ok)
+		if (const auto error = FT_Init_FreeType(&library_); error != FT_Err_Ok)
 		{
 			return false;
 		}
@@ -76,7 +69,7 @@ namespace gal::prometheus::gfx
 		return true;
 	}
 
-	auto FreeTypeGlyphParser::load(const binary_data_type data) noexcept -> LoadResult
+	auto FreeTypeGlyphParser::load(const FontPendingLoadData::data_view_type data) noexcept -> LoadResult
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.data() != nullptr);
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not data.empty());
@@ -84,14 +77,12 @@ namespace gal::prometheus::gfx
 		LoadResult invalid_result{.name = {}, .id = invalid_font_id};
 
 		FT_Face face = nullptr;
-		if (const auto error = FT_New_Memory_Face(library_, data.data(), static_cast<FT_Long>(data.size()), 0, &face);
-			error != FT_Err_Ok)
+		if (const auto error = FT_New_Memory_Face(library_, data.data(), static_cast<FT_Long>(data.size()), 0, &face); error != FT_Err_Ok)
 		{
 			return invalid_result;
 		}
 
-		if (const auto error = FT_Select_Charmap(face, FT_ENCODING_UNICODE);
-			error != FT_Err_Ok)
+		if (const auto error = FT_Select_Charmap(face, FT_ENCODING_UNICODE); error != FT_Err_Ok)
 		{
 			FT_Done_Face(face);
 			return invalid_result;
@@ -136,8 +127,7 @@ namespace gal::prometheus::gfx
 
 		info.set_pixel_height(key.size);
 
-		if (const auto error = FT_Load_Glyph(info.face, char_index, FT_LOAD_DEFAULT);
-			error != FT_Err_Ok)
+		if (const auto error = FT_Load_Glyph(info.face, char_index, FT_LOAD_DEFAULT); error != FT_Err_Ok)
 		{
 			return invalid_result;
 		}
@@ -153,8 +143,7 @@ namespace gal::prometheus::gfx
 			FT_GlyphSlot_Oblique(slot);
 		}
 
-		if (const auto error = FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL);
-			error != FT_Err_Ok)
+		if (const auto error = FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL); error != FT_Err_Ok)
 		{
 			return invalid_result;
 		}
@@ -165,18 +154,17 @@ namespace gal::prometheus::gfx
 		const extent_type size{static_cast<extent_type::value_type>(bitmap.width), static_cast<extent_type::value_type>(bitmap.rows)};
 		const std::size_t data_length = static_cast<std::size_t>(bitmap.width) * bitmap.rows;
 
-		ParseResult result
-		{
-				.info =
-				{
+		ParseResult result{
+			.info =
+					{
 						.rect = {point, size},
 						.advance_x = ft_size_to_float(slot->advance.x),
 						.visible = size.width > 0 and size.height > 0,
 						.colored = bitmap.pixel_mode == FT_PIXEL_MODE_BGRA,
 						.texture_atlas_id = invalid_texture_atlas_id,
-						.uv = {}
-				},
-				.data = std::make_unique_for_overwrite<TextureAtlas::data_type::element_type[]>(data_length)
+						.uv = {},
+					},
+			.data = std::make_unique_for_overwrite<Texture::element_type[]>(data_length)
 		};
 
 		{
@@ -244,6 +232,6 @@ namespace gal::prometheus::gfx
 
 		return result;
 	}
-}
+} // namespace gal::prometheus::gfx
 
 #endif

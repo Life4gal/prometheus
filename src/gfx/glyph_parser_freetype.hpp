@@ -53,12 +53,12 @@ namespace gal::prometheus::gfx
 
 		auto initialize() noexcept -> bool override;
 
-		auto load(binary_data_type data) noexcept -> LoadResult override;
+		auto load(FontPendingLoadData::data_view_type data) noexcept -> LoadResult override;
 
 		[[nodiscard]] auto has_glyph(font_id_type id, std::uint32_t codepoint) const noexcept -> bool override;
 
 		auto parse(font_id_type id, const GlyphKey& key) noexcept -> ParseResult override;
 	};
-}
+} // namespace gal::prometheus::gfx
 
 #endif

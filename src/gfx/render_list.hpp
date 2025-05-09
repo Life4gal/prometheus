@@ -196,7 +196,7 @@ namespace gal::prometheus::gfx
 	private:
 		class Drawer;
 
-		RenderListFlag draw_list_flag_;
+		RenderListFlag render_list_flag_;
 		memory::RefWrapper<RendererContext> context_;
 
 		// vertex_list: v1-v2-v3-v4 + v5-v6-v7-v8 + v9-v10-v11 => rect0 + rect1(clipped by rect0) + triangle0(clipped by rect1)
@@ -216,6 +216,10 @@ namespace gal::prometheus::gfx
 
 		auto on_scissor_changed() noexcept -> void;
 		auto on_texture_changed() noexcept -> void;
+
+		[[nodiscard]] auto shared_data() const noexcept -> const RenderListSharedData&;
+
+		[[nodiscard]] auto default_texture() const noexcept -> texture_id_type;
 
 	public:
 		RenderList(RenderListFlag flag, RendererContext& context) noexcept;

@@ -5,6 +5,8 @@
 
 #include <gfx/render_list.hpp>
 
+#include <gfx/context.hpp>
+
 #include <math/cmath.hpp>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
@@ -345,12 +347,12 @@ namespace gal::prometheus::gfx
 
 		[[nodiscard]] auto make_appender() noexcept -> RenderDataAppender
 		{
-			auto& draw_list = self.get();
+			auto& render_list = self.get();
 
-			return {draw_list.command_list_.back(), draw_list.vertex_list_, draw_list.index_list_};
+			return {render_list.command_list_.back(), render_list.vertex_list_, render_list.index_list_};
 		}
 
-		auto draw_polygon_line(const color_type color, const RenderFlag draw_flag, const float thickness) noexcept -> void
+		auto draw_polygon_line(const color_type color, const RenderFlag render_flag, const float thickness) noexcept -> void
 		{
 			const auto path_point_count = path_list.size();
 			const auto& path_point = path_list;
@@ -360,11 +362,11 @@ namespace gal::prometheus::gfx
 				return;
 			}
 
-			const auto& draw_list = self.get();
-			const auto& shared_data = draw_list.context_.get().render_list_shared_data();
+			const auto& render_list = self.get();
+			const auto& shared_data = render_list.shared_data();
 			auto appender = make_appender();
 
-			const auto is_closed = (draw_flag & RenderFlag::CLOSED) != RenderFlag::NONE;
+			const auto is_closed = (render_flag & RenderFlag::CLOSED) != RenderFlag::NONE;
 			const auto segments_count = is_closed ? path_point_count : path_point_count - 1;
 
 			const auto vertex_count = segments_count * 4;
@@ -395,7 +397,7 @@ namespace gal::prometheus::gfx
 			}
 		}
 
-		auto draw_polygon_line_aa(const color_type color, const RenderFlag draw_flag, float thickness) noexcept -> void
+		auto draw_polygon_line_aa(const color_type color, const RenderFlag render_flag, float thickness) noexcept -> void
 		{
 			const auto path_point_count = path_list.size();
 			const auto& path_point = path_list;
@@ -405,15 +407,15 @@ namespace gal::prometheus::gfx
 				return;
 			}
 
-			const auto& draw_list = self.get();
-			const auto draw_list_flag = draw_list.draw_list_flag_;
-			const auto& shared_data = draw_list.context_.get().render_list_shared_data();
+			const auto& render_list = self.get();
+			const auto render_list_flag = render_list.render_list_flag_;
+			const auto& shared_data = render_list.shared_data();
 			auto appender = make_appender();
 
 			const auto& opaque_uv = shared_data.white_pixel_uv;
 			const auto transparent_color = color.transparent();
 
-			const auto is_closed = (draw_flag & RenderFlag::CLOSED) != RenderFlag::NONE;
+			const auto is_closed = (render_flag & RenderFlag::CLOSED) != RenderFlag::NONE;
 			const auto segments_count = is_closed ? path_point_count : path_point_count - 1;
 			const auto is_thick_line = thickness > 1.f;
 
@@ -422,7 +424,7 @@ namespace gal::prometheus::gfx
 			const auto thickness_fractional = thickness - static_cast<float>(thickness_integer);
 
 			const auto is_use_texture =
-					((draw_list_flag & RenderListFlag::ANTI_ALIASED_LINE_USE_TEXTURE) == RenderListFlag::ANTI_ALIASED_LINE_USE_TEXTURE and
+					((render_list_flag & RenderListFlag::ANTI_ALIASED_LINE_USE_TEXTURE) == RenderListFlag::ANTI_ALIASED_LINE_USE_TEXTURE and
 					 (thickness_integer < RenderListSharedData::baked_line_uv_count) and (thickness_fractional <= .00001f));
 
 			const auto vertex_cont = is_use_texture ? (path_point_count * 2) : (is_thick_line ? path_point_count * 4 : path_point_count * 3);
@@ -624,8 +626,8 @@ namespace gal::prometheus::gfx
 				return;
 			}
 
-			const auto& draw_list = self.get();
-			const auto& shared_data = draw_list.context_.get().render_list_shared_data();
+			const auto& render_list = self.get();
+			const auto& shared_data = render_list.shared_data();
 			auto appender = make_appender();
 
 			const auto vertex_count = path_point_count;
@@ -661,8 +663,8 @@ namespace gal::prometheus::gfx
 				return;
 			}
 
-			const auto& draw_list = self.get();
-			const auto& shared_data = draw_list.context_.get().render_list_shared_data();
+			const auto& render_list = self.get();
+			const auto& shared_data = render_list.shared_data();
 			auto appender = make_appender();
 
 			const auto& opaque_uv = shared_data.white_pixel_uv;
@@ -769,8 +771,8 @@ namespace gal::prometheus::gfx
 		) noexcept -> void
 		// clang-format on
 		{
-			const auto& draw_list = self.get();
-			const auto& shared_data = draw_list.context_.get().render_list_shared_data();
+			const auto& render_list = self.get();
+			const auto& shared_data = render_list.shared_data();
 			const auto& opaque_uv = shared_data.white_pixel_uv;
 
 			draw_rect_filled(rect, opaque_uv, color_left_top, color_right_top, color_left_bottom, color_right_bottom);
@@ -786,8 +788,10 @@ namespace gal::prometheus::gfx
 		) noexcept -> void
 		// clang-format on
 		{
-			auto& draw_list = self.get();
-			auto& texture_context = draw_list.context_.get().texture_context();
+			std::ignore = wrap_width;
+
+			auto& render_list = self.get();
+			auto& texture_context = render_list.context_.get().texture_context();
 
 			const auto& glyphs = texture_context.glyph_of(utf8_text, font_size);
 			for (auto x = p.x; const auto& glyph: glyphs)
@@ -801,11 +805,11 @@ namespace gal::prometheus::gfx
 				{
 					const auto& atlas = texture_context.atlas_of(*glyph);
 
-					const auto new_texture = draw_list.this_command_texture_ != atlas.id();
+					const auto new_texture = render_list.this_command_texture_ != atlas.id();
 
 					if (new_texture)
 					{
-						draw_list.push_texture(atlas.id());
+						render_list.push_texture(atlas.id());
 					}
 
 					// todo
@@ -835,7 +839,7 @@ namespace gal::prometheus::gfx
 
 					if (new_texture)
 					{
-						draw_list.pop_texture();
+						render_list.pop_texture();
 					}
 				}
 
@@ -858,13 +862,13 @@ namespace gal::prometheus::gfx
 		) noexcept -> void
 		// clang-format on
 		{
-			auto& draw_list = self.get();
+			auto& render_list = self.get();
 
-			const auto new_texture = draw_list.this_command_texture_ != texture_id;
+			const auto new_texture = render_list.this_command_texture_ != texture_id;
 
 			if (new_texture)
 			{
-				draw_list.push_texture(texture_id);
+				render_list.push_texture(texture_id);
 			}
 
 			auto appender = make_appender();
@@ -886,7 +890,7 @@ namespace gal::prometheus::gfx
 
 			if (new_texture)
 			{
-				draw_list.pop_texture();
+				render_list.pop_texture();
 			}
 		}
 
@@ -933,13 +937,13 @@ namespace gal::prometheus::gfx
 			}
 			else
 			{
-				auto& draw_list = self.get();
+				auto& render_list = self.get();
 
-				const auto new_texture = draw_list.this_command_texture_ != texture_id;
+				const auto new_texture = render_list.this_command_texture_ != texture_id;
 
 				if (new_texture)
 				{
-					draw_list.push_texture(texture_id);
+					render_list.push_texture(texture_id);
 				}
 
 				const auto rounding_left_top = (flag & RenderFlag::ROUND_CORNER_LEFT_TOP) != RenderFlag::NONE ? rounding : 0;
@@ -952,10 +956,10 @@ namespace gal::prometheus::gfx
 				path_arc_fast({display_rect.right_bottom() + point_type{-rounding_right_bottom, -rounding_right_bottom}, rounding_right_bottom}, RenderArcFlag::Q4_CLOCK_WISH);
 				path_arc_fast({display_rect.left_bottom() + point_type{rounding_left_bottom, -rounding_left_bottom}, rounding_left_bottom}, RenderArcFlag::Q3_CLOCK_WISH);
 
-				const auto before_vertex_count = draw_list.vertex_list_.size();
+				const auto before_vertex_count = render_list.vertex_list_.size();
 				// draw
 				path_stroke(color);
-				const auto after_vertex_count = draw_list.vertex_list_.size();
+				const auto after_vertex_count = render_list.vertex_list_.size();
 
 				// set uv manually
 
@@ -963,10 +967,10 @@ namespace gal::prometheus::gfx
 				const auto uv_size = uv_rect.size();
 				const auto scale = uv_size / display_size;
 
-				auto it = draw_list.vertex_list_.begin() + static_cast<vertex_list_type::difference_type>(before_vertex_count);
-				const auto end = draw_list.vertex_list_.begin() + static_cast<vertex_list_type::difference_type>(after_vertex_count);
+				auto it = render_list.vertex_list_.begin() + static_cast<vertex_list_type::difference_type>(before_vertex_count);
+				const auto end = render_list.vertex_list_.begin() + static_cast<vertex_list_type::difference_type>(after_vertex_count);
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it < end);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(end == draw_list.vertex_list_.end());
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(end == render_list.vertex_list_.end());
 
 				// note: linear uv
 				const auto uv_min = uv_rect.left_top();
@@ -986,7 +990,7 @@ namespace gal::prometheus::gfx
 
 				if (new_texture)
 				{
-					draw_list.pop_texture();
+					render_list.pop_texture();
 				}
 			}
 		}
@@ -1013,7 +1017,7 @@ namespace gal::prometheus::gfx
 
 		auto path_stroke(const color_type color, const RenderFlag flag, const float thickness) noexcept -> void
 		{
-			if (const auto draw_list_flag = self.get().draw_list_flag_; (draw_list_flag & RenderListFlag::ANTI_ALIASED_LINE) != RenderListFlag::NONE)
+			if (const auto render_list_flag = self.get().render_list_flag_; (render_list_flag & RenderListFlag::ANTI_ALIASED_LINE) != RenderListFlag::NONE)
 			{
 				draw_polygon_line_aa(color, flag, thickness);
 			}
@@ -1027,7 +1031,7 @@ namespace gal::prometheus::gfx
 
 		auto path_stroke(const color_type color) noexcept -> void
 		{
-			if (const auto draw_list_flag = self.get().draw_list_flag_; (draw_list_flag & RenderListFlag::ANTI_ALIASED_FILL) != RenderListFlag::NONE)
+			if (const auto render_list_flag = self.get().render_list_flag_; (render_list_flag & RenderListFlag::ANTI_ALIASED_FILL) != RenderListFlag::NONE)
 			{
 				draw_convex_polygon_line_filled_aa(color);
 			}
@@ -1049,8 +1053,8 @@ namespace gal::prometheus::gfx
 				return;
 			}
 
-			const auto& draw_list = self.get();
-			const auto& shared_data = draw_list.context_.get().render_list_shared_data();
+			const auto& render_list = self.get();
+			const auto& shared_data = render_list.shared_data();
 
 			// Calculate arc auto segment step size
 			auto step = RenderListSharedData::vertex_sample_points_count / shared_data.circle_auto_segment_count(radius);
@@ -1173,8 +1177,8 @@ namespace gal::prometheus::gfx
 				return;
 			}
 
-			const auto& draw_list = self.get();
-			const auto& shared_data = draw_list.context_.get().render_list_shared_data();
+			const auto& render_list = self.get();
+			const auto& shared_data = render_list.shared_data();
 
 			// Automatic segment count
 			if (radius <= shared_data.arc_fast_radius_cutoff)
@@ -1346,8 +1350,8 @@ namespace gal::prometheus::gfx
 
 		auto path_bezier_curve(const point_type& p1, const point_type& p2, const point_type& p3, const point_type& p4, const std::uint32_t segments) noexcept -> void
 		{
-			const auto& draw_list = self.get();
-			const auto& shared_data = draw_list.context_.get().render_list_shared_data();
+			const auto& render_list = self.get();
+			const auto& shared_data = render_list.shared_data();
 
 			path_pin(p1);
 			if (segments == 0)
@@ -1371,8 +1375,8 @@ namespace gal::prometheus::gfx
 
 		auto path_bezier_quadratic_curve(const point_type& p1, const point_type& p2, const point_type& p3, const std::uint32_t segments) noexcept -> void
 		{
-			const auto& draw_list = self.get();
-			const auto& shared_data = draw_list.context_.get().render_list_shared_data();
+			const auto& render_list = self.get();
+			const auto& shared_data = render_list.shared_data();
 
 			path_pin(p1);
 			if (segments == 0)
@@ -1478,11 +1482,21 @@ namespace gal::prometheus::gfx
 		command_list_.back().texture = this_command_texture_;
 	}
 
+	auto RenderList::shared_data() const noexcept -> const RenderListSharedData&
+	{
+		return context_.get().render_list_shared_data();
+	}
+
+	auto RenderList::default_texture() const noexcept -> texture_id_type
+	{
+		return context_.get().texture_context().root_texture();
+	}
+
 	RenderList::RenderList(const RenderListFlag flag, RendererContext& context) noexcept
-		: draw_list_flag_{flag},
+		: render_list_flag_{flag},
 		  context_{context},
 		  this_command_scissor_{0, 0, 0, 0},
-		  this_command_texture_{context.texture_context().root_texture()}
+		  this_command_texture_{default_texture()}
 	{
 		// we always have a command ready in the buffer
 		command_list_.emplace_back(
@@ -1996,12 +2010,10 @@ namespace gal::prometheus::gfx
 			return;
 		}
 
-		const auto& shared_data = context_.get().render_list_shared_data();
-
 		if (segments == 0)
 		{
 			// fixme
-			segments = shared_data.circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
+			segments = shared_data().circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
 		}
 
 		ellipse_n(ellipse, color, segments, thickness);
@@ -2034,12 +2046,10 @@ namespace gal::prometheus::gfx
 			return;
 		}
 
-		const auto& shared_data = context_.get().render_list_shared_data();
-
 		if (segments == 0)
 		{
 			// fixme
-			segments = shared_data.circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
+			segments = shared_data().circle_auto_segment_count(std::ranges::max(ellipse.radius.width, ellipse.radius.height));
 		}
 
 		ellipse_n_filled(ellipse, color, segments);

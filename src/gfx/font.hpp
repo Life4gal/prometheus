@@ -74,13 +74,64 @@ namespace gal::prometheus::gfx
 	};
 
 	/**
+	 * @brief Font data to be loaded, then GlyphParser::load will load its bitmap data
+	 */
+	class FontPendingLoadData final
+	{
+	public:
+		using element_type = std::uint8_t;
+		using data_type = std::unique_ptr<element_type[]>;
+		using size_type = std::uint32_t;
+
+		using data_view_type = std::span<element_type>;
+
+	private:
+		data_type data_;
+		size_type size_;
+
+	public:
+		FontPendingLoadData(data_type data, size_type size) noexcept;
+
+		[[nodiscard]] auto data() const noexcept -> data_view_type;
+
+		[[nodiscard]] auto size() const noexcept -> size_type;
+	};
+
+	/**
+	 * @brief Glyph data parsed by @c GlyphParser::parse,
+	 * which references @c GlyphInfo (to set its @c texture_atlas_id and @c uv) and holds the bitmap data for the glyph (which is automatically released after writing it to the texture atlas)
+	 */
+	class GlyphParsedInfo final
+	{
+	public:
+		using info_type = memory::RefWrapper<GlyphInfo>;
+		using data_type = Texture::data_type;
+
+	private:
+		info_type info_;
+		data_type data_;
+
+	public:
+		/**
+		 * @param info Glyph info
+		 * @param data Glypy bitmap data
+		 *
+		 * @link FontFace::find_or_parse_glyph
+		 */
+		GlyphParsedInfo(GlyphInfo& info, data_type data) noexcept;
+
+		/**
+		 * @brief Upload the glyph data to the texture atlas, set its @c texture_atlas_id and @c uv
+		 */
+		auto upload(TextureContext& texture_context) noexcept -> void;
+	};
+
+	/**
 	 * @brief Parse glyph data from (binary) font data
 	 */
 	class GlyphParser
 	{
 	public:
-		using binary_data_type = std::span<std::uint8_t>;
-
 		class [[nodiscard]] LoadResult final
 		{
 		public:
@@ -102,7 +153,9 @@ namespace gal::prometheus::gfx
 		{
 		public:
 			GlyphInfo info;
-			TextureDescriptor::data_type data;
+
+			// todo: Borrows a memory region from the texture to write to, rather than having it allocated by the parser
+			GlyphParsedInfo::data_type data;
 
 			[[nodiscard]] explicit operator bool() const noexcept
 			{
@@ -129,7 +182,12 @@ namespace gal::prometheus::gfx
 		/**
 		 * @brief Load the font data, get all its glyph data, return the id of the font
 		 */
-		[[nodiscard]] virtual auto load(binary_data_type data) noexcept -> LoadResult = 0;
+		[[nodiscard]] virtual auto load(FontPendingLoadData::data_view_type data) noexcept -> LoadResult = 0;
+
+		/**
+		 * @brief Load the font data, get all its glyph data, return the id of the font
+		 */
+		[[nodiscard]] auto load(const FontPendingLoadData& data) noexcept -> LoadResult;
 
 		/**
 		 * @brief Determines whether the target font contains the glyphs of the specified codepoint
@@ -159,16 +217,6 @@ namespace gal::prometheus::gfx
 	};
 
 	/**
-	 * @brief Write @c data to texture according to @c info, and set texture_atlas_id and uv of @c info
-	 */
-	class GlyphUploadInfo final
-	{
-	public:
-		memory::RefWrapper<GlyphInfo> info;
-		TextureDescriptor::data_type data;
-	};
-
-	/**
 	 * @brief All the glyph data used in a font
 	 */
 	class FontFace final
@@ -183,7 +231,7 @@ namespace gal::prometheus::gfx
 		std::string name_;
 		font_id_type id_;
 
-		std::vector<GlyphUploadInfo> upload_queue_;
+		std::vector<GlyphParsedInfo> parsed_infos_upload_queue_;
 
 		std::unordered_map<GlyphKey, GlyphInfo, GlyphKey::hasher> glyphs_;
 		const GlyphInfo* fallback_glyph_;
