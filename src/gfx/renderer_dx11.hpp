@@ -27,6 +27,14 @@ namespace gal::prometheus::gfx
 		using textures_type = std::unordered_map<ID3D11ShaderResourceView*, ID3D11Texture2D*>;
 
 	private:
+		struct render_buffer_type
+		{
+			ComPtr<ID3D11Buffer> index;
+			UINT index_count;
+			ComPtr<ID3D11Buffer> vertex;
+			UINT vertex_count;
+		};
+
 		ComPtr<ID3D11Device> device_;
 		ComPtr<ID3D11DeviceContext> device_immediate_context_;
 
@@ -43,6 +51,8 @@ namespace gal::prometheus::gfx
 
 		textures_type textures_;
 
+		render_buffer_type render_buffer_;
+
 		[[nodiscard]] auto create_blend_state() noexcept -> bool;
 		[[nodiscard]] auto create_rasterizer_state() noexcept -> bool;
 		[[nodiscard]] auto create_depth_stencil_state() noexcept -> bool;
@@ -53,10 +63,10 @@ namespace gal::prometheus::gfx
 		[[nodiscard]] auto upload_texture(
 			Texture::data_view_type data,
 			Texture::size_type size,
-			D3D11_USAGE usage = D3D11_USAGE_DEFAULT,
-			std::uint32_t bind_flags = D3D11_BIND_SHADER_RESOURCE,
-			std::uint32_t cpu_access_flags = 0,
-			std::uint32_t misc_flags = 0,
+			D3D11_USAGE usage,
+			std::uint32_t bind_flags,
+			std::uint32_t cpu_access_flags,
+			std::uint32_t misc_flags,
 			bool record_resource = true
 		) noexcept -> texture_id_type;
 
@@ -75,7 +85,10 @@ namespace gal::prometheus::gfx
 
 		[[nodiscard]] auto ready() const noexcept -> bool override;
 
+		auto present(const RenderContext& renderer_context, const rect_type& display_area) noexcept -> void override;
+
 		auto create_texture(Texture::data_view_type data, Texture::size_type size) noexcept -> texture_id_type override;
+		auto update_texture(const Texture& texture) noexcept -> void override;
 		auto destroy_texture(texture_id_type texture_id) noexcept -> void override;
 	};
 }

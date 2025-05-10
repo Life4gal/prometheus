@@ -197,7 +197,7 @@ namespace gal::prometheus::gfx
 		class Drawer;
 
 		RenderListFlag render_list_flag_;
-		memory::RefWrapper<RendererContext> context_;
+		memory::RefWrapper<RenderContext> render_context_;
 
 		// vertex_list: v1-v2-v3-v4 + v5-v6-v7-v8 + v9-v10-v11 => rect0 + rect1(clipped by rect0) + triangle0(clipped by rect1)
 		// index_list: 0/1/2-0/2/3 + 4/5/6-4/6/7 + 8/9/10
@@ -222,7 +222,9 @@ namespace gal::prometheus::gfx
 		[[nodiscard]] auto default_texture() const noexcept -> texture_id_type;
 
 	public:
-		RenderList(RenderListFlag flag, RendererContext& context) noexcept;
+		RenderList(RenderListFlag flag, RenderContext& render_context) noexcept;
+
+		auto reset() noexcept -> void;
 
 		// ----------------------------------------------------------------------------
 		// RENDER DATA

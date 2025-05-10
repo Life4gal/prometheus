@@ -26,9 +26,9 @@ namespace
 		};
 
 		return std::ranges::clamp(
-				circle_segments_roundup_to_even(static_cast<std::uint32_t>(std::ceil(std::numbers::pi_v<float> / std::acos(1 - std::ranges::min(radius, max_error) / radius)))),
-				RenderListSharedData::circle_segments_min,
-				RenderListSharedData::circle_segments_max
+			circle_segments_roundup_to_even(static_cast<std::uint32_t>(std::ceil(std::numbers::pi_v<float> / std::acos(1 - std::ranges::min(radius, max_error) / radius)))),
+			RenderListSharedData::circle_segments_min,
+			RenderListSharedData::circle_segments_max
 		);
 	}
 
@@ -53,7 +53,7 @@ namespace
 				return {math::cos(a), -math::sin(a)};
 			};
 
-			return { {make_point.template operator()<Index>()...} };
+			return {{make_point.template operator()<Index>()...}};
 		}(std::make_index_sequence<N>{});
 	}
 
@@ -233,9 +233,7 @@ namespace
 		RenderDataAppender(command_type& command, vertex_list_type& vertex_list, index_list_type& index_list) noexcept
 			: element_count_{command.element_count},
 			  vertex_list_{vertex_list},
-			  index_list_{index_list}
-		{
-		}
+			  index_list_{index_list} {}
 
 		[[nodiscard]] auto vertex_count() const noexcept -> size_type
 		{
@@ -424,8 +422,8 @@ namespace gal::prometheus::gfx
 			const auto thickness_fractional = thickness - static_cast<float>(thickness_integer);
 
 			const auto is_use_texture =
-					((render_list_flag & RenderListFlag::ANTI_ALIASED_LINE_USE_TEXTURE) == RenderListFlag::ANTI_ALIASED_LINE_USE_TEXTURE and
-					 (thickness_integer < RenderListSharedData::baked_line_uv_count) and (thickness_fractional <= .00001f));
+			((render_list_flag & RenderListFlag::ANTI_ALIASED_LINE_USE_TEXTURE) == RenderListFlag::ANTI_ALIASED_LINE_USE_TEXTURE and
+			 (thickness_integer < RenderListSharedData::baked_line_uv_count) and (thickness_fractional <= .00001f));
 
 			const auto vertex_cont = is_use_texture ? (path_point_count * 2) : (is_thick_line ? path_point_count * 4 : path_point_count * 3);
 			const auto index_count = is_use_texture ? (segments_count * 6) : (is_thick_line ? segments_count * 18 : segments_count * 12);
@@ -479,8 +477,8 @@ namespace gal::prometheus::gfx
 				{
 					const auto second_point_of_segment = (first_point_of_segment + 1) % path_point_count;
 					const auto vertex_index_for_end = static_cast<index_type>(
-							// closed
-							(first_point_of_segment + 1) == path_point_count ? current_vertex_index : (vertex_index_for_start + (is_use_texture ? 2 : 3))
+						// closed
+						(first_point_of_segment + 1) == path_point_count ? current_vertex_index : (vertex_index_for_start + (is_use_texture ? 2 : 3))
 					);
 
 					// Average normals
@@ -638,11 +636,11 @@ namespace gal::prometheus::gfx
 			const auto& opaque_uv = shared_data.white_pixel_uv;
 
 			std::ranges::for_each(
-					path_point,
-					[&](const point_type& point) noexcept -> void
-					{
-						appender.add_vertex(point, opaque_uv, color);
-					}
+				path_point,
+				[&](const point_type& point) noexcept -> void
+				{
+					appender.add_vertex(point, opaque_uv, color);
+				}
 			);
 			for (index_type i = 2; std::cmp_less(i, path_point_count); ++i)
 			{
@@ -720,14 +718,14 @@ namespace gal::prometheus::gfx
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current_vertex_inner_index + static_cast<index_type>(n << 1) >= current_vertex_inner_index);
 
 				appender.add_index(
-						current_vertex_inner_index + static_cast<index_type>(n << 1),
-						current_vertex_inner_index + static_cast<index_type>(i << 1),
-						current_vertex_outer_index + static_cast<index_type>(i << 1)
+					current_vertex_inner_index + static_cast<index_type>(n << 1),
+					current_vertex_inner_index + static_cast<index_type>(i << 1),
+					current_vertex_outer_index + static_cast<index_type>(i << 1)
 				);
 				appender.add_index(
-						current_vertex_outer_index + static_cast<index_type>(i << 1),
-						current_vertex_outer_index + static_cast<index_type>(n << 1),
-						current_vertex_inner_index + static_cast<index_type>(n << 1)
+					current_vertex_outer_index + static_cast<index_type>(i << 1),
+					current_vertex_outer_index + static_cast<index_type>(n << 1),
+					current_vertex_inner_index + static_cast<index_type>(n << 1)
 				);
 			}
 		}
@@ -741,7 +739,7 @@ namespace gal::prometheus::gfx
 			const color_type color_left_bottom,
 			const color_type color_right_bottom
 		) noexcept -> void
-		// clang-format on
+			// clang-format on
 		{
 			auto appender = make_appender();
 
@@ -769,7 +767,7 @@ namespace gal::prometheus::gfx
 			const color_type color_left_bottom,
 			const color_type color_right_bottom
 		) noexcept -> void
-		// clang-format on
+			// clang-format on
 		{
 			const auto& render_list = self.get();
 			const auto& shared_data = render_list.shared_data();
@@ -786,14 +784,14 @@ namespace gal::prometheus::gfx
 			const color_type color,
 			const float wrap_width
 		) noexcept -> void
-		// clang-format on
+			// clang-format on
 		{
 			std::ignore = wrap_width;
 
 			auto& render_list = self.get();
-			auto& texture_context = render_list.context_.get().texture_context();
+			auto& render_context = render_list.render_context_.get();
 
-			const auto& glyphs = texture_context.glyph_of(utf8_text, font_size);
+			const auto& glyphs = render_context.glyph_of(utf8_text, font_size);
 			for (auto x = p.x; const auto& glyph: glyphs)
 			{
 				if (glyph == nullptr)
@@ -803,7 +801,7 @@ namespace gal::prometheus::gfx
 
 				if (glyph->visible)
 				{
-					const auto& atlas = texture_context.atlas_of(*glyph);
+					const auto& atlas = render_context.atlas_of(*glyph);
 
 					const auto new_texture = render_list.this_command_texture_ != atlas.id();
 
@@ -860,7 +858,7 @@ namespace gal::prometheus::gfx
 			const uv_type& uv_p4,
 			const color_type color
 		) noexcept -> void
-		// clang-format on
+			// clang-format on
 		{
 			auto& render_list = self.get();
 
@@ -903,7 +901,7 @@ namespace gal::prometheus::gfx
 			float rounding,
 			RenderFlag flag
 		) noexcept -> void
-		// clang-format on
+			// clang-format on
 		{
 			// @see `path_rect`
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(display_rect.valid() and not display_rect.empty());
@@ -923,16 +921,16 @@ namespace gal::prometheus::gfx
 			if (rounding < .5f or (RenderFlag::ROUND_CORNER_MASK & flag) == RenderFlag::ROUND_CORNER_NONE)
 			{
 				draw_image(
-						texture_id,
-						display_rect.left_top(),
-						display_rect.right_top(),
-						display_rect.right_bottom(),
-						display_rect.left_bottom(),
-						uv_rect.left_top(),
-						uv_rect.right_top(),
-						uv_rect.right_bottom(),
-						uv_rect.left_bottom(),
-						color
+					texture_id,
+					display_rect.left_top(),
+					display_rect.right_top(),
+					display_rect.right_bottom(),
+					display_rect.left_bottom(),
+					uv_rect.left_top(),
+					uv_rect.right_top(),
+					uv_rect.right_bottom(),
+					uv_rect.left_bottom(),
+					color
 				);
 			}
 			else
@@ -980,10 +978,10 @@ namespace gal::prometheus::gfx
 					const auto v = uv_min + (it->position - display_rect.left_top()) * scale;
 
 					it->uv = {
-						// std::ranges::clamp(v.x, uv_min.x, uv_max.x),
-						v.x,
-						// std::ranges::clamp(v.y, uv_min.y, uv_max.y)
-						v.y
+							// std::ranges::clamp(v.x, uv_min.x, uv_max.x),
+							v.x,
+							// std::ranges::clamp(v.y, uv_min.y, uv_max.y)
+							v.y
 					};
 					it += 1;
 				}
@@ -1220,8 +1218,8 @@ namespace gal::prometheus::gfx
 				const auto arc_length = to - from;
 				const auto circle_segment_count = shared_data.circle_auto_segment_count(radius);
 				const auto arc_segment_count = std::ranges::max(
-						static_cast<unsigned>(math::ceil(static_cast<float>(circle_segment_count) * arc_length / (std::numbers::pi_v<float> * 2))),
-						static_cast<unsigned>(std::numbers::pi_v<float> * 2 / arc_length)
+					static_cast<unsigned>(math::ceil(static_cast<float>(circle_segment_count) * arc_length / (std::numbers::pi_v<float> * 2))),
+					static_cast<unsigned>(std::numbers::pi_v<float> * 2 / arc_length)
 				);
 				path_arc_n(circle, from, to, arc_segment_count);
 			}
@@ -1294,7 +1292,7 @@ namespace gal::prometheus::gfx
 			const float tessellation_tolerance,
 			const std::size_t level
 		) noexcept -> void
-		// clang-format on
+			// clang-format on
 		{
 			const auto dx = p4.x - p1.x;
 			const auto dy = p4.y - p1.y;
@@ -1327,7 +1325,7 @@ namespace gal::prometheus::gfx
 			const float tessellation_tolerance,
 			const std::size_t level
 		) noexcept -> void
-		// clang-format on
+			// clang-format on
 		{
 			const auto dx = p3.x - p1.x;
 			const auto dy = p3.y - p1.y;
@@ -1406,13 +1404,13 @@ namespace gal::prometheus::gfx
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(this_command_texture_ != invalid_texture_id);
 
 		command_list_.emplace_back(
-				command_type{
+			command_type{
 					.scissor = this_command_scissor_,
 					.texture = this_command_texture_,
 					.index_offset = static_cast<size_type>(index_list_.size()),
 					// set by draw_xxx
 					.element_count = 0
-				}
+			}
 		);
 	}
 
@@ -1484,29 +1482,40 @@ namespace gal::prometheus::gfx
 
 	auto RenderList::shared_data() const noexcept -> const RenderListSharedData&
 	{
-		return context_.get().render_list_shared_data();
+		return render_context_.get().render_list_shared_data();
 	}
 
 	auto RenderList::default_texture() const noexcept -> texture_id_type
 	{
-		return context_.get().texture_context().root_texture();
+		return render_context_.get().root_texture();
 	}
 
-	RenderList::RenderList(const RenderListFlag flag, RendererContext& context) noexcept
+	RenderList::RenderList(const RenderListFlag flag, RenderContext& render_context) noexcept
 		: render_list_flag_{flag},
-		  context_{context},
+		  render_context_{render_context},
 		  this_command_scissor_{0, 0, 0, 0},
-		  this_command_texture_{default_texture()}
+		  this_command_texture_{invalid_texture_id} {}
+
+	auto RenderList::reset() noexcept -> void
 	{
+		command_list_.clear();
+		vertex_list_.clear();
+		index_list_.clear();
+
+		// we don't know the size of the clip rect, so we need the user to set it
+		this_command_scissor_ = {};
+		// the first texture is always the (default) font texture
+		this_command_texture_ = default_texture();
+
 		// we always have a command ready in the buffer
 		command_list_.emplace_back(
-				command_type{
+			command_type{
 					.scissor = this_command_scissor_,
 					.texture = this_command_texture_,
 					.index_offset = static_cast<size_type>(index_list_.size()),
 					// set by subsequent draw_xxx
-					.element_count = 0
-				}
+					.element_count = 0,
+			}
 		);
 	}
 
@@ -1561,7 +1570,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -1584,7 +1593,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -1607,7 +1616,7 @@ namespace gal::prometheus::gfx
 		const point_type& c,
 		const color_type color
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -1631,7 +1640,7 @@ namespace gal::prometheus::gfx
 		const RenderFlag flag,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -1654,7 +1663,7 @@ namespace gal::prometheus::gfx
 		const RenderFlag flag,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		return rect({left_top, right_bottom}, color, rounding, flag, thickness);
 	}
@@ -1666,7 +1675,7 @@ namespace gal::prometheus::gfx
 		const float rounding,
 		const RenderFlag flag
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -1694,7 +1703,7 @@ namespace gal::prometheus::gfx
 		const float rounding,
 		const RenderFlag flag
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		return rect_filled({left_top, right_bottom}, color, rounding, flag);
 	}
@@ -1707,7 +1716,7 @@ namespace gal::prometheus::gfx
 		const color_type color_left_bottom,
 		const color_type color_right_bottom
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color_left_top.alpha == 0 or color_right_top.alpha == 0 or color_left_bottom.alpha == 0 or color_right_bottom.alpha == 0)
 		{
@@ -1728,7 +1737,7 @@ namespace gal::prometheus::gfx
 		const color_type color_left_bottom,
 		const color_type color_right_bottom
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		return rect_filled({left_top, right_bottom}, color_left_top, color_right_top, color_left_bottom, color_right_bottom);
 	}
@@ -1742,7 +1751,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -1764,7 +1773,7 @@ namespace gal::prometheus::gfx
 		const point_type& p4,
 		const color_type color
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -1785,7 +1794,7 @@ namespace gal::prometheus::gfx
 		const std::uint32_t segments,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0 or circle.radius < .5f or segments < 3)
 		{
@@ -1807,7 +1816,7 @@ namespace gal::prometheus::gfx
 		const std::uint32_t segments,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		return circle_n({center, radius}, color, segments, thickness);
 	}
@@ -1819,7 +1828,7 @@ namespace gal::prometheus::gfx
 		const std::uint32_t segments,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f or segments < 3)
 		{
@@ -1853,7 +1862,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		const std::uint32_t segments
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0 or circle.radius < .5f or segments < 3)
 		{
@@ -1874,7 +1883,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		const std::uint32_t segments
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		return circle_n_filled({center, radius}, color, segments);
 	}
@@ -1885,7 +1894,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		const std::uint32_t segments
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f or segments < 3)
 		{
@@ -1907,7 +1916,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		const std::uint32_t segments
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		return ellipse_n_filled({center, radius, rotation}, color, segments);
 	}
@@ -1950,7 +1959,7 @@ namespace gal::prometheus::gfx
 		const std::uint32_t segments,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		return circle({center, radius}, color, segments, thickness);
 	}
@@ -1961,7 +1970,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		const std::uint32_t segments
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0 or circle.radius < .5f)
 		{
@@ -1991,7 +2000,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		const std::uint32_t segments
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		circle_filled({center, radius}, color, segments);
 	}
@@ -2003,7 +2012,7 @@ namespace gal::prometheus::gfx
 		std::uint32_t segments,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f)
 		{
@@ -2028,7 +2037,7 @@ namespace gal::prometheus::gfx
 		const std::uint32_t segments,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		return ellipse({center, radius, rotation}, color, segments, thickness);
 	}
@@ -2039,7 +2048,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		std::uint32_t segments
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0 or ellipse.radius.width < .5f or ellipse.radius.height < .5f)
 		{
@@ -2063,7 +2072,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		const std::uint32_t segments
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		return ellipse_filled({center, radius, rotation}, color, segments);
 	}
@@ -2078,7 +2087,7 @@ namespace gal::prometheus::gfx
 		const std::uint32_t segments,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -2101,7 +2110,7 @@ namespace gal::prometheus::gfx
 		const std::uint32_t segments,
 		const float thickness
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -2123,7 +2132,7 @@ namespace gal::prometheus::gfx
 		const color_type color,
 		const float wrap_width
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -2149,7 +2158,7 @@ namespace gal::prometheus::gfx
 		const uv_type& uv_p4,
 		const color_type color
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -2168,18 +2177,18 @@ namespace gal::prometheus::gfx
 		const rect_type& uv_rect,
 		const color_type color
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		image(texture_id,
-			  display_rect.left_top(),
-			  display_rect.right_top(),
-			  display_rect.right_bottom(),
-			  display_rect.left_bottom(),
-			  uv_rect.left_top(),
-			  uv_rect.right_top(),
-			  uv_rect.right_bottom(),
-			  uv_rect.left_bottom(),
-			  color);
+		      display_rect.left_top(),
+		      display_rect.right_top(),
+		      display_rect.right_bottom(),
+		      display_rect.left_bottom(),
+		      uv_rect.left_top(),
+		      uv_rect.right_top(),
+		      uv_rect.right_bottom(),
+		      uv_rect.left_bottom(),
+		      color);
 	}
 
 	// clang-format off
@@ -2191,7 +2200,7 @@ namespace gal::prometheus::gfx
 		const uv_type& uv_right_bottom,
 		const color_type color
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		image(texture_id, {display_left_top, display_right_bottom}, {uv_left_top, uv_right_bottom}, color);
 	}
@@ -2205,7 +2214,7 @@ namespace gal::prometheus::gfx
 		const rect_type& uv_rect,
 		const color_type color
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		if (color.alpha == 0)
 		{
@@ -2228,7 +2237,7 @@ namespace gal::prometheus::gfx
 		const uv_type& uv_right_bottom,
 		const color_type color
 	) noexcept -> void
-	// clang-format on
+		// clang-format on
 	{
 		image_rounded(texture_id, {display_left_top, display_right_bottom}, rounding, flag, {uv_left_top, uv_right_bottom}, color);
 	}

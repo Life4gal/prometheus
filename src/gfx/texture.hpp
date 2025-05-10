@@ -49,7 +49,7 @@ namespace gal::prometheus::gfx
 
 	public:
 		Texture(const Texture&) noexcept = delete;
-		Texture(Texture&&) noexcept;					// = default;
+		Texture(Texture&&) noexcept; // = default;
 		auto operator=(const Texture&) noexcept -> Texture& = delete;
 		auto operator=(Texture&&) noexcept -> Texture&; // = default;
 
@@ -57,7 +57,22 @@ namespace gal::prometheus::gfx
 
 		explicit Texture(size_type size) noexcept;
 
+		/**
+		 * @brief Upload texture atlas data to GPU and get GPU resource handle
+		 */
+		auto create(Renderer& renderer) noexcept -> void;
+
+		/**
+		 * @brief Upload new texture atlas data to GPU (overwrite previous texture atlas data)
+		 * @note Not checking if it needs to be re-uploaded
+		 */
 		auto upload(Renderer& renderer) noexcept -> void;
+
+		/**
+		 * @brief Upload new texture atlas data to GPU (overwrite previous texture atlas data)
+		 * @note If no re-upload is required, the upload operation is not performed
+		 */
+		auto upload_if_required(Renderer& renderer) noexcept -> void;
 
 		/**
 		 * @brief Texture atlas data (for upload)

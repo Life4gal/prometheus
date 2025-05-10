@@ -373,10 +373,9 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/gfx/texture.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/font.hpp
-		${PROJECT_SOURCE_DIR}/src/gfx/render_list.hpp
-
 		${PROJECT_SOURCE_DIR}/src/gfx/glyph_parser_freetype.hpp
 
+		${PROJECT_SOURCE_DIR}/src/gfx/render_list.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer_dx11.hpp
 
@@ -441,10 +440,9 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/gfx/texture.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/font.cpp
-		${PROJECT_SOURCE_DIR}/src/gfx/render_list.cpp
-
 		${PROJECT_SOURCE_DIR}/src/gfx/glyph_parser_freetype.cpp
 
+		${PROJECT_SOURCE_DIR}/src/gfx/render_list.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer_dx11.cpp
 

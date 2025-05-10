@@ -10,6 +10,7 @@
 #include <gfx/render_list.hpp>
 
 #include <chars/chars.hpp>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace gal::prometheus::gfx
 {
@@ -32,7 +33,8 @@ namespace gal::prometheus::gfx
 
 	auto TextureContext::select_atlas(const Texture::size_type size) const noexcept -> texture_atlas_id_type
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(size.width > 0 and size.height > 0);
+		// width/height == 0 ==> whitespace
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(size.width >= 0 and size.height >= 0);
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not texture_atlases_.empty());
 
 		std::ignore = size;
@@ -43,7 +45,8 @@ namespace gal::prometheus::gfx
 
 	auto TextureContext::make_territory(const Texture::size_type size) noexcept -> BorrowTexture
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(size.width > 0 and size.height > 0);
+		// width/height == 0 ==> whitespace
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(size.width >= 0 and size.height >= 0);
 
 		const auto atlas_id = select_atlas(size);
 		auto& atlas = select_atlas(atlas_id);
@@ -128,11 +131,11 @@ namespace gal::prometheus::gfx
 		// FontFace (load fallback glyph)
 		// ========================================
 		std::ranges::for_each(
-				font_faces_,
-				[](auto& font_face) noexcept -> void
-				{
-					font_face.initialize();
-				}
+			font_faces_,
+			[](auto& font_face) noexcept -> void
+			{
+				font_face.initialize();
+			}
 		);
 	}
 
@@ -159,18 +162,13 @@ namespace gal::prometheus::gfx
 		file.seekg(0, std::ios::end);
 		const auto size = file.tellg();
 
-		auto data = std::make_unique_for_overwrite<FontPendingLoadData::element_type[]>(size);
+		auto* data = new FontData::element_type[size];
 		file.seekg(0, std::ios::beg);
-		file.read(reinterpret_cast<char*>(data.get()), size);
+		file.read(reinterpret_cast<char*>(data), size);
 		file.close();
 
-		font_pending_load_datas_.emplace_back(std::move(data), static_cast<FontPendingLoadData::size_type>(size));
+		font_data_list_.emplace_back(std::unique_ptr<FontData::element_type>{data}, static_cast<FontData::size_type>(size));
 		return true;
-	}
-
-	auto TextureContext::add_font(const std::string_view path) noexcept -> bool
-	{
-		return add_font(std::filesystem::path{path});
 	}
 
 	auto TextureContext::root_texture() const noexcept -> texture_id_type
@@ -204,12 +202,12 @@ namespace gal::prometheus::gfx
 		infos.reserve(utf32_text.size());
 
 		std::ranges::for_each(
-				utf32_text,
-				[&infos, this, size, flag](const auto codepoint) noexcept -> void
-				{
-					const auto* info = this->glyph_of(codepoint, size, flag);
-					infos.emplace_back(info);
-				}
+			utf32_text,
+			[&infos, this, size, flag](const auto codepoint) noexcept -> void
+			{
+				const auto* info = this->glyph_of(codepoint, size, flag);
+				infos.emplace_back(info);
+			}
 		);
 
 		return infos;
@@ -232,17 +230,17 @@ namespace gal::prometheus::gfx
 
 		extent_type total_size{0, 0};
 		std::ranges::for_each(
-				infos,
-				[&total_size](const auto* info) noexcept -> void
+			infos,
+			[&total_size](const auto* info) noexcept -> void
+			{
+				if (info == nullptr)
 				{
-					if (info == nullptr)
-					{
-						return;
-					}
-
-					total_size.width += info->advance_x;
-					total_size.height = std::max(total_size.height, info->rect.height());
+					return;
 				}
+
+				total_size.width += info->advance_x;
+				total_size.height = std::max(total_size.height, info->rect.height());
+			}
 		);
 
 		return total_size;
@@ -253,20 +251,22 @@ namespace gal::prometheus::gfx
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(parser_ != nullptr);
 
 		std::ranges::for_each(
-				font_pending_load_datas_,
-				[this](const FontPendingLoadData& data) noexcept -> void
+			font_data_list_,
+			[this](FontData& data) noexcept -> void
+			{
+				// note: Transferring ownership of font file data
+				if (auto result = parser_->load(std::move(data.data), data.size); result.valid())
 				{
-					if (auto result = parser_->load(data); result.valid())
-					{
-						font_faces_.emplace_back(*this, std::move(result.name), result.id);
-					}
-					else
-					{
-						// todo: error handling
-					}
+					font_faces_.emplace_back(*this, std::move(result.name), result.id);
 				}
+				else
+				{
+					// todo: error handling
+					GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+				}
+			}
 		);
-		font_pending_load_datas_.clear();
+		font_data_list_.clear();
 	}
 
 	auto TextureContext::upload_all_font_face() noexcept -> void
@@ -286,7 +286,7 @@ namespace gal::prometheus::gfx
 		const auto atlas_uv_scale = atlas.uv();
 
 		const auto& texture = make_territory(size);
-		texture.fill({data.get(), width * height});
+		texture.fill({data.get(), static_cast<std::size_t>(width) * height});
 
 		const auto texture_point = texture.point();
 		info.texture_atlas_id = atlas_id;
@@ -297,49 +297,110 @@ namespace gal::prometheus::gfx
 	auto TextureContext::upload_all_texture(Renderer& renderer) noexcept -> void
 	{
 		std::ranges::for_each(
-				texture_atlases_,
-				[&renderer](auto& atlas) noexcept -> void
+			texture_atlases_,
+			[&renderer](auto& texture) noexcept -> void
+			{
+				if (not texture.uploaded())
 				{
-					if (not atlas.uploaded())
-					{
-						atlas.upload(renderer);
-					}
+					texture.create(renderer);
 				}
+				else
+				{
+					texture.upload_if_required(renderer);
+				}
+			}
 		);
 	}
 
-	RendererContext::~RendererContext() noexcept = default;
+	RenderContext::~RenderContext() noexcept = default;
 
-	RendererContext::RendererContext() noexcept = default;
+	RenderContext::RenderContext() noexcept = default;
 
-	auto RendererContext::initialize() noexcept -> void
+	auto RenderContext::initialize() noexcept -> void
 	{
 		texture_context_.initialize(render_list_shared_data_);
 	}
 
-	auto RendererContext::begin_frame(Renderer& renderer) noexcept -> void
+	auto RenderContext::begin_frame(Renderer& renderer) noexcept -> void
 	{
 		texture_context_.load_all_font();
 		texture_context_.upload_all_texture(renderer);
 	}
 
-	auto RendererContext::end_frame() noexcept -> void
+	auto RenderContext::end_frame(Renderer& renderer) noexcept -> void
 	{
+		std::ignore = renderer;
 		texture_context_.upload_all_font_face();
 	}
 
-	auto RendererContext::texture_context() noexcept -> TextureContext&
+	auto RenderContext::bind_parser(GlyphParser& parser) noexcept -> void
 	{
-		return texture_context_;
+		texture_context_.bind_parser(parser);
 	}
 
-	auto RendererContext::texture_context() const noexcept -> const TextureContext&
+	auto RenderContext::add_font(const std::filesystem::path& path) noexcept -> bool
 	{
-		return texture_context_;
+		return texture_context_.add_font(path);
 	}
 
-	auto RendererContext::render_list_shared_data() const noexcept -> const RenderListSharedData&
+	auto RenderContext::root_texture() const noexcept -> texture_id_type
+	{
+		return texture_context_.root_texture();
+	}
+
+	auto RenderContext::atlas_of(const GlyphInfo& info) noexcept -> const Texture&
+	{
+		return texture_context_.atlas_of(info);
+	}
+
+	auto RenderContext::glyph_of(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> const GlyphInfo*
+	{
+		return texture_context_.glyph_of(codepoint, size, flag);
+	}
+
+	auto RenderContext::glyph_of(const std::string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> std::vector<const GlyphInfo*>
+	{
+		return texture_context_.glyph_of(text, size, flag);
+	}
+
+	auto RenderContext::size_of(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
+	{
+		return texture_context_.size_of(codepoint, size, flag);
+	}
+
+	auto RenderContext::size_of(const std::string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
+	{
+		return texture_context_.size_of(text, size, flag);
+	}
+
+	auto RenderContext::render_list_shared_data() const noexcept -> const RenderListSharedData&
 	{
 		return render_list_shared_data_;
+	}
+
+	auto RenderContext::render_data() const noexcept -> std::vector<RenderData>
+	{
+		std::vector<RenderData> all_render_data{};
+		all_render_data.reserve(render_lists_.size());
+
+		std::ranges::for_each(
+			render_lists_,
+			[&all_render_data](const auto& render_list) noexcept -> void
+			{
+				all_render_data.emplace_back(render_list.render_data());
+			}
+		);
+
+		return all_render_data;
+	}
+
+	auto RenderContext::test_render_list() noexcept -> RenderList&
+	{
+		if (render_lists_.empty())
+		{
+			render_lists_.emplace_back(RenderListFlag::ANTI_ALIASED_LINE | RenderListFlag::ANTI_ALIASED_LINE_USE_TEXTURE | RenderListFlag::ANTI_ALIASED_FILL, *this);
+		}
+
+		return render_lists_.front();
 	}
 } // namespace gal::prometheus::gfx

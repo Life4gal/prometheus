@@ -28,7 +28,10 @@ namespace gal::prometheus::gfx
 
 		[[nodiscard]] virtual auto ready() const noexcept -> bool = 0;
 
+		virtual auto present(const RenderContext& renderer_context, const rect_type& display_area) noexcept -> void = 0;
+
 		virtual auto create_texture(Texture::data_view_type data, Texture::size_type size) noexcept -> texture_id_type = 0;
+		virtual auto update_texture(const Texture& texture) noexcept -> void = 0;
 		virtual auto destroy_texture(texture_id_type texture_id) noexcept -> void = 0;
 	};
 } // namespace gal::prometheus::gfx

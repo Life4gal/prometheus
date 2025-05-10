@@ -11,7 +11,7 @@
 
 namespace
 {
-#define STB_RECT_PACK_IMPLEMENTATION
+	// #define STB_RECT_PACK_IMPLEMENTATION
 #include <stb_rect_pack.h>
 } // namespace
 
@@ -24,7 +24,7 @@ namespace gal::prometheus::gfx
 	};
 
 	Texture::Texture(Texture&&) noexcept = default;
-	Texture& Texture::operator=(Texture&&) noexcept = default;
+	auto Texture::operator=(Texture&&) noexcept -> Texture& = default;
 
 	Texture::~Texture() noexcept = default;
 
@@ -38,18 +38,38 @@ namespace gal::prometheus::gfx
 		pack_context_->nodes.resize(size.width);
 
 		stbrp_init_target(
-				&pack_context_->context, static_cast<stbrp_coord>(size.width), static_cast<stbrp_coord>(size.height), pack_context_->nodes.data(), static_cast<int>(pack_context_->nodes.size())
+			&pack_context_->context,
+			static_cast<stbrp_coord>(size.width),
+			static_cast<stbrp_coord>(size.height),
+			pack_context_->nodes.data(),
+			static_cast<int>(pack_context_->nodes.size())
 		);
+	}
+
+	auto Texture::create(Renderer& renderer) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not uploaded());
+
+		const auto id = renderer.create_texture(data(), size_);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(id != invalid_texture_id);
+
+		dirty_ = false;
+		id_ = id;
 	}
 
 	auto Texture::upload(Renderer& renderer) noexcept -> void
 	{
-		// todo: destroy texture?
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not uploaded());
-		const auto id = renderer.create_texture(data(), size_);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(id != invalid_texture_id);
+		renderer.update_texture(*this);
+		dirty_ = false;
+	}
 
-		id_ = id;
+	auto Texture::upload_if_required(Renderer& renderer) noexcept -> void
+	{
+		if (dirty_)
+		{
+			renderer.update_texture(*this);
+			dirty_ = false;
+		}
 	}
 
 	auto Texture::data() const noexcept -> data_view_type
@@ -59,7 +79,7 @@ namespace gal::prometheus::gfx
 
 	auto Texture::area_size() const noexcept -> std::size_t
 	{
-		return size_.width * size_.height;
+		return static_cast<std::size_t>(size_.width) * size_.height;
 	}
 
 	auto Texture::size() const noexcept -> size_type
@@ -101,8 +121,8 @@ namespace gal::prometheus::gfx
 
 			auto* address = data_.get() + (point.y * size.width + point.x);
 			const auto mapping = BorrowTexture::data_type::mapping_type{
-				std::dextents<size_type::value_type, 2>{size.height, size.width},
-				std::array<size_type::value_type, 2>{size_.width, 1},
+					std::dextents<size_type::value_type, 2>{size.height, size.width},
+					std::array<size_type::value_type, 2>{size_.width, 1},
 			};
 			const auto data = BorrowTexture::data_type{address, mapping};
 
@@ -115,9 +135,7 @@ namespace gal::prometheus::gfx
 
 	BorrowTexture::BorrowTexture(const point_type point, const data_type data) noexcept
 		: point_{point},
-		  data_{data}
-	{
-	}
+		  data_{data} {}
 
 	auto BorrowTexture::valid() const noexcept -> bool
 	{
@@ -133,9 +151,12 @@ namespace gal::prometheus::gfx
 
 	auto BorrowTexture::fill(const size_type::value_type y, const size_type::value_type offset, const size_type::value_type n, const element_type element) const noexcept -> void
 	{
+		const auto width = data_.extent(1);
+		const auto height = data_.extent(0);
+
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < data_.extent(0));
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(offset + n < data_.extent(1));
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(offset + n <= width);
 
 		for (size_type::value_type x = offset; x < offset + n; ++x)
 		{
@@ -145,9 +166,12 @@ namespace gal::prometheus::gfx
 
 	auto BorrowTexture::fill(const size_type::value_type y, const size_type::value_type offset, const data_view_type data) const noexcept -> void
 	{
+		const auto width = data_.extent(1);
+		const auto height = data_.extent(0);
+
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < data_.extent(0));
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(offset + data.size() < data_.extent(1));
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(offset + data.size() <= width);
 
 		for (size_type::value_type x = 0; x < data.size(); ++x)
 		{
@@ -157,35 +181,45 @@ namespace gal::prometheus::gfx
 
 	auto BorrowTexture::fill(const size_type::value_type y, const size_type::value_type n, const element_type element) const noexcept -> void
 	{
+		const auto width = data_.extent(1);
+		const auto height = data_.extent(0);
+
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < data_.extent(0));
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(n < data_.extent(1));
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(n <= width);
 
 		fill(y, 0, n, element);
 	}
 
 	auto BorrowTexture::fill(const size_type::value_type y, const data_view_type data) const noexcept -> void
 	{
+		const auto width = data_.extent(1);
+		const auto height = data_.extent(0);
+
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < data_.extent(0));
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.size() < data_.extent(1));
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.size() <= width);
 
 		fill(y, 0, data);
 	}
 
 	auto BorrowTexture::fill(const size_type::value_type y, const element_type element) const noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < data_.extent(0));
+		const auto width = data_.extent(1);
+		const auto height = data_.extent(0);
 
-		fill(y, data_.extent(1), element);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
+
+		fill(y, width, element);
 	}
 
 	auto BorrowTexture::fill(const element_type element) const noexcept -> void
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
 
-		for (size_type::value_type y = 0; y < data_.extent(0); ++y)
+		const auto height = data_.extent(0);
+		for (size_type::value_type y = 0; y < height; ++y)
 		{
 			fill(y, element);
 		}
@@ -193,21 +227,27 @@ namespace gal::prometheus::gfx
 
 	auto BorrowTexture::fill(const data_view_type data) const noexcept -> void
 	{
+		const auto width = data_.extent(1);
+		const auto height = data_.extent(0);
+
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
 
-		for (size_type::value_type y = 0; y < data_.extent(0); ++y)
+		for (size_type::value_type y = 0; y < height; ++y)
 		{
-			const data_view_type sub{data.begin() + y * data_.extent(1), data_.extent(1)};
+			const data_view_type sub{data.begin() + static_cast<std::ptrdiff_t>(y) * width, width};
 
 			fill(y, sub);
 		}
 	}
 
-	auto BorrowTexture::operator[](size_type::value_type x, size_type::value_type y) const noexcept -> data_type::reference
+	auto BorrowTexture::operator[](const size_type::value_type x, const size_type::value_type y) const noexcept -> data_type::reference
 	{
+		const auto width = data_.extent(1);
+		const auto height = data_.extent(0);
+
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < data_.extent(0));
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(x < data_.extent(1));
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(x < width);
 
 		return data_[y, x];
 	}

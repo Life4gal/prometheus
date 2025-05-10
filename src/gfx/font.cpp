@@ -12,22 +12,6 @@
 
 namespace gal::prometheus::gfx
 {
-	FontPendingLoadData::FontPendingLoadData(data_type data, const size_type size) noexcept
-		: data_{std::move(data)},
-		  size_{size}
-	{
-	}
-
-	auto FontPendingLoadData::data() const noexcept -> data_view_type
-	{
-		return {data_.get(), size()};
-	}
-
-	auto FontPendingLoadData::size() const noexcept -> size_type
-	{
-		return size_;
-	}
-
 	GlyphParsedInfo::GlyphParsedInfo(GlyphInfo& info, data_type data) noexcept
 		: info_{info},
 		  data_{std::move(data)}
@@ -45,11 +29,6 @@ namespace gal::prometheus::gfx
 
 	GlyphParser::~GlyphParser() noexcept = default;
 
-	auto GlyphParser::load(const FontPendingLoadData& data) noexcept -> LoadResult
-	{
-		return this->load(data.data());
-	}
-
 	auto GlyphParser::parse(const font_id_type id, const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> ParseResult
 	{
 		return this->parse(id, {.codepoint = codepoint, .size = size, .flag = flag});
@@ -65,10 +44,10 @@ namespace gal::prometheus::gfx
 		}
 
 		auto& parser = context_.get().parser();
-		if (not parser.has_glyph(id_, key.codepoint))
-		{
-			return nullptr;
-		}
+		// if (not parser.has_glyph(id_, key.codepoint))
+		// {
+		// 	return nullptr;
+		// }
 
 		auto result = parser.parse(id_, key);
 		if (not result.valid())
@@ -125,7 +104,7 @@ namespace gal::prometheus::gfx
 		if (fallback_glyph_ == nullptr)
 		{
 			// todo
-			GAL_PROMETHEUS_ERROR_DEBUG_UNREACHABLE();
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
 		}
 	}
 

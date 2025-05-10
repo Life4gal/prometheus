@@ -14,32 +14,20 @@
 
 #include <gfx/font.hpp>
 
-#include <freetype/freetype.h>
+#include <memory/unique_ptr.hpp>
 
 namespace gal::prometheus::gfx
 {
 	class FreeTypeGlyphParser final : public GlyphParser
 	{
-		class FontInfo final
-		{
-		public:
-			FT_Face face{nullptr};
-
-			float ascender{0};
-			float descender{0};
-			float line_spacing{0};
-			float line_gap{0};
-			float max_advance_width{0};
-
-			auto set_pixel_height(std::size_t height) noexcept -> bool;
-		};
+		class Library;
+		class FontInfo;
 
 	public:
 		using infos_type = std::vector<FontInfo>;
 
 	private:
-		FT_Library library_;
-
+		memory::UniquePointer<Library> library_;
 		infos_type infos_;
 
 	public:
@@ -51,9 +39,13 @@ namespace gal::prometheus::gfx
 
 		FreeTypeGlyphParser() noexcept;
 
-		auto initialize() noexcept -> bool override;
+		auto ready() noexcept -> bool override;
 
-		auto load(FontPendingLoadData::data_view_type data) noexcept -> LoadResult override;
+		auto load(const std::filesystem::path& path) noexcept -> LoadResult override;
+
+		auto load(std::unique_ptr<std::uint8_t> data, std::size_t size) noexcept -> LoadResult override;
+
+		auto load(std::span<std::uint8_t> data) noexcept -> LoadResult override;
 
 		[[nodiscard]] auto has_glyph(font_id_type id, std::uint32_t codepoint) const noexcept -> bool override;
 

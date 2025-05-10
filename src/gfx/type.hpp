@@ -51,8 +51,6 @@ namespace gal::prometheus::gfx
 	class GlyphKey;
 	class GlyphInfo;
 
-	class FontPendingLoadData;
-
 	class GlyphParsedInfo;
 	class GlyphParser;
 
@@ -76,5 +74,5 @@ namespace gal::prometheus::gfx
 	// =========================================================
 
 	class TextureContext;
-	class RendererContext;
+	class RenderContext;
 } // namespace gal::prometheus::gfx

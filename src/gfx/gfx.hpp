@@ -6,6 +6,14 @@
 #pragma once
 
 #include <gfx/type.hpp>
-#include <gfx/draw_list_shared_data.hpp>
+
+#include <gfx/texture.hpp>
 #include <gfx/font.hpp>
+#include <gfx/glyph_parser_freetype.hpp>
+
+#include <gfx/render_list.hpp>
+
 #include <gfx/renderer.hpp>
+#include <gfx/renderer_dx11.hpp>
+
+#include <gfx/context.hpp>

@@ -18,7 +18,7 @@
 
 #include <platform/os.hpp>
 #include <gfx/font.hpp>
-#include <utility>
+#include <gfx/context.hpp>
 
 #include <comdef.h>
 #include <d3dcompiler.h>
@@ -28,12 +28,12 @@ namespace
 	using namespace gal::prometheus;
 	using namespace gfx;
 
-	[[nodiscard]] auto check_hr_error(
+	auto check_hr_error(
 		const HRESULT result
-		#if defined(GAL_PROMETHEUS_GFX_DEBUG)
+#if defined(GAL_PROMETHEUS_GFX_DEBUG)
 		,
 		const std::source_location& location = std::source_location::current()
-		#endif
+#endif
 	) noexcept -> bool
 	{
 		if (SUCCEEDED(result))
@@ -41,18 +41,18 @@ namespace
 			return true;
 		}
 
-		#if defined(GAL_PROMETHEUS_GFX_DEBUG)
+#if defined(GAL_PROMETHEUS_GFX_DEBUG)
 
 		const _com_error err{result};
 		std::println(stderr, "Error: {} --- at {}:{}", err.ErrorMessage(), location.file_name(), location.line());
 
 		GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
 
-		#else
+#else
 
 		GAL_PROMETHEUS_COMPILER_UNREACHABLE();
 
-		#endif
+#endif
 
 		return false;
 	}
@@ -448,7 +448,8 @@ namespace gal::prometheus::gfx
 		  vertex_input_layout_{nullptr},
 		  vertex_projection_matrix_{nullptr},
 		  pixel_shader_{nullptr},
-		  pixel_font_sampler_{nullptr} {}
+		  pixel_font_sampler_{nullptr},
+		  render_buffer_{} {}
 
 	Dx11Renderer::Dx11Renderer(ID3D11Device* device, ID3D11DeviceContext* device_immediate_context) noexcept
 		: Dx11Renderer{}
@@ -552,9 +553,251 @@ namespace gal::prometheus::gfx
 		return true;
 	}
 
+	auto Dx11Renderer::present(const RenderContext& renderer_context, const rect_type& display_area) noexcept -> void
+	{
+		const auto all_render_data = renderer_context.render_data();
+		// const auto [display_x, display_y] = display_area.point;
+		const auto [display_width, display_height] = display_area.extent;
+
+		auto& [this_frame_index_buffer, this_frame_index_count, this_frame_vertex_buffer, this_frame_vertex_count] = render_buffer_;
+
+		const auto [total_vertex_count, total_index_count] = [&]() noexcept
+		{
+			struct sum
+			{
+				UINT vertex;
+				UINT index;
+			};
+
+			return std::ranges::fold_left(
+				all_render_data,
+				sum{.vertex = 0, .index = 0},
+				[](const sum s, const RenderData& render_data) noexcept -> sum
+				{
+					const auto vertex_list = render_data.vertex_list.get();
+					const auto index_list = render_data.index_list.get();
+
+					return {.vertex = s.vertex + static_cast<UINT>(vertex_list.size()), .index = s.index + static_cast<UINT>(index_list.size())};
+				}
+			);
+		}();
+
+		if (not this_frame_vertex_buffer or total_vertex_count > this_frame_vertex_count)
+		{
+			// todo: grow factor
+			this_frame_vertex_count = total_vertex_count + 5000;
+
+			const D3D11_BUFFER_DESC buffer_desc{
+					.ByteWidth = static_cast<UINT>(this_frame_vertex_count * sizeof(vertex_type)),
+					.Usage = D3D11_USAGE_DYNAMIC,
+					.BindFlags = D3D11_BIND_VERTEX_BUFFER,
+					.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE,
+					.MiscFlags = 0,
+					.StructureByteStride = 0
+			};
+			check_hr_error(device_->CreateBuffer(&buffer_desc, nullptr, this_frame_vertex_buffer.ReleaseAndGetAddressOf()));
+		}
+		if (not this_frame_index_buffer or total_index_count > this_frame_index_count)
+		{
+			// todo: grow factor
+			this_frame_index_count = total_index_count + 10000;
+
+			const D3D11_BUFFER_DESC buffer_desc{
+					.ByteWidth = static_cast<UINT>(this_frame_index_count * sizeof(index_type)),
+					.Usage = D3D11_USAGE_DYNAMIC,
+					.BindFlags = D3D11_BIND_INDEX_BUFFER,
+					.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE,
+					.MiscFlags = 0,
+					.StructureByteStride = 0
+			};
+			check_hr_error(device_->CreateBuffer(&buffer_desc, nullptr, this_frame_index_buffer.ReleaseAndGetAddressOf()));
+		}
+
+		// Upload vertex/index data into a single contiguous GPU buffer
+		{
+			D3D11_MAPPED_SUBRESOURCE mapped_vertex_resource;
+			D3D11_MAPPED_SUBRESOURCE mapped_index_resource;
+			check_hr_error(device_immediate_context_->Map(this_frame_vertex_buffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_vertex_resource));
+			check_hr_error(device_immediate_context_->Map(this_frame_index_buffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_index_resource));
+
+			auto* mapped_vertex = static_cast<vertex_type*>(mapped_vertex_resource.pData);
+			auto* mapped_index = static_cast<index_type*>(mapped_index_resource.pData);
+
+			UINT vertex_offset = 0;
+			UINT index_offset = 0;
+
+			std::ranges::for_each(
+				all_render_data,
+				[&](const RenderData& draw_data) noexcept -> void
+				{
+					const auto vertex_list = draw_data.vertex_list.get();
+					const auto index_list = draw_data.index_list.get();
+
+					// std::ranges::transform(
+					// 		vertex_list,
+					// 		mapped_vertex + vertex_offset,
+					// 		[](const vertex_type& vertex) noexcept -> vertex_type
+					// 		{
+					// 			// return {
+					// 			// 		.position = {vertex.position.x, vertex.position.y},
+					// 			// 		.uv = {vertex.uv.x, vertex.uv.y},
+					// 			// 		.color = vertex.color.to(primitive::color_format<primitive::ColorFormat::A_B_G_R>)
+					// 			// };
+					// 			return std::bit_cast<vertex_type>(vertex);
+					// 		}
+					// );
+					std::ranges::copy(vertex_list, mapped_vertex + vertex_offset);
+					// std::ranges::transform(
+					// 		index_list,
+					// 		mapped_index + index_offset,
+					// 		[vertex_offset](const index_type index) noexcept -> index_type
+					// 		{
+					// 			return static_cast<index_type>(index + vertex_offset);
+					// 		}
+					// );
+					std::ranges::copy(index_list, mapped_index + index_offset);
+
+					vertex_offset += static_cast<UINT>(vertex_list.size());
+					index_offset += static_cast<UINT>(index_list.size());
+				}
+			);
+
+			device_immediate_context_->Unmap(this_frame_vertex_buffer.Get(), 0);
+			device_immediate_context_->Unmap(this_frame_index_buffer.Get(), 0);
+		}
+
+		// Setup orthographic projection matrix into our constant buffer
+		{
+			D3D11_MAPPED_SUBRESOURCE mapped_resource;
+			check_hr_error(device_immediate_context_->Map(vertex_projection_matrix_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource));
+
+			auto* mapped_projection_matrix = static_cast<projection_matrix_type*>(mapped_resource.pData);
+
+			constexpr auto left = 0.f;
+			const auto right = display_width;
+			constexpr auto top = 0.f;
+			const auto bottom = display_height;
+
+			const projection_matrix_type mvp{
+					{2.0f / (right - left), 0.0f, 0.0f, 0.0f},
+					{0.0f, 2.0f / (top - bottom), 0.0f, 0.0f},
+					{0.0f, 0.0f, 0.5f, 0.0f},
+					{(right + left) / (left - right), (top + bottom) / (bottom - top), 0.5f, 1.0f},
+			};
+			std::memcpy(mapped_projection_matrix, &mvp, sizeof(projection_matrix_type));
+
+			device_immediate_context_->Unmap(vertex_projection_matrix_.Get(), 0);
+		}
+
+		// Setup viewport
+		{
+			const D3D11_VIEWPORT viewport{
+					.TopLeftX = .0f,
+					.TopLeftY = .0f,
+					.Width = display_width,
+					.Height = display_height,
+					.MinDepth = 0,
+					.MaxDepth = 1
+			};
+			device_immediate_context_->RSSetViewports(1, &viewport);
+		}
+
+		// Bind shader and vertex buffers
+		constexpr UINT stride = sizeof(vertex_type);
+		constexpr UINT offset = 0;
+		device_immediate_context_->IASetInputLayout(vertex_input_layout_.Get());
+		device_immediate_context_->IASetVertexBuffers(0, 1, this_frame_vertex_buffer.GetAddressOf(), &stride, &offset);
+		device_immediate_context_->IASetIndexBuffer(
+			this_frame_index_buffer.Get(),
+			// ReSharper disable once CppUnreachableCode
+			sizeof(index_type) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT,
+			0
+		);
+		device_immediate_context_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		device_immediate_context_->VSSetShader(vertex_shader_.Get(), nullptr, 0);
+		device_immediate_context_->VSSetConstantBuffers(0, 1, vertex_projection_matrix_.GetAddressOf());
+		device_immediate_context_->PSSetShader(pixel_shader_.Get(), nullptr, 0);
+		device_immediate_context_->PSSetSamplers(0, 1, pixel_font_sampler_.GetAddressOf());
+		device_immediate_context_->DSSetShader(nullptr, nullptr, 0);
+		device_immediate_context_->HSSetShader(nullptr, nullptr, 0);
+		device_immediate_context_->GSSetShader(nullptr, nullptr, 0);
+		device_immediate_context_->CSSetShader(nullptr, nullptr, 0);
+
+		// Setup render state
+		constexpr float blend_factor[]{0, 0, 0, 0};
+		device_immediate_context_->OMSetBlendState(blend_state_.Get(), blend_factor, (std::numeric_limits<UINT>::max)());
+		device_immediate_context_->OMSetDepthStencilState(depth_stencil_state_.Get(), 0);
+		device_immediate_context_->RSSetState(rasterizer_state_.Get());
+
+		UINT total_index_offset = 0;
+		std::ranges::for_each(
+			all_render_data,
+			[this, &total_index_offset](const RenderData& render_data) noexcept -> void
+			{
+				const auto vertex_list = render_data.vertex_list.get();
+				const auto index_list = render_data.index_list.get();
+
+				for (const auto& command_list = render_data.command_list.get();
+				     const auto& [clip_rect, texture, index_offset, element_count]: command_list)
+				{
+					const auto [point, extent] = clip_rect;
+					const D3D11_RECT rect
+					{
+							static_cast<LONG>(point.x),
+							static_cast<LONG>(point.y),
+							static_cast<LONG>(point.x + extent.width),
+							static_cast<LONG>(point.y + extent.height)
+					};
+					device_immediate_context_->RSSetScissorRects(1, &rect);
+
+					assert(texture != 0 and "push_texture_id when create texture view");
+					ID3D11ShaderResourceView* textures[]{reinterpret_cast<ID3D11ShaderResourceView*>(texture)}; // NOLINT(performance-no-int-to-ptr)
+					device_immediate_context_->PSSetShaderResources(0, 1, textures);
+
+					const auto this_index_offset = static_cast<UINT>(total_index_offset + index_offset);
+					// device_immediate_context_->DrawIndexed(static_cast<UINT>(element_count), this_index_offset, 0);
+					device_immediate_context_->DrawIndexedInstanced(static_cast<UINT>(element_count), 1, this_index_offset, 0, 0);
+				}
+
+				total_index_offset += static_cast<UINT>(index_list.size());
+			}
+		);
+	}
+
 	auto Dx11Renderer::create_texture(const Texture::data_view_type data, const Texture::size_type size) noexcept -> texture_id_type
 	{
-		return upload_texture(data, size);
+		return upload_texture(data, size, D3D11_USAGE_DYNAMIC, D3D11_BIND_SHADER_RESOURCE, D3D11_CPU_ACCESS_WRITE, 0);
+	}
+
+	auto Dx11Renderer::update_texture(const Texture& texture) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture.uploaded(), "Create texture first!");
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture.dirty(), "No need to update texture!");
+
+		auto* srv = id_to_gpu_handle(texture.id());
+		const auto it = textures_.find(srv);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it != textures_.end(), "Invalid texture id");
+
+		auto* texture_2d = it->second;
+		D3D11_MAPPED_SUBRESOURCE mapped_resource{};
+		if (const auto result = device_immediate_context_->Map(
+			texture_2d,
+			0,
+			D3D11_MAP_WRITE_DISCARD,
+			0,
+			&mapped_resource
+		); result != S_OK)
+		{
+			// todo: error handling
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+			return;
+		}
+
+		const auto* source = texture.data().data();
+		const auto source_length = texture.area_size();
+		std::ranges::copy(source, source + source_length, static_cast<Texture::element_type*>(mapped_resource.pData));
+
+		device_immediate_context_->Unmap(texture_2d, 0);
 	}
 
 	auto Dx11Renderer::destroy_texture(const texture_id_type texture_id) noexcept -> void

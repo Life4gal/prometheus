@@ -5,6 +5,9 @@
 
 #pragma once
 
+#include <filesystem>
+#include <memory>
+
 #include <gfx/texture.hpp>
 #include <gfx/type.hpp>
 
@@ -58,10 +61,10 @@ namespace gal::prometheus::gfx
 		// =============
 
 		// Bitmap infos of this glyph
-		rect_type rect;
-		value_type advance_x;
-		bool visible;
-		bool colored;
+		rect_type rect{-1, -1, -1, -1};
+		value_type advance_x{-1};
+		bool visible{false};
+		bool colored{false};
 
 		// =============
 		// Data filled when writing texture
@@ -69,32 +72,8 @@ namespace gal::prometheus::gfx
 
 		// The id of the texture atlas where the glyph is located
 		// This id is present if and only if the glyph is in a texture atlas, otherwise it is invalid_texture_atlas_id
-		texture_atlas_id_type texture_atlas_id;
-		uv_type uv;
-	};
-
-	/**
-	 * @brief Font data to be loaded, then GlyphParser::load will load its bitmap data
-	 */
-	class FontPendingLoadData final
-	{
-	public:
-		using element_type = std::uint8_t;
-		using data_type = std::unique_ptr<element_type[]>;
-		using size_type = std::uint32_t;
-
-		using data_view_type = std::span<element_type>;
-
-	private:
-		data_type data_;
-		size_type size_;
-
-	public:
-		FontPendingLoadData(data_type data, size_type size) noexcept;
-
-		[[nodiscard]] auto data() const noexcept -> data_view_type;
-
-		[[nodiscard]] auto size() const noexcept -> size_type;
+		texture_atlas_id_type texture_atlas_id{invalid_texture_atlas_id};
+		uv_type uv{-1, -1, -1, -1};
 	};
 
 	/**
@@ -114,9 +93,10 @@ namespace gal::prometheus::gfx
 	public:
 		/**
 		 * @param info Glyph info
-		 * @param data Glypy bitmap data
+		 * @param data Glyph bitmap data
 		 *
 		 * @link FontFace::find_or_parse_glyph
+		 * @endlink 
 		 */
 		GlyphParsedInfo(GlyphInfo& info, data_type data) noexcept;
 
@@ -159,7 +139,7 @@ namespace gal::prometheus::gfx
 
 			[[nodiscard]] explicit operator bool() const noexcept
 			{
-				return data == nullptr;
+				return data != nullptr;
 			}
 
 			[[nodiscard]] auto valid() const noexcept -> bool
@@ -177,17 +157,31 @@ namespace gal::prometheus::gfx
 
 		GlyphParser() noexcept = default;
 
-		[[nodiscard]] virtual auto initialize() noexcept -> bool = 0;
+		[[nodiscard]] virtual auto ready() noexcept -> bool = 0;
 
 		/**
-		 * @brief Load the font data, get all its glyph data, return the id of the font
+		 * @brief Load font data from file, get all glyph data, return id of font
+		 * @param path Font file path
+		 * @return id of the font, or invalid_font_id if failed to load
 		 */
-		[[nodiscard]] virtual auto load(FontPendingLoadData::data_view_type data) noexcept -> LoadResult = 0;
+		[[nodiscard]] virtual auto load(const std::filesystem::path& path) noexcept -> LoadResult = 0;
 
 		/**
-		 * @brief Load the font data, get all its glyph data, return the id of the font
+		 * @brief Load font data from @c data, get all glyph data, return id of font
+		 * @param data Font data
+		 * @param size Font data length
+		 * @return id of the font, or invalid_font_id if failed to load
+		 * @note Transfer ownership of the font data, the caller does not need to free memory
 		 */
-		[[nodiscard]] auto load(const FontPendingLoadData& data) noexcept -> LoadResult;
+		[[nodiscard]] virtual auto load(std::unique_ptr<std::uint8_t> data, std::size_t size) noexcept -> LoadResult = 0;
+
+		/**
+		 * @brief Load font data from @c data, get all glyph data, return id of font
+		 * @param data Font data
+		 * @return id of the font, or invalid_font_id if failed to load
+		 * @note Copy font data, caller needs to free memory
+		 */
+		[[nodiscard]] virtual auto load(std::span<std::uint8_t> data) noexcept -> LoadResult = 0;
 
 		/**
 		 * @brief Determines whether the target font contains the glyphs of the specified codepoint
@@ -290,7 +284,5 @@ namespace gal::prometheus::gfx
 namespace gal::prometheus::meta::user_defined
 {
 	template<>
-	struct enum_is_flag<gfx::GlyphFlag> : std::true_type
-	{
-	};
+	struct enum_is_flag<gfx::GlyphFlag> : std::true_type {};
 } // namespace gal::prometheus::meta::user_defined
