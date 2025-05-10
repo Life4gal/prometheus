@@ -9,7 +9,7 @@
 
 #include <gfx/render_list.hpp>
 
-#include <chars/chars.hpp>
+// #include <chars/chars.hpp>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace gal::prometheus::gfx
@@ -194,15 +194,13 @@ namespace gal::prometheus::gfx
 		return nullptr;
 	}
 
-	auto TextureContext::glyph_of(const std::string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> std::vector<const GlyphInfo*>
+	auto TextureContext::glyph_of(std::u32string_view text, std::uint32_t size, GlyphFlag flag) noexcept -> std::vector<const GlyphInfo*>
 	{
-		const auto utf32_text = chars::convert<chars::CharsType::UTF8_CHAR, chars::CharsType::UTF32>(text);
-
 		std::vector<const GlyphInfo*> infos;
-		infos.reserve(utf32_text.size());
+		infos.reserve(text.size());
 
 		std::ranges::for_each(
-			utf32_text,
+			text,
 			[&infos, this, size, flag](const auto codepoint) noexcept -> void
 			{
 				const auto* info = this->glyph_of(codepoint, size, flag);
@@ -213,38 +211,62 @@ namespace gal::prometheus::gfx
 		return infos;
 	}
 
-	auto TextureContext::size_of(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
-	{
-		const auto* info = glyph_of(codepoint, size, flag);
-		if (info == nullptr)
-		{
-			return {0, 0};
-		}
+	// auto TextureContext::glyph_of(const std::string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> std::vector<const GlyphInfo*>
+	// {
+	// 	const auto utf32_text = chars::convert<chars::CharsType::UTF8_CHAR, chars::CharsType::UTF32>(text);
+	//
+	// 	return this->glyph_of(utf32_text, size, flag);
+	// }
 
-		return {info->advance_x, info->rect.height()};
-	}
-
-	auto TextureContext::size_of(const std::string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
-	{
-		const auto infos = glyph_of(text, size, flag);
-
-		extent_type total_size{0, 0};
-		std::ranges::for_each(
-			infos,
-			[&total_size](const auto* info) noexcept -> void
-			{
-				if (info == nullptr)
-				{
-					return;
-				}
-
-				total_size.width += info->advance_x;
-				total_size.height = std::max(total_size.height, info->rect.height());
-			}
-		);
-
-		return total_size;
-	}
+	// auto TextureContext::size_of(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
+	// {
+	// 	const auto* info = glyph_of(codepoint, size, flag);
+	//
+	// 	if (info == nullptr)
+	// 	{
+	// 		return {0, 0};
+	// 	}
+	//
+	// 	return {info->advance_x, info->rect.height()};
+	// }
+	//
+	// auto TextureContext::size_of(const std::u32string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
+	// {
+	// 	const auto infos = glyph_of(text, size, flag);
+	//
+	// 	return std::ranges::fold_left(
+	// 		infos,
+	// 		extent_type{0, 0},
+	// 		[](const extent_type total, const auto* info) noexcept -> extent_type
+	// 		{
+	// 			if (info == nullptr)
+	// 			{
+	// 				return total;
+	// 			}
+	//
+	// 			return {total.width + info->advance_x, std::ranges::max(total.height, info->rect.height())};
+	// 		}
+	// 	);
+	// }
+	//
+	// auto TextureContext::size_of(const std::string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
+	// {
+	// 	const auto infos = glyph_of(text, size, flag);
+	//
+	// 	return std::ranges::fold_left(
+	// 		infos,
+	// 		extent_type{0, 0},
+	// 		[](const extent_type total, const auto* info) noexcept -> extent_type
+	// 		{
+	// 			if (info == nullptr)
+	// 			{
+	// 				return total;
+	// 			}
+	//
+	// 			return {total.width + info->advance_x, std::ranges::max(total.height, info->rect.height())};
+	// 		}
+	// 	);
+	// }
 
 	auto TextureContext::load_all_font() noexcept -> void
 	{
@@ -358,20 +380,30 @@ namespace gal::prometheus::gfx
 		return texture_context_.glyph_of(codepoint, size, flag);
 	}
 
-	auto RenderContext::glyph_of(const std::string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> std::vector<const GlyphInfo*>
+	auto RenderContext::glyph_of(const std::u32string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> std::vector<const GlyphInfo*>
 	{
 		return texture_context_.glyph_of(text, size, flag);
 	}
 
-	auto RenderContext::size_of(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
-	{
-		return texture_context_.size_of(codepoint, size, flag);
-	}
+	// auto RenderContext::glyph_of(const std::string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> std::vector<const GlyphInfo*>
+	// {
+	// 	return texture_context_.glyph_of(text, size, flag);
+	// }
 
-	auto RenderContext::size_of(const std::string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
-	{
-		return texture_context_.size_of(text, size, flag);
-	}
+	// auto RenderContext::size_of(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
+	// {
+	// 	return texture_context_.size_of(codepoint, size, flag);
+	// }
+	//
+	// auto RenderContext::size_of(const std::u32string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
+	// {
+	// 	return texture_context_.size_of(text, size, flag);
+	// }
+	//
+	// auto RenderContext::size_of(const std::string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
+	// {
+	// 	return texture_context_.size_of(text, size, flag);
+	// }
 
 	auto RenderContext::render_list_shared_data() const noexcept -> const RenderListSharedData&
 	{

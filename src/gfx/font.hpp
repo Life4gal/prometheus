@@ -11,18 +11,10 @@
 #include <gfx/texture.hpp>
 #include <gfx/type.hpp>
 
-#include <functional/enumeration.hpp>
 #include <memory/reference_wrapper.hpp>
 
 namespace gal::prometheus::gfx
 {
-	enum class GlyphFlag : std::uint8_t
-	{
-		NONE = 0,
-		BOLD = 1 << 0,
-		ITALIC = 1 << 1,
-	};
-
 	/**
 	 * @brief Glyph
 	 */
@@ -279,10 +271,3 @@ namespace gal::prometheus::gfx
 		[[nodiscard]] auto find_glyph_no_fallback(const GlyphKey& key) noexcept -> const GlyphInfo*;
 	};
 } // namespace gal::prometheus::gfx
-
-// ReSharper disable once CppRedundantNamespaceDefinition
-namespace gal::prometheus::meta::user_defined
-{
-	template<>
-	struct enum_is_flag<gfx::GlyphFlag> : std::true_type {};
-} // namespace gal::prometheus::meta::user_defined

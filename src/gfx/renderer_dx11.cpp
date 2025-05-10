@@ -738,9 +738,9 @@ namespace gal::prometheus::gfx
 				const auto index_list = render_data.index_list.get();
 
 				for (const auto& command_list = render_data.command_list.get();
-				     const auto& [clip_rect, texture, index_offset, element_count]: command_list)
+				     const auto& [scissor, texture, index_offset, element_count]: command_list)
 				{
-					const auto [point, extent] = clip_rect;
+					const auto [point, extent] = scissor;
 					const D3D11_RECT rect
 					{
 							static_cast<LONG>(point.x),
@@ -750,9 +750,9 @@ namespace gal::prometheus::gfx
 					};
 					device_immediate_context_->RSSetScissorRects(1, &rect);
 
-					assert(texture != 0 and "push_texture_id when create texture view");
-					ID3D11ShaderResourceView* textures[]{reinterpret_cast<ID3D11ShaderResourceView*>(texture)}; // NOLINT(performance-no-int-to-ptr)
-					device_immediate_context_->PSSetShaderResources(0, 1, textures);
+					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture != invalid_texture_id);
+					auto* srv = id_to_gpu_handle(texture);
+					device_immediate_context_->PSSetShaderResources(0, 1, &srv);
 
 					const auto this_index_offset = static_cast<UINT>(total_index_offset + index_offset);
 					// device_immediate_context_->DrawIndexed(static_cast<UINT>(element_count), this_index_offset, 0);

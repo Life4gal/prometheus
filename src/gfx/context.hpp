@@ -128,25 +128,35 @@ namespace gal::prometheus::gfx
 		[[nodiscard]] auto atlas_of(const GlyphInfo& info) noexcept -> const Texture&;
 
 		[[nodiscard]] auto glyph_of(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> const GlyphInfo*;
-		[[nodiscard]] auto glyph_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> std::vector<const GlyphInfo*>;
+		[[nodiscard]] auto glyph_of(std::u32string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> std::vector<const GlyphInfo*>;
+		// [[nodiscard]] auto glyph_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> std::vector<const GlyphInfo*>;
 
-		/**
-		 * @brief The minimum space to be occupied if the specified codepoint is to be rendered in its entirety
-		 * @param codepoint
-		 * @param size
-		 * @param flag
-		 * @return
-		 */
-		[[nodiscard]] auto size_of(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
-
-		/**
-		 * @brief The minimum space to be occupied if the specified text is to be rendered in its entirety
-		 * @param text
-		 * @param size
-		 * @param flag
-		 * @return
-		 */
-		[[nodiscard]] auto size_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
+		// /**
+		//  * @brief The minimum space to be occupied if the specified codepoint is to be rendered in its entirety
+		//  * @param codepoint
+		//  * @param size
+		//  * @param flag
+		//  * @return
+		//  */
+		// [[nodiscard]] auto size_of(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
+		//
+		// /**
+		//  * @brief The minimum space to be occupied if the specified text is to be rendered in its entirety
+		//  * @param text
+		//  * @param size
+		//  * @param flag
+		//  * @return
+		//  */
+		// [[nodiscard]] auto size_of(std::u32string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
+		//
+		// /**
+		//  * @brief The minimum space to be occupied if the specified text is to be rendered in its entirety
+		//  * @param text
+		//  * @param size
+		//  * @param flag
+		//  * @return
+		//  */
+		// [[nodiscard]] auto size_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
 
 		/**
 		 * @brief Load the fonts previously added by @c add_font to the @c FontFace
@@ -227,25 +237,35 @@ namespace gal::prometheus::gfx
 		[[nodiscard]] auto atlas_of(const GlyphInfo& info) noexcept -> const Texture&;
 
 		[[nodiscard]] auto glyph_of(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> const GlyphInfo*;
-		[[nodiscard]] auto glyph_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> std::vector<const GlyphInfo*>;
+		[[nodiscard]] auto glyph_of(std::u32string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> std::vector<const GlyphInfo*>;
+		// [[nodiscard]] auto glyph_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> std::vector<const GlyphInfo*>;
 
-		/**
-		 * @brief The minimum space to be occupied if the specified codepoint is to be rendered in its entirety
-		 * @param codepoint
-		 * @param size
-		 * @param flag
-		 * @return
-		 */
-		[[nodiscard]] auto size_of(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
-
-		/**
-		 * @brief The minimum space to be occupied if the specified text is to be rendered in its entirety
-		 * @param text
-		 * @param size
-		 * @param flag
-		 * @return
-		 */
-		[[nodiscard]] auto size_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
+		// /**
+		//  * @brief The minimum space to be occupied if the specified codepoint is to be rendered in its entirety
+		//  * @param codepoint
+		//  * @param size
+		//  * @param flag
+		//  * @return
+		//  */
+		// [[nodiscard]] auto size_of(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
+		//
+		// /**
+		//  * @brief The minimum space to be occupied if the specified text is to be rendered in its entirety
+		//  * @param text
+		//  * @param size
+		//  * @param flag
+		//  * @return
+		//  */
+		// [[nodiscard]] auto size_of(std::u32string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
+		//
+		// /**
+		//  * @brief The minimum space to be occupied if the specified text is to be rendered in its entirety
+		//  * @param text
+		//  * @param size
+		//  * @param flag
+		//  * @return
+		//  */
+		// [[nodiscard]] auto size_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
 
 		// ====================================================================
 		// RenderListSharedData

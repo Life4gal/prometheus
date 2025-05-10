@@ -7,6 +7,7 @@
 
 #include <gfx/context.hpp>
 
+#include <chars/chars.hpp>
 #include <math/cmath.hpp>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
@@ -782,24 +783,76 @@ namespace gal::prometheus::gfx
 			const std::uint32_t font_size,
 			const point_type& p,
 			const color_type color,
-			const float wrap_width
+			const float wrap_width,
+			const GlyphFlag flag
 		) noexcept -> void
 			// clang-format on
 		{
-			std::ignore = wrap_width;
+			// todo:
+			// The texture used for glyphs may not be the default texture, then we need to switch the texture,
+			// but at this time, the glyph information may not be written to the texture atlas (e.g. the first frame), then we can't know the ID of the texture atlas
+
+			// note:
+			// Line break ('\n') have no glyph information (nullptr), meaning we need to skip it
 
 			auto& render_list = self.get();
 			auto& render_context = render_list.render_context_.get();
 
-			const auto& glyphs = render_context.glyph_of(utf8_text, font_size);
-			for (auto x = p.x; const auto& glyph: glyphs)
+			const auto utf32_text = chars::convert<chars::CharsType::UTF8_CHAR, chars::CharsType::UTF32>(utf8_text);
+			const auto& glyphs = render_context.glyph_of(utf32_text, font_size, flag);
+
+			if (std::ranges::any_of(
+					glyphs,
+					[](const auto* glyph) noexcept -> bool
+					{
+						return glyph and glyph->texture_atlas_id == invalid_texture_atlas_id;
+					}
+				)
+			)
+			{
+				// skip this frame?
+				return;
+			}
+
+			const auto visible_glyph_count = std::ranges::count_if(
+				glyphs,
+				[](const auto* glyph) noexcept -> bool
+				{
+					if (glyph == nullptr)
+					{
+						return false;
+					}
+
+					if (not glyph->visible)
+					{
+						return false;
+					}
+
+					return true;
+				}
+			);
+
+			// two triangle without path
+			const auto vertex_count = std::size_t{4} * visible_glyph_count;
+			const auto index_count = std::size_t{6} * visible_glyph_count;
+			auto appender = make_appender();
+			appender.reserve(vertex_count, index_count);
+
+			const auto wrap_pos_x = p.x + wrap_width;
+			const auto line_height = static_cast<extent_type::value_type>(font_size);
+			auto cursor = p + point_type{0, line_height};
+
+			for (const auto [codepoint, glyph]: std::views::zip(utf32_text, glyphs))
 			{
 				if (glyph == nullptr)
 				{
-					return;
+					if (codepoint == U'\n')
+					{
+						cursor.x = p.x;
+						cursor.y += line_height;
+					}
 				}
-
-				if (glyph->visible)
+				else if (glyph->visible)
 				{
 					const auto& atlas = render_context.atlas_of(*glyph);
 
@@ -810,39 +863,103 @@ namespace gal::prometheus::gfx
 						render_list.push_texture(atlas.id());
 					}
 
-					// todo
+					const auto glyph_advance_x = glyph->advance_x;
+
+					if (cursor.x + glyph_advance_x > wrap_pos_x)
 					{
-						const auto color_may_colored = glyph->colored ? color.transparent() : color;
-						const auto glyph_point = point_type{x, glyph->rect.point.y};
-						const auto glyph_width = glyph->rect.width();
-						const auto glyph_height = glyph->rect.height();
-
-						auto appender = make_appender();
-
-						// two triangle without path
-						constexpr size_type vertex_count = 4;
-						constexpr size_type index_count = 6;
-						appender.reserve(vertex_count, index_count);
-
-						const auto current_vertex_index = static_cast<index_type>(appender.vertex_count());
-
-						appender.add_vertex(glyph_point, glyph->uv.left_top(), color_may_colored);
-						appender.add_vertex(glyph_point + extent_type{glyph_width, 0}, glyph->uv.right_top(), color_may_colored);
-						appender.add_vertex(glyph_point + extent_type{0, glyph_height}, glyph->uv.left_bottom(), color_may_colored);
-						appender.add_vertex(glyph_point + extent_type{glyph_width, glyph_height}, glyph->uv.right_bottom(), color_may_colored);
-
-						appender.add_index(current_vertex_index + 0, current_vertex_index + 1, current_vertex_index + 2);
-						appender.add_index(current_vertex_index + 0, current_vertex_index + 2, current_vertex_index + 3);
+						cursor.x = p.x;
+						cursor.y += line_height;
 					}
+
+					const rect_type char_rect
+					{
+							cursor + point_type{glyph->rect.left_top().x, -glyph->rect.left_top().y},
+							glyph->rect.size()
+					};
+					const auto color_may_colored = glyph->colored ? color.transparent() : color;
+					const auto current_vertex_index = static_cast<index_type>(appender.vertex_count());
+
+					appender.add_vertex(char_rect.left_top(), glyph->uv.left_top(), color_may_colored);
+					appender.add_vertex(char_rect.right_top(), glyph->uv.right_top(), color_may_colored);
+					appender.add_vertex(char_rect.right_bottom(), glyph->uv.right_bottom(), color_may_colored);
+					appender.add_vertex(char_rect.left_bottom(), glyph->uv.left_bottom(), color_may_colored);
+
+					appender.add_index(current_vertex_index + 0, current_vertex_index + 1, current_vertex_index + 2);
+					appender.add_index(current_vertex_index + 0, current_vertex_index + 2, current_vertex_index + 3);
 
 					if (new_texture)
 					{
 						render_list.pop_texture();
 					}
-				}
 
-				x += glyph->advance_x;
+					cursor.x += glyph_advance_x;
+				}
 			}
+		}
+
+		// clang-format off
+		auto draw_text_size(
+			const std::string_view utf8_text,
+			const std::uint32_t font_size,
+			const float wrap_width,
+			const GlyphFlag flag
+		) noexcept -> extent_type
+			// clang-format on
+		{
+			auto& render_list = self.get();
+			auto& render_context = render_list.render_context_.get();
+
+			const auto utf32_text = chars::convert<chars::CharsType::UTF8_CHAR, chars::CharsType::UTF32>(utf8_text);
+			const auto& glyphs = render_context.glyph_of(utf32_text, font_size, flag);
+
+			if (std::ranges::any_of(
+					glyphs,
+					[](const auto* glyph) noexcept -> bool
+					{
+						return glyph and glyph->texture_atlas_id == invalid_texture_atlas_id;
+					}
+				)
+			)
+			{
+				// skip this frame?
+				return {0, 0};
+			}
+
+			const auto line_height = static_cast<extent_type::value_type>(font_size);
+
+			float max_width = 0;
+			float current_width = 0;
+			float total_height = line_height;
+
+			for (const auto [codepoint, glyph]: std::views::zip(utf32_text, glyphs))
+			{
+				if (glyph == nullptr)
+				{
+					if (codepoint == U'\n')
+					{
+						max_width = std::ranges::max(max_width, current_width);
+						current_width = 0;
+						total_height += line_height;
+					}
+				}
+				else if (glyph->visible)
+				{
+					if (const auto glyph_advance_x = glyph->advance_x; current_width + glyph_advance_x > wrap_width)
+					{
+						max_width = std::ranges::max(max_width, current_width);
+						current_width = glyph_advance_x;
+						total_height += line_height;
+					}
+					else
+					{
+						current_width += glyph_advance_x;
+					}
+				}
+			}
+
+			max_width = std::ranges::max(max_width, current_width);
+
+			return {max_width, total_height};
 		}
 
 		// clang-format off
@@ -2134,6 +2251,20 @@ namespace gal::prometheus::gfx
 	) noexcept -> void
 		// clang-format on
 	{
+		return this->text(utf8_text, font_size, point, color, GlyphFlag::NONE, wrap_width);
+	}
+
+	// clang-format off
+	auto RenderList::text(
+		const std::string_view utf8_text, 
+		const std::uint32_t font_size, 
+		const point_type& point,
+		const color_type color, 
+		const GlyphFlag flag, 
+		const float wrap_width
+	) noexcept -> void
+		// clang-format on
+	{
 		if (color.alpha == 0)
 		{
 			return;
@@ -2142,7 +2273,33 @@ namespace gal::prometheus::gfx
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(wrap_width > 0);
 
 		Drawer drawer{.self = *this, .path_list = {}};
-		drawer.draw_text(utf8_text, font_size, point, color, wrap_width);
+
+		drawer.draw_text(utf8_text, font_size, point, color, wrap_width, flag);
+	}
+
+	// clang-format off
+	auto RenderList::text_size(
+		const std::string_view utf8_text, 
+		const std::uint32_t font_size,
+		const float wrap_width
+	) noexcept -> extent_type
+		// clang-format on
+	{
+		return this->text_size(utf8_text, font_size, GlyphFlag::NONE, wrap_width);
+	}
+
+	// clang-format off
+	auto RenderList::text_size(
+		const std::string_view utf8_text, 
+		const std::uint32_t font_size, 
+		const GlyphFlag flag,
+		const float wrap_width
+	) noexcept -> extent_type
+		// clang-format on
+	{
+		Drawer drawer{.self = *this, .path_list = {}};
+
+		return drawer.draw_text_size(utf8_text, font_size, wrap_width, flag);
 	}
 
 	// clang-format off
