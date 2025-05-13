@@ -29,7 +29,6 @@ namespace gal::prometheus::gfx
 	class FreeTypeGlyphParser::FontInfo final
 	{
 	public:
-		std::unique_ptr<std::uint8_t> font_data{nullptr};
 		FT_Face face{nullptr};
 
 		float ascender{0};
@@ -87,66 +86,57 @@ namespace gal::prometheus::gfx
 		return library_ != nullptr;
 	}
 
-	auto FreeTypeGlyphParser::load(const std::filesystem::path& path) noexcept -> LoadResult
-	{
-		const auto path_string = path.string();
-
-		LoadResult invalid_result{.name = {}, .id = invalid_font_id};
-
-		FT_Face face = nullptr;
-		if (const auto error = FT_New_Face(library_->library, path_string.data(), 0, &face); error != FT_Err_Ok)
-		{
-			return invalid_result;
-		}
-
-		if (const auto error = FT_Select_Charmap(face, FT_ENCODING_UNICODE); error != FT_Err_Ok)
-		{
-			FT_Done_Face(face);
-			return invalid_result;
-		}
-
-		const auto id = infos_.size();
-
-		auto& info = infos_.emplace_back();
-		info.face = face;
-
-		return {.name = face->family_name, .id = static_cast<font_id_type>(id)};
-	}
-
-	auto FreeTypeGlyphParser::load(std::unique_ptr<std::uint8_t> data, const std::size_t size) noexcept -> LoadResult
-	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.get() != nullptr);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(size != 0);
-
-		LoadResult invalid_result{.name = {}, .id = invalid_font_id};
-
-		FT_Face face = nullptr;
-		if (const auto error = FT_New_Memory_Face(library_->library, data.get(), static_cast<FT_Long>(size), 0, &face); error != FT_Err_Ok)
-		{
-			return invalid_result;
-		}
-
-		if (const auto error = FT_Select_Charmap(face, FT_ENCODING_UNICODE); error != FT_Err_Ok)
-		{
-			FT_Done_Face(face);
-			return invalid_result;
-		}
-
-		const auto id = infos_.size();
-
-		auto& info = infos_.emplace_back();
-		info.font_data = std::move(data);
-		info.face = face;
-
-		return {.name = face->family_name, .id = static_cast<font_id_type>(id)};
-	}
+	// auto FreeTypeGlyphParser::load(const std::filesystem::path& path) noexcept -> LoadResult
+	// {
+	// 	const auto path_string = path.string();
+	//
+	// 	LoadResult invalid_result{.name = {}, .id = invalid_font_id};
+	//
+	// 	FT_Face face = nullptr;
+	// 	if (const auto error = FT_New_Face(library_->library, path_string.data(), 0, &face); error != FT_Err_Ok)
+	// 	{
+	// 		return invalid_result;
+	// 	}
+	//
+	// 	if (const auto error = FT_Select_Charmap(face, FT_ENCODING_UNICODE); error != FT_Err_Ok)
+	// 	{
+	// 		FT_Done_Face(face);
+	// 		return invalid_result;
+	// 	}
+	//
+	// 	const auto id = infos_.size();
+	//
+	// 	auto& info = infos_.emplace_back();
+	// 	info.face = face;
+	//
+	// 	return {.name = face->family_name, .id = static_cast<font_id_type>(id)};
+	// }
 
 	auto FreeTypeGlyphParser::load(const std::span<std::uint8_t> data) noexcept -> LoadResult
 	{
-		auto* copy = new std::uint8_t[data.size()];
-		std::ranges::copy(data, copy);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.data() != nullptr);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not data.empty());
 
-		return this->load(std::unique_ptr<std::uint8_t>{copy}, data.size());
+		LoadResult invalid_result{.name = {}, .id = invalid_font_id};
+
+		FT_Face face = nullptr;
+		if (const auto error = FT_New_Memory_Face(library_->library, data.data(), static_cast<FT_Long>(data.size()), 0, &face); error != FT_Err_Ok)
+		{
+			return invalid_result;
+		}
+
+		if (const auto error = FT_Select_Charmap(face, FT_ENCODING_UNICODE); error != FT_Err_Ok)
+		{
+			FT_Done_Face(face);
+			return invalid_result;
+		}
+
+		const auto id = infos_.size();
+
+		auto& info = infos_.emplace_back();
+		info.face = face;
+
+		return {.name = face->family_name, .id = static_cast<font_id_type>(id)};
 	}
 
 	auto FreeTypeGlyphParser::has_glyph(const font_id_type id, const std::uint32_t codepoint) const noexcept -> bool
@@ -171,7 +161,7 @@ namespace gal::prometheus::gfx
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(key.codepoint != 0);
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(key.size != 0);
 
-		ParseResult invalid_result{.info = {}, .data = nullptr};
+		ParseResult invalid_result{};
 
 		auto& info = infos_[id];
 		const auto& face = info.face;
@@ -212,15 +202,10 @@ namespace gal::prometheus::gfx
 		const std::size_t data_length = static_cast<std::size_t>(bitmap.width) * bitmap.rows;
 
 		ParseResult result{
-				.info =
-				{
-						.rect = {point, size},
-						.advance_x = ft_size_to_float(slot->advance.x),
-						.visible = size.width > 0 and size.height > 0,
-						.colored = bitmap.pixel_mode == FT_PIXEL_MODE_BGRA,
-						.texture_atlas_id = invalid_texture_atlas_id,
-						.uv = {},
-				},
+				.rect = {point, size},
+				.advance_x = ft_size_to_float(slot->advance.x),
+				.visible = size.width > 0 and size.height > 0,
+				.colored = bitmap.pixel_mode == FT_PIXEL_MODE_BGRA,
 				.data = std::make_unique_for_overwrite<Texture::element_type[]>(data_length)
 		};
 

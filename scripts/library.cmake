@@ -371,6 +371,8 @@ set(
 
 		${PROJECT_SOURCE_DIR}/src/gfx/type.hpp
 
+		${PROJECT_SOURCE_DIR}/src/gfx/glyph.hpp
+
 		${PROJECT_SOURCE_DIR}/src/gfx/texture.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/font.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/glyph_parser_freetype.hpp
@@ -437,6 +439,8 @@ set(
 		# =========================
 		# GFX
 		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/gfx/glyph.cpp
 
 		${PROJECT_SOURCE_DIR}/src/gfx/texture.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/font.cpp

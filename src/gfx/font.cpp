@@ -5,35 +5,11 @@
 
 #include <gfx/font.hpp>
 
-#include <fstream>
-
 #include <chars/chars.hpp>
 #include <gfx/context.hpp>
 
 namespace gal::prometheus::gfx
 {
-	GlyphParsedInfo::GlyphParsedInfo(GlyphInfo& info, data_type data) noexcept
-		: info_{info},
-		  data_{std::move(data)}
-	{
-	}
-
-	auto GlyphParsedInfo::upload(TextureContext& texture_context) noexcept -> void
-	{
-		auto& info = info_.get();
-
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(info.texture_atlas_id == invalid_texture_atlas_id);
-		texture_context.upload_glyph_to_texture(info, data_);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(info.texture_atlas_id != invalid_texture_atlas_id);
-	}
-
-	GlyphParser::~GlyphParser() noexcept = default;
-
-	auto GlyphParser::parse(const font_id_type id, const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> ParseResult
-	{
-		return this->parse(id, {.codepoint = codepoint, .size = size, .flag = flag});
-	}
-
 	auto FontFace::find_or_parse_glyph(const GlyphKey& key) noexcept -> GlyphInfo*
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(id_ != invalid_font_id);
@@ -55,9 +31,15 @@ namespace gal::prometheus::gfx
 			return nullptr;
 		}
 
-		const auto [it, inserted] = glyphs_.emplace(key, result.info);
+		GlyphInfo info{};
+		info.rect = result.rect;
+		info.advance_x = result.advance_x;
+		info.visible = result.visible;
+		info.colored = result.colored;
+
+		const auto [it, inserted] = glyphs_.emplace(key, info);
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(inserted);
-		parsed_infos_upload_queue_.emplace_back(memory::ref(it->second), std::move(result.data));
+		parsed_info_queue_.emplace_back(memory::ref(it->second), std::move(result));
 
 		return std::addressof(it->second);
 	}
@@ -66,14 +48,10 @@ namespace gal::prometheus::gfx
 		: context_{context},
 		  name_{std::move(name)},
 		  id_{id},
-		  fallback_glyph_{nullptr}
-	{
-	}
+		  fallback_glyph_{nullptr} {}
 
 	FontFace::FontFace(TextureContext& context, const std::string_view name, const font_id_type id) noexcept
-		: FontFace{context, std::string{name}, id}
-	{
-	}
+		: FontFace{context, std::string{name}, id} {}
 
 	auto FontFace::name() const noexcept -> std::string_view
 	{
@@ -111,13 +89,17 @@ namespace gal::prometheus::gfx
 	auto FontFace::upload() noexcept -> void
 	{
 		std::ranges::for_each(
-				parsed_infos_upload_queue_,
-				[&context = context_.get()](GlyphParsedInfo& parsed_info) noexcept -> void
-				{
-					parsed_info.upload(context);
-				}
+			parsed_info_queue_,
+			[&context = context_.get()](parsed_info_type& parsed_info) noexcept -> void
+			{
+				auto& info = parsed_info.info.get();
+
+				const auto [texture_atlas_id, uv] = context.upload_parsed_info_to_texture(parsed_info.result);
+				info.texture_atlas_id = texture_atlas_id;
+				info.uv = uv;
+			}
 		);
-		parsed_infos_upload_queue_.clear();
+		parsed_info_queue_.clear();
 	}
 
 	auto FontFace::find_glyph(const GlyphKey& key) noexcept -> const GlyphInfo&

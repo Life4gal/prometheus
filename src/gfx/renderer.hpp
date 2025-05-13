@@ -23,15 +23,27 @@ namespace gal::prometheus::gfx
 		Renderer() noexcept = default;
 
 	public:
-		[[nodiscard]] virtual auto create() noexcept -> bool = 0;
-		virtual auto destroy() noexcept -> void = 0;
+		auto create() noexcept -> bool;
+		auto destroy() noexcept -> void;
 
-		[[nodiscard]] virtual auto ready() const noexcept -> bool = 0;
+		[[nodiscard]] auto ready() const noexcept -> bool;
 
-		virtual auto present(const RenderContext& renderer_context, const rect_type& display_area) noexcept -> void = 0;
+		auto create_texture(Texture::data_view_type data, Texture::size_type size) noexcept -> texture_id_type;
+		auto update_texture(const Texture& texture) noexcept -> void;
+		auto destroy_texture(texture_id_type texture_id) noexcept -> void;
 
-		virtual auto create_texture(Texture::data_view_type data, Texture::size_type size) noexcept -> texture_id_type = 0;
-		virtual auto update_texture(const Texture& texture) noexcept -> void = 0;
-		virtual auto destroy_texture(texture_id_type texture_id) noexcept -> void = 0;
+		auto present(RenderContext& renderer_context, const rect_type& display_area) noexcept -> void;
+
+	private:
+		[[nodiscard]] virtual auto do_create() noexcept -> bool = 0;
+		virtual auto do_destroy() noexcept -> void = 0;
+
+		[[nodiscard]] virtual auto do_ready() const noexcept -> bool = 0;
+
+		virtual auto do_create_texture(Texture::data_view_type data, Texture::size_type size) noexcept -> texture_id_type = 0;
+		virtual auto do_update_texture(const Texture& texture) noexcept -> void = 0;
+		virtual auto do_destroy_texture(texture_id_type texture_id) noexcept -> void = 0;
+
+		virtual auto do_present(const RenderContext& render_context, const rect_type& display_area) noexcept -> void = 0;
 	};
 } // namespace gal::prometheus::gfx

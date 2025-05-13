@@ -41,10 +41,6 @@ namespace gal::prometheus::gfx
 
 		auto ready() noexcept -> bool override;
 
-		auto load(const std::filesystem::path& path) noexcept -> LoadResult override;
-
-		auto load(std::unique_ptr<std::uint8_t> data, std::size_t size) noexcept -> LoadResult override;
-
 		auto load(std::span<std::uint8_t> data) noexcept -> LoadResult override;
 
 		[[nodiscard]] auto has_glyph(font_id_type id, std::uint32_t codepoint) const noexcept -> bool override;

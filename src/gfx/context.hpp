@@ -55,6 +55,7 @@ namespace gal::prometheus::gfx
 
 		font_faces_type font_faces_;
 		font_data_list_type font_data_list_;
+		font_data_list_type::difference_type font_data_new_add_index_;
 
 		/**
 		 * @brief Retain at least one texture atlas (root)
@@ -170,11 +171,17 @@ namespace gal::prometheus::gfx
 		 */
 		auto upload_all_font_face() noexcept -> void;
 
+		struct parsed_info_upload_result_type
+		{
+			texture_atlas_id_type texture_atlas_id;
+			GlyphInfo::uv_type uv;
+		};
+
 		/**
-		 * @brief Write FontFace uploaded glyph data to texture, also set the @c texture_atlas_id and @c uv coordinates for this glyph data
+		 * @brief Write FontFace uploaded glyph data to texture
 		 * @note @c GlyphParsedInfo calls this function to upload glyph data to the texture and set its texture atlas ID and UV coordinates
 		 */
-		auto upload_glyph_to_texture(GlyphInfo& info, const GlyphParsedInfo::data_type& data) noexcept -> void;
+		auto upload_parsed_info_to_texture(const GlyphParser::ParseResult& result) noexcept -> parsed_info_upload_result_type;
 
 		/**
 		 * @brief Upload all texture atlas (if it didn't upload or needs to be re-uploaded)
@@ -266,6 +273,24 @@ namespace gal::prometheus::gfx
 		//  * @return
 		//  */
 		// [[nodiscard]] auto size_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
+
+		/**
+		 * @brief Load the fonts previously added by @c add_font to the @c FontFace
+		 * @note This function is usually called at initialization time (or at every frame if needed) to load all the required fonts
+		 */
+		auto load_all_font() noexcept -> void;
+
+		/**
+		 * @brief Upload all used glyphs (in the @c FontFace) to the texture (if it is not already uploaded)
+		 * @note This function is usually called every frame (unless all the needed glyphs have been uploaded to the texture, but it can still be called) to upload all new (previously unused) glyphs to the texture
+		 */
+		auto upload_all_font_face() noexcept -> void;
+
+		/**
+		 * @brief Upload all texture atlas (if it didn't upload or needs to be re-uploaded)
+		 * @note This function is usually called every frame to upload the texture to the GPU, or to update the texture (if new glyph data is written)
+		 */
+		auto upload_all_texture(Renderer& renderer) noexcept -> void;
 
 		// ====================================================================
 		// RenderListSharedData

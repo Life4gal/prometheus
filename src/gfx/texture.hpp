@@ -133,6 +133,12 @@ namespace gal::prometheus::gfx
 		data_type data_;
 
 	public:
+		BorrowTexture(const BorrowTexture&) noexcept = delete;
+		BorrowTexture(BorrowTexture&&) noexcept = default;
+		auto operator=(const BorrowTexture&) noexcept -> BorrowTexture& = delete;
+		auto operator=(BorrowTexture&&) noexcept -> BorrowTexture& = default;
+		~BorrowTexture() noexcept = default;
+
 		BorrowTexture(point_type point, data_type data) noexcept;
 
 		[[nodiscard]] auto valid() const noexcept -> bool;

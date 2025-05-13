@@ -59,8 +59,6 @@ namespace gal::prometheus::gfx
 
 	class GlyphKey;
 	class GlyphInfo;
-
-	class GlyphParsedInfo;
 	class GlyphParser;
 
 	class FontFace;
