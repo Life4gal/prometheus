@@ -80,16 +80,17 @@ namespace gal::prometheus::gfx
 		auto bind_device_context(ID3D11DeviceContext* device_immediate_context) noexcept -> void;
 		auto bind_device_context(ComPtr<ID3D11DeviceContext> device_immediate_context) noexcept -> void;
 
-		auto create() noexcept -> bool override;
-		auto destroy() noexcept -> void override;
+	private:
+		auto do_create() noexcept -> bool override;
+		auto do_destroy() noexcept -> void override;
 
-		[[nodiscard]] auto ready() const noexcept -> bool override;
+		[[nodiscard]] auto do_ready() const noexcept -> bool override;
 
-		auto present(const RenderContext& renderer_context, const rect_type& display_area) noexcept -> void override;
+		auto do_create_texture(Texture::data_view_type data, Texture::size_type size) noexcept -> texture_id_type override;
+		auto do_update_texture(const Texture& texture) noexcept -> void override;
+		auto do_destroy_texture(texture_id_type texture_id) noexcept -> void override;
 
-		auto create_texture(Texture::data_view_type data, Texture::size_type size) noexcept -> texture_id_type override;
-		auto update_texture(const Texture& texture) noexcept -> void override;
-		auto destroy_texture(texture_id_type texture_id) noexcept -> void override;
+		auto do_present(const RenderContext& renderer_context, const rect_type& display_area) noexcept -> void override;
 	};
 }
 

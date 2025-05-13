@@ -391,7 +391,7 @@ namespace gal::prometheus::gfx
 				.SysMemSlicePitch = 0
 		};
 
-		ID3D11Texture2D* texture_2d = nullptr;
+		ID3D11Texture2D* texture_2d;
 		if (not check_hr_error(
 			device_->CreateTexture2D(
 				&texture_2d_desc,
@@ -489,7 +489,7 @@ namespace gal::prometheus::gfx
 		device_immediate_context_ = std::move(device_immediate_context);
 	}
 
-	auto Dx11Renderer::create() noexcept -> bool
+	auto Dx11Renderer::do_create() noexcept -> bool
 	{
 		if (not create_blend_state())
 		{
@@ -515,20 +515,41 @@ namespace gal::prometheus::gfx
 		return true;
 	}
 
-	auto Dx11Renderer::destroy() noexcept -> void
+	auto Dx11Renderer::do_destroy() noexcept -> void
 	{
 		// ComPtr
+		blend_state_ = nullptr;
+		rasterizer_state_ = nullptr;
+		depth_stencil_state_ = nullptr;
+		vertex_shader_ = nullptr;
+		vertex_input_layout_ = nullptr;
+		vertex_projection_matrix_ = nullptr;
+		pixel_shader_ = nullptr;
+		pixel_font_sampler_ = nullptr;
+		render_buffer_.index = nullptr;
+		render_buffer_.index_count = 0;
+		render_buffer_.vertex = nullptr;
+		render_buffer_.vertex_count = 0;
 
+		// RAW
 		std::ranges::for_each(
-			textures_ | std::views::values,
-			[](auto* texture_2d) noexcept -> void
+			textures_,
+			[](auto& kv) noexcept -> void
 			{
-				texture_2d->Release();
+				kv.first->Release();
+				kv.second->Release();
 			}
 		);
+		textures_.clear();
+
+		// ComPtr
+		// device_immediate_context_->ClearState();
+		// device_immediate_context_->Flush();
+		device_immediate_context_ = nullptr;
+		device_ = nullptr;
 	}
 
-	auto Dx11Renderer::ready() const noexcept -> bool
+	auto Dx11Renderer::do_ready() const noexcept -> bool
 	{
 		if (device_ == nullptr or device_immediate_context_ == nullptr)
 		{
@@ -553,7 +574,57 @@ namespace gal::prometheus::gfx
 		return true;
 	}
 
-	auto Dx11Renderer::present(const RenderContext& renderer_context, const rect_type& display_area) noexcept -> void
+	auto Dx11Renderer::do_create_texture(const Texture::data_view_type data, const Texture::size_type size) noexcept -> texture_id_type
+	{
+		return upload_texture(data, size, D3D11_USAGE_DYNAMIC, D3D11_BIND_SHADER_RESOURCE, D3D11_CPU_ACCESS_WRITE, 0);
+	}
+
+	auto Dx11Renderer::do_update_texture(const Texture& texture) noexcept -> void
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture.uploaded(), "Create texture first!");
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture.dirty(), "No need to update texture!");
+
+		auto* srv = id_to_gpu_handle(texture.id());
+		const auto it = textures_.find(srv);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it != textures_.end(), "Invalid texture id");
+
+		auto* texture_2d = it->second;
+		D3D11_MAPPED_SUBRESOURCE mapped_resource{};
+		if (const auto result = device_immediate_context_->Map(
+			texture_2d,
+			0,
+			D3D11_MAP_WRITE_DISCARD,
+			0,
+			&mapped_resource
+		); result != S_OK)
+		{
+			// todo: error handling
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+			return;
+		}
+
+		const auto* source = texture.data().data();
+		const auto source_length = texture.area_size();
+		std::ranges::copy(source, source + source_length, static_cast<Texture::element_type*>(mapped_resource.pData));
+
+		device_immediate_context_->Unmap(texture_2d, 0);
+	}
+
+	auto Dx11Renderer::do_destroy_texture(const texture_id_type texture_id) noexcept -> void
+	{
+		auto* srv = id_to_gpu_handle(texture_id);
+
+		if (const auto it = textures_.find(srv); it != textures_.end())
+		{
+			srv->Release();
+			it->first->Release();
+			it->second->Release();
+
+			textures_.erase(it);
+		}
+	}
+
+	auto Dx11Renderer::do_present(const RenderContext& renderer_context, const rect_type& display_area) noexcept -> void
 	{
 		const auto all_render_data = renderer_context.render_data();
 		// const auto [display_x, display_y] = display_area.point;
@@ -762,49 +833,6 @@ namespace gal::prometheus::gfx
 				total_index_offset += static_cast<UINT>(index_list.size());
 			}
 		);
-	}
-
-	auto Dx11Renderer::create_texture(const Texture::data_view_type data, const Texture::size_type size) noexcept -> texture_id_type
-	{
-		return upload_texture(data, size, D3D11_USAGE_DYNAMIC, D3D11_BIND_SHADER_RESOURCE, D3D11_CPU_ACCESS_WRITE, 0);
-	}
-
-	auto Dx11Renderer::update_texture(const Texture& texture) noexcept -> void
-	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture.uploaded(), "Create texture first!");
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture.dirty(), "No need to update texture!");
-
-		auto* srv = id_to_gpu_handle(texture.id());
-		const auto it = textures_.find(srv);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(it != textures_.end(), "Invalid texture id");
-
-		auto* texture_2d = it->second;
-		D3D11_MAPPED_SUBRESOURCE mapped_resource{};
-		if (const auto result = device_immediate_context_->Map(
-			texture_2d,
-			0,
-			D3D11_MAP_WRITE_DISCARD,
-			0,
-			&mapped_resource
-		); result != S_OK)
-		{
-			// todo: error handling
-			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
-			return;
-		}
-
-		const auto* source = texture.data().data();
-		const auto source_length = texture.area_size();
-		std::ranges::copy(source, source + source_length, static_cast<Texture::element_type*>(mapped_resource.pData));
-
-		device_immediate_context_->Unmap(texture_2d, 0);
-	}
-
-	auto Dx11Renderer::destroy_texture(const texture_id_type texture_id) noexcept -> void
-	{
-		auto* srv = id_to_gpu_handle(texture_id);
-
-		textures_.erase(srv);
 	}
 }
 
