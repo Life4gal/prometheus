@@ -364,6 +364,18 @@ set(
 		${PROJECT_SOURCE_DIR}/src/io/inputs.hpp
 
 		${PROJECT_SOURCE_DIR}/src/io/io.hpp
+		
+		# =========================
+		# GFX-NEW
+		# =========================
+		
+		${PROJECT_SOURCE_DIR}/src/gfx_new/gfx.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/renderer_context.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_texture.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_font.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_render.hpp
+
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/texture.hpp
 
 		# =========================
 		# GFX
@@ -380,6 +392,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/gfx/render_list.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer_dx11.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/renderer_dx12.hpp
 
 		${PROJECT_SOURCE_DIR}/src/gfx/context.hpp
 
@@ -435,6 +448,18 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/io/inputs.cpp
+		
+		# =========================
+		# GFX-NEW
+		# =========================
+		
+		${PROJECT_SOURCE_DIR}/src/gfx_new/gfx.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/renderer_context.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_texture.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_font.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_render.cpp
+
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/texture.cpp
 
 		# =========================
 		# GFX
@@ -449,6 +474,7 @@ set(
 		${PROJECT_SOURCE_DIR}/src/gfx/render_list.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/renderer_dx11.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/renderer_dx12.cpp
 
 		${PROJECT_SOURCE_DIR}/src/gfx/context.cpp
 
