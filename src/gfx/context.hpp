@@ -18,7 +18,6 @@ namespace gal::prometheus::gfx
 	{
 	public:
 		using texture_atlases_type = std::vector<Texture>;
-		using font_faces_type = std::vector<FontFace>;
 
 	private:
 		class Territory final
@@ -35,27 +34,10 @@ namespace gal::prometheus::gfx
 
 		using territories_type = std::vector<Territory>;
 
-		class FontData final
-		{
-		public:
-			using element_type = std::uint8_t;
-			using data_type = std::unique_ptr<std::uint8_t>;
-			using size_type = std::uint32_t;
-
-			data_type data;
-			size_type size;
-		};
-
-		using font_data_list_type = std::vector<FontData>;
-
-		GlyphParser* parser_;
-
 		texture_atlases_type texture_atlases_;
 		territories_type territories_;
 
-		font_faces_type font_faces_;
-		font_data_list_type font_data_list_;
-		font_data_list_type::difference_type font_data_new_add_index_;
+		Fonts fonts_;
 
 		/**
 		 * @brief Retain at least one texture atlas (root)
@@ -73,6 +55,13 @@ namespace gal::prometheus::gfx
 		 * @return Texture atlas
 		 */
 		[[nodiscard]] auto select_atlas(texture_atlas_id_type id) noexcept -> Texture&;
+
+		/**
+		 * @brief Get the texture atlas for the specified id
+		 * @param id Texture atlas id
+		 * @return Texture atlas
+		 */
+		[[nodiscard]] auto select_atlas(texture_atlas_id_type id) const noexcept -> const Texture&;
 
 		/**
 		 * @brief Gets a texture atlas large enough to hold the specified @c size sub texture
@@ -103,22 +92,6 @@ namespace gal::prometheus::gfx
 		auto initialize(RenderListSharedData& shared_data) noexcept -> void;
 
 		/**
-		 * @brief Bind parser, default parser is null pointer, must bind parser before loading fonts
-		 */
-		auto bind_parser(GlyphParser& parser) noexcept -> void;
-
-		/**
-		 * @brief Get the current parser, usually used by FontFace to load glyph data
-		 */
-		[[nodiscard]] auto parser() const noexcept -> GlyphParser&;
-
-		/**
-		 * @brief Load fonts from the specified path, assuming the path is a valid font file
-		 * @param path Font path
-		 */
-		auto add_font(const std::filesystem::path& path) noexcept -> bool;
-
-		/**
 		 * @brief Get root (default) texture
 		 */
 		[[nodiscard]] auto root_texture() const noexcept -> texture_id_type;
@@ -126,11 +99,48 @@ namespace gal::prometheus::gfx
 		/**
 		 * @brief Get texture atlas for glyph information
 		 */
-		[[nodiscard]] auto atlas_of(const GlyphInfo& info) noexcept -> const Texture&;
+		[[nodiscard]] auto atlas_of(const GlyphInfo& info) const noexcept -> const Texture&;
 
+		/**
+		 * @brief Bind parser, default parser is null pointer, must bind parser before loading fonts
+		 */
+		auto bind_parser(GlyphParser& parser) noexcept -> void;
+
+		/**
+		 * @brief Load fonts from the specified path, assuming the path is a valid font file
+		 * @param path Font path
+		 * @return Returns true if the file exists and was opened successfully (without checking if it is a valid font file), otherwise returns false
+		 */
+		auto add_font(const std::filesystem::path& path) noexcept -> bool;
+
+		/**
+		 * @brief Load the fonts previously added by @c add_font
+		 * @note This function is usually called at initialization time (or at every frame if needed) to load all the required fonts
+		 */
+		auto load_all_font() noexcept -> void;
+
+		auto set_fallback_glyph() noexcept -> void;
+
+		/**
+		 * @brief Set the fallback glyph, if we can't find the glyph of the specified codepoint, then use the fallback glyph
+		 * @param key {codepoint, size, flag}
+		 */
+		auto set_fallback_glyph(const GlyphKey& key) noexcept -> void;
+
+		/**
+		 * @brief Set the fallback glyph, if we can't find the glyph of the specified codepoint, then use the fallback glyph
+		 */
+		auto set_fallback_glyph(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag) noexcept -> void;
+
+		[[nodiscard]] auto glyph_of(const GlyphKey& key) noexcept -> const GlyphInfo*;
 		[[nodiscard]] auto glyph_of(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> const GlyphInfo*;
 		[[nodiscard]] auto glyph_of(std::u32string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> std::vector<const GlyphInfo*>;
 		// [[nodiscard]] auto glyph_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> std::vector<const GlyphInfo*>;
+
+		[[nodiscard]] auto glyph_of_or_fallback(const GlyphKey& key) const noexcept -> const GlyphInfo&;
+		[[nodiscard]] auto glyph_of_or_fallback(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) const noexcept -> const GlyphInfo&;
+		[[nodiscard]] auto glyph_of_or_fallback(std::u32string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) const noexcept -> std::vector<std::reference_wrapper<const GlyphInfo>>;
+		// [[nodiscard]] auto glyph_of_or_fallback(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) const noexcept -> std::vector<std::reference_wrapper<const GlyphInfo>>;
 
 		// /**
 		//  * @brief The minimum space to be occupied if the specified codepoint is to be rendered in its entirety
@@ -160,16 +170,10 @@ namespace gal::prometheus::gfx
 		// [[nodiscard]] auto size_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
 
 		/**
-		 * @brief Load the fonts previously added by @c add_font to the @c FontFace
-		 * @note This function is usually called at initialization time (or at every frame if needed) to load all the required fonts
-		 */
-		auto load_all_font() noexcept -> void;
-
-		/**
-		 * @brief Upload all used glyphs (in the @c FontFace) to the texture (if it is not already uploaded)
+		 * @brief Upload all used glyphs to the texture (if it is not already uploaded)
 		 * @note This function is usually called every frame (unless all the needed glyphs have been uploaded to the texture, but it can still be called) to upload all new (previously unused) glyphs to the texture
 		 */
-		auto upload_all_font_face() noexcept -> void;
+		auto load_all_glyph() noexcept -> void;
 
 		struct parsed_info_upload_result_type
 		{
@@ -178,8 +182,8 @@ namespace gal::prometheus::gfx
 		};
 
 		/**
-		 * @brief Write FontFace uploaded glyph data to texture
-		 * @note @c GlyphParsedInfo calls this function to upload glyph data to the texture and set its texture atlas ID and UV coordinates
+		 * @brief Write Font uploaded glyph data to texture
+		 * @note @c FontGlyphQueue calls this function to upload glyph data to the texture and set its texture atlas ID and UV coordinates
 		 */
 		auto upload_parsed_info_to_texture(const GlyphParser::ParseResult& result) noexcept -> parsed_info_upload_result_type;
 
@@ -223,6 +227,16 @@ namespace gal::prometheus::gfx
 		// ====================================================================
 
 		/**
+		 * @brief Get root (default) texture
+		 */
+		[[nodiscard]] auto root_texture() const noexcept -> texture_id_type;
+
+		/**
+		 * @brief Get texture atlas for glyph information
+		 */
+		[[nodiscard]] auto atlas_of(const GlyphInfo& info) const noexcept -> const Texture&;
+
+		/**
 		 * @brief Bind parser, default parser is null pointer, must bind parser before loading fonts
 		 */
 		auto bind_parser(GlyphParser& parser) noexcept -> void;
@@ -234,18 +248,33 @@ namespace gal::prometheus::gfx
 		auto add_font(const std::filesystem::path& path) noexcept -> bool;
 
 		/**
-		 * @brief Get root (default) texture
+		 * @brief Load the fonts previously added by @c add_font
+		 * @note This function is usually called at initialization time (or at every frame if needed) to load all the required fonts
 		 */
-		[[nodiscard]] auto root_texture() const noexcept -> texture_id_type;
+		auto load_all_font() noexcept -> void;
+
+		auto set_fallback_glyph() noexcept -> void;
 
 		/**
-		 * @brief Get texture atlas for glyph information
+		 * @brief Set the fallback glyph, if we can't find the glyph of the specified codepoint, then use the fallback glyph
+		 * @param key {codepoint, size, flag}
 		 */
-		[[nodiscard]] auto atlas_of(const GlyphInfo& info) noexcept -> const Texture&;
+		auto set_fallback_glyph(const GlyphKey& key) noexcept -> void;
 
+		/**
+		 * @brief Set the fallback glyph, if we can't find the glyph of the specified codepoint, then use the fallback glyph
+		 */
+		auto set_fallback_glyph(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag) noexcept -> void;
+
+		[[nodiscard]] auto glyph_of(const GlyphKey& key) noexcept -> const GlyphInfo*;
 		[[nodiscard]] auto glyph_of(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> const GlyphInfo*;
 		[[nodiscard]] auto glyph_of(std::u32string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> std::vector<const GlyphInfo*>;
 		// [[nodiscard]] auto glyph_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> std::vector<const GlyphInfo*>;
+
+		[[nodiscard]] auto glyph_of_or_fallback(const GlyphKey& key) const noexcept -> const GlyphInfo&;
+		[[nodiscard]] auto glyph_of_or_fallback(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) const noexcept -> const GlyphInfo&;
+		[[nodiscard]] auto glyph_of_or_fallback(std::u32string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) const noexcept -> std::vector<std::reference_wrapper<const GlyphInfo>>;
+		// [[nodiscard]] auto glyph_of_or_fallback(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) const noexcept -> std::vector<std::reference_wrapper<const GlyphInfo>>;
 
 		// /**
 		//  * @brief The minimum space to be occupied if the specified codepoint is to be rendered in its entirety
@@ -275,16 +304,10 @@ namespace gal::prometheus::gfx
 		// [[nodiscard]] auto size_of(std::string_view text, std::uint32_t size, GlyphFlag flag = GlyphFlag::NONE) noexcept -> extent_type;
 
 		/**
-		 * @brief Load the fonts previously added by @c add_font to the @c FontFace
-		 * @note This function is usually called at initialization time (or at every frame if needed) to load all the required fonts
-		 */
-		auto load_all_font() noexcept -> void;
-
-		/**
-		 * @brief Upload all used glyphs (in the @c FontFace) to the texture (if it is not already uploaded)
+		 * @brief Upload all used glyphs to the texture (if it is not already uploaded)
 		 * @note This function is usually called every frame (unless all the needed glyphs have been uploaded to the texture, but it can still be called) to upload all new (previously unused) glyphs to the texture
 		 */
-		auto upload_all_font_face() noexcept -> void;
+		auto load_all_glyph() noexcept -> void;
 
 		/**
 		 * @brief Upload all texture atlas (if it didn't upload or needs to be re-uploaded)

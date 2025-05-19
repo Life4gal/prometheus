@@ -5,8 +5,6 @@
 
 #include <gfx/context.hpp>
 
-#include <fstream>
-
 #include <gfx/render_list.hpp>
 
 // #include <chars/chars.hpp>
@@ -25,6 +23,13 @@ namespace gal::prometheus::gfx
 	}
 
 	auto TextureContext::select_atlas(const texture_atlas_id_type id) noexcept -> Texture&
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(id < texture_atlases_.size());
+
+		return texture_atlases_[id];
+	}
+
+	auto TextureContext::select_atlas(const texture_atlas_id_type id) const noexcept -> const Texture&
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(id < texture_atlases_.size());
 
@@ -61,8 +66,6 @@ namespace gal::prometheus::gfx
 	}
 
 	TextureContext::TextureContext() noexcept
-		: parser_{nullptr},
-		  font_data_new_add_index_{0}
 	{
 		// root atlas
 		constexpr Texture::size_type root_texture_atlas_size{2048, 2048};
@@ -128,48 +131,10 @@ namespace gal::prometheus::gfx
 			}
 		}
 
-		// ========================================
-		// FontFace (load fallback glyph)
-		// ========================================
-		std::ranges::for_each(
-			font_faces_,
-			[](auto& font_face) noexcept -> void
-			{
-				font_face.initialize();
-			}
-		);
-	}
-
-	auto TextureContext::bind_parser(GlyphParser& parser) noexcept -> void
-	{
-		parser_ = std::addressof(parser);
-	}
-
-	auto TextureContext::parser() const noexcept -> GlyphParser&
-	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(parser_ != nullptr);
-		return *parser_;
-	}
-
-	auto TextureContext::add_font(const std::filesystem::path& path) noexcept -> bool
-	{
-		std::ifstream file{path, std::ios::binary};
-		if (not file.is_open())
-		{
-			// todo: error handling
-			return false;
-		}
-
-		file.seekg(0, std::ios::end);
-		const auto size = file.tellg();
-
-		auto* data = new FontData::element_type[size];
-		file.seekg(0, std::ios::beg);
-		file.read(reinterpret_cast<char*>(data), size);
-		file.close();
-
-		font_data_list_.emplace_back(std::unique_ptr<FontData::element_type>{data}, static_cast<FontData::size_type>(size));
-		return true;
+		// // ========================================
+		// // set fallback glyph
+		// // ========================================
+		// fonts_.set_fallback_glyph();
 	}
 
 	auto TextureContext::root_texture() const noexcept -> texture_id_type
@@ -177,39 +142,54 @@ namespace gal::prometheus::gfx
 		return root_atlas().id();
 	}
 
-	auto TextureContext::atlas_of(const GlyphInfo& info) noexcept -> const Texture&
+	auto TextureContext::atlas_of(const GlyphInfo& info) const noexcept -> const Texture&
 	{
 		return select_atlas(info.texture_atlas_id);
 	}
 
-	auto TextureContext::glyph_of(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> const GlyphInfo*
+	auto TextureContext::bind_parser(GlyphParser& parser) noexcept -> void
 	{
-		for (auto& face: font_faces_)
-		{
-			if (const auto* info = face.find_glyph_no_fallback({.codepoint = codepoint, .size = size, .flag = flag}); info != nullptr)
-			{
-				return info;
-			}
-		}
-
-		return nullptr;
+		fonts_.bind_parser(parser);
 	}
 
-	auto TextureContext::glyph_of(std::u32string_view text, std::uint32_t size, GlyphFlag flag) noexcept -> std::vector<const GlyphInfo*>
+	auto TextureContext::add_font(const std::filesystem::path& path) noexcept -> bool
 	{
-		std::vector<const GlyphInfo*> infos;
-		infos.reserve(text.size());
+		return fonts_.add_font(path);
+	}
 
-		std::ranges::for_each(
-			text,
-			[&infos, this, size, flag](const auto codepoint) noexcept -> void
-			{
-				const auto* info = this->glyph_of(codepoint, size, flag);
-				infos.emplace_back(info);
-			}
-		);
+	auto TextureContext::load_all_font() noexcept -> void
+	{
+		fonts_.load_all_font();
+	}
 
-		return infos;
+	auto TextureContext::set_fallback_glyph() noexcept -> void
+	{
+		fonts_.set_fallback_glyph();
+	}
+
+	auto TextureContext::set_fallback_glyph(const GlyphKey& key) noexcept -> void
+	{
+		fonts_.set_fallback_glyph(key);
+	}
+
+	auto TextureContext::set_fallback_glyph(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> void
+	{
+		fonts_.set_fallback_glyph(codepoint, size, flag);
+	}
+
+	auto TextureContext::glyph_of(const GlyphKey& key) noexcept -> const GlyphInfo*
+	{
+		return fonts_.glyph_of(key);
+	}
+
+	auto TextureContext::glyph_of(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> const GlyphInfo*
+	{
+		return fonts_.glyph_of(codepoint, size, flag);
+	}
+
+	auto TextureContext::glyph_of(const std::u32string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> std::vector<const GlyphInfo*>
+	{
+		return fonts_.glyph_of(text, size, flag);
 	}
 
 	// auto TextureContext::glyph_of(const std::string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> std::vector<const GlyphInfo*>
@@ -219,9 +199,24 @@ namespace gal::prometheus::gfx
 	// 	return this->glyph_of(utf32_text, size, flag);
 	// }
 
+	auto TextureContext::glyph_of_or_fallback(const GlyphKey& key) const noexcept -> const GlyphInfo&
+	{
+		return fonts_.glyph_of_or_fallback(key);
+	}
+
+	auto TextureContext::glyph_of_or_fallback(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) const noexcept -> const GlyphInfo&
+	{
+		return fonts_.glyph_of_or_fallback(codepoint, size, flag);
+	}
+
+	auto TextureContext::glyph_of_or_fallback(const std::u32string_view text, const std::uint32_t size, const GlyphFlag flag) const noexcept -> std::vector<std::reference_wrapper<const GlyphInfo>>
+	{
+		return fonts_.glyph_of_or_fallback(text, size, flag);
+	}
+
 	// auto TextureContext::size_of(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
 	// {
-	// 	const auto* info = glyph_of(codepoint, size, flag);
+	// 	const auto* info = this->glyph_of(codepoint, size, flag);
 	//
 	// 	if (info == nullptr)
 	// 	{
@@ -230,10 +225,10 @@ namespace gal::prometheus::gfx
 	//
 	// 	return {info->advance_x, info->rect.height()};
 	// }
-	//
+
 	// auto TextureContext::size_of(const std::u32string_view text, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
 	// {
-	// 	const auto infos = glyph_of(text, size, flag);
+	// 	const auto infos = this->glyph_of(text, size, flag);
 	//
 	// 	return std::ranges::fold_left(
 	// 		infos,
@@ -269,32 +264,9 @@ namespace gal::prometheus::gfx
 	// 	);
 	// }
 
-	auto TextureContext::load_all_font() noexcept -> void
+	auto TextureContext::load_all_glyph() noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(parser_ != nullptr);
-
-		std::ranges::for_each(
-			std::ranges::subrange{font_data_list_.begin() + font_data_new_add_index_, font_data_list_.end()},
-			[this](FontData& data) noexcept -> void
-			{
-				// note: Transferring ownership of font file data
-				if (auto result = parser_->load({data.data.get(), data.size}); result.valid())
-				{
-					font_faces_.emplace_back(*this, std::move(result.name), result.id);
-				}
-				else
-				{
-					// todo: error handling
-					GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
-				}
-			}
-		);
-		font_data_new_add_index_ = static_cast<font_data_list_type::difference_type>(font_data_list_.size());
-	}
-
-	auto TextureContext::upload_all_font_face() noexcept -> void
-	{
-		std::ranges::for_each(font_faces_, &FontFace::upload);
+		fonts_.load_all_glyph(*this);
 	}
 
 	auto TextureContext::upload_parsed_info_to_texture(const GlyphParser::ParseResult& result) noexcept -> parsed_info_upload_result_type
@@ -350,11 +322,21 @@ namespace gal::prometheus::gfx
 		texture_context_.load_all_font();
 		texture_context_.upload_all_texture(renderer);
 	}
-
+	
 	auto RenderContext::end_frame(Renderer& renderer) noexcept -> void
 	{
 		std::ignore = renderer;
-		texture_context_.upload_all_font_face();
+		texture_context_.load_all_glyph();
+	}
+
+	auto RenderContext::root_texture() const noexcept -> texture_id_type
+	{
+		return texture_context_.root_texture();
+	}
+
+	auto RenderContext::atlas_of(const GlyphInfo& info) const noexcept -> const Texture&
+	{
+		return texture_context_.atlas_of(info);
 	}
 
 	auto RenderContext::bind_parser(GlyphParser& parser) noexcept -> void
@@ -367,14 +349,29 @@ namespace gal::prometheus::gfx
 		return texture_context_.add_font(path);
 	}
 
-	auto RenderContext::root_texture() const noexcept -> texture_id_type
+	auto RenderContext::load_all_font() noexcept -> void
 	{
-		return texture_context_.root_texture();
+		texture_context_.load_all_font();
 	}
 
-	auto RenderContext::atlas_of(const GlyphInfo& info) noexcept -> const Texture&
+	auto RenderContext::set_fallback_glyph() noexcept -> void
 	{
-		return texture_context_.atlas_of(info);
+		texture_context_.set_fallback_glyph();
+	}
+
+	auto RenderContext::set_fallback_glyph(const GlyphKey& key) noexcept -> void
+	{
+		texture_context_.set_fallback_glyph(key);
+	}
+
+	auto RenderContext::set_fallback_glyph(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> void
+	{
+		texture_context_.set_fallback_glyph(codepoint, size, flag);
+	}
+
+	auto RenderContext::glyph_of(const GlyphKey& key) noexcept -> const GlyphInfo*
+	{
+		return texture_context_.glyph_of(key);
 	}
 
 	auto RenderContext::glyph_of(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> const GlyphInfo*
@@ -392,6 +389,21 @@ namespace gal::prometheus::gfx
 	// 	return texture_context_.glyph_of(text, size, flag);
 	// }
 
+	auto RenderContext::glyph_of_or_fallback(const GlyphKey& key) const noexcept -> const GlyphInfo&
+	{
+		return texture_context_.glyph_of_or_fallback(key);
+	}
+
+	auto RenderContext::glyph_of_or_fallback(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) const noexcept -> const GlyphInfo&
+	{
+		return texture_context_.glyph_of_or_fallback(codepoint, size, flag);
+	}
+
+	auto RenderContext::glyph_of_or_fallback(const std::u32string_view text, const std::uint32_t size, const GlyphFlag flag) const noexcept -> std::vector<std::reference_wrapper<const GlyphInfo>>
+	{
+		return texture_context_.glyph_of_or_fallback(text, size, flag);
+	}
+
 	// auto RenderContext::size_of(const std::uint32_t codepoint, const std::uint32_t size, const GlyphFlag flag) noexcept -> extent_type
 	// {
 	// 	return texture_context_.size_of(codepoint, size, flag);
@@ -407,14 +419,9 @@ namespace gal::prometheus::gfx
 	// 	return texture_context_.size_of(text, size, flag);
 	// }
 
-	auto RenderContext::load_all_font() noexcept -> void
+	auto RenderContext::load_all_glyph() noexcept -> void
 	{
-		texture_context_.load_all_font();
-	}
-
-	auto RenderContext::upload_all_font_face() noexcept -> void
-	{
-		texture_context_.upload_all_font_face();
+		texture_context_.load_all_glyph();
 	}
 
 	auto RenderContext::upload_all_texture(Renderer& renderer) noexcept -> void

@@ -5,53 +5,69 @@
 
 #pragma once
 
+#include <string>
+#include <memory>
+#include <vector>
+#include <filesystem>
+#include <unordered_map>
+
 #include <gfx/type.hpp>
-#include <gfx/texture.hpp>
 #include <gfx/glyph.hpp>
 
 #include <memory/reference_wrapper.hpp>
+#include <functional/function_ref.hpp>
 
 namespace gal::prometheus::gfx
 {
-	/**
-	 * @brief All the glyph data used in a font
-	 */
-	class FontFace final
+	class FontGlyphQueue final
 	{
 	public:
-		using value_type = extent_type::value_type;
-		using uv_type = primitive::basic_rect_2d<value_type>;
-
-	private:
-		memory::RefWrapper<TextureContext> context_;
-
-		std::string name_;
-		font_id_type id_;
-
-		struct parsed_info_type
+		struct element_type
 		{
 			memory::RefWrapper<GlyphInfo> info;
 			GlyphParser::ParseResult result;
 		};
 
-		std::vector<parsed_info_type> parsed_info_queue_;
+		using list_type = std::vector<element_type>;
 
-		std::unordered_map<GlyphKey, GlyphInfo, GlyphKey::hasher> glyphs_;
-		const GlyphInfo* fallback_glyph_;
-
-		[[nodiscard]] auto find_or_parse_glyph(const GlyphKey& key) noexcept -> GlyphInfo*;
+	private:
+		list_type list_;
 
 	public:
-		FontFace(const FontFace&) noexcept = delete;
-		FontFace(FontFace&&) noexcept = default;
-		auto operator=(const FontFace&) noexcept -> FontFace& = delete;
-		auto operator=(FontFace&&) noexcept -> FontFace& = default;
+		FontGlyphQueue(const FontGlyphQueue&) noexcept = delete;
+		FontGlyphQueue(FontGlyphQueue&&) noexcept = default;
+		auto operator=(const FontGlyphQueue&) noexcept -> FontGlyphQueue& = delete;
+		auto operator=(FontGlyphQueue&&) noexcept -> FontGlyphQueue& = default;
 
-		~FontFace() noexcept = default;
+		~FontGlyphQueue() noexcept = default;
 
-		FontFace(TextureContext& context, std::string name, font_id_type id) noexcept;
+		FontGlyphQueue() noexcept = default;
 
-		FontFace(TextureContext& context, std::string_view name, font_id_type id) noexcept;
+		auto push(GlyphInfo& info, GlyphParser::ParseResult&& result) noexcept -> void;
+
+		auto upload(TextureContext& context) noexcept -> void;
+	};
+
+	class Font final
+	{
+	public:
+		using name_type = std::string;
+
+	private:
+		name_type name_;
+		font_id_type id_;
+
+		std::unordered_map<GlyphKey, GlyphInfo, GlyphKey::hasher> glyphs_;
+
+	public:
+		Font(const Font&) noexcept = delete;
+		Font(Font&&) noexcept = default;
+		auto operator=(const Font&) noexcept -> Font& = delete;
+		auto operator=(Font&&) noexcept -> Font& = default;
+
+		~Font() noexcept = default;
+
+		Font(name_type name, font_id_type id) noexcept;
 
 		/**
 		 * @brief Font name (obtained on GlyphParser::load)
@@ -64,27 +80,125 @@ namespace gal::prometheus::gfx
 		[[nodiscard]] auto id() const noexcept -> font_id_type;
 
 		/**
-		 * @brief Initialization, usually used to load default glyph data (for fallbacks when the desired glyph is not found)
-		 */
-		auto initialize() noexcept -> void;
-
-		/**
-		 * @brief Upload the glyph data used and not uploaded to the texture before to the texture
-		 */
-		auto upload() noexcept -> void;
-
-		/**
-		 * @brief Get the glyph information of the specified codepoint, if it can't be found, then return the fallback glyph information
-		 * @param key {codepoint, size, flag}
-		 * @return The glyph information of the specified codepoint, or the fallback glyph information if it can't be found
-		 */
-		[[nodiscard]] auto find_glyph(const GlyphKey& key) noexcept -> const GlyphInfo&;
-
-		/**
 		 * @brief Get the glyph information of the specified codepoint, if it can't be found, then return a null pointer
 		 * @param key {codepoint, size, flag}
 		 * @return The glyph information of the specified codepoint, or a null pointer if it can't be found
 		 */
-		[[nodiscard]] auto find_glyph_no_fallback(const GlyphKey& key) noexcept -> const GlyphInfo*;
+		[[nodiscard]] auto get_glyph(const GlyphKey& key) const noexcept -> const GlyphInfo*;
+
+		/**
+		 * @brief Set the glyph information of the specified codepoint, override if it already exists
+		 * @param key {codepoint, size, flag}
+		 * @param result The parse result of the specified codepoint
+		 * @return GlyphInfo after insertion
+		 */
+		[[nodiscard]] auto set_glyph(const GlyphKey& key, const GlyphParser::ParseResult& result) noexcept -> GlyphInfo&;
+	};
+
+	class FontLoadQueue final
+	{
+	public:
+		struct font_data_type
+		{
+			using element_type = std::uint8_t;
+			using data_type = std::unique_ptr<std::uint8_t>;
+			using size_type = std::uint32_t;
+
+			data_type data;
+			size_type size;
+		};
+
+		using list_type = std::vector<font_data_type>;
+
+	private:
+		list_type list_;
+		list_type::difference_type new_font_index_;
+
+	public:
+		FontLoadQueue(const FontLoadQueue&) noexcept = delete;
+		FontLoadQueue(FontLoadQueue&&) noexcept = default;
+		auto operator=(const FontLoadQueue&) noexcept -> FontLoadQueue& = delete;
+		auto operator=(FontLoadQueue&&) noexcept -> FontLoadQueue& = default;
+
+		~FontLoadQueue() noexcept = default;
+
+		FontLoadQueue() noexcept;
+
+		auto push(const std::filesystem::path& path) noexcept -> bool;
+
+		auto upload(GlyphParser& parser, functional::function_reference_wrapper<void(Font&&)> font_dest) noexcept -> void;
+	};
+
+	class Fonts final
+	{
+	public:
+		using font_list_type = std::vector<Font>;
+
+		using font_glyph_queue_list_type = std::unordered_map<Font*, FontGlyphQueue>;
+
+	private:
+		font_list_type font_list_;
+		FontLoadQueue font_load_queue_;
+
+		const GlyphInfo* fallback_glyph_;
+		font_glyph_queue_list_type font_glyph_queue_;
+
+		GlyphParser* parser_;
+
+	public:
+		Fonts(const Fonts&) noexcept = delete;
+		Fonts(Fonts&&) noexcept = default;
+		auto operator=(const Fonts&) noexcept -> Fonts& = delete;
+		auto operator=(Fonts&&) noexcept -> Fonts& = default;
+
+		~Fonts() noexcept = default;
+
+		Fonts() noexcept;
+
+		/**
+		 * @brief Bind parser, default parser is null pointer, must bind parser before loading fonts
+		 * @return The previously bound parser, or nullptr if no parser is bound
+		 */
+		auto bind_parser(GlyphParser& parser) noexcept -> GlyphParser*;
+
+		/**
+		 * @brief Load fonts from the specified path, assuming the path is a valid font file
+		 * @param path Font path
+		 * @return Returns true if the file exists and was opened successfully (without checking if it is a valid font file), otherwise returns false
+		 */
+		auto add_font(const std::filesystem::path& path) noexcept -> bool;
+
+		/**
+		 * @brief Load the fonts previously added by @c add_font
+		 * @note This function is usually called at initialization time (or at every frame if needed) to load all the required fonts
+		 */
+		auto load_all_font() noexcept -> void;
+
+		auto set_fallback_glyph() noexcept -> void;
+
+		/**
+		 * @brief Set the fallback glyph, if we can't find the glyph of the specified codepoint, then use the fallback glyph
+		 * @param key {codepoint, size, flag}
+		 */
+		auto set_fallback_glyph(const GlyphKey& key) noexcept -> void;
+
+		/**
+		 * @brief Set the fallback glyph, if we can't find the glyph of the specified codepoint, then use the fallback glyph
+		 */
+		auto set_fallback_glyph(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag) noexcept -> void;
+
+		[[nodiscard]] auto glyph_of(const GlyphKey& key) noexcept -> const GlyphInfo*;
+		[[nodiscard]] auto glyph_of(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag) noexcept -> const GlyphInfo*;
+		[[nodiscard]] auto glyph_of(std::u32string_view text, std::uint32_t size, GlyphFlag flag) noexcept -> std::vector<const GlyphInfo*>;
+
+		[[nodiscard]] auto glyph_of_or_fallback(const GlyphKey& key) const noexcept -> const GlyphInfo&;
+		[[nodiscard]] auto glyph_of_or_fallback(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag) const noexcept -> const GlyphInfo&;
+		[[nodiscard]] auto glyph_of_or_fallback(std::u32string_view text, std::uint32_t size, GlyphFlag flag) const noexcept -> std::vector<std::reference_wrapper<const GlyphInfo>>;
+
+		/**
+		 * @brief Upload all used glyphs to the texture (if it is not already uploaded)
+		 * @note This function is usually called every frame (unless all the needed glyphs have been uploaded to the texture, but it can still be called) to upload all new (previously unused) glyphs to the texture
+		 */
+		auto load_all_glyph(TextureContext& context) noexcept -> void;
 	};
 } // namespace gal::prometheus::gfx

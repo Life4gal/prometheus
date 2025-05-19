@@ -61,7 +61,10 @@ namespace gal::prometheus::gfx
 	class GlyphInfo;
 	class GlyphParser;
 
-	class FontFace;
+	class FontGlyphQueue;
+	class Font;
+	class FontLoadQueue;
+	class Fonts;
 
 	// =========================================================
 	// RENDERER LIST
