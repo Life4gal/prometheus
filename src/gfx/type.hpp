@@ -33,7 +33,7 @@ namespace gal::prometheus::gfx
 	// =========================================================
 
 	// DX11: ID3D11ShaderResourceView
-	// DX12: D3D12_GPU_DESCRIPTOR_HANDLE::ptr
+	// DX12: D3D12_GPU_DESCRIPTOR_HANDLE::ptr / HEAP index
 	using texture_id_type = std::uintptr_t;
 	constexpr texture_id_type invalid_texture_id{0};
 

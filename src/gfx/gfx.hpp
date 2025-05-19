@@ -15,5 +15,6 @@
 
 #include <gfx/renderer.hpp>
 #include <gfx/renderer_dx11.hpp>
+#include <gfx/renderer_dx12.hpp>
 
 #include <gfx/context.hpp>
