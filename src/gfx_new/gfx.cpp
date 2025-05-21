@@ -8,6 +8,8 @@
 
 namespace gal::prometheus::gfx_new
 {
+	GlyphParser::~GlyphParser() noexcept = default;
+
 	Renderer::~Renderer() noexcept = default;
 
 	Renderer::Renderer() noexcept
@@ -30,58 +32,48 @@ namespace gal::prometheus::gfx_new
 
 	auto Renderer::new_frame() noexcept -> void
 	{
-		do_before_new_frame();
-
-		//
-
-		do_after_new_frame();
+		// font
+		{
+			context_->font_context.load_all_font();
+			context_->font_context.set_fallback_glyph();
+		}
+		// texture
+		{
+			AccessorTexture accessor{*this};
+			context_->texture_context.upload(accessor);
+		}
 	}
 
 	auto Renderer::present() noexcept -> void
 	{
-		do_before_present();
+		// glyphs
+		{
+			// note: newly added glyph information is not available until the next frame
+			context_->font_context.upload_all_glyph(context_->texture_context);
+		}
 
-		//
-
-		do_after_present();
+		// todo
+		// do_present()
 	}
 
 	auto Renderer::end_frame() noexcept -> void
 	{
-		do_before_end_frame();
-
-		//
-
-		do_after_end_frame();
-	}
-
-	auto Renderer::do_before_new_frame() noexcept -> void
-	{
 		//
 	}
 
-	auto Renderer::do_after_new_frame() noexcept -> void
+	auto Renderer::set_glyph_parser(GlyphParser& parser) noexcept -> GlyphParser*
 	{
-		//
+		return context_->font_context.set_glyph_parser(parser);
 	}
 
-	auto Renderer::do_before_present() noexcept -> void
+	auto Renderer::add_font(const std::filesystem::path& path) noexcept -> bool
 	{
-		//
+		return context_->font_context.add_font(path);
 	}
 
-	auto Renderer::do_after_present() noexcept -> void
+	auto Renderer::new_render_list() noexcept -> RenderList&
 	{
-		//
-	}
-
-	auto Renderer::do_before_end_frame() noexcept -> void
-	{
-		//
-	}
-
-	auto Renderer::do_after_end_frame() noexcept -> void
-	{
-		//
+		RenderList new_render_list{*this};
+		return context_->render_context.render_lists.emplace_back(std::move(new_render_list));
 	}
 }

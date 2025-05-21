@@ -5,6 +5,8 @@
 
 #include <gfx_new/internal/accessor_texture.hpp>
 
+#include <gfx_new/internal/renderer_context.hpp>
+
 namespace gal::prometheus::gfx_new
 {
 	auto TextureContext::root_id() const noexcept -> texture_atlas_id_type
@@ -69,17 +71,20 @@ namespace gal::prometheus::gfx_new
 	auto TextureContext::write(
 		const Texture::data_view_type data,
 		const Texture::size_type size
-	) noexcept -> primitive::basic_rect_2d<Texture::uv_type::value_type>
+	) noexcept -> random_write_result_type
 	{
 		// todo
-		return this->write(root_id(), data, size);
+		const auto id = root_id();
+		const auto uv = this->write(id, data, size);
+
+		return {.texture_atlas_id = id, .uv = uv};
 	}
 
-	auto TextureContext::upload(Renderer& renderer) noexcept -> void
+	auto TextureContext::upload(Renderer::AccessorTexture& accessor) noexcept -> void
 	{
 		std::ranges::for_each(
 			texture_atlas_list_,
-			[accessor = Renderer::AccessorTexture{renderer}](auto& texture) mutable noexcept -> void
+			[&accessor](auto& texture) mutable noexcept -> void
 			{
 				if (not texture.uploaded())
 				{
@@ -96,7 +101,14 @@ namespace gal::prometheus::gfx_new
 	Renderer::AccessorTexture::AccessorTexture(Renderer& renderer) noexcept
 		: renderer_{renderer} {}
 
-	auto Renderer::AccessorTexture::upload(texture_type& texture) noexcept -> void
+	auto Renderer::AccessorTexture::context() const noexcept -> const TextureContext&
+	{
+		const auto& renderer_context = renderer_.get().context_;
+
+		return renderer_context->texture_context;
+	}
+
+	auto Renderer::AccessorTexture::upload(Texture& texture) noexcept -> void
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not texture.uploaded());
 
@@ -106,7 +118,7 @@ namespace gal::prometheus::gfx_new
 		texture.texture_.dirty = false;
 	}
 
-	auto Renderer::AccessorTexture::update(texture_type& texture) noexcept -> void
+	auto Renderer::AccessorTexture::update(Texture& texture) noexcept -> void
 	{
 		auto& renderer = renderer_.get();
 
@@ -114,7 +126,7 @@ namespace gal::prometheus::gfx_new
 		texture.texture_.dirty = false;
 	}
 
-	auto Renderer::AccessorTexture::update_if_dirty(texture_type& texture) noexcept -> void
+	auto Renderer::AccessorTexture::update_if_dirty(Texture& texture) noexcept -> void
 	{
 		if (texture.dirty())
 		{

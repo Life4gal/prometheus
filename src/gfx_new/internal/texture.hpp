@@ -7,7 +7,7 @@
 
 #include <mdspan>
 
-#include <gfx_new/gfx.hpp>
+#include <gfx_new/internal/type.hpp>
 
 #include <stb_rect_pack.h>
 
@@ -21,11 +21,11 @@ namespace gal::prometheus::gfx_new
 		friend Renderer::AccessorTexture;
 
 	public:
-		using element_type = Renderer::Texture::element_type;
-		using data_type = Renderer::Texture::data_type;
-		using data_view_type = Renderer::Texture::data_view_type;
+		using element_type = TextureDescriptor::element_type;
+		using data_type = TextureDescriptor::data_type;
+		using data_view_type = TextureDescriptor::data_view_type;
 
-		using size_type = Renderer::Texture::size_type;
+		using size_type = TextureDescriptor::size_type;
 
 		using point_type = primitive::basic_point_2d<size_type::value_type>;
 		using uv_type = primitive::basic_extent_2d<float>;
@@ -34,7 +34,9 @@ namespace gal::prometheus::gfx_new
 		stbrp_context rp_context_;
 		std::vector<stbrp_node> rp_nodes_;
 
-		Renderer::Texture texture_;
+		TextureDescriptor texture_;
+		// It's much more cost-effective to keep a member variable than to compute it every time
+		uv_type uv_;
 
 	public:
 		explicit Texture(size_type size) noexcept;

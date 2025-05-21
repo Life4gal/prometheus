@@ -375,7 +375,10 @@ set(
 		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_font.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_render.hpp
 
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/type.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/texture.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/font.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/render_list.hpp
 
 		# =========================
 		# GFX
@@ -460,6 +463,8 @@ set(
 		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_render.cpp
 
 		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/texture.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/font.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/render_list.cpp
 
 		# =========================
 		# GFX

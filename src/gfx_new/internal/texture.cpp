@@ -19,7 +19,8 @@ namespace gal::prometheus::gfx_new
 				  .size = size,
 				  .dirty = false,
 				  .id = invalid_texture_id,
-		  }
+		  },
+		  uv_{1.f / static_cast<uv_type::value_type>(size.width), 1.f / static_cast<uv_type::value_type>(size.height)}
 	{
 		rp_nodes_.resize(size.width);
 
@@ -49,9 +50,7 @@ namespace gal::prometheus::gfx_new
 
 	auto Texture::uv() const noexcept -> uv_type
 	{
-		const auto s = size();
-
-		return {1.f / static_cast<uv_type::value_type>(s.width), 1.f / static_cast<uv_type::value_type>(s.height)};
+		return uv_;
 	}
 
 	auto Texture::dirty() const noexcept -> bool

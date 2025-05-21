@@ -5,13 +5,17 @@
 
 #pragma once
 
-#include <gfx_new/gfx.hpp>
+#include <gfx_new/internal/accessor_font.hpp>
+#include <gfx_new/internal/accessor_texture.hpp>
+#include <gfx_new/internal/accessor_render.hpp>
 
 namespace gal::prometheus::gfx_new
 {
-	// todo
 	class Renderer::RendererContext
 	{
 	public:
+		FontContext font_context;
+		TextureContext texture_context;
+		RenderContext render_context;
 	};
 }
