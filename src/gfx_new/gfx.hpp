@@ -189,12 +189,11 @@ namespace gal::prometheus::gfx_new
 		GlyphParser() noexcept = default;
 
 		/**
-		 * @brief Load font data from @c data, get all glyph data, return id of font
-		 * @param data Font data
+		 * @brief Load font data from @c path, return id of font
+		 * @param path Font path
 		 * @return id of the font, or invalid_font_id if failed to load
-		 * @note The parser does not need to store (copy) the font data internally, we make sure that the font data is valid for the lifetime of the parser
 		 */
-		[[nodiscard]] virtual auto load(std::span<std::uint8_t> data) noexcept -> FontDescriptor = 0;
+		[[nodiscard]] virtual auto load(const std::filesystem::path& path) noexcept -> FontDescriptor = 0;
 
 		/**
 		 * @brief Determines whether the target font contains the glyphs of the specified codepoint
@@ -949,10 +948,9 @@ namespace gal::prometheus::gfx_new
 
 	/**
 	 * @brief Load font from the specified path, assuming the path is a valid font file
-	 * @return Returns true if the file exists and was opened successfully (without checking if it is a valid font file), otherwise returns false
 	 * @note *Must* ensure that at least one font is added before calling @c Renderer::new_frame
 	 */
-	auto add_font(Context& context, const std::filesystem::path& path) noexcept -> bool;
+	auto add_font(Context& context, const std::filesystem::path& path) noexcept -> void;
 
 	// =========================================================
 	// RENDER LIST

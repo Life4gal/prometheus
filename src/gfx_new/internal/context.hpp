@@ -130,9 +130,8 @@ namespace gal::prometheus::gfx_new
 		/**
 		 * @brief Load font from the specified path, assuming the path is a valid font file
 		 * @param path Font path
-		 * @return Returns true if the file exists and was opened successfully (without checking if it is a valid font file), otherwise returns false
 		 */
-		auto add_font(const std::filesystem::path& path) noexcept -> bool;
+		auto add_font(const std::filesystem::path& path) noexcept -> void;
 
 		/**
 		 * @brief Load the fonts previously added by @c add_font

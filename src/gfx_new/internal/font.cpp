@@ -5,8 +5,6 @@
 
 #include <gfx_new/internal/font.hpp>
 
-#include <fstream>
-
 #include <gfx_new/internal/texture.hpp>
 #include <gfx_new/internal/context.hpp>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
@@ -68,41 +66,22 @@ namespace gal::prometheus::gfx_new
 		return cached_glyphs.insert_or_assign(key, info).first->second;
 	}
 
-	FontLoadQueue::FontLoadQueue() noexcept
-		: new_font_index_{0} {}
+	FontLoadQueue::FontLoadQueue() noexcept = default;
 
-	auto FontLoadQueue::push(const std::filesystem::path& path) noexcept -> bool
+	auto FontLoadQueue::push(const std::filesystem::path& path) noexcept -> void
 	{
-		std::ifstream file{path, std::ios::binary};
-		if (not file.is_open())
-		{
-			// todo: error handling
-			return false;
-		}
-
-		file.seekg(0, std::ios::end);
-		const auto size = file.tellg();
-
-		auto data = std::make_unique_for_overwrite<element_type[]>(size);
-		file.seekg(0, std::ios::beg);
-		file.read(reinterpret_cast<char*>(data.get()), size);
-		file.close();
-
-		list_.emplace_back(data_type{data.release()}, static_cast<size_type>(size));
-		return true;
+		list_.emplace_back(path);
 	}
 
 	auto FontLoadQueue::upload(GlyphParser& parser, const functional::function_reference_wrapper<void(Font&&)> font_dest) noexcept -> void
 	{
-		if (const auto size = static_cast<list_type::difference_type>(list_.size()); size > new_font_index_)
+		if (not list_.empty())
 		{
-			auto new_fonts = std::ranges::subrange{list_.begin() + new_font_index_, list_.end()};
-
 			std::ranges::for_each(
-				new_fonts,
-				[&](const Descriptor& descriptor) noexcept -> void
+				list_,
+				[&](const auto& path) noexcept -> void
 				{
-					if (const auto result = parser.load({descriptor.data.get(), descriptor.size}); result.valid())
+					if (const auto result = parser.load(path); result.valid())
 					{
 						Font font{.descriptor = {.identifier = result.identifier, .id = result.id}, .cached_glyphs = {}};
 						font_dest(std::move(font));
@@ -114,8 +93,7 @@ namespace gal::prometheus::gfx_new
 					}
 				}
 			);
-
-			new_font_index_ = size;
+			list_.clear();
 		}
 	}
 }

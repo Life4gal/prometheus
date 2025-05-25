@@ -138,9 +138,9 @@ namespace gal::prometheus::gfx_new
 		}
 	}
 
-	auto FontContext::add_font(const std::filesystem::path& path) noexcept -> bool
+	auto FontContext::add_font(const std::filesystem::path& path) noexcept -> void
 	{
-		return font_load_queue_.push(path);
+		font_load_queue_.push(path);
 	}
 
 	auto FontContext::load_all_font() noexcept -> void
@@ -347,10 +347,14 @@ namespace gal::prometheus::gfx_new
 	}
 
 	Context::Context(std::shared_ptr<GlyphParser> glyph_parser, std::shared_ptr<Renderer> renderer) noexcept
-		: glyph_parser_{std::move(glyph_parser)},
-		  renderer_{std::move(renderer)},
+		: glyph_parser_{nullptr},
+		  renderer_{nullptr},
 		  texture_context_{},
-		  font_context_{} {}
+		  font_context_{}
+	{
+		set_glyph_parser(std::move(glyph_parser));
+		set_renderer(std::move(renderer));
+	}
 
 	auto Context::get_glyph_parser() const noexcept -> std::shared_ptr<GlyphParser>
 	{
@@ -449,9 +453,9 @@ namespace gal::prometheus::gfx_new
 		return context.set_renderer(std::move(renderer));
 	}
 
-	auto add_font(Context& context, const std::filesystem::path& path) noexcept -> bool
+	auto add_font(Context& context, const std::filesystem::path& path) noexcept -> void
 	{
-		return context.get_font_context().add_font(path);
+		context.get_font_context().add_font(path);
 	}
 
 	auto new_render_list(Context& context, const RenderListFlag flag) noexcept -> RenderList&
@@ -506,6 +510,6 @@ namespace gal::prometheus::gfx_new
 
 	auto Renderer::end_frame(Context& context) noexcept -> void
 	{
-		std::ignore = context;
+		context.render_lists_.clear();
 	}
 }

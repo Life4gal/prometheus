@@ -156,17 +156,9 @@ namespace gal::prometheus::gfx_new
 		using size_type = descriptor::size_type;
 
 	private:
-		class Descriptor final
-		{
-		public:
-			data_type data;
-			size_type size;
-		};
-
-		using list_type = std::vector<Descriptor>;
+		using list_type = std::vector<std::filesystem::path>;
 
 		list_type list_;
-		list_type::difference_type new_font_index_;
 
 	public:
 		FontLoadQueue(const FontLoadQueue&) noexcept = delete;
@@ -178,7 +170,7 @@ namespace gal::prometheus::gfx_new
 
 		FontLoadQueue() noexcept;
 
-		auto push(const std::filesystem::path& path) noexcept -> bool;
+		auto push(const std::filesystem::path& path) noexcept -> void;
 
 		auto upload(GlyphParser& parser, functional::function_reference_wrapper<void(Font&&)> font_dest) noexcept -> void;
 	};
