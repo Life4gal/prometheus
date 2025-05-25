@@ -7,7 +7,8 @@
 
 #include <fstream>
 
-#include <gfx_new/internal/accessor_texture.hpp>
+#include <gfx_new/internal/texture.hpp>
+#include <gfx_new/internal/context.hpp>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace gal::prometheus::gfx_new

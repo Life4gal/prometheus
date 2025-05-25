@@ -370,15 +370,10 @@ set(
 		# =========================
 		
 		${PROJECT_SOURCE_DIR}/src/gfx_new/gfx.hpp
-		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/renderer_context.hpp
-		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_texture.hpp
-		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_font.hpp
-		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_render.hpp
-
-		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/type.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/texture.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/font.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/render_list.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/context.hpp
 
 		# =========================
 		# GFX
@@ -456,15 +451,10 @@ set(
 		# GFX-NEW
 		# =========================
 		
-		${PROJECT_SOURCE_DIR}/src/gfx_new/gfx.cpp
-		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/renderer_context.cpp
-		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_texture.cpp
-		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_font.cpp
-		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/accessor_render.cpp
-
 		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/texture.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/font.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/render_list.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx_new/internal/context.cpp
 
 		# =========================
 		# GFX

@@ -20,10 +20,17 @@
 #include <primitive/vertex.hpp>
 
 #include <memory/unique_ptr.hpp>
+#include <memory/reference_wrapper.hpp>
 #include <functional/enumeration.hpp>
 
 namespace gal::prometheus::gfx_new
 {
+	// =========================================================
+	// CONTEXT
+	// =========================================================
+
+	class Context;
+
 	// =========================================================
 	// PRIMITIVE
 	// =========================================================
@@ -43,8 +50,8 @@ namespace gal::prometheus::gfx_new
 	// TEXTURE
 	// =========================================================
 
-	// DX11: ID3D11ShaderResourceView
-	// DX12: D3D12_GPU_DESCRIPTOR_HANDLE::ptr / HEAP index + constant offset
+	// D3D11: ID3D11ShaderResourceView
+	// D3D12: D3D12_GPU_DESCRIPTOR_HANDLE::ptr / HEAP index + constant offset
 	using texture_id_type = std::uintptr_t;
 	constexpr texture_id_type invalid_texture_id{0};
 
@@ -77,7 +84,7 @@ namespace gal::prometheus::gfx_new
 	};
 
 	// =========================================================
-	// FONT
+	// GLYPH / FONT
 	// =========================================================
 
 	// index
@@ -220,14 +227,9 @@ namespace gal::prometheus::gfx_new
 		DEFAULT = ANTI_ALIASED_LINE | ANTI_ALIASED_LINE_USE_TEXTURE | ANTI_ALIASED_FILL,
 	};
 
-	enum class RenderFlag : std::uint8_t
+	enum class RenderRectFlag : std::uint8_t
 	{
 		NONE = 0,
-		// specify that shape should be closed
-		// @see RenderList::draw_polygon_line
-		// @see RenderList::draw_polygon_line_aa
-		// @see RenderList::path_stroke
-		CLOSED = 1 << 0,
 		// enable rounding left-top corner only (when rounding > 0.0f, we default to all corners)
 		// @see RenderList::path_rect
 		// @see RenderList::rect
@@ -384,15 +386,85 @@ namespace gal::prometheus::gfx_new
 
 	class RenderList
 	{
+		friend class Context;
 		friend class Renderer;
 
 	public:
 		class RenderListContext;
 
+		class Painter final
+		{
+		public:
+			using path_list_type = std::vector<point_type>;
+
+		private:
+			memory::RefWrapper<RenderList> render_list_;
+			path_list_type path_list_;
+
+			auto draw_polygon_line(color_type color, float thickness, bool close) noexcept -> void;
+			auto draw_polygon_line_aa(color_type color, float thickness, bool close) noexcept -> void;
+			auto draw_convex_polygon_line_filled(color_type color) noexcept -> void;
+			auto draw_convex_polygon_line_filled_aa(color_type color) noexcept -> void;
+
+		public:
+			Painter(const Painter&) noexcept = delete;
+			Painter(Painter&&) noexcept = default;
+			auto operator=(const Painter&) noexcept -> Painter& = delete;
+			auto operator=(Painter&&) noexcept -> Painter& = default;
+
+			~Painter() noexcept;
+
+			explicit Painter(RenderList& render_list, std::size_t reserve_point) noexcept;
+
+			auto clear() noexcept -> Painter&;
+			auto reserve_extra(std::size_t size) noexcept -> Painter&;
+			auto reserve(std::size_t size) noexcept -> Painter&;
+
+			auto pin(const point_type& point) noexcept -> Painter&;
+
+			auto line(const point_type& from, const point_type& to) noexcept -> Painter&;
+			auto triangle(const point_type& a, const point_type& b, const point_type& c) noexcept -> Painter&;
+			auto quadrilateral(const point_type& p1, const point_type& p2, const point_type& p3, const point_type& p4) noexcept -> Painter&;
+			auto rect(const rect_type& rect, float rounding, RenderRectFlag flag) noexcept -> Painter&;
+			auto rect(const rect_type::point_type& left_top, const rect_type::extent_type& extent, float rounding, RenderRectFlag flag) noexcept -> Painter&;
+			auto rect(const rect_type::point_type& left_top, const rect_type::point_type& right_bottom, float rounding, RenderRectFlag flag) noexcept -> Painter&;
+			auto circle_n(const circle_type& circle, std::uint32_t segments) noexcept -> Painter&;
+			auto circle_n(const circle_type::point_type& center, circle_type::radius_value_type radius, std::uint32_t segments) noexcept -> Painter&;
+			auto circle(const circle_type& circle) noexcept -> Painter&;
+			auto circle(const circle_type::point_type& center, circle_type::radius_value_type radius) noexcept -> Painter&;
+			auto ellipse_n(const ellipse_type& ellipse, std::uint32_t segments) noexcept -> Painter&;
+			auto ellipse_n(const ellipse_type::point_type& center, const ellipse_type::radius_type& radius, ellipse_type::rotation_value_type rotation, std::uint32_t segments) noexcept -> Painter&;
+			auto ellipse(const ellipse_type& ellipse) noexcept -> Painter&;
+			auto ellipse(const ellipse_type::point_type& center, const ellipse_type::radius_type& radius, ellipse_type::rotation_value_type rotation) noexcept -> Painter&;
+			auto arc_fast(const circle_type& circle, int sample_point_from, int sample_point_to) noexcept -> Painter&;
+			auto arc_fast(const circle_type& circle, RenderArcFlag flag) noexcept -> Painter&;
+			auto arc_n(const circle_type& circle, float degree_from, float degree_to, std::uint32_t segments) noexcept -> Painter&;
+			auto arc(const circle_type& circle, float degree_from, float degree_to) noexcept -> Painter&;
+			auto arc_n(const ellipse_type& ellipse, float degree_from, float degree_to, std::uint32_t segments) noexcept -> Painter&;
+			auto bezier_cubic_n(const point_type& p1, const point_type& p2, const point_type& p3, const point_type& p4, std::uint32_t segments) noexcept -> Painter&;
+			auto bezier_cubic(const point_type& p1, const point_type& p2, const point_type& p3, const point_type& p4) noexcept -> Painter&;
+			auto bezier_quadratic_n(const point_type& p1, const point_type& p2, const point_type& p3, std::uint32_t segments) noexcept -> Painter&;
+			auto bezier_quadratic(const point_type& p1, const point_type& p2, const point_type& p3) noexcept -> Painter&;
+
+			/**
+			 * @brief Draws the fill shape according to the specified path points
+			 * @param color Shape color
+			 */
+			auto stroke(color_type color) noexcept -> void;
+
+			/**
+			 * @brief Plot the corresponding lines/shapes according to the specified path points
+			 * @param color Line/shape color
+			 * @param thickness Line thickness
+			 * @param close Whether the graph is closed, in other words, whether the first point should be connected to the last point
+			 */
+			auto stroke(color_type color, float thickness, bool close) noexcept -> void;
+		};
+
 	private:
 		memory::UniquePointer<RenderListContext> context_;
 
-		explicit RenderList(Renderer& renderer) noexcept;
+		explicit RenderList(Context& context, RenderListFlag flag) noexcept;
 
 	public:
 		RenderList(const RenderList&) noexcept = delete;
@@ -416,6 +488,14 @@ namespace gal::prometheus::gfx_new
 		auto push_texture(texture_id_type texture) noexcept -> void;
 
 		auto pop_texture() noexcept -> void;
+
+		// ----------------------------------------------------------------------------
+		// PAINTER
+
+		[[nodiscard]] auto painter(const Painter::path_list_type::size_type reserve_point = 0) noexcept -> Painter
+		{
+			return Painter{*this, reserve_point};
+		}
 
 		// ----------------------------------------------------------------------------
 		// PRIMITIVE
@@ -442,55 +522,6 @@ namespace gal::prometheus::gfx_new
 			color_type color
 		) noexcept -> void;
 
-		auto rect(
-			const rect_type& rect,
-			color_type color,
-			float rounding = .0f,
-			RenderFlag flag = RenderFlag::ROUND_CORNER_ALL,
-			float thickness = 1.f
-		) noexcept -> void;
-
-		auto rect(
-			const point_type& left_top,
-			const point_type& right_bottom,
-			color_type color,
-			float rounding = .0f,
-			RenderFlag flag = RenderFlag::ROUND_CORNER_ALL,
-			float thickness = 1.f
-		) noexcept -> void;
-
-		auto rect_filled(
-			const rect_type& rect,
-			color_type color,
-			float rounding = .0f,
-			RenderFlag flag = RenderFlag::ROUND_CORNER_ALL
-		) noexcept -> void;
-
-		auto rect_filled(
-			const point_type& left_top,
-			const point_type& right_bottom,
-			color_type color,
-			float rounding = .0f,
-			RenderFlag flag = RenderFlag::ROUND_CORNER_ALL
-		) noexcept -> void;
-
-		auto rect_filled(
-			const rect_type& rect,
-			color_type color_left_top,
-			color_type color_right_top,
-			color_type color_left_bottom,
-			color_type color_right_bottom
-		) noexcept -> void;
-
-		auto rect_filled(
-			const point_type& left_top,
-			const point_type& right_bottom,
-			color_type color_left_top,
-			color_type color_right_top,
-			color_type color_left_bottom,
-			color_type color_right_bottom
-		) noexcept -> void;
-
 		auto quadrilateral(
 			const point_type& p1,
 			const point_type& p2,
@@ -508,6 +539,81 @@ namespace gal::prometheus::gfx_new
 			color_type color
 		) noexcept -> void;
 
+		auto rect(
+			const rect_type& rect,
+			color_type color,
+			float rounding = .0f,
+			RenderRectFlag flag = RenderRectFlag::ROUND_CORNER_ALL,
+			float thickness = 1.f
+		) noexcept -> void;
+
+		auto rect(
+			const point_type& left_top,
+			const rect_type::extent_type& extent,
+			color_type color,
+			float rounding = .0f,
+			RenderRectFlag flag = RenderRectFlag::ROUND_CORNER_ALL,
+			float thickness = 1.f
+		) noexcept -> void;
+
+		auto rect(
+			const rect_type::point_type& left_top,
+			const rect_type::point_type& right_bottom,
+			color_type color,
+			float rounding = .0f,
+			RenderRectFlag flag = RenderRectFlag::ROUND_CORNER_ALL,
+			float thickness = 1.f
+		) noexcept -> void;
+
+		auto rect_filled(
+			const rect_type& rect,
+			color_type color,
+			float rounding = .0f,
+			RenderRectFlag flag = RenderRectFlag::ROUND_CORNER_ALL
+		) noexcept -> void;
+
+		auto rect_filled(
+			const point_type& left_top,
+			const rect_type::extent_type& extent,
+			color_type color,
+			float rounding = .0f,
+			RenderRectFlag flag = RenderRectFlag::ROUND_CORNER_ALL
+		) noexcept -> void;
+
+		auto rect_filled(
+			const point_type& left_top,
+			const point_type& right_bottom,
+			color_type color,
+			float rounding = .0f,
+			RenderRectFlag flag = RenderRectFlag::ROUND_CORNER_ALL
+		) noexcept -> void;
+
+		auto rect_filled(
+			const rect_type& rect,
+			color_type color_left_top,
+			color_type color_right_top,
+			color_type color_left_bottom,
+			color_type color_right_bottom
+		) noexcept -> void;
+
+		auto rect_filled(
+			const point_type& left_top,
+			const rect_type::extent_type& extent,
+			color_type color_left_top,
+			color_type color_right_top,
+			color_type color_left_bottom,
+			color_type color_right_bottom
+		) noexcept -> void;
+
+		auto rect_filled(
+			const point_type& left_top,
+			const point_type& right_bottom,
+			color_type color_left_top,
+			color_type color_right_top,
+			color_type color_left_bottom,
+			color_type color_right_bottom
+		) noexcept -> void;
+
 		auto circle_n(
 			const circle_type& circle,
 			color_type color,
@@ -516,24 +622,8 @@ namespace gal::prometheus::gfx_new
 		) noexcept -> void;
 
 		auto circle_n(
-			const point_type& center,
-			float radius,
-			color_type color,
-			std::uint32_t segments,
-			float thickness = 1.f
-		) noexcept -> void;
-
-		auto ellipse_n(
-			const ellipse_type& ellipse,
-			color_type color,
-			std::uint32_t segments,
-			float thickness = 1.f
-		) noexcept -> void;
-
-		auto ellipse_n(
-			const point_type& center,
-			const extent_type& radius,
-			float rotation,
+			const circle_type::point_type& center,
+			circle_type::radius_value_type radius,
 			color_type color,
 			std::uint32_t segments,
 			float thickness = 1.f
@@ -546,10 +636,50 @@ namespace gal::prometheus::gfx_new
 		) noexcept -> void;
 
 		auto circle_n_filled(
-			const point_type& center,
-			float radius,
+			const circle_type::point_type& center,
+			circle_type::radius_value_type radius,
 			color_type color,
 			std::uint32_t segments
+		) noexcept -> void;
+
+		auto circle(
+			const circle_type& circle,
+			color_type color,
+			float thickness = 1.f
+		) noexcept -> void;
+
+		auto circle(
+			const circle_type::point_type& center,
+			circle_type::radius_value_type radius,
+			color_type color,
+			float thickness = 1.f
+		) noexcept -> void;
+
+		auto circle_filled(
+			const circle_type& circle,
+			color_type color
+		) noexcept -> void;
+
+		auto circle_filled(
+			const circle_type::point_type& center,
+			circle_type::radius_value_type radius,
+			color_type color
+		) noexcept -> void;
+
+		auto ellipse_n(
+			const ellipse_type& ellipse,
+			color_type color,
+			std::uint32_t segments,
+			float thickness = 1.f
+		) noexcept -> void;
+
+		auto ellipse_n(
+			const ellipse_type::point_type& center,
+			const ellipse_type::radius_type& radius,
+			ellipse_type::rotation_value_type rotation,
+			color_type color,
+			std::uint32_t segments,
+			float thickness = 1.f
 		) noexcept -> void;
 
 		auto ellipse_n_filled(
@@ -559,69 +689,47 @@ namespace gal::prometheus::gfx_new
 		) noexcept -> void;
 
 		auto ellipse_n_filled(
-			const point_type& center,
-			const extent_type& radius,
-			float rotation,
+			const ellipse_type::point_type& center,
+			const ellipse_type::radius_type& radius,
+			ellipse_type::rotation_value_type rotation,
 			color_type color,
 			std::uint32_t segments
 		) noexcept -> void;
 
-		auto circle(
-			const circle_type& circle,
-			color_type color,
-			std::uint32_t segments = 0,
-			float thickness = 1.f
-		) noexcept -> void;
-
-		auto circle(
-			const point_type& center,
-			float radius,
-			color_type color,
-			std::uint32_t segments = 0,
-			float thickness = 1.f
-		) noexcept -> void;
-
-		auto circle_filled(
-			const circle_type& circle,
-			color_type color,
-			std::uint32_t segments = 0
-		) noexcept -> void;
-
-		auto circle_filled(
-			const point_type& center,
-			float radius,
-			color_type color,
-			std::uint32_t segments = 0
-		) noexcept -> void;
-
 		auto ellipse(
 			const ellipse_type& ellipse,
 			color_type color,
-			std::uint32_t segments = 0,
 			float thickness = 1.f
 		) noexcept -> void;
 
 		auto ellipse(
-			const point_type& center,
-			const extent_type& radius,
-			float rotation,
+			const ellipse_type::point_type& center,
+			const ellipse_type::radius_type& radius,
+			ellipse_type::rotation_value_type rotation,
 			color_type color,
-			std::uint32_t segments = 0,
 			float thickness = 1.f
 		) noexcept -> void;
 
 		auto ellipse_filled(
 			const ellipse_type& ellipse,
-			color_type color,
-			std::uint32_t segments = 0
+			color_type color
 		) noexcept -> void;
 
 		auto ellipse_filled(
-			const point_type& center,
-			const extent_type& radius,
-			float rotation,
+			const ellipse_type::point_type& center,
+			const ellipse_type::radius_type& radius,
+			ellipse_type::rotation_value_type rotation,
+			color_type color
+		) noexcept -> void;
+
+		auto bezier_cubic_n(
+			const point_type& p1,
+			const point_type& p2,
+			const point_type& p3,
+			const point_type& p4,
 			color_type color,
-			std::uint32_t segments = 0
+			std::uint32_t segments,
+			float thickness = 1.f
 		) noexcept -> void;
 
 		auto bezier_cubic(
@@ -630,7 +738,15 @@ namespace gal::prometheus::gfx_new
 			const point_type& p3,
 			const point_type& p4,
 			color_type color,
-			std::uint32_t segments = 0,
+			float thickness = 1.f
+		) noexcept -> void;
+
+		auto bezier_quadratic_n(
+			const point_type& p1,
+			const point_type& p2,
+			const point_type& p3,
+			color_type color,
+			std::uint32_t segments,
 			float thickness = 1.f
 		) noexcept -> void;
 
@@ -639,7 +755,6 @@ namespace gal::prometheus::gfx_new
 			const point_type& p2,
 			const point_type& p3,
 			color_type color,
-			std::uint32_t segments = 0,
 			float thickness = 1.f
 		) noexcept -> void;
 
@@ -718,7 +833,7 @@ namespace gal::prometheus::gfx_new
 			texture_id_type texture_id,
 			const rect_type& display_rect,
 			float rounding = .0f,
-			RenderFlag flag = RenderFlag::NONE,
+			RenderRectFlag flag = RenderRectFlag::NONE,
 			const rect_type& uv_rect = {0, 0, 1, 1},
 			color_type color = primitive::colors::white
 		) noexcept -> void;
@@ -728,7 +843,7 @@ namespace gal::prometheus::gfx_new
 			const point_type& display_left_top,
 			const point_type& display_right_bottom,
 			float rounding = .0f,
-			RenderFlag flag = RenderFlag::NONE,
+			RenderRectFlag flag = RenderRectFlag::NONE,
 			const uv_type& uv_left_top = {0, 0},
 			const uv_type& uv_right_bottom = {1, 1},
 			color_type color = primitive::colors::white
@@ -741,15 +856,7 @@ namespace gal::prometheus::gfx_new
 
 	class Renderer
 	{
-	public:
-		class RendererContext;
-
-		class AccessorTexture;
-		class AccessorFont;
-		class AccessorRender;
-
-	private:
-		memory::UniquePointer<RendererContext> context_;
+		friend Context;
 
 	public:
 		Renderer(const Renderer&) noexcept = delete;
@@ -782,19 +889,19 @@ namespace gal::prometheus::gfx_new
 		 * @brief
 		 * @note @c new_frame -> @c present -> @c end_frame
 		 */
-		auto new_frame() noexcept -> void;
+		auto new_frame(Context& context) noexcept -> void;
 
 		/**
 		 * @brief
 		 * @note @c new_frame -> @c present -> @c end_frame
 		 */
-		auto present() noexcept -> void;
+		auto present(Context& context) noexcept -> void;
 
 		/**
 		 * @brief
 		 * @note @c new_frame -> @c present -> @c end_frame
 		 */
-		auto end_frame() noexcept -> void;
+		auto end_frame(Context& context) noexcept -> void;
 
 	private:
 		virtual auto do_construct() noexcept -> bool = 0;
@@ -806,38 +913,52 @@ namespace gal::prometheus::gfx_new
 		virtual auto do_texture_destroy(texture_id_type texture_id) noexcept -> void = 0;
 
 		virtual auto do_present(const render_data_list_type& render_data_list) noexcept -> void = 0;
-
-	public:
-		// ==============================================================
-		// GLYPH
-		// ==============================================================
-
-		/**
-		 * @brief Setting the glyph parser
-		 * @param parser New glyph parser
-		 * @return Previous glyph parser, or nullptr if newly set
-		 * @note *Must* ensure that the glyph parser is set before calling @c new_frame
-		 */
-		auto set_glyph_parser(GlyphParser& parser) noexcept -> GlyphParser*;
-
-		// ==============================================================
-		// FONT
-		// ==============================================================
-
-		/**
-		 * @brief Load font from the specified path, assuming the path is a valid font file
-		 * @param path Font path
-		 * @return Returns true if the file exists and was opened successfully (without checking if it is a valid font file), otherwise returns false
-		 * @note *Must* ensure that at least one font is added before calling @c new_frame
-		 */
-		auto add_font(const std::filesystem::path& path) noexcept -> bool;
-
-		// ==============================================================
-		// RENDER LIST
-		// ==============================================================
-
-		auto new_render_list() noexcept -> RenderList&;
 	};
+
+	// =========================================================
+	// CONTEXT
+	// =========================================================
+
+	[[nodiscard]] auto create_context(std::shared_ptr<GlyphParser> glyph_parser, std::shared_ptr<Renderer> renderer) noexcept -> Context*;
+	auto destroy_context(Context& context) noexcept -> void;
+	auto destroy_context(Context* context) noexcept -> void;
+
+	// =========================================================
+	// GLYPH PARSER
+	// =========================================================
+
+	/**
+	 * @brief Setting the glyph parser of context
+	 * @return Previous glyph parser, or nullptr if newly set
+	 */
+	auto set_glyph_parser(Context& context, std::shared_ptr<GlyphParser> glyph_parser) noexcept -> std::shared_ptr<GlyphParser>;
+
+	// =========================================================
+	// RENDERER
+	// =========================================================
+
+	/**
+	 * @brief Setting the renderer of context
+	 * @return Previous renderer, or nullptr if newly set
+	 */
+	auto set_renderer(Context& context, std::shared_ptr<Renderer> renderer) noexcept -> std::shared_ptr<Renderer>;
+
+	// =========================================================
+	// FONT
+	// =========================================================
+
+	/**
+	 * @brief Load font from the specified path, assuming the path is a valid font file
+	 * @return Returns true if the file exists and was opened successfully (without checking if it is a valid font file), otherwise returns false
+	 * @note *Must* ensure that at least one font is added before calling @c Renderer::new_frame
+	 */
+	auto add_font(Context& context, const std::filesystem::path& path) noexcept -> bool;
+
+	// =========================================================
+	// RENDER LIST
+	// =========================================================
+
+	auto new_render_list(Context& context, RenderListFlag flag = RenderListFlag::DEFAULT) noexcept -> RenderList&;
 } // namespace gal::prometheus::gfx_new
 
 namespace gal::prometheus::meta::user_defined
@@ -849,7 +970,7 @@ namespace gal::prometheus::meta::user_defined
 	struct enum_is_flag<gfx_new::RenderListFlag> : std::true_type {};
 
 	template<>
-	struct enum_is_flag<gfx_new::RenderFlag> : std::true_type {};
+	struct enum_is_flag<gfx_new::RenderRectFlag> : std::true_type {};
 
 	template<>
 	struct enum_is_flag<gfx_new::RenderArcFlag> : std::true_type {};

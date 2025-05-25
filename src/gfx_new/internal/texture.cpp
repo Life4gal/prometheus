@@ -5,8 +5,6 @@
 
 #include <gfx_new/internal/texture.hpp>
 
-#include <gfx_new/internal/accessor_texture.hpp>
-
 // #define STB_RECT_PACK_IMPLEMENTATION
 // #include <stb_rect_pack.h>
 

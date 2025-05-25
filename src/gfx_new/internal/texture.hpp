@@ -7,7 +7,7 @@
 
 #include <mdspan>
 
-#include <gfx_new/internal/type.hpp>
+#include <gfx_new/gfx.hpp>
 
 #include <stb_rect_pack.h>
 
@@ -18,7 +18,7 @@ namespace gal::prometheus::gfx_new
 	class Texture final
 	{
 		// Texture::id and Texture::dirty
-		friend Renderer::AccessorTexture;
+		friend Context;
 
 	public:
 		using element_type = TextureDescriptor::element_type;
