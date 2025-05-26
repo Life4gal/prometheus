@@ -14,7 +14,7 @@
 #include <meta/dimension.hpp>
 #include <math/cmath.hpp>
 
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+// #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace gal::prometheus
 {
@@ -103,8 +103,8 @@ namespace gal::prometheus
 				const basic_point<2, High>& high
 			) const noexcept -> basic_point
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.x < high.x);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.y < high.y);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.x < high.x);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.y < high.y);
 
 				return
 				{
@@ -235,9 +235,9 @@ namespace gal::prometheus
 				const basic_point<3, High>& high
 			) const noexcept -> basic_point
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.x < high.x);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.y < high.y);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.z < high.z);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.x < high.x);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.y < high.y);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.z < high.z);
 
 				return
 				{

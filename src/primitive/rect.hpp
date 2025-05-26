@@ -15,7 +15,7 @@
 #include <primitive/point.hpp>
 #include <primitive/extent.hpp>
 
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+// #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace gal::prometheus
 {
@@ -380,16 +380,16 @@ namespace gal::prometheus
 
 			[[nodiscard]] constexpr auto includes(const point_type& p) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
 
 				return p.between(left_top_near(), right_bottom_near());
 			}
 
 			[[nodiscard]] constexpr auto includes(const basic_rect& rect) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width() > rect.width() and height() > rect.height() and depth() > rect.depth());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width() > rect.width() and height() > rect.height() and depth() > rect.depth());
 
 				return
 						rect.point.x >= point.x and
@@ -402,8 +402,8 @@ namespace gal::prometheus
 
 			[[nodiscard]] constexpr auto intersects(const basic_rect& rect) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
 
 				return not(
 					rect.point.x >= point.x + width() or

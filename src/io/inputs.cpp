@@ -6,6 +6,7 @@
 #include <io/inputs.hpp>
 
 #include <functional/functor.hpp>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace
 {

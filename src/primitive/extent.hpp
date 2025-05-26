@@ -13,7 +13,7 @@
 
 #include <meta/dimension.hpp>
 
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+// #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace gal::prometheus
 {
@@ -96,8 +96,8 @@ namespace gal::prometheus
 				const basic_extent<2, High>& high
 			) const noexcept -> basic_extent
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.width < high.width);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.height < high.height);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.width < high.width);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.height < high.height);
 
 				return
 				{
@@ -189,9 +189,9 @@ namespace gal::prometheus
 				const basic_extent<3, High>& high
 			) const noexcept -> basic_extent
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.width < high.width);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.height < high.height);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.depth < high.depth);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.width < high.width);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.height < high.height);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.depth < high.depth);
 
 				return
 				{

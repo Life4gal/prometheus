@@ -12,7 +12,7 @@
 
 #include <prometheus/macro.hpp>
 
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+// #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #if not defined(__cpp_lib_constexpr_cmath) or __cpp_lib_constexpr_cmath < 202306L
 #define CMATH_WORKAROUND_REQUIRED
@@ -120,7 +120,7 @@ namespace gal::prometheus::math
 	// ReSharper disable once IdentifierTypo
 	[[nodiscard]] constexpr auto tgamma(const T value) noexcept -> T
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(value >= T{0});
+		// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(value >= T{0});
 
 		if constexpr (not std::is_floating_point_v<T>)
 		{
@@ -149,7 +149,7 @@ namespace gal::prometheus::math
 		requires std::is_arithmetic_v<T>
 	[[nodiscard]] constexpr auto pow(const T base, const int exp) noexcept -> T
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(exp >= 0);
+		// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(exp >= 0);
 
 		#if defined(CMATH_WORKAROUND_REQUIRED)
 		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
@@ -170,7 +170,7 @@ namespace gal::prometheus::math
 		requires std::is_arithmetic_v<T>
 	[[nodiscard]] constexpr auto sqrt(const T value) noexcept -> T
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(value >= 0);
+		// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(value >= 0);
 
 		#if defined(CMATH_WORKAROUND_REQUIRED)
 		GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
