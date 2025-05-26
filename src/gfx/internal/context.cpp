@@ -3,13 +3,12 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#include <gfx_new/internal/context.hpp>
+#include <gfx/internal/context.hpp>
 
-#include "render_list.hpp"
-
+#include <gfx/internal/render_list.hpp>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
 	// =========================================================
 	// TEXTURE
@@ -26,6 +25,65 @@ namespace gal::prometheus::gfx_new
 		// root atlas
 		constexpr Texture::size_type root_texture_atlas_size{2048, 2048};
 		texture_atlas_list_.emplace_back(root_texture_atlas_size);
+	}
+
+	auto TextureContext::initialize(RenderListSharedData& shared_data) noexcept -> void
+	{
+		// ========================================
+		// BAKE LINES (AA)
+		// ========================================
+		{
+			constexpr std::uint32_t white_color = 0xff'ff'ff'ff;
+			constexpr auto aa_width = static_cast<Texture::size_type::value_type>(RenderListSharedData::baked_line_uv_count);
+			constexpr auto aa_height = static_cast<Texture::size_type::value_type>(RenderListSharedData::baked_line_uv_count);
+			constexpr auto aa_size = Texture::size_type{aa_width, aa_height};
+
+			const auto texture_atlas_id = root_id();
+			auto& texture = this->select(texture_atlas_id);
+
+			// baked line rect area:
+			// white pixel
+			// ◿
+			const auto borrowed_texture = texture.select(aa_size);
+			borrowed_texture.fill(0);
+
+			const auto aa_point = borrowed_texture.position();
+			const auto aa_uv_scale = texture.uv();
+
+			// white pixel
+			{
+				// LINE 0, 2 pixels
+				borrowed_texture.fill(0, 2, white_color);
+				// LINE 1, 2 pixels
+				borrowed_texture.fill(1, 2, white_color);
+
+				const auto uv_x = static_cast<point_type::value_type>(static_cast<float>(aa_point.x) + 1.0f) * aa_uv_scale.width;
+				const auto uv_y = static_cast<point_type::value_type>(static_cast<float>(aa_point.y) + 1.0f) * aa_uv_scale.height;
+
+				shared_data.white_pixel_uv = {uv_x, uv_y};
+			}
+
+			// ◿
+			for (Texture::size_type::value_type y = 1; y < aa_height; ++y)
+			{
+				const auto line_width = y;
+				const auto offset = aa_width - line_width;
+
+				borrowed_texture.fill(y, offset, line_width, white_color);
+
+				const auto p_x = aa_point.x + offset;
+				const auto p_y = aa_point.y + y;
+				const auto width = line_width;
+				constexpr auto height = .5f;
+
+				const auto uv_x = static_cast<point_type::value_type>(p_x) * aa_uv_scale.width;
+				const auto uv_y = static_cast<point_type::value_type>(p_y) * aa_uv_scale.height;
+				const auto uv_width = static_cast<point_type::value_type>(width) * aa_uv_scale.width;
+				const auto uv_height = static_cast<point_type::value_type>(height) * aa_uv_scale.height;
+
+				shared_data.baked_line_uvs[y] = {uv_x, uv_y, uv_width, uv_height};
+			}
+		}
 	}
 
 	auto TextureContext::root() noexcept -> Texture&
@@ -88,19 +146,19 @@ namespace gal::prometheus::gfx_new
 
 	auto TextureContext::upload(const Context& context) noexcept -> void
 	{
-		auto renderer = context.get_renderer();
+		auto renderer_accessor = context.renderer_accessor();
 
 		std::ranges::for_each(
 			texture_atlas_list_,
-			[&renderer](auto& texture) mutable noexcept -> void
+			[&renderer_accessor](auto& texture) mutable noexcept -> void
 			{
 				if (not texture.uploaded())
 				{
-					renderer.upload(texture);
+					renderer_accessor.upload(texture);
 				}
 				else
 				{
-					renderer.update_if_dirty(texture);
+					renderer_accessor.update_if_dirty(texture);
 				}
 			}
 		);
@@ -110,9 +168,9 @@ namespace gal::prometheus::gfx_new
 	// FONT
 	// =========================================================
 
-	auto FontContext::set_glyph_parser(std::shared_ptr<GlyphParser> glyph_parser) noexcept -> void
+	auto FontContext::set_glyph_parser(GlyphParser& glyph_parser) noexcept -> void
 	{
-		glyph_parser_ = std::move(glyph_parser);
+		glyph_parser_ = std::addressof(glyph_parser);
 	}
 
 	auto FontContext::set_fallback_glyph() noexcept -> void
@@ -346,59 +404,83 @@ namespace gal::prometheus::gfx_new
 		}
 	}
 
-	Context::Context(std::shared_ptr<GlyphParser> glyph_parser, std::shared_ptr<Renderer> renderer) noexcept
+	Context::TextureAccessor::TextureAccessor(TextureContext& texture_context) noexcept
+		: texture_context_{texture_context} {}
+
+	auto Context::TextureAccessor::texture_context() const noexcept -> const TextureContext&
+	{
+		static_assert(std::is_const_v<memory::RefWrapper<const TextureContext>::type>);
+
+		return texture_context_;
+	}
+
+	Context::FontAccessor::FontAccessor(FontContext& font_context) noexcept
+		: font_context_{font_context} {}
+
+	auto Context::FontAccessor::font_context() noexcept -> FontContext&
+	{
+		return font_context_;
+	}
+
+	auto Context::FontAccessor::font_context() const noexcept -> const FontContext&
+	{
+		return font_context_;
+	}
+
+	Context::RenderListAccessor::RenderListAccessor(RenderListSharedData& render_list_shared_data) noexcept
+		: render_list_shared_data_{render_list_shared_data} {}
+
+	auto Context::RenderListAccessor::shared_data() const noexcept -> const RenderListSharedData&
+	{
+		return render_list_shared_data_;
+	}
+
+	Context::Context() noexcept
 		: glyph_parser_{nullptr},
 		  renderer_{nullptr},
 		  texture_context_{},
 		  font_context_{}
 	{
-		set_glyph_parser(std::move(glyph_parser));
-		set_renderer(std::move(renderer));
-	}
-
-	auto Context::get_glyph_parser() const noexcept -> std::shared_ptr<GlyphParser>
-	{
-		return glyph_parser_;
+		texture_context_.initialize(render_list_shared_data_);
 	}
 
 	auto Context::set_glyph_parser(std::shared_ptr<GlyphParser> glyph_parser) noexcept -> std::shared_ptr<GlyphParser>
 	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(glyph_parser != nullptr, "GlyphParser must not be null!");
+
 		auto old = std::exchange(glyph_parser_, glyph_parser);
-		font_context_.set_glyph_parser(glyph_parser_);
+		font_context_.set_glyph_parser(*glyph_parser_);
 
 		return old;
 	}
 
-	// auto Context::get_renderer() noexcept -> std::shared_ptr<Renderer>
-	// {
-	// 	return renderer_;
-	// }
+	auto Context::set_renderer(std::shared_ptr<Renderer> renderer) noexcept -> std::shared_ptr<Renderer>
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(renderer != nullptr, "Renderer must not be null!");
 
-	auto Context::get_renderer() const noexcept -> RendererAccessor
+		return std::exchange(renderer_, renderer);
+	}
+
+	auto Context::renderer_accessor() const noexcept -> RendererAccessor
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(renderer_ != nullptr);
 
 		return RendererAccessor{*renderer_};
 	}
 
-	auto Context::set_renderer(std::shared_ptr<Renderer> renderer) noexcept -> std::shared_ptr<Renderer>
+	auto Context::texture_accessor() noexcept -> TextureAccessor
 	{
-		return std::exchange(renderer_, renderer);
+		return TextureAccessor{texture_context_};
 	}
 
-	auto Context::get_texture_context() const noexcept -> const TextureContext&
+	auto Context::font_accessor() noexcept -> FontAccessor
 	{
-		return texture_context_;
+		return FontAccessor{font_context_};
 	}
 
-	auto Context::get_font_context() noexcept -> FontContext&
+	auto Context::render_list_accessor() noexcept -> RenderListAccessor
 	{
-		return font_context_;
-	}
-
-	auto Context::get_render_list_shared_data() const noexcept -> const RenderListSharedData&
-	{
-		return render_list_shared_data_;
+		return RenderListAccessor{render_list_shared_data_};
 	}
 
 	auto Context::new_render_list(const RenderListFlag flag) noexcept -> RenderList&
@@ -428,7 +510,10 @@ namespace gal::prometheus::gfx_new
 
 	[[nodiscard]] auto create_context(std::shared_ptr<GlyphParser> glyph_parser, std::shared_ptr<Renderer> renderer) noexcept -> Context*
 	{
-		auto* context = new Context{std::move(glyph_parser), std::move(renderer)};
+		auto* context = new Context{};
+		context->set_glyph_parser(std::move(glyph_parser));
+		context->set_renderer(std::move(renderer));
+
 		return context;
 	}
 
@@ -455,7 +540,9 @@ namespace gal::prometheus::gfx_new
 
 	auto add_font(Context& context, const std::filesystem::path& path) noexcept -> void
 	{
-		context.get_font_context().add_font(path);
+		auto font_accessor = context.font_accessor();
+
+		font_accessor.font_context().add_font(path);
 	}
 
 	auto new_render_list(Context& context, const RenderListFlag flag) noexcept -> RenderList&
@@ -497,7 +584,7 @@ namespace gal::prometheus::gfx_new
 		}
 	}
 
-	auto Renderer::present(Context& context) noexcept -> void
+	auto Renderer::present(Context& context, const extent_type& display_size) noexcept -> void
 	{
 		// glyphs
 		{
@@ -505,7 +592,7 @@ namespace gal::prometheus::gfx_new
 			context.font_context_.upload_all_glyph(context.texture_context_);
 		}
 
-		do_present(context.render_data());
+		do_present(context.render_data(), display_size);
 	}
 
 	auto Renderer::end_frame(Context& context) noexcept -> void

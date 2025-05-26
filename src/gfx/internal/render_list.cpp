@@ -3,9 +3,9 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#include <gfx_new/internal/render_list.hpp>
+#include <gfx/internal/render_list.hpp>
 
-#include <gfx_new/internal/context.hpp>
+#include <gfx/internal/context.hpp>
 
 #include <chars/chars.hpp>
 #include <functional/functor.hpp>
@@ -15,7 +15,7 @@
 namespace
 {
 	using namespace gal::prometheus;
-	using namespace gfx_new;
+	using namespace gfx;
 
 	// @see https://stackoverflow.com/a/2244088/15194693
 	// Number of segments (N) is calculated using equation:
@@ -391,7 +391,7 @@ namespace
 	// };
 }
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
 	RenderListSharedData::RenderListSharedData() noexcept
 		: circle_segment_counts{},
@@ -531,12 +531,16 @@ namespace gal::prometheus::gfx_new
 
 	auto RenderList::RenderListContext::shared_data() const noexcept -> const RenderListSharedData&
 	{
-		return context.get().get_render_list_shared_data();
+		const auto render_list_accessor = context.get().render_list_accessor();
+
+		return render_list_accessor.shared_data();
 	}
 
 	auto RenderList::RenderListContext::default_texture() const noexcept -> texture_id_type
 	{
-		return context.get().get_texture_context().root().id();
+		const auto texture_accessor = context.get().texture_accessor();
+
+		return texture_accessor.texture_context().root().id();
 	}
 
 	auto RenderList::RenderListContext::reset() noexcept -> void
@@ -1655,8 +1659,8 @@ namespace gal::prometheus::gfx_new
 	}
 
 	auto RenderList::rect(
-		const point_type& left_top,
-		const point_type& right_bottom,
+		const rect_type::point_type& left_top,
+		const rect_type::point_type& right_bottom,
 		const color_type color,
 		const float rounding,
 		const RenderRectFlag flag,
@@ -1700,8 +1704,8 @@ namespace gal::prometheus::gfx_new
 	}
 
 	auto RenderList::rect_filled(
-		const point_type& left_top,
-		const point_type& right_bottom,
+		const rect_type::point_type& left_top,
+		const rect_type::point_type& right_bottom,
 		const color_type color,
 		const float rounding,
 		const RenderRectFlag flag
@@ -1757,8 +1761,8 @@ namespace gal::prometheus::gfx_new
 	}
 
 	auto RenderList::rect_filled(
-		const point_type& left_top,
-		const point_type& right_bottom,
+		const rect_type::point_type& left_top,
+		const rect_type::point_type& right_bottom,
 		const color_type color_left_top,
 		const color_type color_right_top,
 		const color_type color_left_bottom,
@@ -1784,8 +1788,8 @@ namespace gal::prometheus::gfx_new
 	}
 
 	auto RenderList::circle_n(
-		const point_type& center,
-		const float radius,
+		const circle_type::point_type& center,
+		const circle_type::radius_value_type radius,
 		const color_type color,
 		const std::uint32_t segments,
 		const float thickness
@@ -1809,8 +1813,8 @@ namespace gal::prometheus::gfx_new
 	}
 
 	auto RenderList::circle_n_filled(
-		const point_type& center,
-		const float radius,
+		const circle_type::point_type& center,
+		const circle_type::radius_value_type radius,
 		const color_type color,
 		const std::uint32_t segments
 	) noexcept -> void
@@ -1833,8 +1837,8 @@ namespace gal::prometheus::gfx_new
 	}
 
 	auto RenderList::circle(
-		const point_type& center,
-		const float radius,
+		const circle_type::point_type& center,
+		const circle_type::radius_value_type radius,
 		const color_type color,
 		const float thickness
 	) noexcept -> void
@@ -1856,8 +1860,8 @@ namespace gal::prometheus::gfx_new
 	}
 
 	auto RenderList::circle_filled(
-		const point_type& center,
-		const float radius,
+		const circle_type::point_type& center,
+		const circle_type::radius_value_type radius,
 		const color_type color
 	) noexcept -> void
 	{
@@ -1880,9 +1884,9 @@ namespace gal::prometheus::gfx_new
 	}
 
 	void RenderList::ellipse_n(
-		const point_type& center,
-		const extent_type& radius,
-		const float rotation,
+		const ellipse_type::point_type& center,
+		const ellipse_type::radius_type& radius,
+		const ellipse_type::rotation_value_type rotation,
 		const color_type color,
 		const std::uint32_t segments,
 		const float thickness
@@ -1906,9 +1910,9 @@ namespace gal::prometheus::gfx_new
 	}
 
 	auto RenderList::ellipse_n_filled(
-		const point_type& center,
-		const extent_type& radius,
-		const float rotation,
+		const ellipse_type::point_type& center,
+		const ellipse_type::radius_type& radius,
+		const ellipse_type::rotation_value_type rotation,
 		const color_type color,
 		const std::uint32_t segments
 	) noexcept -> void
@@ -1931,9 +1935,9 @@ namespace gal::prometheus::gfx_new
 	}
 
 	auto RenderList::ellipse(
-		const point_type& center,
-		const extent_type& radius,
-		const float rotation,
+		const ellipse_type::point_type& center,
+		const ellipse_type::radius_type& radius,
+		const ellipse_type::rotation_value_type rotation,
 		const color_type color,
 		const float thickness
 	) noexcept -> void
@@ -1955,9 +1959,9 @@ namespace gal::prometheus::gfx_new
 	}
 
 	auto RenderList::ellipse_filled(
-		const point_type& center,
-		const extent_type& radius,
-		const float rotation,
+		const ellipse_type::point_type& center,
+		const ellipse_type::radius_type& radius,
+		const ellipse_type::rotation_value_type rotation,
 		const color_type color
 	) noexcept -> void
 	{
@@ -2071,11 +2075,15 @@ namespace gal::prometheus::gfx_new
 
 		auto& render_list_context = *context_;
 		auto& context = render_list_context.context.get();
-		auto& font_context = context.get_font_context();
-		const auto& texture_context = context.get_texture_context();
+		auto font_accessor = context.font_accessor();
+		auto& font_context = font_accessor.font_context();
+		const auto texture_accessor = context.texture_accessor();
+		const auto& texture_context = texture_accessor.texture_context();
 
 		const auto utf32_text = chars::convert<chars::CharsType::UTF8_CHAR, chars::CharsType::UTF32>(utf8_text);
-		const auto glyphs = font_context.glyph_of_or_fallback(utf32_text, font_size, flag);
+		// todo: Don't let the fallback character replace line breaks!
+		// const auto glyphs = font_context.glyph_of_or_fallback(utf32_text, font_size, flag);
+		const auto glyphs = font_context.glyph_of(utf32_text, font_size, flag);
 
 		if (std::ranges::any_of(
 			glyphs,
@@ -2194,7 +2202,8 @@ namespace gal::prometheus::gfx_new
 	{
 		const auto& render_list_context = *context_;
 		auto& context = render_list_context.context.get();
-		auto& font_context = context.get_font_context();
+		auto font_accessor = context.font_accessor();
+		auto& font_context = font_accessor.font_context();
 
 		const auto utf32_text = chars::convert<chars::CharsType::UTF8_CHAR, chars::CharsType::UTF32>(utf8_text);
 		const auto glyphs = font_context.glyph_of_or_fallback(utf32_text, font_size, flag);
@@ -2250,10 +2259,10 @@ namespace gal::prometheus::gfx_new
 
 	auto RenderList::image(
 		const texture_id_type texture_id,
-		const point_type& display_p1,
-		const point_type& display_p2,
-		const point_type& display_p3,
-		const point_type& display_p4,
+		const rect_type::point_type& display_p1,
+		const rect_type::point_type& display_p2,
+		const rect_type::point_type& display_p3,
+		const rect_type::point_type& display_p4,
 		const uv_type& uv_p1,
 		const uv_type& uv_p2,
 		const uv_type& uv_p3,
@@ -2321,8 +2330,20 @@ namespace gal::prometheus::gfx_new
 
 	auto RenderList::image(
 		const texture_id_type texture_id,
-		const point_type& display_left_top,
-		const point_type& display_right_bottom,
+		const rect_type::point_type& display_left_top,
+		const rect_type::extent_type& display_size,
+		const uv_type& uv_left_top,
+		const uv_type& uv_right_bottom,
+		const color_type color
+	) noexcept -> void
+	{
+		this->image(texture_id, {display_left_top, display_size}, {uv_left_top, uv_right_bottom}, color);
+	}
+
+	auto RenderList::image(
+		const texture_id_type texture_id,
+		const rect_type::point_type& display_left_top,
+		const rect_type::point_type& display_right_bottom,
 		const uv_type& uv_left_top,
 		const uv_type& uv_right_bottom,
 		const color_type color
@@ -2362,18 +2383,7 @@ namespace gal::prometheus::gfx_new
 
 		if (rounding < .5f or (RenderRectFlag::ROUND_CORNER_MASK & flag) == RenderRectFlag::ROUND_CORNER_NONE)
 		{
-			this->image(
-				texture_id,
-				display_rect.left_top(),
-				display_rect.right_top(),
-				display_rect.right_bottom(),
-				display_rect.left_bottom(),
-				uv_rect.left_top(),
-				uv_rect.right_top(),
-				uv_rect.right_bottom(),
-				uv_rect.left_bottom(),
-				color
-			);
+			this->image(texture_id, display_rect, uv_rect, color);
 		}
 		else
 		{
@@ -2439,8 +2449,22 @@ namespace gal::prometheus::gfx_new
 
 	auto RenderList::image_rounded(
 		const texture_id_type texture_id,
-		const point_type& display_left_top,
-		const point_type& display_right_bottom,
+		const rect_type::point_type& display_left_top,
+		const rect_type::extent_type& display_size,
+		const float rounding,
+		const RenderRectFlag flag,
+		const uv_type& uv_left_top,
+		const uv_type& uv_right_bottom,
+		const color_type color
+	) noexcept -> void
+	{
+		this->image_rounded(texture_id, {display_left_top, display_size}, rounding, flag, {uv_left_top, uv_right_bottom}, color);
+	}
+
+	auto RenderList::image_rounded(
+		const texture_id_type texture_id,
+		const rect_type::point_type& display_left_top,
+		const rect_type::point_type& display_right_bottom,
 		const float rounding,
 		const RenderRectFlag flag,
 		const uv_type& uv_left_top,

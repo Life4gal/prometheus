@@ -3,12 +3,12 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#include <gfx_new/internal/texture.hpp>
+#include <gfx/internal/texture.hpp>
 
 // #define STB_RECT_PACK_IMPLEMENTATION
 // #include <stb_rect_pack.h>
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
 	Texture::Texture(const size_type size) noexcept
 		: rp_context_{},

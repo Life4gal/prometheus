@@ -7,12 +7,12 @@
 
 #include <unordered_map>
 
-#include <gfx_new/gfx.hpp>
+#include <gfx/gfx.hpp>
 
 #include <d3d11.h>
 #include <wrl/client.h>
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
 	using Microsoft::WRL::ComPtr;
 
@@ -47,7 +47,6 @@ namespace gal::prometheus::gfx_new
 		textures_type textures_;
 
 		render_buffer_type render_buffer_;
-		extent_type display_size_;
 
 		[[nodiscard]] auto create_blend_state() noexcept -> bool;
 		[[nodiscard]] auto create_rasterizer_state() noexcept -> bool;
@@ -76,8 +75,6 @@ namespace gal::prometheus::gfx_new
 		auto bind_device_context(ID3D11DeviceContext* device_immediate_context) noexcept -> void;
 		auto bind_device_context(ComPtr<ID3D11DeviceContext> device_immediate_context) noexcept -> void;
 
-		auto set_display_size(const extent_type& display_size) noexcept -> void;
-
 	private:
 		auto do_construct() noexcept -> bool override;
 		auto do_destruct() noexcept -> void override;
@@ -87,6 +84,6 @@ namespace gal::prometheus::gfx_new
 		auto do_texture_update(const TextureDescriptor& texture) noexcept -> void override;
 		auto do_texture_destroy(texture_id_type texture_id) noexcept -> void override;
 
-		auto do_present(const render_data_list_type& render_data_list) noexcept -> void override;
+		auto do_present(const render_data_list_type& render_data_list, const extent_type& display_size) noexcept -> void override;
 	};
 }

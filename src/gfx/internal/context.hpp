@@ -5,13 +5,13 @@
 
 #pragma once
 
-#include <gfx_new/gfx.hpp>
-#include <gfx_new/internal/texture.hpp>
-#include <gfx_new/internal/font.hpp>
+#include <gfx/gfx.hpp>
+#include <gfx/internal/texture.hpp>
+#include <gfx/internal/font.hpp>
 
 #include <memory/reference_wrapper.hpp>
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
 	// =========================================================
 	// TEXTURE
@@ -36,6 +36,8 @@ namespace gal::prometheus::gfx_new
 		~TextureContext() noexcept = default;
 
 		TextureContext() noexcept;
+
+		auto initialize(RenderListSharedData& shared_data) noexcept -> void;
 
 		/**
 		 * @brief Get root (default) texture
@@ -110,7 +112,7 @@ namespace gal::prometheus::gfx_new
 
 		glyph_upload_queue_list_type glyph_upload_queue_list_;
 
-		std::shared_ptr<GlyphParser> glyph_parser_;
+		GlyphParser* glyph_parser_;
 		const GlyphInfo* fallback_glyph_;
 
 	public:
@@ -123,7 +125,7 @@ namespace gal::prometheus::gfx_new
 
 		FontContext() noexcept = default;
 
-		auto set_glyph_parser(std::shared_ptr<GlyphParser> glyph_parser) noexcept -> void;
+		auto set_glyph_parser(GlyphParser& glyph_parser) noexcept -> void;
 
 		auto set_fallback_glyph() noexcept -> void;
 
@@ -174,6 +176,9 @@ namespace gal::prometheus::gfx_new
 	public:
 		class RendererAccessor final
 		{
+			// TextureContext::upload
+			friend TextureContext;
+
 		public:
 			using renderer_type = memory::RefWrapper<Renderer>;
 
@@ -183,6 +188,7 @@ namespace gal::prometheus::gfx_new
 		public:
 			explicit RendererAccessor(Renderer& renderer) noexcept;
 
+		private:
 			/**
 			 * @brief Upload texture atlas data to GPU and get GPU resource handle
 			 */
@@ -201,6 +207,62 @@ namespace gal::prometheus::gfx_new
 			auto update_if_dirty(Texture& texture) noexcept -> void;
 		};
 
+		class TextureAccessor final
+		{
+			// RenderList::RenderListContext::default_texture
+			friend RenderList::RenderListContext;
+			// RenderList::text (select texture atlas for text rendering)
+			friend RenderList;
+
+		public:
+
+		private:
+			memory::RefWrapper<const TextureContext> texture_context_;
+
+		public:
+			explicit TextureAccessor(TextureContext& texture_context) noexcept;
+
+		private:
+			[[nodiscard]] auto texture_context() const noexcept -> const TextureContext&;
+		};
+
+		class FontAccessor final
+		{
+			// RenderList::text
+			// RenderList::text_size
+			friend RenderList;
+			friend auto add_font(Context& context, const std::filesystem::path& path) noexcept -> void;
+
+		public:
+
+		private:
+			memory::RefWrapper<FontContext> font_context_;
+
+		public:
+			explicit FontAccessor(FontContext& font_context) noexcept;
+
+		private:
+			[[nodiscard]] auto font_context() noexcept -> FontContext&;
+			[[nodiscard]] auto font_context() const noexcept -> const FontContext&;
+		};
+
+		class RenderListAccessor final
+		{
+			// RenderList::RenderListContext::shared_data
+			friend RenderList::RenderListContext;
+
+		public:
+
+		private:
+			memory::RefWrapper<const RenderListSharedData> render_list_shared_data_;
+
+		public:
+			explicit RenderListAccessor(RenderListSharedData& render_list_shared_data) noexcept;
+
+		private:
+			[[nodiscard]] auto shared_data() const noexcept -> const RenderListSharedData&;
+		};
+
 	private:
 		std::shared_ptr<GlyphParser> glyph_parser_;
 		std::shared_ptr<Renderer> renderer_;
@@ -212,25 +274,19 @@ namespace gal::prometheus::gfx_new
 		std::vector<RenderList> render_lists_;
 
 	public:
-		Context(std::shared_ptr<GlyphParser> glyph_parser, std::shared_ptr<Renderer> renderer) noexcept;
-
-		[[nodiscard]] auto get_glyph_parser() const noexcept -> std::shared_ptr<GlyphParser>;
+		Context() noexcept;
 
 		auto set_glyph_parser(std::shared_ptr<GlyphParser> glyph_parser) noexcept -> std::shared_ptr<GlyphParser>;
-
-		// [[nodiscard]] auto get_renderer() noexcept -> std::shared_ptr<Renderer>;
-		[[nodiscard]] auto get_renderer() const noexcept -> RendererAccessor;
-
 		auto set_renderer(std::shared_ptr<Renderer> renderer) noexcept -> std::shared_ptr<Renderer>;
 
-		[[nodiscard]] auto get_texture_context() const noexcept -> const TextureContext&;
+		// todo: set RenderListSharedData
 
-		[[nodiscard]] auto get_font_context() noexcept -> FontContext&;
+		[[nodiscard]] auto renderer_accessor() const noexcept -> RendererAccessor;
+		[[nodiscard]] auto texture_accessor() noexcept -> TextureAccessor;
+		[[nodiscard]] auto font_accessor() noexcept -> FontAccessor;
+		[[nodiscard]] auto render_list_accessor() noexcept -> RenderListAccessor;
 
-		[[nodiscard]] auto get_render_list_shared_data() const noexcept -> const RenderListSharedData&;
-
-		auto new_render_list(RenderListFlag flag) noexcept -> RenderList&;
-
+		[[nodiscard]] auto new_render_list(RenderListFlag flag) noexcept -> RenderList&;
 		[[nodiscard]] auto render_data() const noexcept -> render_data_list_type;
 	};
 }

@@ -3,7 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#include <gfx_new/extension/renderer_d3d11.hpp>
+#include <gfx/extension/renderer_d3d11.hpp>
 
 #include <prometheus/macro.hpp>
 
@@ -15,8 +15,6 @@
 #include <print>
 
 #include <platform/os.hpp>
-#include <gfx/font.hpp>
-#include <gfx/context.hpp>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #include <comdef.h>
@@ -69,7 +67,7 @@ namespace
 	}
 }
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
 	auto RendererD3D11::create_blend_state() noexcept -> bool
 	{
@@ -360,8 +358,8 @@ namespace gal::prometheus::gfx_new
 	}
 
 	auto RendererD3D11::upload_texture(
-		const Texture::data_view_type data,
-		const Texture::size_type size,
+		const TextureDescriptor::data_view_type data,
+		const TextureDescriptor::size_type size,
 		const D3D11_USAGE usage,
 		const std::uint32_t bind_flags,
 		const std::uint32_t cpu_access_flags,
@@ -488,11 +486,6 @@ namespace gal::prometheus::gfx_new
 		device_immediate_context_ = std::move(device_immediate_context);
 	}
 
-	auto RendererD3D11::set_display_size(const extent_type& display_size) noexcept -> void
-	{
-		display_size_ = display_size;
-	}
-
 	auto RendererD3D11::do_construct() noexcept -> bool
 	{
 		if (not create_blend_state())
@@ -609,7 +602,7 @@ namespace gal::prometheus::gfx_new
 
 		const auto* source = texture.data.get();
 		const auto source_length = static_cast<std::size_t>(texture.size.width) * texture.size.height;
-		std::ranges::copy(source, source + source_length, static_cast<Texture::element_type*>(mapped_resource.pData));
+		std::ranges::copy(source, source + source_length, static_cast<TextureDescriptor::element_type*>(mapped_resource.pData));
 
 		device_immediate_context_->Unmap(texture_2d, 0);
 	}
@@ -628,7 +621,7 @@ namespace gal::prometheus::gfx_new
 		}
 	}
 
-	auto RendererD3D11::do_present(const render_data_list_type& render_data_list) noexcept -> void
+	auto RendererD3D11::do_present(const render_data_list_type& render_data_list, const extent_type& display_size) noexcept -> void
 	{
 		auto& [this_frame_index_buffer, this_frame_index_count, this_frame_vertex_buffer, this_frame_vertex_count] = render_buffer_;
 
@@ -745,9 +738,9 @@ namespace gal::prometheus::gfx_new
 			auto* mapped_projection_matrix = static_cast<projection_matrix_type*>(mapped_resource.pData);
 
 			constexpr auto left = 0.f;
-			const auto right = display_size_.width;
+			const auto right = display_size.width;
 			constexpr auto top = 0.f;
-			const auto bottom = display_size_.height;
+			const auto bottom = display_size.height;
 
 			const projection_matrix_type mvp{
 					{2.0f / (right - left), 0.0f, 0.0f, 0.0f},
@@ -765,8 +758,8 @@ namespace gal::prometheus::gfx_new
 			const D3D11_VIEWPORT viewport{
 					.TopLeftX = .0f,
 					.TopLeftY = .0f,
-					.Width = display_size_.width,
-					.Height = display_size_.height,
+					.Width = display_size.width,
+					.Height = display_size.height,
 					.MinDepth = 0,
 					.MaxDepth = 1
 			};

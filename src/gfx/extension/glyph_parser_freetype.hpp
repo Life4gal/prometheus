@@ -7,11 +7,11 @@
 
 #include <vector>
 
-#include <gfx_new/gfx.hpp>
+#include <gfx/gfx.hpp>
 
 #include <memory/unique_ptr.hpp>
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
 	class GlyphParserFreeType final : public GlyphParser
 	{

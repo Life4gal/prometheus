@@ -7,11 +7,11 @@
 
 #include <mdspan>
 
-#include <gfx_new/gfx.hpp>
+#include <gfx/gfx.hpp>
 
 #include <stb_rect_pack.h>
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
 	class BorrowedTexture;
 

@@ -3,13 +3,13 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#include <gfx_new/internal/font.hpp>
+#include <gfx/internal/font.hpp>
 
-#include <gfx_new/internal/texture.hpp>
-#include <gfx_new/internal/context.hpp>
+#include <gfx/internal/texture.hpp>
+#include <gfx/internal/context.hpp>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
 	auto GlyphUploadQueue::push(GlyphInfo& info, GlyphParser::GlyphDescriptor&& descriptor) noexcept -> void
 	{

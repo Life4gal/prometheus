@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include <gfx_new/gfx.hpp>
+#include <gfx/gfx.hpp>
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
 	class RenderList::RenderListContext final
 	{

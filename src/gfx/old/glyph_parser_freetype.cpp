@@ -3,7 +3,9 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#include <gfx_new/extension/glyph_parser_freetype.hpp>
+#include <gfx/glyph_parser_freetype.hpp>
+
+#if defined(GAL_PROMETHEUS_GFX_GLYPH_PARSER_FREETYPE)
 
 #include <freetype/freetype.h>
 #include <freetype/ftsynth.h>
@@ -16,18 +18,17 @@ namespace
 	}
 } // namespace
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
-	class GlyphParserFreeType::Library final
+	class FreeTypeGlyphParser::Library final
 	{
 	public:
 		FT_Library library{nullptr};
 	};
 
-	class GlyphParserFreeType::FontInfo final
+	class FreeTypeGlyphParser::FontInfo final
 	{
 	public:
-		std::filesystem::path path;
 		FT_Face face{nullptr};
 
 		float ascender{0};
@@ -57,7 +58,7 @@ namespace gal::prometheus::gfx_new
 		}
 	};
 
-	GlyphParserFreeType::~GlyphParserFreeType() noexcept
+	FreeTypeGlyphParser::~FreeTypeGlyphParser() noexcept
 	{
 		std::ranges::for_each(
 			infos_,
@@ -70,7 +71,7 @@ namespace gal::prometheus::gfx_new
 		FT_Done_FreeType(library_->library);
 	}
 
-	GlyphParserFreeType::GlyphParserFreeType() noexcept
+	FreeTypeGlyphParser::FreeTypeGlyphParser() noexcept
 		: library_{memory::make_unique<Library>()}
 	{
 		if (const auto error = FT_Init_FreeType(&library_->library); error != FT_Err_Ok)
@@ -80,52 +81,27 @@ namespace gal::prometheus::gfx_new
 		}
 	}
 
-	auto GlyphParserFreeType::load(const std::filesystem::path& path) noexcept -> FontDescriptor
+	auto FreeTypeGlyphParser::ready() noexcept -> bool
 	{
-		if (const auto it = std::ranges::find(infos_, path, &FontInfo::path); it != infos_.end())
-		{
-			const auto& info = it.operator*();
-			const auto index = std::ranges::distance(infos_.begin(), it);
-
-			return {.identifier = info.face->family_name, .id = static_cast<font_id_type>(index)};
-		}
-
-		const auto path_string = path.string();
-
-		FT_Face face = nullptr;
-		if (const auto error = FT_New_Face(library_->library, path_string.data(), 0, &face); error != FT_Err_Ok)
-		{
-			return FontDescriptor::error();
-		}
-
-		if (const auto error = FT_Select_Charmap(face, FT_ENCODING_UNICODE); error != FT_Err_Ok)
-		{
-			FT_Done_Face(face);
-			return FontDescriptor::error();
-		}
-
-		const auto id = infos_.size();
-		auto& info = infos_.emplace_back();
-		info.face = face;
-
-		return {.identifier = face->family_name, .id = static_cast<font_id_type>(id)};
+		return library_ != nullptr;
 	}
 
-	// auto GlyphParserFreeType::load(const std::span<std::uint8_t> data) noexcept -> FontDescriptor
+	// auto FreeTypeGlyphParser::load(const std::filesystem::path& path) noexcept -> LoadResult
 	// {
-	// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.data() != nullptr);
-	// 	GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not data.empty());
+	// 	const auto path_string = path.string();
+	//
+	// 	LoadResult invalid_result{.name = {}, .id = invalid_font_id};
 	//
 	// 	FT_Face face = nullptr;
-	// 	if (const auto error = FT_New_Memory_Face(library_->library, data.data(), static_cast<FT_Long>(data.size()), 0, &face); error != FT_Err_Ok)
+	// 	if (const auto error = FT_New_Face(library_->library, path_string.data(), 0, &face); error != FT_Err_Ok)
 	// 	{
-	// 		return FontDescriptor::error();
+	// 		return invalid_result;
 	// 	}
 	//
 	// 	if (const auto error = FT_Select_Charmap(face, FT_ENCODING_UNICODE); error != FT_Err_Ok)
 	// 	{
 	// 		FT_Done_Face(face);
-	// 		return FontDescriptor::error();
+	// 		return invalid_result;
 	// 	}
 	//
 	// 	const auto id = infos_.size();
@@ -133,10 +109,37 @@ namespace gal::prometheus::gfx_new
 	// 	auto& info = infos_.emplace_back();
 	// 	info.face = face;
 	//
-	// 	return {.identifier = face->family_name, .id = static_cast<font_id_type>(id)};
+	// 	return {.name = face->family_name, .id = static_cast<font_id_type>(id)};
 	// }
 
-	auto GlyphParserFreeType::has_glyph(const font_id_type id, const std::uint32_t codepoint) const noexcept -> bool
+	auto FreeTypeGlyphParser::load(const std::span<std::uint8_t> data) noexcept -> LoadResult
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.data() != nullptr);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not data.empty());
+
+		LoadResult invalid_result{.name = {}, .id = invalid_font_id};
+
+		FT_Face face = nullptr;
+		if (const auto error = FT_New_Memory_Face(library_->library, data.data(), static_cast<FT_Long>(data.size()), 0, &face); error != FT_Err_Ok)
+		{
+			return invalid_result;
+		}
+
+		if (const auto error = FT_Select_Charmap(face, FT_ENCODING_UNICODE); error != FT_Err_Ok)
+		{
+			FT_Done_Face(face);
+			return invalid_result;
+		}
+
+		const auto id = infos_.size();
+
+		auto& info = infos_.emplace_back();
+		info.face = face;
+
+		return {.name = face->family_name, .id = static_cast<font_id_type>(id)};
+	}
+
+	auto FreeTypeGlyphParser::has_glyph(const font_id_type id, const std::uint32_t codepoint) const noexcept -> bool
 	{
 		if (id >= infos_.size())
 		{
@@ -152,56 +155,58 @@ namespace gal::prometheus::gfx_new
 		return true;
 	}
 
-	auto GlyphParserFreeType::parse(const font_id_type id, const GlyphCode& code) noexcept -> GlyphDescriptor
+	auto FreeTypeGlyphParser::parse(const font_id_type id, const GlyphKey& key) noexcept -> ParseResult
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(id < infos_.size());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(code.codepoint != 0);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(code.size != 0);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(key.codepoint != 0);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(key.size != 0);
+
+		ParseResult invalid_result{};
 
 		auto& info = infos_[id];
 		const auto& face = info.face;
 
-		const auto char_index = FT_Get_Char_Index(face, code.codepoint);
+		const auto char_index = FT_Get_Char_Index(face, key.codepoint);
 		if (char_index == 0)
 		{
-			return GlyphDescriptor::error();
+			return invalid_result;
 		}
 
-		info.set_pixel_height(code.size);
+		info.set_pixel_height(key.size);
 
 		if (const auto error = FT_Load_Glyph(face, char_index, FT_LOAD_DEFAULT); error != FT_Err_Ok)
 		{
-			return GlyphDescriptor::error();
+			return invalid_result;
 		}
 
 		const auto& slot = face->glyph;
 
-		if (std::to_underlying(code.flag) & GlyphFlag::BOLD)
+		if (std::to_underlying(key.flag) & GlyphFlag::BOLD)
 		{
 			FT_GlyphSlot_Embolden(slot);
 		}
-		if (std::to_underlying(code.flag) & GlyphFlag::ITALIC)
+		if (std::to_underlying(key.flag) & GlyphFlag::ITALIC)
 		{
 			FT_GlyphSlot_Oblique(slot);
 		}
 
 		if (const auto error = FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL); error != FT_Err_Ok)
 		{
-			return GlyphDescriptor::error();
+			return invalid_result;
 		}
 
 		const auto& bitmap = face->glyph->bitmap;
 
-		const GlyphDescriptor::rect_type::point_type point{slot->bitmap_left, slot->bitmap_top};
-		const GlyphDescriptor::rect_type::extent_type size{bitmap.width, bitmap.rows};
+		const point_type point{static_cast<point_type::value_type>(slot->bitmap_left), static_cast<point_type::value_type>(slot->bitmap_top)};
+		const extent_type size{static_cast<extent_type::value_type>(bitmap.width), static_cast<extent_type::value_type>(bitmap.rows)};
 		const std::size_t data_length = static_cast<std::size_t>(bitmap.width) * bitmap.rows;
 
-		GlyphDescriptor result{
+		ParseResult result{
 				.rect = {point, size},
 				.advance_x = ft_size_to_float(slot->advance.x),
 				.visible = size.width > 0 and size.height > 0,
 				.colored = bitmap.pixel_mode == FT_PIXEL_MODE_BGRA,
-				.data = std::make_unique_for_overwrite<TextureDescriptor::element_type[]>(data_length)
+				.data = std::make_unique_for_overwrite<Texture::element_type[]>(data_length)
 		};
 
 		{
@@ -269,4 +274,6 @@ namespace gal::prometheus::gfx_new
 
 		return result;
 	}
-}
+} // namespace gal::prometheus::gfx
+
+#endif

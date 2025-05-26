@@ -19,6 +19,7 @@
 #include <platform/os.hpp>
 #include <gfx/font.hpp>
 #include <gfx/context.hpp>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #include <comdef.h>
 #include <d3dcompiler.h>
@@ -699,10 +700,10 @@ namespace gal::prometheus::gfx
 
 			std::ranges::for_each(
 				all_render_data,
-				[&](const RenderData& draw_data) noexcept -> void
+				[&](const RenderData& render_data) noexcept -> void
 				{
-					const auto vertex_list = draw_data.vertex_list.get();
-					const auto index_list = draw_data.index_list.get();
+					const auto vertex_list = render_data.vertex_list.get();
+					const auto index_list = render_data.index_list.get();
 
 					// std::ranges::transform(
 					// 		vertex_list,

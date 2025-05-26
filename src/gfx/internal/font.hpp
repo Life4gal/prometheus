@@ -8,12 +8,12 @@
 #include <unordered_map>
 #include <filesystem>
 
-#include <gfx_new/gfx.hpp>
+#include <gfx/gfx.hpp>
 
 #include <memory/reference_wrapper.hpp>
 #include <functional/function_ref.hpp>
 
-namespace gal::prometheus::gfx_new
+namespace gal::prometheus::gfx
 {
 	// index
 	using texture_atlas_id_type = std::uint32_t;

@@ -215,7 +215,14 @@ namespace gal::prometheus::gfx
 		~RenderContext() noexcept;
 
 		RenderContext() noexcept;
+		
+		// ====================================================================
+		// RenderContext
+		// ====================================================================
 
+		/**
+		 * @brief Initialize RenderContext, called only once
+		 */
 		auto initialize() noexcept -> void;
 
 		auto begin_frame(Renderer& renderer) noexcept -> void;
