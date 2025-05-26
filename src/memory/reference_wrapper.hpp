@@ -54,14 +54,24 @@ namespace gal::prometheus::memory
 			pointer_ = std::addressof(ref);
 		}
 
+		// RefWrapper<T> --(implicit)--> T&
 		// ReSharper disable once CppNonExplicitConversionOperator
 		constexpr explicit(false) operator type&() noexcept
 		{
 			return *pointer_;
 		}
 
+		// RefWrapper<const T> --(implicit)--> const T&
 		// ReSharper disable once CppNonExplicitConversionOperator
-		constexpr explicit (false) operator const type&() noexcept //
+		constexpr explicit(false) operator type&() const noexcept
+			requires(std::is_const_v<type>) // avoid redefinition (RefWrapper<const T>)
+		{
+			return *pointer_;
+		}
+
+		// const RefWrapper<T> --(implicit)--> const T&
+		// ReSharper disable once CppNonExplicitConversionOperator
+		constexpr explicit (false) operator const type&() const noexcept //
 			requires (not std::is_const_v<type>) // avoid redefinition (RefWrapper<const T>)
 		{
 			return *pointer_;
