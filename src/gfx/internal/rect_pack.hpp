@@ -8,35 +8,19 @@
 #pragma once
 
 #include <span>
+#include <vector>
 
 #include <primitive/point.hpp>
 #include <primitive/extent.hpp>
 
 namespace gal::prometheus::gfx
 {
-	struct rect_pack_rect final
+	enum class PackPrefer : std::uint8_t
 	{
-		using point_type = primitive::basic_point_2d<std::uint32_t>;
-		using extent_type = primitive::basic_extent_2d<std::uint32_t>;
+		FAST_FAIL = 0,
+		SKIP = 1,
 
-		// INPUT
-		extent_type size;
-
-		// OUTPUT
-		point_type point;
-
-		// non-zero if valid packing
-		std::uint32_t was_packed;
-		// reserved for your use
-		std::uint32_t id;
-	};
-
-	struct rect_pack_node final
-	{
-		using point_type = rect_pack_rect::point_type;
-
-		point_type point;
-		rect_pack_node* next;
+		DEFAULT = FAST_FAIL,
 	};
 
 	enum class Heuristic : std::uint8_t
@@ -47,48 +31,82 @@ namespace gal::prometheus::gfx
 		DEFAULT = SKYLINE_BOTTOM_LEFT,
 	};
 
-	class Context final
+	class RectPackContext final
 	{
 	public:
-		using point_type = rect_pack_rect::point_type;
-		using extent_type = rect_pack_rect::extent_type;
+		using point_type = primitive::basic_point_2d<std::uint32_t>;
+		using extent_type = primitive::basic_extent_2d<std::uint32_t>;
+
+		constexpr static auto invalid_point = point_type{std::numeric_limits<point_type::value_type>::max(), std::numeric_limits<point_type::value_type>::max()};
+
+		struct rect_type final
+		{
+			friend RectPackContext;
+
+			// INPUT
+			extent_type size;
+
+			// OUTPUT
+			point_type point;
+
+			// reserved for your use
+			std::uint32_t id;
+
+		private:
+			std::uint32_t internal_status_;
+
+		public:
+			constexpr explicit rect_type(const extent_type size, const std::uint32_t id = std::numeric_limits<std::uint32_t>::max()) noexcept
+				: size{size},
+				  point{0, 0},
+				  id{id},
+				  internal_status_{0} {}
+
+			[[nodiscard]] auto packed() const noexcept -> bool;
+		};
 
 	private:
+		struct rect_pack_node final
+		{
+			point_type point;
+			rect_pack_node* next;
+		};
+
+		struct find_y_result
+		{
+			point_type::value_type y;
+			extent_type::value_type waste;
+		};
+
+		struct find_result
+		{
+			point_type point;
+			rect_pack_node** prev_link;
+		};
+
 		extent_type size_;
 
-		Heuristic heuristic_;
-		std::uint32_t align_;
-		std::uint32_t nodes_count_;
-
-		rect_pack_node* active_head_;
+		std::vector<rect_pack_node> nodes_;
 		rect_pack_node* free_head_;
-		// we allocate two extra nodes so optimal user-node-count is 'size.width' not 'size.width+2'
-		rect_pack_node extra_[2];
+
+		rect_pack_node active_head_[2];
+
+		[[nodiscard]] auto align_of(PackPrefer pack_prefer) const noexcept -> std::uint32_t;
+
+		// find minimum y position if it starts at x1
+		[[nodiscard]] static auto skyline_find_min_y(const rect_pack_node* head, point_type::value_type x0, extent_type::value_type width) noexcept -> find_y_result;
+
+		[[nodiscard]] auto skyline_find_best_pos(extent_type size, PackPrefer pack_prefer, Heuristic heuristic) noexcept -> find_result;
+
+		[[nodiscard]] auto skyline_pack_rectangle(extent_type size, PackPrefer pack_prefer, Heuristic heuristic) noexcept -> find_result;
 
 	public:
-		Context(const extent_type& size, std::span<rect_pack_node> nodes) noexcept;
+		explicit RectPackContext(const extent_type& size) noexcept;
 
-		auto set_heuristic(Heuristic heuristic) noexcept -> void;
-
-		auto set_fast_fail(bool fast_fail) noexcept -> void;
-
-		auto pack(std::span<rect_pack_rect> rects) noexcept -> bool;
-
-		// =======================================
-		// INTERNAL
-		// =======================================
-
-		[[nodiscard]] auto size() const noexcept -> const extent_type&;
-
-		[[nodiscard]] auto heuristic() const noexcept -> Heuristic;
-
-		[[nodiscard]] auto align() const noexcept -> std::uint32_t;
-
-		[[nodiscard]] auto nodes_count() const noexcept -> std::uint32_t;
-
-		[[nodiscard]] auto active_head() const noexcept -> rect_pack_node*;
-
-		[[nodiscard]] auto free_head() const noexcept -> rect_pack_node*;
-		auto free_head(rect_pack_node* node) noexcept -> void;
+		auto pack(
+			std::span<rect_type> in_out_rects,
+			PackPrefer pack_prefer = PackPrefer::DEFAULT,
+			Heuristic heuristic = Heuristic::DEFAULT
+		) noexcept -> bool;
 	};
 }

@@ -10,37 +10,43 @@
 
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
-namespace
+namespace gal::prometheus::gfx
 {
-	using namespace gal::prometheus;
-	using namespace gfx;
-
-	// find minimum y position if it starts at x1
-	[[nodiscard]] auto skyline_find_min_y(
-		const rect_pack_node* first,
-		const Context::point_type::value_type x0,
-		const Context::extent_type::value_type width,
-		std::uint64_t& waster_area
-	) noexcept -> Context::point_type::value_type
+	auto RectPackContext::rect_type::packed() const noexcept -> bool
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(first->point.x <= x0);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(first->next->point.x > x0);
+		return point != invalid_point;
+	}
+
+	auto RectPackContext::align_of(const PackPrefer pack_prefer) const noexcept -> std::uint32_t
+	{
+		if (pack_prefer == PackPrefer::FAST_FAIL)
+		{
+			return static_cast<std::uint32_t>(static_cast<std::size_t>(size_.width) + nodes_.size() - 1 / nodes_.size());
+		}
+
+		return 1;
+	}
+
+	auto RectPackContext::skyline_find_min_y(const rect_pack_node* head, const point_type::value_type x0, const extent_type::value_type width) noexcept -> find_y_result
+	{
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(head->point.x <= x0);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(head->next->point.x > x0);
 
 		const auto x1 = x0 + width;
-		const auto* current = first;
+		const auto* current = head;
 
-		Context::point_type::value_type min_y = 0;
-		Context::extent_type::value_type visited_width = 0;
+		find_y_result result{.y = 0, .waste = 0};
+		extent_type::value_type visited_width = 0;
 
 		while (current->point.x < x1)
 		{
-			if (current->point.y > min_y)
+			if (current->point.y > result.y)
 			{
 				// raise min_y higher.
 				// we've accounted for all waste up to min_y,
 				// but we'll now add more waste for everything we've visited
-				waster_area += static_cast<std::uint64_t>(visited_width) * (current->point.y - min_y);
-				min_y = current->point.y;
+				result.waste += static_cast<std::uint64_t>(visited_width) * (current->point.y - result.y);
+				result.y = current->point.y;
 
 				// the first time through, visited_width might be reduced
 				visited_width += current->next->point.x - std::ranges::max(x0, current->point.x);
@@ -50,78 +56,72 @@ namespace
 				// add waste area
 				const auto under_width = std::ranges::min(current->next->point.x - current->point.x, width - visited_width);
 
-				waster_area += static_cast<std::uint64_t>(under_width) * (min_y - current->point.y);
+				result.waste += static_cast<std::uint64_t>(under_width) * (result.y - current->point.y);
 				visited_width += under_width;
 			}
 
 			current = current->next;
 		}
 
-		return min_y;
+		return result;
 	}
 
-	struct find_result
+	auto RectPackContext::skyline_find_best_pos(extent_type size, const PackPrefer pack_prefer, const Heuristic heuristic) noexcept -> find_result
 	{
-		Context::point_type point;
-		rect_pack_node** prev_link;
-	};
+		const auto& context_size = size_;
 
-	auto skyline_find_best_pos(const Context& context, Context::extent_type size) noexcept -> find_result
-	{
-		// align to multiple of context->align
-		const auto align = context.align();
+		// align to multiple of 'align'
+		const auto align = align_of(pack_prefer);
 		size.width = ((size.width + align - 1) / align) * align;
 
 		// if it can't possibly fit, bail immediately
-		if (size.width > context.size().width or size.height > context.size().height)
+		if (size.width > context_size.width or size.height > context_size.height)
 		{
 			return {.point = {0, 0}, .prev_link = nullptr};
 		}
 
-		const auto& context_size = context.size();
-		const auto heuristic = context.heuristic();
-
 		auto best_waste = std::numeric_limits<std::uint64_t>::max();
-		auto best_y = std::numeric_limits<Context::point_type::value_type>::max();
+		auto best_y = std::numeric_limits<point_type::value_type>::max();
 
 		rect_pack_node** best = nullptr;
-		auto* current = context.active_head();
-		auto** prev = &current;
-
-		while (current->point.x + size.width <= context_size.width)
 		{
-			std::uint64_t waste = 0;
-			const auto min_y = skyline_find_min_y(current, current->point.x, size.width, waste);
+			auto* current = active_head_;
+			auto** prev = &current;
 
-			if (heuristic == Heuristic::SKYLINE_BOTTOM_LEFT)
+			while (current->point.x + size.width <= context_size.width)
 			{
-				if (min_y < best_y)
+				const auto [min_y, waste] = skyline_find_min_y(current, current->point.x, size.width);
+
+				if (heuristic == Heuristic::SKYLINE_BOTTOM_LEFT)
 				{
-					best_y = min_y;
-					best = prev;
-				}
-			}
-			else if (heuristic == Heuristic::SKYLINE_BEST_FIT)
-			{
-				// best-fit
-				if (min_y + size.height <= context_size.height)
-				{
-					// can only use it if it first vertically
-					if (min_y < best_y or (min_y == best_y and waste < best_waste))
+					if (min_y < best_y)
 					{
 						best_y = min_y;
-						best_waste = waste;
 						best = prev;
 					}
 				}
-			}
-			else
-			{
-				GAL_PROMETHEUS_COMPILER_UNREACHABLE();
-			}
+				else if (heuristic == Heuristic::SKYLINE_BEST_FIT)
+				{
+					// best-fit
+					if (min_y + size.height <= context_size.height)
+					{
+						// can only use it if it first vertically
+						if (min_y < best_y or (min_y == best_y and waste < best_waste))
+						{
+							best_y = min_y;
+							best_waste = waste;
+							best = prev;
+						}
+					}
+				}
+				else
+				{
+					GAL_PROMETHEUS_COMPILER_UNREACHABLE();
+				}
 
-			prev = &current->next;
-			current = current->next;
+				prev = &current->next;
+				current = current->next;
+			}
 		}
 
 		auto best_x = best == nullptr ? 0 : (*best)->point.x;
@@ -145,10 +145,9 @@ namespace
 
 		if (heuristic == Heuristic::SKYLINE_BEST_FIT)
 		{
-			const auto* tail = context.active_head();
-
-			current = context.active_head();
-			prev = &current;
+			const auto* tail = active_head_;
+			auto* current = active_head_;
+			auto** prev = &current;
 
 			// find first node that's admissible
 			while (tail->point.x < size.width)
@@ -170,8 +169,7 @@ namespace
 
 				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current->next->point.x > x and current->point.x <= x);
 
-				std::uint64_t waste = 0;
-				if (const auto min_y = skyline_find_min_y(current, x, size.width, waste);
+				if (const auto [min_y, waste] = skyline_find_min_y(current, x, size.width);
 					min_y + size.height <= context_size.height)
 				{
 					if (min_y <= best_y)
@@ -194,27 +192,26 @@ namespace
 		return {.point = {best_x, best_y}, .prev_link = best};
 	}
 
-	auto skyline_pack_rectangle(Context& context, const Context::extent_type size) noexcept -> find_result
+	auto RectPackContext::skyline_pack_rectangle(extent_type size, PackPrefer pack_prefer, Heuristic heuristic) noexcept -> find_result
 	{
-		const auto context_size = context.size();
+		const auto context_size = size_;
 
 		// find best position according to heuristic
-		auto result = skyline_find_best_pos(context, size);
+		auto result = skyline_find_best_pos(size, pack_prefer, heuristic);
 
 		// bail if:
 		//    1. it failed
 		//    2. the best node doesn't fit (we don't always check this)
 		//    3. we're out of memory
-		if (result.prev_link == nullptr or result.point.y + size.height > context_size.height or context.free_head() == nullptr)
+		if (result.prev_link == nullptr or result.point.y + size.height > context_size.height or free_head_ == nullptr)
 		{
 			return {.point = result.point, .prev_link = nullptr};
 		}
 
 		// on success, create new node
-		auto* head = context.free_head();
+		auto* head = free_head_;
 		head->point = {result.point.x, result.point.y + size.height};
-
-		context.free_head(head->next);
+		free_head_ = head->next;
 
 		// insert the new node into the right starting point,
 		// and let 'current' point to the remaining nodes needing to be stitched back in
@@ -237,8 +234,8 @@ namespace
 		{
 			auto* next = current->next;
 			// move the current node to the free list
-			current->next = context.free_head();
-			context.free_head(current);
+			current->next = free_head_;
+			free_head_ = current;
 			current = next;
 		}
 
@@ -248,7 +245,7 @@ namespace
 		current->point.x = std::ranges::max(current->point.x, result.point.x + size.width);
 
 #if GAL_PROMETHEUS_COMPILER_DEBUG
-		current = context.active_head();
+		current = active_head_;
 		while (current->point.x < context_size.width)
 		{
 			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current->point.x < current->next->point.x);
@@ -256,79 +253,61 @@ namespace
 		}
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(current->next == nullptr);
 
-		std::uint32_t count = 0;
-		for (current = context.active_head(); current; current = current->next, count += 1) {}
-		for (current = context.free_head(); current; current = current->next, count += 1) {}
+		std::size_t count = 0;
+		for (current = active_head_; current; current = current->next, count += 1) {}
+		for (current = free_head_; current; current = current->next, count += 1) {}
 
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(count = context.nodes_count() + 2);
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(count == nodes_.size() + 2);
 #endif
 
 		return result;
 	}
-}
 
-namespace gal::prometheus::gfx
-{
-	Context::Context(const extent_type& size, const std::span<rect_pack_node> nodes) noexcept
+	RectPackContext::RectPackContext(const extent_type& size) noexcept
 		: size_{size},
-		  heuristic_{Heuristic::DEFAULT},
-		  align_{0},
-		  nodes_count_{static_cast<std::uint32_t>(nodes.size())},
-		  active_head_{extra_},
-		  free_head_{nodes.data()}
+		  nodes_{size.width},
+		  free_head_{nodes_.data()}
 	{
-		for (auto [index, node]: nodes | std::views::take(nodes.size() - 1) | std::views::enumerate)
+		for (auto [index, node]: nodes_ | std::views::take(nodes_.size() - 1) | std::views::enumerate)
 		{
-			node.next = &nodes[index + 1];
+			node.next = &nodes_[index + 1];
 		}
-		nodes[nodes.size() - 1].next = nullptr;
-
-		set_fast_fail(true);
+		nodes_.back().next = nullptr;
 
 		// node 0 is the full width, node 1 is the sentinel (lets us not store width explicitly)
-		extra_[0] = {.point = {0, 0}, .next = &extra_[1]};
-		extra_[1] = {.point = {size.width, std::numeric_limits<point_type::value_type>::max()}, .next = nullptr};
+		active_head_[0] = {.point = {0, 0}, .next = &active_head_[1]};
+		active_head_[1] = {.point = {size_.width, std::numeric_limits<point_type::value_type>::max()}, .next = nullptr};
 	}
 
-	auto Context::set_heuristic(const Heuristic heuristic) noexcept -> void
+	auto RectPackContext::pack(
+		std::span<rect_type> in_out_rects,
+		const PackPrefer pack_prefer,
+		const Heuristic heuristic
+	) noexcept -> bool
 	{
-		heuristic_ = heuristic;
-	}
-
-	auto Context::set_fast_fail(const bool fast_fail) noexcept -> void
-	{
-		if (fast_fail)
+		// we use the 'internal_status_' field internally to allow sorting/un-sorting
+		for (auto [index, rect]: in_out_rects | std::views::enumerate)
 		{
-			align_ = (size_.width + nodes_count_ - 1) / nodes_count_;
-		}
-		else
-		{
-			align_ = 1;
-		}
-	}
-
-	auto Context::pack(std::span<rect_pack_rect> rects) noexcept -> bool
-	{
-		constexpr auto invalid_point = point_type{std::numeric_limits<point_type::value_type>::max(), std::numeric_limits<point_type::value_type>::max()};
-
-		// we use the 'was_packed' field internally to allow sorting/un-sorting
-		for (auto [index, rect]: rects | std::views::enumerate)
-		{
-			rect.was_packed = static_cast<std::uint32_t>(index);
+			rect.internal_status_ = static_cast<std::uint32_t>(index);
 		}
 
 		// sort according to heuristic
 		std::ranges::sort(
-			rects,
-			[](const rect_pack_rect& r1, const rect_pack_rect& r2) noexcept -> bool
+			in_out_rects,
+			[](const rect_type& r1, const rect_type& r2) noexcept -> bool
 			{
-				return r1.size.height < r2.size.height or r1.size.width < r2.size.width;
+				if (r1.size.height != r2.size.height)
+				{
+					return r1.size.height > r2.size.height;
+				}
+
+				return r1.size.width > r2.size.width;
 			}
 		);
 
 		std::ranges::for_each(
-			rects,
-			[this](rect_pack_rect& rect) noexcept -> void
+			in_out_rects,
+			[this, pack_prefer, heuristic](rect_type& rect) noexcept -> void
 			{
 				if (rect.size.width == 0 or rect.size.height == 0)
 				{
@@ -337,7 +316,7 @@ namespace gal::prometheus::gfx
 				}
 				else
 				{
-					if (const auto [point, prev_link] = skyline_pack_rectangle(*this, rect.size); prev_link)
+					if (const auto [point, prev_link] = skyline_pack_rectangle(rect.size, pack_prefer, heuristic); prev_link)
 					{
 						rect.point = point;
 					}
@@ -351,57 +330,13 @@ namespace gal::prometheus::gfx
 
 		// un-sort
 		std::ranges::sort(
-			rects,
-			[](const rect_pack_rect& r1, const rect_pack_rect& r2) noexcept -> bool
+			in_out_rects,
+			[](const rect_type& r1, const rect_type& r2) noexcept -> bool
 			{
-				return r1.was_packed < r2.was_packed;
+				return r1.internal_status_ < r2.internal_status_;
 			}
 		);
 
-		// set was_packed flags
-		std::ranges::for_each(
-			rects,
-			[](rect_pack_rect& rect) noexcept -> void
-			{
-				rect.was_packed = rect.point != invalid_point ? 1 : 0;
-			}
-		);
-
-		return not std::ranges::contains(rects, std::uint32_t{0}, &rect_pack_rect::was_packed);
-	}
-
-	auto Context::size() const noexcept -> const extent_type&
-	{
-		return size_;
-	}
-
-	auto Context::heuristic() const noexcept -> Heuristic
-	{
-		return heuristic_;
-	}
-
-	auto Context::align() const noexcept -> std::uint32_t
-	{
-		return align_;
-	}
-
-	auto Context::nodes_count() const noexcept -> std::uint32_t
-	{
-		return nodes_count_;
-	}
-
-	auto Context::active_head() const noexcept -> rect_pack_node*
-	{
-		return active_head_;
-	}
-
-	auto Context::free_head() const noexcept -> rect_pack_node*
-	{
-		return free_head_;
-	}
-
-	auto Context::free_head(rect_pack_node* node) noexcept -> void
-	{
-		free_head_ = node;
+		return std::ranges::all_of(in_out_rects, &rect_type::packed);
 	}
 }
