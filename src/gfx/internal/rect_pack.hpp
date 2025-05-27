@@ -41,28 +41,16 @@ namespace gal::prometheus::gfx
 
 		struct rect_type final
 		{
-			friend RectPackContext;
-
 			// INPUT
 			extent_type size;
 
 			// OUTPUT
 			point_type point;
 
-			// reserved for your use
-			std::uint32_t id;
-
-		private:
-			std::uint32_t internal_status_;
-
-		public:
-			constexpr explicit rect_type(const extent_type size, const std::uint32_t id = std::numeric_limits<std::uint32_t>::max()) noexcept
-				: size{size},
-				  point{0, 0},
-				  id{id},
-				  internal_status_{0} {}
-
-			[[nodiscard]] auto packed() const noexcept -> bool;
+			[[nodiscard]] constexpr auto packed() const noexcept -> bool
+			{
+				return point != invalid_point;
+			}
 		};
 
 	private:
@@ -86,10 +74,14 @@ namespace gal::prometheus::gfx
 
 		extent_type size_;
 
+		// size_.width + 2
 		std::vector<rect_pack_node> nodes_;
+		// size_.width
 		rect_pack_node* free_head_;
+		// 2
+		rect_pack_node* active_head_;
 
-		rect_pack_node active_head_[2];
+		[[nodiscard]] auto nodes_count() const noexcept -> std::size_t;
 
 		[[nodiscard]] auto align_of(PackPrefer pack_prefer) const noexcept -> std::uint32_t;
 
