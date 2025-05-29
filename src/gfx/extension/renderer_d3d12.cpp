@@ -14,7 +14,6 @@
 
 #include <print>
 
-#include <platform/os.hpp>
 #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 #include <comdef.h>
@@ -69,7 +68,7 @@ namespace
 	}
 }
 
-namespace gal::prometheus::gfx
+namespace gal::prometheus::gfx::extension
 {
 	auto RendererD3D12::create_root_signature() noexcept -> bool
 	{
@@ -359,8 +358,8 @@ namespace gal::prometheus::gfx
 
 	auto RendererD3D12::upload_texture(
 		const std::size_t index,
-		const TextureDescriptor::data_view_type data,
-		const TextureDescriptor::size_type size,
+		const Texture::data_type& data,
+		const Texture::size_type size,
 		const bool record_resource
 	) noexcept -> texture_id_type
 	{
@@ -445,7 +444,7 @@ namespace gal::prometheus::gfx
 		for (UINT i = 0; i < static_cast<UINT>(size.height); ++i)
 		{
 			auto* dest = static_cast<std::uint8_t*>(mapped_data) + static_cast<std::ptrdiff_t>(upload_pitch * i);
-			auto* source = reinterpret_cast<const std::uint8_t*>(data.data()) + static_cast<std::ptrdiff_t>(size.width * i * 4);
+			auto* source = reinterpret_cast<const std::uint8_t*>(data.get()) + static_cast<std::ptrdiff_t>(size.width * i * 4);
 			const auto length = size.width * 4;
 			std::memcpy(dest, source, length);
 		}
@@ -647,7 +646,7 @@ namespace gal::prometheus::gfx
 		command_list_ = std::move(command_list);
 	}
 
-	auto RendererD3D12::do_construct() noexcept -> bool
+	auto RendererD3D12::construct() noexcept -> bool
 	{
 		if (not create_root_signature())
 		{
@@ -666,10 +665,25 @@ namespace gal::prometheus::gfx
 		return true;
 	}
 
-	auto RendererD3D12::do_destruct() noexcept -> void
+	auto RendererD3D12::destruct() noexcept -> void
 	{
 		// ComPtr
+		// command_list_->ClearState(pipeline_state_.Get());
+		// std::ignore = command_list_->Close();
+
+		pipeline_state_ = nullptr;
+		root_signature_ = nullptr;
+
+		std::ranges::for_each(
+			textures_,
+			[](auto& texture) noexcept -> void
+			{
+				// ComPtr
+				texture.resource = nullptr;
+			}
+		);
 		textures_.clear();
+		srv_descriptor_heap_ = nullptr;
 
 		std::ranges::for_each(
 			std::ranges::subrange{frame_resource_, num_frames_in_flight},
@@ -681,33 +695,11 @@ namespace gal::prometheus::gfx
 			}
 		);
 
-		// command_list_->ClearState(pipeline_state_.Get());
-		// std::ignore = command_list_->Close();
-
-		srv_descriptor_heap_ = nullptr;
-		pipeline_state_ = nullptr;
-		root_signature_ = nullptr;
-
 		command_list_ = nullptr;
 		device_ = nullptr;
 	}
 
-	auto RendererD3D12::do_ready() const noexcept -> bool
-	{
-		if (device_ == nullptr or command_list_ == nullptr)
-		{
-			return false;
-		}
-
-		if (root_signature_ == nullptr or pipeline_state_ == nullptr or srv_descriptor_heap_ == nullptr)
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	auto RendererD3D12::do_texture_create(const TextureDescriptor::data_view_type data, const TextureDescriptor::size_type size) noexcept -> texture_id_type
+	auto RendererD3D12::create_texture(const Texture::data_type& data, const Texture::size_type size) noexcept -> texture_id_type
 	{
 		auto it = std::ranges::find(textures_, nullptr, &texture_type::resource);
 		if (it == textures_.end())
@@ -754,24 +746,262 @@ namespace gal::prometheus::gfx
 		return upload_texture(index, data, size);
 	}
 
-	auto RendererD3D12::do_texture_update(const TextureDescriptor& texture) noexcept -> void
+	// todo
+	auto RendererD3D12::update_texture(texture_id_type id, std::span<TextureViewer> update_viewer) noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture.id != invalid_texture_id, "Create texture first!");
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture.dirty, "No need to update texture!");
-
-		const auto index = id_to_gpu_handle(texture.id);
+		const auto index = id_to_gpu_handle(id);
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(index < srv_max_size_);
-		auto& texture_gpu = textures_[index];
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture_gpu.resource != nullptr);
 
-		// todo
-		do_texture_destroy(texture.id);
-		std::ignore = upload_texture(index, {texture.data.get(), static_cast<std::size_t>(texture.size.width) * texture.size.height}, texture.size);
+		auto& texture = textures_[index];
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture.resource != nullptr);
+
+		const auto texture_desc = texture.resource->GetDesc();
+		const auto texture_size = Texture::size_type{static_cast<Texture::size_type::value_type>(texture_desc.Width), texture_desc.Height};
+
+		const auto upload_pitch = (static_cast<UINT>(texture_size.width * 4) + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u);
+		const auto upload_size = static_cast<UINT>(texture_size.height) * upload_pitch;
+
+		constexpr D3D12_HEAP_PROPERTIES upload_heap_properties
+		{
+				.Type = D3D12_HEAP_TYPE_UPLOAD,
+				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+				.CreationNodeMask = 0,
+				.VisibleNodeMask = 0
+		};
+
+		const D3D12_RESOURCE_DESC upload_resource_desc
+		{
+				.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(upload_size),
+				.Height = 1,
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_UNKNOWN,
+				.SampleDesc = {.Count = 1, .Quality = 0},
+				.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+				.Flags = D3D12_RESOURCE_FLAG_NONE
+		};
+
+		ComPtr<ID3D12Resource> upload_buffer;
+		check_hr_error(
+			device_->CreateCommittedResource(
+				&upload_heap_properties,
+				D3D12_HEAP_FLAG_NONE,
+				&upload_resource_desc,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(upload_buffer.GetAddressOf())
+			)
+		);
+
+		void* mapped_data = nullptr;
+		D3D12_RANGE range{.Begin = 0, .End = upload_size};
+		if (not check_hr_error(upload_buffer->Map(0, &range, &mapped_data)))
+		{
+			// todo: error handling
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+		}
+		else
+		{
+			std::ranges::for_each(
+				update_viewer,
+				[
+					this,
+					dest_begin = static_cast<Texture::element_type*>(mapped_data),
+					pitch = static_cast<std::ptrdiff_t>(upload_pitch / sizeof(Texture::element_type))
+				](const TextureViewer& viewer) noexcept -> void
+				{
+					const auto point = viewer.position();
+					const auto size = viewer.size();
+
+					const auto y_offset = static_cast<std::ptrdiff_t>(point.y) * pitch;
+					const auto x_offset = point.x;
+					auto* dest = dest_begin + y_offset + x_offset;
+
+					for (Texture::size_type::value_type y = 0; y < size.height; ++y)
+					{
+						const auto this_line_source = viewer.line(y);
+						GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(this_line_source.size() == size.width, "TextureViewer line size mismatch");
+
+						auto* this_line_dest = dest + static_cast<std::ptrdiff_t>(y) * pitch;
+
+						std::ranges::copy(this_line_source, this_line_dest);
+					}
+				}
+			);
+
+			upload_buffer->Unmap(0, &range);
+		}
+
+		D3D12_RESOURCE_BARRIER barrier_before
+		{
+				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+				.Transition = {
+						.pResource = texture.resource.Get(),
+						.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+						.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+						.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST
+				}
+		};
+
+		ComPtr<ID3D12CommandAllocator> command_allocator;
+		if (not check_hr_error(
+			device_->CreateCommandAllocator(
+				D3D12_COMMAND_LIST_TYPE_DIRECT,
+				IID_PPV_ARGS(command_allocator.GetAddressOf())
+			)
+		))
+		{
+			// todo: error handling
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+			return;
+		}
+
+		ComPtr<ID3D12GraphicsCommandList> command_list;
+		if (not check_hr_error(
+			device_->CreateCommandList(
+				0,
+				D3D12_COMMAND_LIST_TYPE_DIRECT,
+				command_allocator.Get(),
+				nullptr,
+				IID_PPV_ARGS(command_list.GetAddressOf())
+			)
+		))
+		{
+			// todo: error handling
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+			return;
+		}
+
+		command_list->ResourceBarrier(1, &barrier_before);
+
+		for (const auto& viewer: update_viewer)
+		{
+			const auto point = viewer.position();
+			const auto size = viewer.size();
+
+			D3D12_TEXTURE_COPY_LOCATION src_location
+			{
+					.pResource = upload_buffer.Get(),
+					.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
+					.PlacedFootprint = {
+							.Offset = static_cast<UINT64>(upload_pitch * point.y + point.x * 4),
+							.Footprint = {
+									.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+									.Width = static_cast<UINT>(size.width),
+									.Height = static_cast<UINT>(size.height),
+									.Depth = 1,
+									.RowPitch = upload_pitch
+							}
+					}
+			};
+
+			D3D12_TEXTURE_COPY_LOCATION dst_location
+			{
+					.pResource = texture.resource.Get(),
+					.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+					.SubresourceIndex = 0
+			};
+
+			D3D12_BOX src_box
+			{
+					.left = 0,
+					.top = 0,
+					.front = 0,
+					.right = static_cast<UINT>(size.width),
+					.bottom = static_cast<UINT>(size.height),
+					.back = 1
+			};
+
+			command_list->CopyTextureRegion(&dst_location, point.x, point.y, 0, &src_location, &src_box);
+		}
+
+		D3D12_RESOURCE_BARRIER barrier_after
+		{
+				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+				.Transition =
+				{
+						.pResource = texture.resource.Get(),
+						.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+						.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
+						.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+				}
+		};
+		command_list->ResourceBarrier(1, &barrier_after);
+
+		if (not check_hr_error(command_list->Close()))
+		{
+			// todo: error handling
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+			return;
+		}
+
+		constexpr D3D12_COMMAND_QUEUE_DESC command_queue_desc
+		{
+				.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
+				.Priority = 0,
+				.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
+				.NodeMask = 1
+		};
+
+		ComPtr<ID3D12CommandQueue> command_queue;
+		if (not check_hr_error(
+			device_->CreateCommandQueue(
+				&command_queue_desc,
+				IID_PPV_ARGS(command_queue.GetAddressOf())
+			)
+		))
+		{
+			// todo: error handling
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+			return;
+		}
+
+		ID3D12CommandList* command_lists[]{command_list.Get()};
+		command_queue->ExecuteCommandLists(1, command_lists);
+
+		ComPtr<ID3D12Fence> fence;
+		if (not check_hr_error(
+			device_->CreateFence(
+				0,
+				D3D12_FENCE_FLAG_NONE,
+				IID_PPV_ARGS(fence.GetAddressOf())
+			)
+		))
+		{
+			// todo: error handling
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+			return;
+		}
+
+		constexpr UINT64 fence_value = 1;
+		if (not check_hr_error(command_queue->Signal(fence.Get(), fence_value)))
+		{
+			// todo: error handling
+			GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+			return;
+		}
+		if (fence->GetCompletedValue() < fence_value)
+		{
+			HANDLE event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+			if (not check_hr_error(fence->SetEventOnCompletion(fence_value, event)))
+			{
+				// todo: error handling
+				GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+				return;
+			}
+			WaitForSingleObject(event, INFINITE);
+			CloseHandle(event);
+		}
 	}
 
-	auto RendererD3D12::do_texture_destroy(const texture_id_type texture_id) noexcept -> void
+	auto RendererD3D12::destroy_texture(const texture_id_type id) noexcept -> void
 	{
-		const auto index = id_to_gpu_handle(texture_id);
+		const auto index = id_to_gpu_handle(id);
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(index < srv_max_size_);
 
 		auto& texture = textures_[index];
@@ -780,7 +1010,7 @@ namespace gal::prometheus::gfx
 		texture.resource = nullptr;
 	}
 
-	auto RendererD3D12::do_present(const render_data_list_type& render_data_list, const extent_type& display_size) noexcept -> void
+	auto RendererD3D12::present(const render_data_list_type& render_data_list, const extent_type& display_size) noexcept -> void
 	{
 		const auto [total_vertex_count, total_index_count] = [&]() noexcept
 		{

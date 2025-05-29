@@ -35,14 +35,14 @@ namespace gal::prometheus::gfx
 	{
 	public:
 		using point_type = primitive::basic_point_2d<std::uint32_t>;
-		using extent_type = primitive::basic_extent_2d<std::uint32_t>;
+		using size_type = primitive::basic_extent_2d<std::uint32_t>;
 
 		constexpr static auto invalid_point = point_type{std::numeric_limits<point_type::value_type>::max(), std::numeric_limits<point_type::value_type>::max()};
 
 		struct rect_type final
 		{
 			// INPUT
-			extent_type size;
+			size_type size;
 
 			// OUTPUT
 			point_type point;
@@ -63,7 +63,7 @@ namespace gal::prometheus::gfx
 		struct find_y_result
 		{
 			point_type::value_type y;
-			extent_type::value_type waste;
+			size_type::value_type waste;
 		};
 
 		struct find_result
@@ -72,7 +72,7 @@ namespace gal::prometheus::gfx
 			rect_pack_node** prev_link;
 		};
 
-		extent_type size_;
+		size_type size_;
 
 		// size_.width + 2
 		std::vector<rect_pack_node> nodes_;
@@ -86,14 +86,14 @@ namespace gal::prometheus::gfx
 		[[nodiscard]] auto align_of(PackPrefer pack_prefer) const noexcept -> std::uint32_t;
 
 		// find minimum y position if it starts at x1
-		[[nodiscard]] static auto skyline_find_min_y(const rect_pack_node* head, point_type::value_type x0, extent_type::value_type width) noexcept -> find_y_result;
+		[[nodiscard]] static auto skyline_find_min_y(const rect_pack_node* head, point_type::value_type x0, size_type::value_type width) noexcept -> find_y_result;
 
-		[[nodiscard]] auto skyline_find_best_pos(extent_type size, PackPrefer pack_prefer, Heuristic heuristic) noexcept -> find_result;
+		[[nodiscard]] auto skyline_find_best_pos(size_type size, PackPrefer pack_prefer, Heuristic heuristic) noexcept -> find_result;
 
-		[[nodiscard]] auto skyline_pack_rectangle(extent_type size, PackPrefer pack_prefer, Heuristic heuristic) noexcept -> find_result;
+		[[nodiscard]] auto skyline_pack_rectangle(size_type size, PackPrefer pack_prefer, Heuristic heuristic) noexcept -> find_result;
 
 	public:
-		explicit RectPackContext(const extent_type& size) noexcept;
+		explicit RectPackContext(const size_type& size) noexcept;
 
 		auto pack(
 			std::span<rect_type> in_out_rects,

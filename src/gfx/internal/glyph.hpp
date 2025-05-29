@@ -6,20 +6,17 @@
 #pragma once
 
 #include <unordered_map>
-#include <filesystem>
 
-#include <gfx/gfx.hpp>
+#include <gfx/glyph.hpp>
+
+#include <gfx/internal/texture.hpp>
 
 #include <memory/reference_wrapper.hpp>
 #include <functional/function_ref.hpp>
 
 namespace gal::prometheus::gfx
 {
-	// index
-	using texture_atlas_id_type = std::uint32_t;
-	constexpr texture_atlas_id_type invalid_texture_atlas_id{std::numeric_limits<texture_atlas_id_type>::max()};
-
-	class TextureContext;
+	static_assert(std::is_same_v<GlyphDescriptor::data_type, Texture::data_type>);
 
 	/**
 	 * @brief This class is essentially the same as @c GlyphParser::GlyphCode, but takes up less memory space.
@@ -41,7 +38,7 @@ namespace gal::prometheus::gfx
 			return codepoint == other.codepoint and size == other.size and flag == other.flag;
 		}
 
-		[[nodiscard]] constexpr explicit(false) operator GlyphParser::GlyphCode() const noexcept
+		[[nodiscard]] constexpr explicit(false) operator GlyphCode() const noexcept
 		{
 			return {codepoint, size, static_cast<GlyphFlag>(flag)};
 		}
@@ -63,7 +60,7 @@ namespace gal::prometheus::gfx
 	class GlyphInfo final
 	{
 	public:
-		using rect_type = GlyphParser::GlyphDescriptor::rect_type;
+		using rect_type = GlyphDescriptor::rect_type;
 		using uv_type = primitive::basic_rect_2d<uv_type::value_type>;
 
 		// =============
@@ -73,11 +70,12 @@ namespace gal::prometheus::gfx
 		// Bitmap infos of this glyph
 		rect_type rect;
 		float advance_x;
+
 		bool visible;
 		bool colored;
 
 		// =============
-		// Data filled when writing texture
+		// Data filled when writing texture (if and only if the glyph is visible)
 		// =============
 
 		// The id of the texture atlas where the glyph is located
@@ -96,7 +94,8 @@ namespace gal::prometheus::gfx
 		struct element_type
 		{
 			memory::RefWrapper<GlyphInfo> info;
-			GlyphParser::GlyphDescriptor descriptor;
+
+			Texture::data_type data;
 		};
 
 		using list_type = std::vector<element_type>;
@@ -114,64 +113,41 @@ namespace gal::prometheus::gfx
 
 		GlyphUploadQueue() noexcept = default;
 
-		auto push(GlyphInfo& info, GlyphParser::GlyphDescriptor&& descriptor) noexcept -> void;
+		auto push(GlyphInfo& info, Texture::data_type&& data) noexcept -> void;
 
 		auto upload(TextureContext& context) noexcept -> void;
 	};
 
-	class Font final
+	class GlyphContext final
 	{
 	public:
-		GlyphParser::FontDescriptor descriptor;
-		std::unordered_map<GlyphKey, GlyphInfo, GlyphKey::hasher> cached_glyphs;
+		using cached_glyphs_type = std::unordered_map<GlyphKey, GlyphInfo, GlyphKey::hasher>;
 
-		/**
-		 * @brief Get the glyph information of the specified codepoint, if it can't be found, then return a null pointer
-		 * @param key {codepoint, size, flag}
-		 * @return The glyph information of the specified codepoint, or a null pointer if it can't be found
-		 */
-		[[nodiscard]] auto get_glyph(const GlyphKey& key) const noexcept -> const GlyphInfo*;
-
-		/**
-		 * @brief Set the glyph information of the specified codepoint, override if it already exists
-		 * @param key {codepoint, size, flag}
-		 * @param glyph_descriptor The parse result of the specified codepoint
-		 * @return GlyphInfo after insertion
-		 */
-		[[nodiscard]] auto set_glyph(const GlyphKey& key, const GlyphParser::GlyphDescriptor& glyph_descriptor) noexcept -> GlyphInfo&;
-	};
-
-	/**
-	 * @brief Queue of font data to be loaded to the context
-	 */
-	class FontLoadQueue final
-	{
-		using descriptor = GlyphParser::FontDescriptor;
-
-	public:
-		using element_type = descriptor::element_type;
-		using data_type = descriptor::data_type;
-		using data_view_type = descriptor::data_view_type;
-
-		using size_type = descriptor::size_type;
+		GlyphParser** glyph_parser;
 
 	private:
-		using list_type = std::vector<std::filesystem::path>;
+		cached_glyphs_type cached_glyphs_;
 
-		list_type list_;
+		GlyphUploadQueue upload_queue_;
 
 	public:
-		FontLoadQueue(const FontLoadQueue&) noexcept = delete;
-		FontLoadQueue(FontLoadQueue&&) noexcept = default;
-		auto operator=(const FontLoadQueue&) noexcept -> FontLoadQueue& = delete;
-		auto operator=(FontLoadQueue&&) noexcept -> FontLoadQueue& = default;
+		GlyphContext(const GlyphContext&) noexcept = delete;
+		GlyphContext(GlyphContext&&) noexcept = default;
+		auto operator=(const GlyphContext&) noexcept -> GlyphContext& = delete;
+		auto operator=(GlyphContext&&) noexcept -> GlyphContext& = default;
 
-		~FontLoadQueue() noexcept = default;
+		~GlyphContext() noexcept = default;
 
-		FontLoadQueue() noexcept;
+		GlyphContext() noexcept = default;
 
-		auto push(const std::filesystem::path& path) noexcept -> void;
+		[[nodiscard]] auto glyph_of(const GlyphKey& key) noexcept -> const GlyphInfo&;
+		[[nodiscard]] auto glyph_of(std::uint32_t codepoint, std::uint32_t size, GlyphFlag flag) noexcept -> const GlyphInfo&;
+		[[nodiscard]] auto glyph_of(std::u32string_view text, std::uint32_t size, GlyphFlag flag) noexcept -> std::vector<std::reference_wrapper<const GlyphInfo>>;
 
-		auto upload(GlyphParser& parser, functional::function_reference_wrapper<void(Font&&)> font_dest) noexcept -> void;
+		/**
+		 * @brief Upload all used glyphs to the texture (if it is not already uploaded)
+		 * @note This function is usually called every frame (unless all the needed glyphs have been uploaded to the texture, but it can still be called) to upload all new (previously unused) glyphs to the texture
+		 */
+		auto upload_all_glyph(TextureContext& context) noexcept -> void;
 	};
 }

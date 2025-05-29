@@ -7,12 +7,12 @@
 
 #include <unordered_map>
 
-#include <gfx/gfx.hpp>
+#include <gfx/renderer.hpp>
 
 #include <d3d11.h>
 #include <wrl/client.h>
 
-namespace gal::prometheus::gfx
+namespace gal::prometheus::gfx::extension
 {
 	using Microsoft::WRL::ComPtr;
 
@@ -56,8 +56,8 @@ namespace gal::prometheus::gfx
 		[[nodiscard]] auto create_pixel_shader() noexcept -> bool;
 
 		[[nodiscard]] auto upload_texture(
-			TextureDescriptor::data_view_type data,
-			TextureDescriptor::size_type size,
+			const Texture::data_type& data,
+			Texture::size_type size,
 			D3D11_USAGE usage,
 			std::uint32_t bind_flags,
 			std::uint32_t cpu_access_flags,
@@ -75,15 +75,13 @@ namespace gal::prometheus::gfx
 		auto bind_device_context(ID3D11DeviceContext* device_immediate_context) noexcept -> void;
 		auto bind_device_context(ComPtr<ID3D11DeviceContext> device_immediate_context) noexcept -> void;
 
-	private:
-		auto do_construct() noexcept -> bool override;
-		auto do_destruct() noexcept -> void override;
-		[[nodiscard]] auto do_ready() const noexcept -> bool override;
+		auto construct() noexcept -> bool;
+		auto destruct() noexcept -> void;
 
-		auto do_texture_create(TextureDescriptor::data_view_type data, TextureDescriptor::size_type size) noexcept -> texture_id_type override;
-		auto do_texture_update(const TextureDescriptor& texture) noexcept -> void override;
-		auto do_texture_destroy(texture_id_type texture_id) noexcept -> void override;
+		auto create_texture(const Texture::data_type& data, Texture::size_type size) noexcept -> texture_id_type override;
+		auto update_texture(texture_id_type id, std::span<TextureViewer> update_viewer) noexcept -> void override;
+		auto destroy_texture(texture_id_type id) noexcept -> void override;
 
-		auto do_present(const render_data_list_type& render_data_list, const extent_type& display_size) noexcept -> void override;
+		auto present(const render_data_list_type& render_data_list, const extent_type& display_size) noexcept -> void override;
 	};
 }

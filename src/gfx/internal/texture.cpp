@@ -4,208 +4,216 @@
 // found in the top-level directory of this distribution.
 
 #include <gfx/internal/texture.hpp>
+#include <gfx/render_list.hpp>
+#include <gfx/gfx.hpp>
 
-// #define STB_RECT_PACK_IMPLEMENTATION
-// #include <stb_rect_pack.h>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
+namespace
+{
+	using namespace gal::prometheus;
+	using namespace gfx;
+
+	[[nodiscard]] auto make_texture(const Texture::size_type size) noexcept -> Texture
+	{
+		auto data = std::make_unique_for_overwrite<Texture::element_type[]>(static_cast<std::size_t>(size.width) * size.height);
+
+		return {
+				.data = std::move(data),
+				.size = size,
+				.uv_scale = {1.f / static_cast<Texture::uv_scale_type::value_type>(size.width), 1.f / static_cast<Texture::uv_scale_type::value_type>(size.height)},
+				.id = invalid_texture_id
+		};
+	}
+}
 
 namespace gal::prometheus::gfx
 {
-	Texture::Texture(const size_type size) noexcept
-		: rp_context_{},
-		  texture_{
-				  .data = std::make_unique_for_overwrite<element_type[]>(static_cast<std::size_t>(size.width) * size.height),
-				  .size = size,
-				  .dirty = false,
-				  .id = invalid_texture_id,
-		  },
-		  uv_{1.f / static_cast<uv_type::value_type>(size.width), 1.f / static_cast<uv_type::value_type>(size.height)}
+	auto TextureContext::root_id() const noexcept -> texture_atlas_id_type
 	{
-		rp_nodes_.resize(size.width);
-
-		stbrp_init_target(
-			&rp_context_,
-			static_cast<stbrp_coord>(size.width),
-			static_cast<stbrp_coord>(size.height),
-			rp_nodes_.data(),
-			static_cast<int>(rp_nodes_.size())
-		);
+		std::ignore = this;
+		return 0;
 	}
 
-	auto Texture::data() const noexcept -> data_view_type
+	auto TextureContext::active_id() const noexcept -> texture_atlas_id_type
 	{
-		return {texture_.data.get(), area_size()};
+		return static_cast<texture_atlas_id_type>(atlas_list_.size() - 1);
 	}
 
-	auto Texture::area_size() const noexcept -> std::size_t
+	auto TextureContext::select_atlas(const texture_atlas_id_type texture_atlas_id) noexcept -> atlas_type&
 	{
-		return static_cast<std::size_t>(texture_.size.width) * texture_.size.height;
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture_atlas_id < atlas_list_.size());
+
+		return atlas_list_[texture_atlas_id];
 	}
 
-	auto Texture::size() const noexcept -> size_type
+	auto TextureContext::select_atlas(const texture_atlas_id_type texture_atlas_id) const noexcept -> const atlas_type&
 	{
-		return texture_.size;
+		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(texture_atlas_id < atlas_list_.size());
+
+		return atlas_list_[texture_atlas_id];
 	}
 
-	auto Texture::uv() const noexcept -> uv_type
+	auto TextureContext::new_atlas(const size_type size) noexcept -> atlas_type&
 	{
-		return uv_;
-	}
-
-	auto Texture::dirty() const noexcept -> bool
-	{
-		return texture_.dirty;
-	}
-
-	auto Texture::uploaded() const noexcept -> bool
-	{
-		return texture_.id != invalid_texture_id;
-	}
-
-	auto Texture::id() const noexcept -> texture_id_type
-	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(uploaded());
-
-		return texture_.id;
-	}
-
-	auto Texture::select(const size_type size) noexcept -> BorrowedTexture
-	{
-		stbrp_rect rect{.id = -1, .w = static_cast<stbrp_coord>(size.width), .h = static_cast<stbrp_coord>(size.height), .x = 0, .y = 0, .was_packed = 0};
-
-		if (stbrp_pack_rects(&rp_context_, &rect, 1))
+		atlas_type atlas
 		{
-			const point_type point{static_cast<point_type::value_type>(rect.x), static_cast<point_type::value_type>(rect.y)};
+				.texture = make_texture(size),
+				.pending_update_data = {},
+				.rp_context = gfx::RectPackContext{size},
+		};
+		return atlas_list_.emplace_back(std::move(atlas));
+	}
 
-			auto* address = texture_.data.get() + (point.y * size.width + point.x);
-			const auto mapping = BorrowedTexture::borrow_data_type::mapping_type{
+	auto TextureContext::write(const texture_atlas_id_type texture_atlas_id, const size_type size) noexcept -> TextureWriter
+	{
+		auto& [texture, pending_data_list, rp_context] = select_atlas(texture_atlas_id);
+
+		gfx::RectPackContext::rect_type new_rect{.size = size, .point = {}};
+		if (rp_context.pack({&new_rect, 1}))
+		{
+			const auto point = new_rect.point;
+			GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(point != gfx::RectPackContext::invalid_point);
+
+			auto* address = texture.data.get() + (point.y * size.width + point.x);
+			const auto mapping = TextureWriter::borrow_data_type::mapping_type{
 					std::dextents<size_type::value_type, 2>{size.height, size.width},
-					std::array<size_type::value_type, 2>{texture_.size.width, 1},
+					std::array<size_type::value_type, 2>{texture.size.width, 1},
 			};
-			const auto data = BorrowedTexture::borrow_data_type{address, mapping};
+			const auto data = TextureWriter::borrow_data_type{address, mapping};
 
-			texture_.dirty = true;
+			TextureViewer viewer{point, data};
+			pending_data_list.emplace_back(viewer);
+
 			return {point, data};
 		}
 
-		return {BorrowedTexture::invalid_point, {}};
+		return {TextureWriter::invalid_point, {}};
 	}
 
-	BorrowedTexture::BorrowedTexture(const point_type point, const borrow_data_type& data) noexcept
-		: point_{point},
-		  data_{data} {}
-
-	auto BorrowedTexture::valid() const noexcept -> bool
+	TextureContext::TextureContext() noexcept
 	{
-		return point_ != invalid_point;
+		atlas_list_.reserve(2);
+
+		// root atlas
+		constexpr size_type root_texture_atlas_size{128, 128};
+		new_atlas(root_texture_atlas_size);
+
+		// first
+		constexpr size_type first_texture_atlas_size{2048, 2048};
+		new_atlas(first_texture_atlas_size);
 	}
 
-	auto BorrowedTexture::position() const noexcept -> point_type
+	auto TextureContext::initialize(RenderListSharedData& shared_data) noexcept -> void
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
+		const auto atlas_id = root_id();
+		const auto& texture = select_texture(atlas_id);
 
-		return point_;
-	}
-
-	auto BorrowedTexture::fill(const size_type::value_type y, const size_type::value_type offset, const size_type::value_type n, const element_type element) const noexcept -> void
-	{
-		const auto width = data_.extent(1);
-		const auto height = data_.extent(0);
-
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(offset + n <= width);
-
-		for (size_type::value_type x = offset; x < offset + n; ++x)
+		// ========================================
+		// BAKE LINES (AA)
+		// ========================================
 		{
-			data_[y, x] = element;
+			constexpr std::uint32_t white_color = 0xff'ff'ff'ff;
+			constexpr auto aa_width = static_cast<size_type::value_type>(RenderListSharedData::baked_line_uv_count);
+			constexpr auto aa_height = static_cast<size_type::value_type>(RenderListSharedData::baked_line_uv_count);
+			constexpr auto aa_size = size_type{aa_width, aa_height};
+
+			// baked line rect area:
+			// white pixel + ◿
+			const auto texture_write = write(atlas_id, aa_size);
+			texture_write.fill(0);
+
+			const auto aa_point = texture_write.position();
+			const auto aa_uv_scale = texture.uv_scale;
+
+			// white pixel
+			{
+				// LINE 0, 2 pixels
+				texture_write.fill(0, 2, white_color);
+				// LINE 1, 2 pixels
+				texture_write.fill(1, 2, white_color);
+
+				const auto uv_x = static_cast<gfx::point_type::value_type>(static_cast<float>(aa_point.x) + 1.0f) * aa_uv_scale.width;
+				const auto uv_y = static_cast<gfx::point_type::value_type>(static_cast<float>(aa_point.y) + 1.0f) * aa_uv_scale.height;
+
+				shared_data.white_pixel_uv = {uv_x, uv_y};
+			}
+
+			// ◿
+			for (size_type::value_type y = 1; y < aa_height; ++y)
+			{
+				const auto line_width = y;
+				const auto offset = aa_width - line_width;
+
+				texture_write.fill(y, offset, line_width, white_color);
+
+				const auto p_x = aa_point.x + offset;
+				const auto p_y = aa_point.y + y;
+				const auto width = line_width;
+				constexpr auto height = .5f;
+
+				const auto uv_x = static_cast<gfx::point_type::value_type>(p_x) * aa_uv_scale.width;
+				const auto uv_y = static_cast<gfx::point_type::value_type>(p_y) * aa_uv_scale.height;
+				const auto uv_width = static_cast<gfx::point_type::value_type>(width) * aa_uv_scale.width;
+				const auto uv_height = static_cast<gfx::point_type::value_type>(height) * aa_uv_scale.height;
+
+				shared_data.baked_line_uvs[y] = {uv_x, uv_y, uv_width, uv_height};
+			}
+		}
+
+		// ========================================
+		// 
+		// ========================================
+		{
+			std::ignore = texture;
 		}
 	}
 
-	auto BorrowedTexture::fill(const size_type::value_type y, const size_type::value_type offset, const data_view_type data) const noexcept -> void
+	auto TextureContext::update_all_atlas(Renderer& renderer) noexcept -> void
 	{
-		const auto width = data_.extent(1);
-		const auto height = data_.extent(0);
+		std::ranges::for_each(
+			atlas_list_,
+			[&renderer](auto& atlas) noexcept -> void
+			{
+				if (atlas.texture.id == invalid_texture_id)
+				{
+					atlas.texture.id = renderer.create_texture(atlas.texture.data, atlas.texture.size);
+				}
+				else if (not atlas.pending_update_data.empty())
+				{
+					renderer.update_texture(atlas.texture.id, atlas.pending_update_data);
 
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(offset + data.size() <= width);
-
-		for (size_type::value_type x = 0; x < data.size(); ++x)
-		{
-			data_[y, x + offset] = data[x];
-		}
+					atlas.pending_update_data.clear();
+				}
+			}
+		);
 	}
 
-	auto BorrowedTexture::fill(const size_type::value_type y, const size_type::value_type n, const element_type element) const noexcept -> void
+	auto TextureContext::root_texture() noexcept -> Texture&
 	{
-		const auto width = data_.extent(1);
-		const auto height = data_.extent(0);
-
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(n <= width);
-
-		fill(y, 0, n, element);
+		return select_texture(root_id());
 	}
 
-	auto BorrowedTexture::fill(const size_type::value_type y, const data_view_type data) const noexcept -> void
+	auto TextureContext::root_texture() const noexcept -> const Texture&
 	{
-		const auto width = data_.extent(1);
-		const auto height = data_.extent(0);
-
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(data.size() <= width);
-
-		fill(y, 0, data);
+		return select_texture(root_id());
 	}
 
-	auto BorrowedTexture::fill(const size_type::value_type y, const element_type element) const noexcept -> void
+	auto TextureContext::select_texture(const texture_atlas_id_type texture_atlas_id) noexcept -> Texture&
 	{
-		const auto width = data_.extent(1);
-		const auto height = data_.extent(0);
-
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
-
-		fill(y, width, element);
+		return select_atlas(texture_atlas_id).texture;
 	}
 
-	auto BorrowedTexture::fill(const element_type element) const noexcept -> void
+	auto TextureContext::select_texture(const texture_atlas_id_type texture_atlas_id) const noexcept -> const Texture&
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-
-		const auto height = data_.extent(0);
-		for (size_type::value_type y = 0; y < height; ++y)
-		{
-			fill(y, element);
-		}
+		return select_atlas(texture_atlas_id).texture;
 	}
 
-	auto BorrowedTexture::fill(const data_view_type data) const noexcept -> void
+	auto TextureContext::write(const size_type size) noexcept -> write_result
 	{
-		const auto width = data_.extent(1);
-		const auto height = data_.extent(0);
+		const auto id = active_id();
+		const auto writer = write(id, size);
 
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-
-		for (size_type::value_type y = 0; y < height; ++y)
-		{
-			const data_view_type sub{data.begin() + static_cast<std::ptrdiff_t>(y) * width, width};
-
-			fill(y, sub);
-		}
-	}
-
-	auto BorrowedTexture::operator[](const size_type::value_type x, const size_type::value_type y) const noexcept -> borrow_data_type::reference
-	{
-		const auto width = data_.extent(1);
-		const auto height = data_.extent(0);
-
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(valid());
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(y < height);
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(x < width);
-
-		return data_[y, x];
+		return {.writer = writer, .texture_atlas_id = id};
 	}
 }

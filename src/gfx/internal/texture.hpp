@@ -5,124 +5,106 @@
 
 #pragma once
 
-#include <mdspan>
+#include <vector>
 
-#include <gfx/gfx.hpp>
+#include <gfx/texture.hpp>
 
-#include <stb_rect_pack.h>
+#include <gfx/internal/rect_pack.hpp>
 
 namespace gal::prometheus::gfx
 {
-	class BorrowedTexture;
+	// index
+	using texture_atlas_id_type = std::uint32_t;
+	constexpr texture_atlas_id_type invalid_texture_atlas_id{std::numeric_limits<texture_atlas_id_type>::max()};
 
-	class Texture final
+	class RenderListSharedData;
+	class Renderer;
+
+	class TextureContext final
 	{
-		// Texture::id and Texture::dirty
-		friend Context;
-
-	public:
-		using element_type = TextureDescriptor::element_type;
-		using data_type = TextureDescriptor::data_type;
-		using data_view_type = TextureDescriptor::data_view_type;
-
-		using size_type = TextureDescriptor::size_type;
-
-		using point_type = primitive::basic_point_2d<size_type::value_type>;
-		using uv_type = primitive::basic_extent_2d<float>;
-
-	private:
-		stbrp_context rp_context_;
-		std::vector<stbrp_node> rp_nodes_;
-
-		TextureDescriptor texture_;
-		// It's much more cost-effective to keep a member variable than to compute it every time
-		uv_type uv_;
-
-	public:
-		explicit Texture(size_type size) noexcept;
-
-		/**
-		 * @brief Texture atlas data (for upload)
-		 */
-		[[nodiscard]] auto data() const noexcept -> data_view_type;
-
-		/**
-		 * @brief Texture atlas area size
-		 */
-		[[nodiscard]] auto area_size() const noexcept -> std::size_t;
-
-		/**
-		 * @brief Texture atlas size
-		 */
-		[[nodiscard]] auto size() const noexcept -> size_type;
-
-		/**
-		 * @brief Texture atlas uv scale (1.0f / size.width, 1.0f / size.height)
-		 */
-		[[nodiscard]] auto uv() const noexcept -> uv_type;
-
-		/**
-		 * @brief Does this texture atlas need to be re-uploaded to the GPU
-		 */
-		[[nodiscard]] auto dirty() const noexcept -> bool;
-
-		/**
-		 * @brief Texture atlas uploaded (to GPU)
-		 */
-		[[nodiscard]] auto uploaded() const noexcept -> bool;
-
-		/**
-		 * @brief Texture atlas id (usually a GPU resource handle)
-		 */
-		[[nodiscard]] auto id() const noexcept -> texture_id_type;
-
-		/**
-		 * @brief Find a region that can hold a (piece of) texture of @c size
-		 * @param size Texture size
-		 */
-		[[nodiscard]] auto select(size_type size) noexcept -> BorrowedTexture;
-	};
-
-	class BorrowedTexture final
-	{
-		friend Texture;
-
 	public:
 		using element_type = Texture::element_type;
 		using data_type = Texture::data_type;
 		using data_view_type = Texture::data_view_type;
 
+		using point_type = Texture::point_type;
 		using size_type = Texture::size_type;
 
-		using point_type = Texture::point_type;
-		using uv_type = Texture::uv_type;
+		static_assert(std::is_same_v<point_type, gfx::RectPackContext::point_type>);
+		static_assert(std::is_same_v<size_type, gfx::RectPackContext::size_type>);
 
-		constexpr static point_type invalid_point{(std::numeric_limits<point_type::value_type>::max)(), (std::numeric_limits<point_type::value_type>::max)()};
+		using uv_scale_type = Texture::uv_scale_type;
+
+		struct atlas_type
+		{
+			Texture texture;
+			std::vector<TextureViewer> pending_update_data;
+
+			gfx::RectPackContext rp_context;
+		};
+
+		using atlas_list_type = std::vector<atlas_type>;
 
 	private:
-		using borrow_data_type = std::mdspan<element_type, std::extents<size_type::value_type, std::dynamic_extent, std::dynamic_extent>, std::layout_stride>;
+		atlas_list_type atlas_list_;
 
-		point_type point_;
-		borrow_data_type data_;
+		[[nodiscard]] auto root_id() const noexcept -> texture_atlas_id_type;
 
-		BorrowedTexture(point_type point, const borrow_data_type& data) noexcept;
+		[[nodiscard]] auto active_id() const noexcept -> texture_atlas_id_type;
+
+		[[nodiscard]] auto select_atlas(texture_atlas_id_type texture_atlas_id) noexcept -> atlas_type&;
+
+		[[nodiscard]] auto select_atlas(texture_atlas_id_type texture_atlas_id) const noexcept -> const atlas_type&;
+
+		auto new_atlas(size_type size) noexcept -> atlas_type&;
+
+		[[nodiscard]] auto write(texture_atlas_id_type texture_atlas_id, size_type size) noexcept -> TextureWriter;
 
 	public:
-		[[nodiscard]] auto valid() const noexcept -> bool;
+		TextureContext(const TextureContext&) noexcept = delete;
+		TextureContext(TextureContext&&) noexcept = default;
+		auto operator=(const TextureContext&) noexcept -> TextureContext& = delete;
+		auto operator=(TextureContext&&) noexcept -> TextureContext& = default;
 
-		[[nodiscard]] auto position() const noexcept -> point_type;
+		~TextureContext() noexcept = default;
 
-		auto fill(size_type::value_type y, size_type::value_type offset, size_type::value_type n, element_type element) const noexcept -> void;
-		auto fill(size_type::value_type y, size_type::value_type offset, data_view_type data) const noexcept -> void;
+		TextureContext() noexcept;
 
-		auto fill(size_type::value_type y, size_type::value_type n, element_type element) const noexcept -> void;
-		auto fill(size_type::value_type y, data_view_type data) const noexcept -> void;
+		auto initialize(RenderListSharedData& shared_data) noexcept -> void;
 
-		auto fill(size_type::value_type y, element_type element) const noexcept -> void;
+		/**
+		 * @brief Upload all texture atlas if it didn't upload, or update them if it dirty
+		 * @note This function is usually called every frame to upload the texture to the GPU, or to update the texture (if new glyph data is written)
+		 */
+		auto update_all_atlas(Renderer& renderer) noexcept -> void;
 
-		auto fill(element_type element) const noexcept -> void;
-		auto fill(data_view_type data) const noexcept -> void;
+		/**
+		 * @brief Get root (default) texture
+		 */
+		[[nodiscard]] auto root_texture() noexcept -> Texture&;
 
-		auto operator[](size_type::value_type x, size_type::value_type y) const noexcept -> borrow_data_type::reference;
+		/**
+		 * @brief Get root (default) texture
+		 */
+		[[nodiscard]] auto root_texture() const noexcept -> const Texture&;
+
+		/**
+		 * @brief Get texture of id
+		 */
+		[[nodiscard]] auto select_texture(texture_atlas_id_type texture_atlas_id) noexcept -> Texture&;
+
+		/**
+		 * @brief Get texture of id
+		 */
+		[[nodiscard]] auto select_texture(texture_atlas_id_type texture_atlas_id) const noexcept -> const Texture&;
+
+		struct write_result
+		{
+			TextureWriter writer;
+
+			texture_atlas_id_type texture_atlas_id;
+		};
+
+		[[nodiscard]] auto write(size_type size) noexcept -> write_result;
 	};
 }

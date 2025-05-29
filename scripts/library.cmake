@@ -368,38 +368,24 @@ set(
 		# =========================
 		# GFX
 		# =========================
-		
-		${PROJECT_SOURCE_DIR}/src/gfx/gfx.hpp
 
+		${PROJECT_SOURCE_DIR}/src/gfx/type.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/texture.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/glyph.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/render_list.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/renderer.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/context.hpp
+
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/rect_pack.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/internal/texture.hpp
-		${PROJECT_SOURCE_DIR}/src/gfx/internal/font.hpp
-		${PROJECT_SOURCE_DIR}/src/gfx/internal/render_list.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/glyph.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/internal/context.hpp
 
 		${PROJECT_SOURCE_DIR}/src/gfx/extension/glyph_parser_freetype.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/extension/renderer_d3d11.hpp
 		${PROJECT_SOURCE_DIR}/src/gfx/extension/renderer_d3d12.hpp
 
-		# =========================
-		# GFX-OLD
-		# =========================
-
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/type.hpp
-#
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/glyph.hpp
-#
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/texture.hpp
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/font.hpp
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/glyph_parser_freetype.hpp
-#
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/render_list.hpp
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/renderer.hpp
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/renderer_dx11.hpp
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/renderer_dx12.hpp
-#
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/context.hpp
-#
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/gfx.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/gfx.hpp
 
 		# =========================
 		# GUI
@@ -455,32 +441,20 @@ set(
 		# =========================
 		# GFX
 		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/gfx/texture.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/glyph.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/render_list.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/renderer.cpp
 		
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/rect_pack.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/internal/texture.cpp
-		${PROJECT_SOURCE_DIR}/src/gfx/internal/font.cpp
-		${PROJECT_SOURCE_DIR}/src/gfx/internal/render_list.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/glyph.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/internal/context.cpp
 
 		${PROJECT_SOURCE_DIR}/src/gfx/extension/glyph_parser_freetype.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/extension/renderer_d3d11.cpp
 		${PROJECT_SOURCE_DIR}/src/gfx/extension/renderer_d3d12.cpp
-
-		# =========================
-		# GFX-OLD
-		# =========================
-
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/glyph.cpp
-#
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/texture.cpp
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/font.cpp
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/glyph_parser_freetype.cpp
-#
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/render_list.cpp
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/renderer.cpp
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/renderer_dx11.cpp
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/renderer_dx12.cpp
-#
-#		${PROJECT_SOURCE_DIR}/src/gfx/old/context.cpp
 
 		# =========================
 		# GUI

@@ -5,6 +5,10 @@
 
 #include <gfx/extension/glyph_parser_freetype.hpp>
 
+#include <filesystem>
+
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 #include <freetype/freetype.h>
 #include <freetype/ftsynth.h>
 
@@ -16,7 +20,7 @@ namespace
 	}
 } // namespace
 
-namespace gal::prometheus::gfx
+namespace gal::prometheus::gfx::extension
 {
 	class GlyphParserFreeType::Library final
 	{
@@ -27,7 +31,7 @@ namespace gal::prometheus::gfx
 	class GlyphParserFreeType::FontInfo final
 	{
 	public:
-		std::filesystem::path path;
+		std::string path;
 		FT_Face face{nullptr};
 
 		float ascender{0};
@@ -80,35 +84,42 @@ namespace gal::prometheus::gfx
 		}
 	}
 
-	auto GlyphParserFreeType::load(const std::filesystem::path& path) noexcept -> FontDescriptor
+	auto GlyphParserFreeType::load(const std::string_view path) noexcept -> FontLoadResult
 	{
-		if (const auto it = std::ranges::find(infos_, path, &FontInfo::path); it != infos_.end())
+		if (std::ranges::contains(infos_, path, &FontInfo::path))
 		{
-			const auto& info = it.operator*();
-			const auto index = std::ranges::distance(infos_.begin(), it);
-
-			return {.identifier = info.face->family_name, .id = static_cast<font_id_type>(index)};
+			return FontLoadResult::FILE_ALREADY_LOADED;
 		}
 
-		const auto path_string = path.string();
+		std::error_code ec;
+		const std::filesystem::path fs_path{path};
+		if (not exists(fs_path, ec))
+		{
+			return FontLoadResult::FILE_NOT_FOUND;
+		}
+
+		if (not is_regular_file(fs_path, ec))
+		{
+			return FontLoadResult::INVALID_FONT_FORMAT;
+		}
 
 		FT_Face face = nullptr;
-		if (const auto error = FT_New_Face(library_->library, path_string.data(), 0, &face); error != FT_Err_Ok)
+		if (const auto error = FT_New_Face(library_->library, path.data(), 0, &face); error != FT_Err_Ok)
 		{
-			return FontDescriptor::error();
+			return FontLoadResult::INVALID_FONT_FORMAT;
 		}
 
 		if (const auto error = FT_Select_Charmap(face, FT_ENCODING_UNICODE); error != FT_Err_Ok)
 		{
 			FT_Done_Face(face);
-			return FontDescriptor::error();
+			return FontLoadResult::INVALID_FONT_FORMAT;
 		}
 
-		const auto id = infos_.size();
 		auto& info = infos_.emplace_back();
+		info.path = path;
 		info.face = face;
 
-		return {.identifier = face->family_name, .id = static_cast<font_id_type>(id)};
+		return FontLoadResult::SUCCESS;
 	}
 
 	// auto GlyphParserFreeType::load(const std::span<std::uint8_t> data) noexcept -> FontDescriptor
@@ -136,137 +147,142 @@ namespace gal::prometheus::gfx
 	// 	return {.identifier = face->family_name, .id = static_cast<font_id_type>(id)};
 	// }
 
-	auto GlyphParserFreeType::has_glyph(const font_id_type id, const std::uint32_t codepoint) const noexcept -> bool
+	auto GlyphParserFreeType::has_glyph(const std::uint32_t codepoint) const noexcept -> bool
 	{
-		if (id >= infos_.size())
-		{
-			return false;
-		}
-
-		const auto& info = infos_[id];
-		if (const auto char_index = FT_Get_Char_Index(info.face, codepoint); char_index == 0)
-		{
-			return false;
-		}
-
-		return true;
+		return std::ranges::any_of(
+			infos_,
+			[codepoint](const auto& info) noexcept -> bool
+			{
+				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(info.face != nullptr);
+				return ::FT_Get_Char_Index(info.face, codepoint) != 0;
+			}
+		);
 	}
 
-	auto GlyphParserFreeType::parse(const font_id_type id, const GlyphCode& code) noexcept -> GlyphDescriptor
+	auto GlyphParserFreeType::parse(const GlyphCode& code) noexcept -> GlyphDescriptor
 	{
-		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(id < infos_.size());
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(code.codepoint != 0);
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(code.size != 0);
 
-		auto& info = infos_[id];
-		const auto& face = info.face;
-
-		const auto char_index = FT_Get_Char_Index(face, code.codepoint);
-		if (char_index == 0)
+		for (auto& info: infos_)
 		{
-			return GlyphDescriptor::error();
-		}
-
-		info.set_pixel_height(code.size);
-
-		if (const auto error = FT_Load_Glyph(face, char_index, FT_LOAD_DEFAULT); error != FT_Err_Ok)
-		{
-			return GlyphDescriptor::error();
-		}
-
-		const auto& slot = face->glyph;
-
-		if (std::to_underlying(code.flag) & GlyphFlag::BOLD)
-		{
-			FT_GlyphSlot_Embolden(slot);
-		}
-		if (std::to_underlying(code.flag) & GlyphFlag::ITALIC)
-		{
-			FT_GlyphSlot_Oblique(slot);
-		}
-
-		if (const auto error = FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL); error != FT_Err_Ok)
-		{
-			return GlyphDescriptor::error();
-		}
-
-		const auto& bitmap = face->glyph->bitmap;
-
-		const GlyphDescriptor::rect_type::point_type point{slot->bitmap_left, slot->bitmap_top};
-		const GlyphDescriptor::rect_type::extent_type size{bitmap.width, bitmap.rows};
-		const std::size_t data_length = static_cast<std::size_t>(bitmap.width) * bitmap.rows;
-
-		GlyphDescriptor result{
-				.rect = {point, size},
-				.advance_x = ft_size_to_float(slot->advance.x),
-				.visible = size.width > 0 and size.height > 0,
-				.colored = bitmap.pixel_mode == FT_PIXEL_MODE_BGRA,
-				.data = std::make_unique_for_overwrite<TextureDescriptor::element_type[]>(data_length)
-		};
-
-		{
-			const auto* source = bitmap.buffer;
-			auto* dest = result.data.get();
-
-			if (bitmap.pixel_mode == FT_PIXEL_MODE_GRAY)
+			if (const auto char_index = FT_Get_Char_Index(info.face, code.codepoint); char_index != 0)
 			{
-				for (std::uint32_t y = 0; y < bitmap.rows; ++y)
-				{
-					for (std::uint32_t x = 0; x < bitmap.width; ++x)
-					{
-						const auto a = source[x];
-						const auto color =
-								// A
-								a << 24 |
-								// B
-								std::uint32_t{0xff} << 16 |
-								// G
-								std::uint32_t{0xff} << 8 |
-								// R
-								std::uint32_t{0xff};
-						dest[x] = color;
-					}
+				const auto& face = info.face;
 
-					source += bitmap.pitch;
-					dest += bitmap.width;
+				info.set_pixel_height(code.size);
+
+				if (const auto error = FT_Load_Glyph(face, char_index, FT_LOAD_DEFAULT); error != FT_Err_Ok)
+				{
+					// todo
+					GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+					return {.rect = {}, .advance_x = 0, .visible = false, .colored = false, .data = nullptr};
 				}
-			}
-			else if (bitmap.pixel_mode == FT_PIXEL_MODE_MONO)
-			{
-				for (std::uint32_t y = 0; y < bitmap.rows; ++y)
-				{
-					const std::uint8_t* p = source;
-					std::uint8_t bits = 0;
 
-					for (std::uint32_t x = 0; x < bitmap.width; ++x)
+				const auto& slot = face->glyph;
+
+				if (std::to_underlying(code.flag) & GlyphFlag::BOLD)
+				{
+					FT_GlyphSlot_Embolden(slot);
+				}
+				if (std::to_underlying(code.flag) & GlyphFlag::ITALIC)
+				{
+					FT_GlyphSlot_Oblique(slot);
+				}
+
+				if (const auto error = FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL); error != FT_Err_Ok)
+				{
+					// todo
+					GAL_PROMETHEUS_COMPILER_DEBUG_TRAP();
+					return {.rect = {}, .advance_x = 0, .visible = false, .colored = false, .data = nullptr};
+				}
+
+				const auto& bitmap = slot->bitmap;
+
+				const GlyphDescriptor::rect_type::point_type point{slot->bitmap_left, slot->bitmap_top};
+				const GlyphDescriptor::rect_type::extent_type size{bitmap.width, bitmap.rows};
+				const auto visible = size.width > 0 and size.height > 0;
+
+				GlyphDescriptor result{
+						.rect = {point, size},
+						.advance_x = ft_size_to_float(slot->advance.x),
+						.visible = visible,
+						.colored = bitmap.pixel_mode == FT_PIXEL_MODE_BGRA,
+						.data = nullptr
+				};
+
+				if (visible)
+				{
+					const std::size_t data_length = static_cast<std::size_t>(bitmap.width) * bitmap.rows;
+					result.data = std::make_unique_for_overwrite<GlyphDescriptor::data_type::element_type[]>(data_length);
+
+					const auto* source = bitmap.buffer;
+					auto* dest = result.data.get();
+
+					if (bitmap.pixel_mode == FT_PIXEL_MODE_GRAY)
 					{
-						if ((x & 7) == 0)
+						for (std::uint32_t y = 0; y < bitmap.rows; ++y)
 						{
-							bits = *p;
-							p += 1;
+							for (std::uint32_t x = 0; x < bitmap.width; ++x)
+							{
+								const auto a = source[x];
+								const auto color =
+										// A
+										a << 24 |
+										// B
+										std::uint32_t{0xff} << 16 |
+										// G
+										std::uint32_t{0xff} << 8 |
+										// R
+										std::uint32_t{0xff};
+								dest[x] = color;
+							}
+
+							source += bitmap.pitch;
+							dest += bitmap.width;
 						}
-
-						const auto a = (bits & 0x80) ? std::uint32_t{0xff} : std::uint32_t{0};
-						const auto color =
-								// A
-								a << 24 |
-								// B
-								std::uint32_t{0xff} << 16 |
-								// G
-								std::uint32_t{0xff} << 8 |
-								// R
-								std::uint32_t{0xff};
-						dest[x] = color;
-
-						bits <<= 1;
 					}
+					else if (bitmap.pixel_mode == FT_PIXEL_MODE_MONO)
+					{
+						for (std::uint32_t y = 0; y < bitmap.rows; ++y)
+						{
+							const std::uint8_t* p = source;
+							std::uint8_t bits = 0;
 
-					source += bitmap.pitch;
-					dest += bitmap.width;
+							for (std::uint32_t x = 0; x < bitmap.width; ++x)
+							{
+								if ((x & 7) == 0)
+								{
+									bits = *p;
+									p += 1;
+								}
+
+								const auto a = (bits & 0x80) ? std::uint32_t{0xff} : std::uint32_t{0};
+								const auto color =
+										// A
+										a << 24 |
+										// B
+										std::uint32_t{0xff} << 16 |
+										// G
+										std::uint32_t{0xff} << 8 |
+										// R
+										std::uint32_t{0xff};
+								dest[x] = color;
+
+								bits <<= 1;
+							}
+
+							source += bitmap.pitch;
+							dest += bitmap.width;
+						}
+					}
 				}
+
+				return result;
 			}
 		}
 
-		return result;
+		// todo
+		return {.rect = {}, .advance_x = 0, .visible = false, .colored = false, .data = nullptr};
 	}
 }

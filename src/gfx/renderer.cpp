@@ -3,11 +3,11 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#pragma once
-
-#include <gfx/type.hpp>
-#include <gfx/texture.hpp>
-#include <gfx/glyph.hpp>
-#include <gfx/render_list.hpp>
 #include <gfx/renderer.hpp>
-#include <gfx/context.hpp>
+
+namespace gal::prometheus::gfx
+{
+	Renderer::~Renderer() noexcept = default;
+
+	Renderer::Renderer() noexcept = default;
+}

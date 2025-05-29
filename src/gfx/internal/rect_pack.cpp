@@ -27,7 +27,7 @@ namespace gal::prometheus::gfx
 		return 1;
 	}
 
-	auto RectPackContext::skyline_find_min_y(const rect_pack_node* head, const point_type::value_type x0, const extent_type::value_type width) noexcept -> find_y_result
+	auto RectPackContext::skyline_find_min_y(const rect_pack_node* head, const point_type::value_type x0, const size_type::value_type width) noexcept -> find_y_result
 	{
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(head->point.x <= x0);
 		GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(head->next->point.x > x0);
@@ -36,7 +36,7 @@ namespace gal::prometheus::gfx
 		const auto* current = head;
 
 		find_y_result result{.y = 0, .waste = 0};
-		extent_type::value_type visited_width = 0;
+		size_type::value_type visited_width = 0;
 
 		while (current->point.x < x1)
 		{
@@ -66,7 +66,7 @@ namespace gal::prometheus::gfx
 		return result;
 	}
 
-	auto RectPackContext::skyline_find_best_pos(extent_type size, const PackPrefer pack_prefer, const Heuristic heuristic) noexcept -> find_result
+	auto RectPackContext::skyline_find_best_pos(size_type size, const PackPrefer pack_prefer, const Heuristic heuristic) noexcept -> find_result
 	{
 		const auto& context_size = size_;
 
@@ -192,7 +192,7 @@ namespace gal::prometheus::gfx
 		return {.point = {best_x, best_y}, .prev_link = best};
 	}
 
-	auto RectPackContext::skyline_pack_rectangle(const extent_type size, const PackPrefer pack_prefer, const Heuristic heuristic) noexcept -> find_result
+	auto RectPackContext::skyline_pack_rectangle(const size_type size, const PackPrefer pack_prefer, const Heuristic heuristic) noexcept -> find_result
 	{
 		const auto context_size = size_;
 
@@ -263,7 +263,7 @@ namespace gal::prometheus::gfx
 		return result;
 	}
 
-	RectPackContext::RectPackContext(const extent_type& size) noexcept
+	RectPackContext::RectPackContext(const size_type& size) noexcept
 		: size_{size},
 		  nodes_{size.width + 2},
 		  free_head_{nodes_.data()},

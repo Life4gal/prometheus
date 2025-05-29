@@ -7,11 +7,11 @@
 
 #include <vector>
 
-#include <gfx/gfx.hpp>
+#include <gfx/glyph.hpp>
 
 #include <memory/unique_ptr.hpp>
 
-namespace gal::prometheus::gfx
+namespace gal::prometheus::gfx::extension
 {
 	class GlyphParserFreeType final : public GlyphParser
 	{
@@ -35,10 +35,10 @@ namespace gal::prometheus::gfx
 
 		GlyphParserFreeType() noexcept;
 
-		auto load(const std::filesystem::path& path) noexcept -> FontDescriptor override;
+		auto load(std::string_view path) noexcept -> FontLoadResult override;
 
-		[[nodiscard]] auto has_glyph(font_id_type id, std::uint32_t codepoint) const noexcept -> bool override;
+		[[nodiscard]] auto has_glyph(std::uint32_t codepoint) const noexcept -> bool override;
 
-		auto parse(font_id_type id, const GlyphCode& code) noexcept -> GlyphDescriptor override;
+		auto parse(const GlyphCode& code) noexcept -> GlyphDescriptor override;
 	};
 }
