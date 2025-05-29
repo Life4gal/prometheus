@@ -6,6 +6,8 @@
 #include <gui/internal/mouse.hpp>
 #include <gui/internal/context.hpp>
 
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 namespace gal::prometheus::gui::internal
 {
 	auto Mouse::is_down(const Context& context, MouseKey key) const noexcept -> bool

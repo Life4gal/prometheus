@@ -10,6 +10,8 @@
 #include <gui/internal/font.hpp>
 #include <gui/internal/context.hpp>
 
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+
 namespace
 {
 	using namespace gal::prometheus;

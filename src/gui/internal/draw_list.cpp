@@ -12,6 +12,7 @@
 
 #include <memory/reference_wrapper.hpp>
 #include <chars/chars.hpp>
+#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace
 {
