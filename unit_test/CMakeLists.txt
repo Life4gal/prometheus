@@ -76,5 +76,5 @@ add_test(
 
 # assets path
 set(ASSETS_PATH_PIC ${CMAKE_SOURCE_DIR}/assets/pic.jpg)
-# DRAW
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/draw)
+# GUI
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/gui)

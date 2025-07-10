@@ -8,7 +8,7 @@ add_library(gal::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 # COMPILE FLAGS
 
 if (${PROJECT_NAME_PREFIX}COMPILER_MSVC)
-	set(${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/D_CRT_SECURE_NO_WARNINGS")
+	set(${PROJECT_NAME_PREFIX}COMPILE_FLAGS "/D_CRT_SECURE_NO_WARNINGS;/utf-8;/DNOMINMAX")
 	# ====================
 	# PEDANTIC
 	if (${PROJECT_NAME_PREFIX}PEDANTIC)
@@ -257,6 +257,8 @@ set(
 		# =========================
 
 		${PROJECT_SOURCE_DIR}/src/memory/rw.hpp
+		${PROJECT_SOURCE_DIR}/src/memory/unique_ptr.hpp
+		${PROJECT_SOURCE_DIR}/src/memory/reference_wrapper.hpp
 
 		${PROJECT_SOURCE_DIR}/src/memory/memory.hpp
 
@@ -356,20 +358,47 @@ set(
 		${PROJECT_SOURCE_DIR}/src/unit_test/unit_test.hpp
 
 		# =========================
-		# DRAW
+		# IO
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/draw/flag.hpp
-		${PROJECT_SOURCE_DIR}/src/draw/def.hpp
-		${PROJECT_SOURCE_DIR}/src/draw/font.hpp
-		${PROJECT_SOURCE_DIR}/src/draw/shared_data.hpp
-		${PROJECT_SOURCE_DIR}/src/draw/theme.hpp
-		${PROJECT_SOURCE_DIR}/src/draw/mouse.hpp
-		${PROJECT_SOURCE_DIR}/src/draw/draw_list.hpp
-		${PROJECT_SOURCE_DIR}/src/draw/window.hpp
-		${PROJECT_SOURCE_DIR}/src/draw/context.hpp
+		${PROJECT_SOURCE_DIR}/src/io/inputs.hpp
+
+		${PROJECT_SOURCE_DIR}/src/io/io.hpp
 		
-		${PROJECT_SOURCE_DIR}/src/draw/draw.hpp
+		# =========================
+		# GFX
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/gfx/type.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/texture.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/glyph.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/render_list.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/renderer.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/context.hpp
+
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/rect_pack.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/texture.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/glyph.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/context.hpp
+
+		${PROJECT_SOURCE_DIR}/src/gfx/extension/glyph_parser_freetype.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/extension/renderer_d3d11.hpp
+		${PROJECT_SOURCE_DIR}/src/gfx/extension/renderer_d3d12.hpp
+
+		${PROJECT_SOURCE_DIR}/src/gfx/gfx.hpp
+
+		# =========================
+		# GUI
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/gui/gui.hpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/gui.inl
+		${PROJECT_SOURCE_DIR}/src/gui/internal/common.hpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/font.hpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/draw_list.hpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/mouse.hpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/window.hpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/context.hpp
 )
 
 set(
@@ -404,16 +433,39 @@ set(
 		${PROJECT_SOURCE_DIR}/src/chars/icelake.cpp
 
 		# =========================
-		# DRAW
+		# IO
 		# =========================
 
-		${PROJECT_SOURCE_DIR}/src/draw/font.cpp
-		${PROJECT_SOURCE_DIR}/src/draw/shared_data.cpp
-		${PROJECT_SOURCE_DIR}/src/draw/theme.cpp
-		${PROJECT_SOURCE_DIR}/src/draw/mouse.cpp
-		${PROJECT_SOURCE_DIR}/src/draw/draw_list.cpp
-		${PROJECT_SOURCE_DIR}/src/draw/window.cpp
-		${PROJECT_SOURCE_DIR}/src/draw/context.cpp
+		${PROJECT_SOURCE_DIR}/src/io/inputs.cpp
+		
+		# =========================
+		# GFX
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/gfx/texture.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/glyph.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/render_list.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/renderer.cpp
+		
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/rect_pack.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/texture.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/glyph.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/internal/context.cpp
+
+		${PROJECT_SOURCE_DIR}/src/gfx/extension/glyph_parser_freetype.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/extension/renderer_d3d11.cpp
+		${PROJECT_SOURCE_DIR}/src/gfx/extension/renderer_d3d12.cpp
+
+		# =========================
+		# GUI
+		# =========================
+
+		${PROJECT_SOURCE_DIR}/src/gui/internal/common.cpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/font.cpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/draw_list.cpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/mouse.cpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/window.cpp
+		${PROJECT_SOURCE_DIR}/src/gui/internal/context.cpp
 )
 
 set_source_files_properties(

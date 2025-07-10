@@ -312,19 +312,19 @@ namespace gal::prometheus::meta
 			// =================================================
 
 			template<typename StringType>
-				requires(is_constructible_from_data_v<StringType>)
-			[[nodiscard]] constexpr explicit operator StringType() const noexcept //
-				requires(not lazy_is_static<derived_type>())
-			{
-				return StringType{rep_value(), rep_size()};
-			}
-
-			template<typename StringType>
-				requires(is_constructible_from_view_v<StringType> and not is_constructible_from_data_v<StringType>)
+				requires(is_constructible_from_view_v<StringType>)
 			[[nodiscard]] constexpr explicit(not std::is_convertible_v<basic_string_view<value_type>, StringType>) operator StringType() const noexcept //
 				requires(not lazy_is_static<derived_type>())
 			{
 				return StringType{basic_string_view<value_type>{rep_value(), rep_size()}};
+			}
+
+			template<typename StringType>
+				requires(is_constructible_from_data_v<StringType>)
+			[[nodiscard]] constexpr explicit operator StringType() const noexcept //
+				requires(not is_constructible_from_view_v<StringType> and not lazy_is_static<derived_type>())
+			{
+				return StringType{rep_value(), rep_size()};
 			}
 
 			template<typename StringType>
@@ -687,11 +687,18 @@ namespace gal::prometheus::meta
 			std::ranges::copy(std::ranges::begin(char_array), std::ranges::begin(char_array) + N, value);
 		}
 
-		template<std::ranges::range String>
+		template<std::ranges::input_range String>
 			requires std::is_same_v<std::ranges::range_value_t<String>, value_type>
 		constexpr explicit basic_fixed_string(const String& string) noexcept
 		{
 			std::ranges::copy(std::ranges::begin(string), std::ranges::begin(string) + N, value);
+		}
+
+		template<typename Iterator>
+			requires std::is_same_v<std::iter_value_t<Iterator>, value_type>
+		constexpr explicit basic_fixed_string(const Iterator begin, const Iterator end) noexcept
+		{
+			std::ranges::copy(begin, end, value);
 		}
 
 		[[nodiscard]] constexpr auto begin() noexcept -> pointer { return value; }
@@ -701,6 +708,10 @@ namespace gal::prometheus::meta
 		[[nodiscard]] constexpr auto end() noexcept -> pointer { return value + size; }
 
 		[[nodiscard]] constexpr auto end() const noexcept -> const_pointer { return value + size; }
+
+		[[nodiscard]] constexpr auto operator[](const size_type index) noexcept -> value_type& { return value[index]; }
+
+		[[nodiscard]] constexpr auto operator[](const size_type index) const noexcept -> value_type { return value[index]; }
 
 		// // basic_fixed_string <=> basic_fixed_string
 		// template<size_type R>

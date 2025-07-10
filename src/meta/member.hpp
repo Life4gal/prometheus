@@ -211,7 +211,10 @@ namespace gal::prometheus::meta
 	}
 
 	template<std::size_t N, typename T>
-		requires (known_member_t<std::remove_cvref_t<T>> and N < member_size<std::remove_cvref_t<T>>())
+		requires (
+			known_member_t<std::remove_cvref_t<T>> and
+			N < member_size<std::remove_cvref_t<T>>()
+		)
 	[[nodiscard]] constexpr auto member_of_index(T&& object) noexcept -> decltype(auto)
 	{
 		using bare_type = std::remove_cvref_t<T>;
@@ -249,7 +252,10 @@ namespace gal::prometheus::meta
 	namespace member_detail
 	{
 		template<std::size_t N, typename T>
-			requires (member_detail::known_member_t<std::remove_cvref_t<T>> and N < member_size<std::remove_cvref_t<T>>())
+			requires (
+				member_detail::known_member_t<std::remove_cvref_t<T>> and
+				N < member_size<std::remove_cvref_t<T>>()
+			)
 		struct member_type_of_index
 		{
 			using type = std::decay_t<decltype(meta::member_of_index<N>(std::declval<T>()))>;
@@ -260,9 +266,30 @@ namespace gal::prometheus::meta
 	using member_type_of_index = typename member_detail::member_type_of_index<N, T>::type;
 
 	template<std::size_t N, typename T>
-		requires (known_member_t<std::remove_cvref_t<T>> and N < member_size<std::remove_cvref_t<T>>())
+		requires (
+			known_member_t<std::remove_cvref_t<T>> and
+			N < member_size<std::remove_cvref_t<T>>()
+		)
 	[[nodiscard]] constexpr auto name_of_member() noexcept -> std::string_view
 	{
+		// note:
+		// If you encounter compile errors here, such as:
+		// "No overloaded function matching `get_full_function_name` was found"
+		// "The result of `member_detail::visit` was not a (compile time) constant"
+		// then you should check your class definition about structured bindings at this point:
+		// class YourClass
+		// {
+		// public:
+		// template<std::size_t Index>
+		// [[nodiscard]] constexpr auto get() const noexcept -> const value_type& // <-- see this
+		//
+		// template<std::size_t Index>
+		// 	requires(Index < 2)
+		// [[nodiscard]] constexpr auto get() noexcept -> value_type&;
+		// };
+		//
+		// Even if your value_type is a POD type, or can return a value directly (perhaps at less cost than a reference), it must be a constant reference here!
+		// 
 		constexpr auto full_function_name = get_full_function_name<
 			member_detail::visit(
 				[]<typename... Ts>(Ts&&... args) noexcept -> auto //
@@ -343,7 +370,8 @@ namespace gal::prometheus::meta
 			{
 				const auto f = []<std::size_t I>() noexcept
 				{
-					if constexpr (name_of_member<I, T>() == Name)
+					if constexpr (constexpr auto member_name = meta::name_of_member<I, T>();
+						member_name == Name.template as<std::string_view>())
 					{
 						return I;
 					}
@@ -361,7 +389,7 @@ namespace gal::prometheus::meta
 				GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
 				GAL_PROMETHEUS_COMPILER_DISABLE_CLANG_WARNING(-Wunused-value)
 
-				(((index = f.template operator()<Index>()) == member_index_unknown) and ...);
+				std::ignore = (((index = f.template operator()<Index>()) == member_index_unknown) and ...);
 
 				GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
 
@@ -376,7 +404,8 @@ namespace gal::prometheus::meta
 			{
 				const auto f = [name]<std::size_t I>() noexcept
 				{
-					if (name_of_member<I, T>() == name)
+					if (constexpr auto member_name = meta::name_of_member<I, T>();
+						member_name == name)
 					{
 						return I;
 					}
@@ -392,7 +421,7 @@ namespace gal::prometheus::meta
 				GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_PUSH
 				GAL_PROMETHEUS_COMPILER_DISABLE_CLANG_WARNING(-Wunused-value)
 
-				(((index = f.template operator()<Index>()) == member_index_unknown) and ...);
+				std::ignore = (((index = f.template operator()<Index>()) == member_index_unknown) and ...);
 
 				GAL_PROMETHEUS_COMPILER_DISABLE_WARNING_POP
 
@@ -427,6 +456,81 @@ namespace gal::prometheus::meta
 	[[nodiscard]] constexpr auto has_member(const std::string_view name) noexcept -> bool
 	{
 		return member_index<T>(name) != member_index_unknown;
+	}
+
+	namespace member_detail
+	{
+		template<basic_fixed_string Name, typename T>
+		[[nodiscard]] constexpr auto member_of_name(T&& object) noexcept -> decltype(auto)
+		{
+			constexpr auto begin = std::ranges::begin(Name);
+			constexpr auto end = std::ranges::end(Name);
+			constexpr auto size = std::ranges::size(Name);
+
+			if constexpr (begin == end)
+			{
+				GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+			}
+			else
+			{
+				constexpr std::string_view sub{begin, end};
+
+				constexpr auto sub_ref_index = sub.find_first_of('.');
+				constexpr auto sub_ptr_index = sub.find_first_of("->");
+
+				if constexpr (sub_ref_index == std::string_view::npos and sub_ptr_index == std::string_view::npos)
+				{
+					constexpr auto index = meta::member_index<Name, T>();
+
+					if constexpr (index == member_index_unknown)
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE("If you see this message, you've passed in the wrong member name.");
+					}
+					else
+					{
+						return meta::member_of_index<index>(std::forward<T>(object));
+					}
+				}
+				else
+				{
+					const auto make_sub_name = []<std::size_t N>(const auto it) noexcept
+					{
+						basic_fixed_string<char, N + 1> r{it, it + N};
+						r[N] = '\0';
+						return r;
+					};
+
+					if constexpr (sub_ref_index != std::string_view::npos)
+					{
+						constexpr auto name = make_sub_name.template operator()<sub_ref_index>(begin);
+						auto&& ref = member_detail::member_of_name<name>(std::forward<T>(object));
+
+						// "."
+						constexpr auto next = make_sub_name.template operator()<size - sub_ref_index - 1>(begin + sub_ref_index + 1);
+						return member_detail::member_of_name<next>(std::forward<decltype(ref)>(ref));
+					}
+					else if constexpr (sub_ptr_index != std::string_view::npos)
+					{
+						constexpr auto name = make_sub_name.template operator()<sub_ptr_index>(begin);
+						auto&& ptr = member_detail::member_of_name<name>(std::forward<T>(object));
+
+						// "->"
+						constexpr auto next = make_sub_name.template operator()<size - sub_ptr_index - 2>(begin + sub_ptr_index + 2);
+						return member_detail::member_of_name<next>(*std::forward<decltype(ptr)>(ptr));
+					}
+					else
+					{
+						GAL_PROMETHEUS_SEMANTIC_STATIC_UNREACHABLE();
+					}
+				}
+			}
+		}
+	}
+
+	template<basic_fixed_string Name, typename T>
+	[[nodiscard]] constexpr auto member_of_name(T&& object) noexcept -> decltype(auto)
+	{
+		return member_detail::member_of_name<Name>(std::forward<T>(object));
 	}
 
 	namespace member_detail

@@ -16,7 +16,7 @@
 #include <primitive/extent.hpp>
 #include <primitive/rect.hpp>
 
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+// #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace gal::prometheus
 {

@@ -13,7 +13,7 @@
 
 #include <meta/dimension.hpp>
 
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+// #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace gal::prometheus
 {
@@ -49,7 +49,7 @@ namespace gal::prometheus
 
 			template<std::size_t Index>
 				requires(Index < 2)
-			[[nodiscard]] constexpr auto get() const noexcept -> value_type
+			[[nodiscard]] constexpr auto get() const noexcept -> const value_type&
 			{
 				if constexpr (Index == 0) { return width; }
 				else if constexpr (Index == 1) { return height; }
@@ -68,6 +68,42 @@ namespace gal::prometheus
 			[[nodiscard]] constexpr explicit operator basic_extent<3, value_type>() const noexcept
 			{
 				return {.width = width, .height = height, .depth = value_type{0}};
+			}
+
+			template<std::convertible_to<value_type> U = value_type>
+			[[nodiscard]] constexpr auto combine_max(const basic_extent<2, U>& other) const noexcept -> basic_extent
+			{
+				return
+				{
+						std::ranges::max(width, other.width),
+						std::ranges::max(height, other.height)
+				};
+			}
+
+			template<std::convertible_to<value_type> U = value_type>
+			[[nodiscard]] constexpr auto combine_min(const basic_extent<2, U>& other) const noexcept -> basic_extent
+			{
+				return
+				{
+						std::ranges::min(width, other.width),
+						std::ranges::min(height, other.height)
+				};
+			}
+
+			template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
+			[[nodiscard]] constexpr auto clamp(
+				const basic_extent<2, Low>& low,
+				const basic_extent<2, High>& high
+			) const noexcept -> basic_extent
+			{
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.width < high.width);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.height < high.height);
+
+				return
+				{
+						std::ranges::clamp(width, low.width, high.width),
+						std::ranges::clamp(height, low.height, high.height)
+				};
 			}
 		};
 
@@ -102,7 +138,7 @@ namespace gal::prometheus
 
 			template<std::size_t Index>
 				requires(Index < 3)
-			[[nodiscard]] constexpr auto get() const noexcept -> value_type
+			[[nodiscard]] constexpr auto get() const noexcept -> const value_type&
 			{
 				if constexpr (Index == 0) { return width; }
 				else if constexpr (Index == 1) { return height; }
@@ -123,6 +159,46 @@ namespace gal::prometheus
 			[[nodiscard]] constexpr explicit operator basic_extent<2, value_type>() const noexcept
 			{
 				return {.width = width, .height = height};
+			}
+
+			template<std::convertible_to<value_type> U = value_type>
+			[[nodiscard]] constexpr auto combine_max(const basic_extent<3, U>& other) const noexcept -> basic_extent
+			{
+				return
+				{
+						std::ranges::max(width, other.width),
+						std::ranges::max(height, other.height),
+						std::ranges::max(depth, other.depth)
+				};
+			}
+
+			template<std::convertible_to<value_type> U = value_type>
+			[[nodiscard]] constexpr auto combine_min(const basic_extent<3, U>& other) const noexcept -> basic_extent
+			{
+				return
+				{
+						std::ranges::min(width, other.width),
+						std::ranges::min(height, other.height),
+						std::ranges::min(depth, other.depth)
+				};
+			}
+
+			template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
+			[[nodiscard]] constexpr auto clamp(
+				const basic_extent<3, Low>& low,
+				const basic_extent<3, High>& high
+			) const noexcept -> basic_extent
+			{
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.width < high.width);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.height < high.height);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.depth < high.depth);
+
+				return
+				{
+						std::ranges::clamp(width, low.width, high.width),
+						std::ranges::clamp(height, low.height, high.height),
+						std::ranges::clamp(depth, low.depth, high.depth)
+				};
 			}
 		};
 

@@ -14,7 +14,7 @@
 #include <meta/dimension.hpp>
 #include <math/cmath.hpp>
 
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+// #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace gal::prometheus
 {
@@ -50,7 +50,7 @@ namespace gal::prometheus
 
 			template<std::size_t Index>
 				requires(Index < 2)
-			[[nodiscard]] constexpr auto get() const noexcept -> value_type
+			[[nodiscard]] constexpr auto get() const noexcept -> const value_type&
 			{
 				if constexpr (Index == 0) { return x; }
 				else if constexpr (Index == 1) { return y; }
@@ -77,40 +77,40 @@ namespace gal::prometheus
 				return math::hypot(x - static_cast<value_type>(other.x), y - static_cast<value_type>(other.y));
 			}
 
+			template<std::convertible_to<value_type> U = value_type>
+			[[nodiscard]] constexpr auto combine_max(const basic_point<2, U>& other) const noexcept -> basic_point
+			{
+				return
+				{
+						std::ranges::max(x, other.x),
+						std::ranges::max(y, other.y)
+				};
+			}
+
+			template<std::convertible_to<value_type> U = value_type>
+			[[nodiscard]] constexpr auto combine_min(const basic_point<2, U>& other) const noexcept -> basic_point
+			{
+				return
+				{
+						std::ranges::min(x, other.x),
+						std::ranges::min(y, other.y)
+				};
+			}
+
 			template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
 			[[nodiscard]] constexpr auto clamp(
 				const basic_point<2, Low>& low,
 				const basic_point<2, High>& high
-			) noexcept -> basic_point&
+			) const noexcept -> basic_point
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.x < high.x);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.y < high.y);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.x < high.x);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.y < high.y);
 
-				GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+				return
 				{
-					x = std::ranges::min(std::ranges::max(x, static_cast<value_type>(low.x)), static_cast<value_type>(high.x));
-					y = std::ranges::min(std::ranges::max(y, static_cast<value_type>(low.y)), static_cast<value_type>(high.y));
-				}
-				else
-				{
-					x = std::ranges::clamp(x, low.x, high.x);
-					y = std::ranges::clamp(y, low.y, high.y);
-				}
-
-				return *this;
-			}
-
-			template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
-			[[nodiscard]] friend constexpr auto clamp(
-				const basic_point& point,
-				const basic_point<2, Low>& low,
-				const basic_point<2, High>& high
-			) noexcept -> basic_point
-			{
-				auto result{point};
-
-				result.clamp(low, high);
-				return result;
+						std::ranges::clamp(x, low.x, high.x),
+						std::ranges::clamp(y, low.y, high.y)
+				};
 			}
 
 			template<std::size_t Index, std::convertible_to<value_type> T1 = value_type, std::convertible_to<value_type> T2 = value_type>
@@ -122,13 +122,13 @@ namespace gal::prometheus
 			{
 				if constexpr (Index == 0)
 				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.x) < static_cast<value_type>(p2.x));
+					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.x) < static_cast<value_type>(p2.x));
 
 					return x >= static_cast<value_type>(p1.x) and x < static_cast<value_type>(p2.x);
 				}
 				else if constexpr (Index == 1)
 				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.y) < static_cast<value_type>(p2.y));
+					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.y) < static_cast<value_type>(p2.y));
 
 					return y >= static_cast<value_type>(p1.y) and y < static_cast<value_type>(p2.y);
 				}
@@ -178,7 +178,7 @@ namespace gal::prometheus
 
 			template<std::size_t Index>
 				requires(Index < 3)
-			[[nodiscard]] constexpr auto get() const noexcept -> value_type
+			[[nodiscard]] constexpr auto get() const noexcept -> const value_type&
 			{
 				if constexpr (Index == 0) { return x; }
 				else if constexpr (Index == 1) { return y; }
@@ -207,43 +207,44 @@ namespace gal::prometheus
 				return math::hypot(x - static_cast<value_type>(other.x), y - static_cast<value_type>(other.y), z - static_cast<value_type>(other.z));
 			}
 
+			template<std::convertible_to<value_type> U = value_type>
+			[[nodiscard]] constexpr auto combine_max(const basic_point<3, U>& other) const noexcept -> basic_point
+			{
+				return
+				{
+						std::ranges::max(x, other.x),
+						std::ranges::max(y, other.y),
+						std::ranges::max(z, other.z)
+				};
+			}
+
+			template<std::convertible_to<value_type> U = value_type>
+			[[nodiscard]] constexpr auto combine_min(const basic_point<3, U>& other) const noexcept -> basic_point
+			{
+				return
+				{
+						std::ranges::min(x, other.x),
+						std::ranges::min(y, other.y),
+						std::ranges::min(z, other.z)
+				};
+			}
+
 			template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
 			[[nodiscard]] constexpr auto clamp(
 				const basic_point<3, Low>& low,
 				const basic_point<3, High>& high
-			) noexcept -> basic_point&
+			) const noexcept -> basic_point
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.x < high.x);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.y < high.y);
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.z < high.z);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.x < high.x);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.y < high.y);
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(low.z < high.z);
 
-				GAL_PROMETHEUS_SEMANTIC_IF_CONSTANT_EVALUATED
+				return
 				{
-					x = std::ranges::min(std::ranges::max(x, static_cast<value_type>(low.x)), static_cast<value_type>(high.x));
-					y = std::ranges::min(std::ranges::max(y, static_cast<value_type>(low.y)), static_cast<value_type>(high.y));
-					z = std::ranges::min(std::ranges::max(z, static_cast<value_type>(low.z)), static_cast<value_type>(high.z));
-				}
-				else
-				{
-					x = std::ranges::clamp(x, low.x, high.x);
-					y = std::ranges::clamp(y, low.y, high.y);
-					z = std::ranges::clamp(z, low.z, high.z);
-				}
-
-				return *this;
-			}
-
-			template<std::convertible_to<value_type> Low = value_type, std::convertible_to<value_type> High = value_type>
-			[[nodiscard]] friend constexpr auto clamp(
-				const basic_point& point,
-				const basic_point<3, Low>& low,
-				const basic_point<3, High>& high
-			) noexcept -> basic_point
-			{
-				auto result{point};
-
-				result.clamp(low, high);
-				return result;
+						std::ranges::clamp(x, low.x, high.x),
+						std::ranges::clamp(y, low.y, high.y),
+						std::ranges::clamp(z, low.z, high.z)
+				};
 			}
 
 			template<std::size_t Index, std::convertible_to<value_type> T1 = value_type, std::convertible_to<value_type> T2 = value_type>
@@ -255,19 +256,19 @@ namespace gal::prometheus
 			{
 				if constexpr (Index == 0)
 				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.x) < static_cast<value_type>(p2.x));
+					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.x) < static_cast<value_type>(p2.x));
 
 					return x >= static_cast<value_type>(p1.x) and x < static_cast<value_type>(p2.x);
 				}
 				else if constexpr (Index == 1)
 				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.y) < static_cast<value_type>(p2.y));
+					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.y) < static_cast<value_type>(p2.y));
 
 					return y >= static_cast<value_type>(p1.y) and y < static_cast<value_type>(p2.y);
 				}
 				else if constexpr (Index == 2)
 				{
-					GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.z) < static_cast<value_type>(p2.z));
+					// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(static_cast<value_type>(p1.z) < static_cast<value_type>(p2.z));
 
 					return z >= static_cast<value_type>(p1.z) and z < static_cast<value_type>(p2.z);
 				}

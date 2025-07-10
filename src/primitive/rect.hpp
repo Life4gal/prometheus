@@ -15,7 +15,7 @@
 #include <primitive/point.hpp>
 #include <primitive/extent.hpp>
 
-#include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
+// #include GAL_PROMETHEUS_ERROR_DEBUG_MODULE
 
 namespace gal::prometheus
 {
@@ -162,16 +162,16 @@ namespace gal::prometheus
 
 			[[nodiscard]] constexpr auto includes(const point_type& p) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
 
 				return p.between(left_top(), right_bottom());
 			}
 
 			[[nodiscard]] constexpr auto includes(const basic_rect& rect) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(size().exact_greater_than(rect.size()));
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width() > rect.width() and height() > rect.height());
 
 				return
 						rect.point.x >= point.x and
@@ -182,8 +182,8 @@ namespace gal::prometheus
 
 			[[nodiscard]] constexpr auto intersects(const basic_rect& rect) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
 
 				return not(
 					rect.point.x >= point.x + width() or
@@ -197,10 +197,8 @@ namespace gal::prometheus
 			{
 				return
 				{
-						std::ranges::min(point.x, rect.point.x),
-						std::ranges::min(point.y, rect.point.y),
-						std::ranges::max(point.x + width(), rect.point.x + rect.width()),
-						std::ranges::max(point.y + height(), rect.point.y + rect.height())
+						left_top().combine_min(rect.left_top()),
+						right_bottom().combine_max(rect.right_bottom())
 				};
 			}
 
@@ -208,10 +206,8 @@ namespace gal::prometheus
 			{
 				return
 				{
-						std::ranges::max(point.x, rect.point.x),
-						std::ranges::max(point.y, rect.point.y),
-						std::ranges::min(point.x + width(), rect.point.x + rect.width()),
-						std::ranges::min(point.y + height(), rect.point.y + rect.height())
+						left_top().combine_max(rect.left_top()),
+						right_bottom().combine_min(rect.right_bottom())
 				};
 			}
 		};
@@ -384,16 +380,16 @@ namespace gal::prometheus
 
 			[[nodiscard]] constexpr auto includes(const point_type& p) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
 
 				return p.between(left_top_near(), right_bottom_near());
 			}
 
 			[[nodiscard]] constexpr auto includes(const basic_rect& rect) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(size().exact_greater_than(rect.size()));
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(width() > rect.width() and height() > rect.height() and depth() > rect.depth());
 
 				return
 						rect.point.x >= point.x and
@@ -406,8 +402,8 @@ namespace gal::prometheus
 
 			[[nodiscard]] constexpr auto intersects(const basic_rect& rect) const noexcept -> bool
 			{
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
-				GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not empty() and valid());
+				// GAL_PROMETHEUS_ERROR_DEBUG_ASSUME(not rect.empty() and rect.valid());
 
 				return not(
 					rect.point.x >= point.x + width() or
@@ -423,12 +419,8 @@ namespace gal::prometheus
 			{
 				return
 				{
-						std::ranges::min(point.x, rect.point.x),
-						std::ranges::min(point.y, rect.point.y),
-						std::ranges::min(point.z, rect.point.z),
-						std::ranges::max(point.x + width(), rect.point.x + rect.width()),
-						std::ranges::max(point.y + height(), rect.point.y + rect.height()),
-						std::ranges::max(point.z + depth(), rect.point.z + rect.depth())
+						point.combine_min(rect.point),
+						extent.combine_max(rect.extent)
 				};
 			}
 
@@ -436,12 +428,8 @@ namespace gal::prometheus
 			{
 				return
 				{
-						std::ranges::max(point.x, rect.point.x),
-						std::ranges::max(point.y, rect.point.y),
-						std::ranges::max(point.z, rect.point.z),
-						std::ranges::min(point.x + width(), rect.point.x + rect.width()),
-						std::ranges::min(point.y + height(), rect.point.y + rect.height()),
-						std::ranges::min(point.z + depth(), rect.point.z + rect.depth())
+						point.combine_max(rect.point),
+						extent.combine_min(rect.extent)
 				};
 			}
 		};

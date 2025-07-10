@@ -150,8 +150,20 @@ namespace gal::prometheus::functional
 	template<typename... Ts>
 	struct overloaded : Ts...
 	{
-		constexpr explicit overloaded(Ts&&... ts) noexcept((std::is_nothrow_constructible_v<Ts, decltype(ts)> and ...))
-			: Ts{std::forward<Ts>(ts)}... {}
+		// const auto visitor = overloaded
+		// {
+		//		[](const T1&) { ... },
+		//		[](const T2&) { ... },
+		//		[](const T3&) { ... },
+		// };
+		constexpr explicit overloaded(Ts&&... ts) noexcept((std::is_nothrow_constructible_v<Ts, decltype(ts)> and ...)) : Ts{std::forward<Ts>(ts)}... {}
+
+		// const auto lambda1 = [](const T1&) { ... };
+		// const auto lambda2 = [](const T2&) { ... };
+		// const auto lambda3 = [](const T3&) { ... };
+		//
+		// const auto visitor = overloaded{ lambda1, lambda2, lambda3 };
+		constexpr explicit overloaded(const Ts&... ts) noexcept((std::is_nothrow_constructible_v<Ts, decltype(ts)> and ...)) : Ts{ts}... {}
 
 		// This makes all overloads viable to participate in the resolution
 		using Ts::operator()...;
